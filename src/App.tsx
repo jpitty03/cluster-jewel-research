@@ -1,9 +1,8 @@
 import { useEffect, useMemo, useState } from 'react'
 import ClusterJewels from './ClusterJewels'
-import streamerSnapshot from './data/streamers.json'
 import './App.css'
 
-// Dev serves a live scraping API; a production build reads the committed snapshot.
+// Dev serves a live scraping API; a production build reads the committed snapshots.
 const LIVE = import.meta.env.DEV
 
 interface StreamerBuild {
@@ -22,30 +21,44 @@ interface StreamerBuild {
 interface StreamerData {
   fetchedAt: string
   snapshotVersion: string
+  league: string
   total: number
   builds: StreamerBuild[]
 }
 
 type SortKey = 'name' | 'streamerName' | 'class' | 'level' | 'league' | 'seen'
 
+// Prod: bundle every committed league's streamer snapshot, keyed by league name.
+const streamerSnapshots = import.meta.glob('./data/*/streamers.json', {
+  eager: true,
+  import: 'default',
+}) as Record<string, StreamerData>
+const streamersByLeague: Record<string, StreamerData> = {}
+for (const d of Object.values(streamerSnapshots)) streamersByLeague[d.league] = d
+const snapshotLeagues = Object.values(streamersByLeague)
+  .sort((a, b) => (a.fetchedAt < b.fetchedAt ? 1 : -1))
+  .map((d) => d.league)
+
 function App() {
   const [tab, setTab] = useState<'jewels' | 'characters'>('jewels')
   const [data, setData] = useState<StreamerData | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [loading, setLoading] = useState(true)
+  const [leagues, setLeagues] = useState<string[]>(snapshotLeagues)
+  const [league, setLeague] = useState<string>(snapshotLeagues[0] ?? 'Mirage')
   const [query, setQuery] = useState('')
   const [sortKey, setSortKey] = useState<SortKey>('level')
   const [sortDesc, setSortDesc] = useState(true)
 
-  const load = (refresh = false) => {
+  const load = (l: string, refresh = false) => {
     if (!LIVE) {
-      setData(streamerSnapshot as unknown as StreamerData)
+      setData(streamersByLeague[l] ?? null)
       setLoading(false)
       return
     }
     setLoading(true)
     setError(null)
-    fetch(`/api/streamers${refresh ? '?refresh' : ''}`)
+    fetch(`/api/streamers?league=${encodeURIComponent(l)}${refresh ? '&refresh' : ''}`)
       .then(async (res) => {
         const body = await res.json()
         if (!res.ok) throw new Error(body.error ?? `HTTP ${res.status}`)
@@ -55,7 +68,21 @@ function App() {
       .finally(() => setLoading(false))
   }
 
-  useEffect(() => load(), [])
+  // Load the selected league whenever it changes.
+  useEffect(() => load(league), [league])
+
+  // Dev: populate the league dropdown from already-scraped leagues.
+  useEffect(() => {
+    if (!LIVE) return
+    fetch('/api/leagues')
+      .then((r) => r.json())
+      .then((d: { scraped: string[] }) => {
+        const scraped = d.scraped ?? []
+        setLeagues(scraped.length ? scraped : ['Mirage'])
+        setLeague((cur) => (scraped.includes(cur) ? cur : (scraped[0] ?? 'Mirage')))
+      })
+      .catch(() => {})
+  }, [])
 
   const rows = useMemo(() => {
     if (!data) return []
@@ -111,17 +138,27 @@ function App() {
       {tab === 'characters' && (
         <>
           <p className="subtitle">
-            Path of Exile builds scraped from poe.ninja
+            <strong>{league}</strong> streamer builds (level 80+) scraped from poe.ninja
             {data && (
               <>
                 {' · '}
                 {data.builds.length} of {data.total} builds
                 {' · '}
-                updated {new Date(data.fetchedAt).toLocaleTimeString()}
+                updated {new Date(data.fetchedAt).toLocaleDateString()}
               </>
             )}
           </p>
           <div className="controls">
+            <label className="league-select" title="League to display">
+              <span>League</span>
+              <select value={league} onChange={(e) => setLeague(e.target.value)}>
+                {(leagues.length ? leagues : [league]).map((l) => (
+                  <option key={l} value={l}>
+                    {l}
+                  </option>
+                ))}
+              </select>
+            </label>
             <input
               type="search"
               placeholder="Filter by character, streamer, class, league…"
@@ -129,7 +166,7 @@ function App() {
               onChange={(e) => setQuery(e.target.value)}
             />
             {LIVE && (
-              <button onClick={() => load(true)} disabled={loading}>
+              <button onClick={() => load(league, true)} disabled={loading}>
                 {loading ? 'Refreshing…' : 'Refresh'}
               </button>
             )}

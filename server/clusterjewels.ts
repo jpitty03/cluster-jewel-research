@@ -2,15 +2,21 @@
 // data/characters.csv), fetches each character's build JSON from poe.ninja,
 // and extracts every equipped cluster jewel for popularity analysis.
 
-import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs'
+import { existsSync, mkdirSync, readdirSync, readFileSync, writeFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { UA, fetchSnapshotVersion, getStreamerBuilds, searchClusterHolders } from './poeninja'
 
+// All crawl state is organized per league: data/<slug>/{characters.csv,
+// cluster-characters.csv, cluster-jewels.json, character-jewels.json}.
 const DATA_DIR = join(process.cwd(), 'data')
-const CSV_PATH = join(DATA_DIR, 'characters.csv')
-const CLUSTER_CSV_PATH = join(DATA_DIR, 'cluster-characters.csv')
-const JSON_PATH = join(DATA_DIR, 'cluster-jewels.json')
-const STORE_PATH = join(DATA_DIR, 'character-jewels.json')
+const SRC_DATA_DIR = join(process.cwd(), 'src', 'data')
+
+export const slugify = (league: string) => league.toLowerCase().replace(/\s+/g, '-')
+const leagueDir = (league: string) => join(DATA_DIR, slugify(league))
+const CSV_PATH = (league: string) => join(leagueDir(league), 'characters.csv')
+const CLUSTER_CSV_PATH = (league: string) => join(leagueDir(league), 'cluster-characters.csv')
+const JSON_PATH = (league: string) => join(leagueDir(league), 'cluster-jewels.json')
+const STORE_PATH = (league: string) => join(leagueDir(league), 'character-jewels.json')
 
 // poe.ninja rate-limits the character endpoint aggressively: 429s whose Retry-After
 // escalates with repeat offenses (observed 81s -> 168s -> 865s -> 3294s). Rapid
@@ -29,24 +35,25 @@ export interface CharacterRef {
   class: string
 }
 
-export async function ensureCharactersCsv(force = false): Promise<CharacterRef[]> {
-  if (!force && existsSync(CSV_PATH)) {
-    const lines = readFileSync(CSV_PATH, 'utf8').trim().split('\n').slice(1)
+export async function ensureCharactersCsv(league: string, force = false): Promise<CharacterRef[]> {
+  const path = CSV_PATH(league)
+  if (!force && existsSync(path)) {
+    const lines = readFileSync(path, 'utf8').trim().split('\n').slice(1)
     return lines.map((line) => {
       const [account, name, cls, ...rest] = line.split(',')
       return { account, name, class: cls, streamer: rest.join(',') || null }
     })
   }
-  const { builds } = await getStreamerBuilds(force)
+  const { builds } = await getStreamerBuilds(league, force)
   const chars: CharacterRef[] = builds.map((b) => ({
     account: b.account,
     name: b.name,
     class: b.class,
     streamer: b.streamerName,
   }))
-  mkdirSync(DATA_DIR, { recursive: true })
+  mkdirSync(leagueDir(league), { recursive: true })
   writeFileSync(
-    CSV_PATH,
+    path,
     'account,name,class,streamer\n' +
       chars.map((c) => `${c.account},${c.name},${c.class},${c.streamer ?? ''}`).join('\n') +
       '\n',
@@ -54,22 +61,26 @@ export async function ensureCharactersCsv(force = false): Promise<CharacterRef[]
   return chars
 }
 
-// The crawl's actual target list: only characters that hold ≥1 cluster jewel, sorted
-// by total cluster count descending (heaviest users first). Built from the
-// non-rate-limited search endpoint and persisted so it can be reused without
+// The crawl's actual target list: only characters that hold ≥1 cluster jewel in the
+// league, sorted by total cluster count descending (heaviest users first). Built from
+// the non-rate-limited search endpoint and persisted so it can be reused without
 // re-querying. This is what makes the rate-limited per-character crawl tractable.
-export async function ensureClusterCharacters(force = false): Promise<CharacterRef[]> {
-  if (!force && existsSync(CLUSTER_CSV_PATH)) {
-    const lines = readFileSync(CLUSTER_CSV_PATH, 'utf8').trim().split('\n').slice(1)
+export async function ensureClusterCharacters(
+  league: string,
+  force = false,
+): Promise<CharacterRef[]> {
+  const path = CLUSTER_CSV_PATH(league)
+  if (!force && existsSync(path)) {
+    const lines = readFileSync(path, 'utf8').trim().split('\n').slice(1)
     return lines.map((line) => {
       const [account, name, cls, streamer] = line.split(',')
       return { account, name, class: cls, streamer: streamer || null }
     })
   }
-  const { holders } = await searchClusterHolders()
-  mkdirSync(DATA_DIR, { recursive: true })
+  const { holders } = await searchClusterHolders(league)
+  mkdirSync(leagueDir(league), { recursive: true })
   writeFileSync(
-    CLUSTER_CSV_PATH,
+    path,
     'account,name,class,streamer,cjewels,lcjewels,mcjewels,scjewels\n' +
       holders
         .map(
@@ -192,6 +203,7 @@ function parseClusterJewel(it: ItemData, owner: CharacterRef): ClusterJewel {
 export interface ClusterData {
   fetchedAt: string
   snapshotVersion: string
+  league: string
   charactersTotal: number
   charactersFetched: number
   errors: number
@@ -200,6 +212,7 @@ export interface ClusterData {
 
 export interface Progress {
   phase: 'idle' | 'characters' | 'builds' | 'done'
+  league: string
   done: number
   total: number
   pausedUntil: number | null // epoch ms; set while waiting out a 429 ban
@@ -210,6 +223,7 @@ export interface Progress {
 
 const IDLE_PROGRESS: Progress = {
   phase: 'idle',
+  league: '',
   done: 0,
   total: 0,
   pausedUntil: null,
@@ -247,10 +261,11 @@ interface CharStore {
   [accountSlashName: string]: { fetchedAt: string; jewels: ClusterJewel[] }
 }
 
-function loadStore(): CharStore {
-  if (!existsSync(STORE_PATH)) return {}
+function loadStore(league: string): CharStore {
+  const path = STORE_PATH(league)
+  if (!existsSync(path)) return {}
   try {
-    return JSON.parse(readFileSync(STORE_PATH, 'utf8')) as CharStore
+    return JSON.parse(readFileSync(path, 'utf8')) as CharStore
   } catch {
     return {}
   }
@@ -269,15 +284,15 @@ async function fetchCharacter(version: string, c: CharacterRef): Promise<Respons
   })
 }
 
-async function runCrawl(force: boolean): Promise<void> {
-  progress = { ...IDLE_PROGRESS, phase: 'characters', running: true }
+async function runCrawl(league: string, force: boolean): Promise<void> {
+  progress = { ...IDLE_PROGRESS, league, phase: 'characters', running: true }
   // Target only cluster-jewel holders, heaviest first. Always rebuild the list —
   // it comes from the non-rate-limited search endpoint, and a fresh list lets a
   // resume pick up characters that appeared since the last crawl.
-  const chars = await ensureClusterCharacters(true)
+  const chars = await ensureClusterCharacters(league, true)
   const version = await fetchSnapshotVersion()
 
-  const store: CharStore = force ? {} : loadStore()
+  const store: CharStore = force ? {} : loadStore(league)
   const pending = chars.filter((c) => !store[`${c.account}/${c.name}`])
   let errors = 0
 
@@ -286,9 +301,12 @@ async function runCrawl(force: boolean): Promise<void> {
 
   const save = () => {
     if (!isCurrentGen()) return // never let a superseded (zombie) crawl touch disk
-    mkdirSync(DATA_DIR, { recursive: true })
-    writeFileSync(STORE_PATH, JSON.stringify(store))
-    writeFileSync(JSON_PATH, JSON.stringify(aggregate(chars, store, version, errors), null, 2))
+    mkdirSync(leagueDir(league), { recursive: true })
+    writeFileSync(STORE_PATH(league), JSON.stringify(store))
+    writeFileSync(
+      JSON_PATH(league),
+      JSON.stringify(aggregate(league, chars, store, version, errors), null, 2),
+    )
   }
 
   progress = {
@@ -368,6 +386,7 @@ async function runCrawl(force: boolean): Promise<void> {
 }
 
 function aggregate(
+  league: string,
   chars: CharacterRef[],
   store: CharStore,
   version: string,
@@ -378,6 +397,7 @@ function aggregate(
   return {
     fetchedAt: new Date().toISOString(),
     snapshotVersion: version,
+    league,
     charactersTotal: chars.length,
     charactersFetched: Object.keys(store).length,
     errors,
@@ -391,19 +411,59 @@ function aggregate(
 // just read the current aggregate; the UI polls getProgress() until phase 'done'.
 let crawlPromise: Promise<void> | null = null
 
-function readStoredAggregate(): ClusterData | null {
-  if (!existsSync(JSON_PATH)) return null
-  try {
-    return JSON.parse(readFileSync(JSON_PATH, 'utf8')) as ClusterData
-  } catch {
-    return null
+const emptyAggregate = (league: string): ClusterData => ({
+  fetchedAt: new Date().toISOString(),
+  snapshotVersion: '',
+  league,
+  charactersTotal: progress.league === league ? progress.total : 0,
+  charactersFetched: progress.league === league ? progress.done : 0,
+  errors: 0,
+  jewels: [],
+})
+
+// Prefer the live working copy (data/<slug>/), fall back to the committed snapshot
+// (src/data/<slug>/) so already-published leagues are viewable in dev too.
+function readStoredAggregate(league: string): ClusterData | null {
+  for (const path of [
+    JSON_PATH(league),
+    join(SRC_DATA_DIR, slugify(league), 'cluster-jewels.json'),
+  ]) {
+    if (!existsSync(path)) continue
+    try {
+      return JSON.parse(readFileSync(path, 'utf8')) as ClusterData
+    } catch {
+      /* try next */
+    }
   }
+  return null
 }
 
-// Kick off a crawl if one isn't already running. No-op while running.
-export function startCrawl(mode: 'resume' | 'full'): void {
+// Leagues that already have a snapshot (working or committed), by display name.
+export function listScrapedLeagues(): string[] {
+  const found = new Map<string, string>() // slug -> display name
+  for (const dir of [DATA_DIR, SRC_DATA_DIR]) {
+    if (!existsSync(dir)) continue
+    for (const slug of readdirSync(dir, { withFileTypes: true })
+      .filter((e) => e.isDirectory())
+      .map((e) => e.name)) {
+      if (found.has(slug)) continue
+      const file = join(dir, slug, 'cluster-jewels.json')
+      if (!existsSync(file)) continue
+      try {
+        const data = JSON.parse(readFileSync(file, 'utf8')) as ClusterData
+        found.set(slug, data.league || slug)
+      } catch {
+        /* skip */
+      }
+    }
+  }
+  return [...found.values()]
+}
+
+// Kick off a crawl for `league` if one isn't already running. No-op while running.
+export function startCrawl(league: string, mode: 'resume' | 'full'): void {
   if (crawlPromise) return
-  crawlPromise = runCrawl(mode === 'full')
+  crawlPromise = runCrawl(league, mode === 'full')
     .catch((err) => {
       console.error('[poeninja] crawl failed:', err)
       progress = { ...progress, phase: 'idle', running: false }
@@ -421,39 +481,23 @@ export function stopCrawl(): void {
 // Run the crawl to completion and return the aggregate. For headless use (the
 // publish pipeline) — no dev server involved. Defaults to resume so routine updates
 // only fetch new/missing cluster-holders.
-export async function crawlToCompletion(force = false): Promise<ClusterData> {
-  await runCrawl(force)
-  return (
-    readStoredAggregate() ?? {
-      fetchedAt: new Date().toISOString(),
-      snapshotVersion: '',
-      charactersTotal: progress.total,
-      charactersFetched: progress.done,
-      errors: 0,
-      jewels: [],
-    }
-  )
+export async function crawlToCompletion(league: string, force = false): Promise<ClusterData> {
+  await runCrawl(league, force)
+  return readStoredAggregate(league) ?? emptyAggregate(league)
 }
 
 // 'cache': just read the stored aggregate. 'resume'/'full': start a crawl (if not
 // already running) and return whatever aggregate exists right now; the UI polls
 // progress for the rest.
 export async function getClusterJewels(
+  league: string,
   mode: 'cache' | 'resume' | 'full' = 'cache',
 ): Promise<ClusterData> {
-  if (mode !== 'cache') startCrawl(mode)
-  return (
-    readStoredAggregate() ?? {
-      fetchedAt: new Date().toISOString(),
-      snapshotVersion: '',
-      charactersTotal: progress.total,
-      charactersFetched: progress.done,
-      errors: 0,
-      jewels: [],
-    }
-  )
+  if (mode !== 'cache') startCrawl(league, mode)
+  return readStoredAggregate(league) ?? emptyAggregate(league)
 }
 
-export function charactersCsv(): string | null {
-  return existsSync(CSV_PATH) ? readFileSync(CSV_PATH, 'utf8') : null
+export function charactersCsv(league: string): string | null {
+  const path = CSV_PATH(league)
+  return existsSync(path) ? readFileSync(path, 'utf8') : null
 }

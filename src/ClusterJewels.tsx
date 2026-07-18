@@ -1,9 +1,8 @@
 import { Fragment, useEffect, useMemo, useRef, useState } from 'react'
 import poedbData from './data/poedb-cluster-mods.json'
-import clusterSnapshot from './data/cluster-jewels.json'
 
 // In dev the Vite plugin serves a live scraping API; a production build is a static
-// site with no backend, so it reads the committed snapshot bundled at build time.
+// site with no backend, so it reads the committed per-league snapshots bundled here.
 const LIVE = import.meta.env.DEV
 
 interface ClusterJewel {
@@ -28,6 +27,7 @@ interface ClusterJewel {
 interface ClusterData {
   fetchedAt: string
   snapshotVersion: string
+  league: string
   charactersTotal: number
   charactersFetched: number
   errors: number
@@ -36,6 +36,7 @@ interface ClusterData {
 
 interface Progress {
   phase: 'idle' | 'characters' | 'builds' | 'done'
+  league: string
   done: number
   total: number
   pausedUntil: number | null
@@ -43,6 +44,18 @@ interface Progress {
   intervalMs: number
   running: boolean
 }
+
+// Prod: every committed league snapshot is bundled here, keyed by league display name
+// and sorted newest-first (by fetch time). This also yields the league dropdown list.
+const clusterSnapshots = import.meta.glob('./data/*/cluster-jewels.json', {
+  eager: true,
+  import: 'default',
+}) as Record<string, ClusterData>
+const snapshotByLeague: Record<string, ClusterData> = {}
+for (const data of Object.values(clusterSnapshots)) snapshotByLeague[data.league] = data
+const snapshotLeagues = Object.values(snapshotByLeague)
+  .sort((a, b) => (a.fetchedAt < b.fetchedAt ? 1 : -1))
+  .map((d) => d.league)
 
 interface Group {
   key: string
@@ -116,6 +129,10 @@ function ClusterJewels() {
   const [data, setData] = useState<ClusterData | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [progress, setProgress] = useState<Progress | null>(null)
+  const [leagues, setLeagues] = useState<string[]>(snapshotLeagues)
+  const [league, setLeague] = useState<string>(snapshotLeagues[0] ?? 'Mirage')
+  const [scrapeLeagues, setScrapeLeagues] = useState<string[]>([])
+  const [scrapeLeague, setScrapeLeague] = useState<string>('Mirage')
   const [query, setQuery] = useState('')
   const [baseFilter, setBaseFilter] = useState('All')
   const [raresOnly, setRaresOnly] = useState(true)
@@ -132,12 +149,12 @@ function ClusterJewels() {
     return () => clearInterval(id)
   }, [running])
 
-  const fetchData = () => {
+  const loadLeagueData = (l: string) => {
     if (!LIVE) {
-      setData(clusterSnapshot as unknown as ClusterData)
+      setData(snapshotByLeague[l] ?? null)
       return Promise.resolve()
     }
-    return fetch('/api/cluster-jewels')
+    return fetch(`/api/cluster-jewels?league=${encodeURIComponent(l)}`)
       .then(async (res) => {
         const body = await res.json()
         if (!res.ok) throw new Error(body.error ?? `HTTP ${res.status}`)
@@ -151,18 +168,18 @@ function ClusterJewels() {
     pollRef.current = null
   }
 
-  // Poll progress while a crawl runs; refresh the aggregate as it grows and once more
-  // when it finishes. The crawl lives server-side, so this survives across renders.
+  // Poll progress while a crawl runs; refresh the crawling league's aggregate as it
+  // grows and once more when it finishes. The crawl lives server-side.
   const startPolling = () => {
     if (pollRef.current) return
     pollRef.current = setInterval(async () => {
       try {
         const p: Progress = await fetch('/api/cluster-jewels/progress').then((r) => r.json())
         setProgress(p)
-        if (p.phase === 'builds') fetchData()
+        if (p.phase === 'builds') loadLeagueData(p.league)
         if (!p.running) {
           stopPolling()
-          fetchData()
+          loadLeagueData(p.league)
         }
       } catch {
         /* transient dev-server hiccup; keep polling */
@@ -172,7 +189,12 @@ function ClusterJewels() {
 
   const startScrape = (mode: 'resume' | 'full') => {
     setError(null)
-    fetch(`/api/cluster-jewels?${mode === 'full' ? 'full' : 'refresh'}`)
+    setLeague(scrapeLeague) // the display follows the league being crawled
+    fetch(
+      `/api/cluster-jewels?league=${encodeURIComponent(scrapeLeague)}&${
+        mode === 'full' ? 'full' : 'refresh'
+      }`,
+    )
       .then(async (res) => {
         const body = await res.json()
         if (!res.ok) throw new Error(body.error ?? `HTTP ${res.status}`)
@@ -189,16 +211,33 @@ function ClusterJewels() {
       .catch(() => {})
   }
 
-  // On mount: load whatever is stored, and (dev only) resume polling if a crawl is
-  // already running. In prod there's no backend, so just load the snapshot.
+  // Load the selected league's data whenever the display league changes.
   useEffect(() => {
-    fetchData()
+    if (league) loadLeagueData(league)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [league])
+
+  // On mount (dev only): populate the league lists and resume polling if a crawl is
+  // already running. Prod uses the bundled snapshot leagues set in initial state.
+  useEffect(() => {
     if (!LIVE) return
+    fetch('/api/leagues')
+      .then((r) => r.json())
+      .then((d: { scraped: string[]; poe: string[] }) => {
+        const scraped = d.scraped ?? []
+        setLeagues(scraped.length ? scraped : ['Mirage'])
+        setScrapeLeagues(d.poe ?? [])
+        setLeague((cur) => (scraped.includes(cur) ? cur : (scraped[0] ?? 'Mirage')))
+      })
+      .catch(() => {})
     fetch('/api/cluster-jewels/progress')
       .then((r) => r.json())
       .then((p: Progress) => {
         setProgress(p)
-        if (p.running) startPolling()
+        if (p.running) {
+          if (p.league) setLeague(p.league)
+          startPolling()
+        }
       })
       .catch(() => {})
     return stopPolling
@@ -266,8 +305,9 @@ function ClusterJewels() {
   return (
     <>
       <p className="subtitle">
-        Cluster jewels used by streamer characters, grouped by base and cluster type ·
-        cluster-holders fetched heaviest-first, so early results are the most-used jewels
+        Cluster jewels used by <strong>{league}</strong> streamer characters (level 80+),
+        grouped by base and cluster type · fetched heaviest-first, so early results are the
+        most-used jewels
         {data && (
           <>
             {' · '}
@@ -275,11 +315,21 @@ function ClusterJewels() {
             cluster-holders
             {data.errors > 0 && ` (${data.errors} fetch errors)`}
             {' · '}
-            updated {new Date(data.fetchedAt).toLocaleTimeString()}
+            updated {new Date(data.fetchedAt).toLocaleDateString()}
           </>
         )}
       </p>
       <div className="controls">
+        <label className="league-select" title="League to display">
+          <span>League</span>
+          <select value={league} onChange={(e) => setLeague(e.target.value)}>
+            {(leagues.length ? leagues : [league]).map((l) => (
+              <option key={l} value={l}>
+                {l}
+              </option>
+            ))}
+          </select>
+        </label>
         <input
           type="search"
           placeholder="Filter by cluster type, notable, base…"
@@ -302,30 +352,54 @@ function ClusterJewels() {
         </label>
         {LIVE && (
           <>
+            <span className="ctrl-sep" />
+            <label className="league-select" title="League to scrape">
+              <span>Scrape</span>
+              <select
+                value={scrapeLeague}
+                disabled={running}
+                onChange={(e) => setScrapeLeague(e.target.value)}
+              >
+                {(scrapeLeagues.length ? scrapeLeagues : [scrapeLeague]).map((l) => (
+                  <option key={l} value={l}>
+                    {l}
+                  </option>
+                ))}
+              </select>
+            </label>
             {running ? (
               <button onClick={stopScrape}>Stop</button>
             ) : (
               <button onClick={() => startScrape('resume')}>
-                {!data || data.charactersFetched === 0
-                  ? 'Start scrape'
+                {!data || data.league !== scrapeLeague || data.charactersFetched === 0
+                  ? `Scrape ${scrapeLeague}`
                   : data.charactersFetched < data.charactersTotal
-                    ? `Resume scrape (${data.charactersFetched}/${data.charactersTotal})`
-                    : 'Check for new characters'}
+                    ? `Resume (${data.charactersFetched}/${data.charactersTotal})`
+                    : 'Check for new'}
               </button>
             )}
-            {!running && data && data.charactersFetched > 0 && (
+            {!running && data && data.league === scrapeLeague && data.charactersFetched > 0 && (
               <button
                 className="ghost"
-                title="Clears stored data and refetches all cluster-holders (~77 min at the steady pace)"
+                title="Clears stored data and refetches all cluster-holders for this league"
                 onClick={() => startScrape('full')}
               >
                 Full rescrape
               </button>
             )}
-            <a className="download" href="/api/characters.csv" download>
+            <a
+              className="download"
+              href={`/api/characters.csv?league=${encodeURIComponent(league)}`}
+              download
+            >
               characters.csv
             </a>
-            <a className="download" href="/api/cluster-jewels" target="_blank" rel="noreferrer">
+            <a
+              className="download"
+              href={`/api/cluster-jewels?league=${encodeURIComponent(league)}`}
+              target="_blank"
+              rel="noreferrer"
+            >
               raw JSON
             </a>
           </>
@@ -336,7 +410,8 @@ function ClusterJewels() {
 
       {running && progress && (
         <div className="status crawling">
-          {progress.phase === 'characters' && 'Building character list…'}
+          <strong>{progress.league}</strong>:{' '}
+          {progress.phase === 'characters' && 'building character list…'}
           {progress.pausedUntil ? (
             <>
               Rate-limited by poe.ninja — resuming in{' '}
