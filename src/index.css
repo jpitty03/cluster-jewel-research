@@ -1,0 +1,115 @@
+:root {
+  /* Layered dark surfaces (cool charcoal) */
+  --bg: #0c0d11;
+  --surface: #14161d;
+  --surface-2: #1a1d26;
+  --surface-3: #212530;
+  --border: #262a34;
+  --border-strong: #363b48;
+
+  /* Text */
+  --text: #b4b9c6;
+  --text-dim: #7b8190;
+  --text-h: #f0f2f7;
+
+  /* Warm gold accent — evokes PoE currency / crafting */
+  --accent: #e8b866;
+  --accent-2: #f4cf8a;
+  --accent-bg: rgba(232, 184, 102, 0.12);
+  --accent-border: rgba(232, 184, 102, 0.42);
+  --accent-glow: rgba(232, 184, 102, 0.28);
+
+  /* Semantic */
+  --fractured: #7fb0ff;
+  --danger: #ff6b6b;
+  --good: #74d99a;
+
+  /* Legacy aliases kept so component styles resolve */
+  --code-bg: var(--surface-2);
+  --shadow: rgba(0, 0, 0, 0.5) 0 12px 28px -8px, rgba(0, 0, 0, 0.35) 0 4px 10px -4px;
+
+  --sans: 'Segoe UI', system-ui, Roboto, sans-serif;
+  --heading: 'Segoe UI', system-ui, Roboto, sans-serif;
+  --mono: ui-monospace, 'Cascadia Mono', Consolas, monospace;
+
+  font: 16px/1.5 var(--sans);
+  letter-spacing: 0.1px;
+  color-scheme: dark;
+  color: var(--text);
+  background: var(--bg);
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+
+  @media (max-width: 1024px) {
+    font-size: 15px;
+  }
+}
+
+body {
+  margin: 0;
+  min-height: 100svh;
+  background:
+    radial-gradient(1200px 460px at 50% -8%, rgba(232, 184, 102, 0.07), transparent 70%),
+    radial-gradient(900px 500px at 100% 0%, rgba(127, 176, 255, 0.04), transparent 60%),
+    var(--bg);
+  background-attachment: fixed;
+}
+
+#root {
+  width: 1440px;
+  max-width: 100%;
+  margin: 0 auto;
+  min-height: 100svh;
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  text-align: left;
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.015), transparent 240px);
+  border-inline: 1px solid var(--border);
+}
+
+h1,
+h2 {
+  font-family: var(--heading);
+  font-weight: 600;
+  color: var(--text-h);
+}
+
+p {
+  margin: 0;
+}
+
+code {
+  font-family: var(--mono);
+  font-size: 0.9em;
+  padding: 2px 6px;
+  border-radius: 5px;
+  color: var(--accent-2);
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+}
+
+/* Refined scrollbars */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: var(--border-strong) transparent;
+}
+::-webkit-scrollbar {
+  height: 10px;
+  width: 10px;
+}
+::-webkit-scrollbar-thumb {
+  background: var(--border-strong);
+  border-radius: 6px;
+  border: 2px solid var(--surface);
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #454b5a;
+}
+
+::selection {
+  background: var(--accent-glow);
+  color: #fff;
+}
