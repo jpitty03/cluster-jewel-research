@@ -55,13 +55,13 @@ static site on GitHub Pages. Live at: https://jpitty03.github.io/cluster-jewel-r
    page), page title.
 8. ✅ Folder renamed `my-vite-app` → `cluster-jewel-research`.
 
-## In progress — per-league data + league selection
+## Completed — per-league data + league selection
 
 Goal: data scoped per league (e.g. `src/data/mirage/…`), a league dropdown to view
 (historical leagues supported), a dev-only picker choosing which league to scrape.
 Level floor 80. Seed Mirage only for launch; default display = newest league.
 
-Done so far:
+Done:
 - ✅ `src/index.css`: container `width: min(1760px, 96vw)` (fixes cut-off column).
 - ✅ `server/poeninja.ts`: `league` + `min-level=80` on all searches;
   `searchClusterHolders(league)`, `scrapeStreamerBuilds(league)`,
@@ -76,13 +76,12 @@ Done so far:
   display dropdown, scrape-league picker (dev), league-aware polling/banner.
 - ✅ `src/App.tsx`: per-league streamer snapshots via glob, league state + effects.
 
-Remaining:
-- [ ] `src/App.tsx`: add the league dropdown to the Characters tab UI; fix the
-  Refresh button to call `load(league, true)`.
-- [ ] `src/App.css`: styles for `.league-select` + `.ctrl-sep`.
-- [ ] `scripts/scrape.ts`: `--league=<Name>` (default Mirage), write to
+- ✅ `src/App.tsx`: league dropdown on the Characters tab; Refresh calls
+  `load(league, true)`.
+- ✅ `src/App.css`: styles for `.league-select` + `.ctrl-sep`.
+- ✅ `scripts/scrape.ts`: `--league=<Name>` (default Mirage), writes to
   `src/data/<slug>/`.
-- [ ] Delete obsolete flat snapshots (`src/data/{cluster-jewels,streamers}.json`,
+- ✅ Deleted obsolete flat snapshots (`src/data/{cluster-jewels,streamers}.json`,
   old flat `data/*` files) and old mixed-league crawl data.
-- [ ] Seed Mirage: crawl (~154 holders @15s ≈ 40 min), verify `npx tsc -b`,
-  `npm run build` + preview, then commit/push to deploy.
+- ✅ Seeded Mirage: crawl complete (178 builds), `npx tsc -b` clean,
+  `npm run build` + preview verified, committed & pushed (`facb787`) → Pages deploy.
