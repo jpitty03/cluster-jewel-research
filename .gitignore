@@ -13,8 +13,9 @@ dist-ssr
 *.local
 *.tsbuildinfo
 
-# Crawl working state — regenerable; the published snapshots live in src/data/
-data/
+# Crawl working state — regenerable; the published snapshots live in src/data/.
+# Leading slash anchors this to the repo root so it does NOT match src/data/.
+/data/
 
 # Editor directories and files
 .vscode/*
