@@ -1,0 +1,41 @@
+# Dependabot: weekly version updates for npm packages and GitHub Actions.
+# Security updates for vulnerable dependencies are raised as soon as an
+# advisory matches, independent of this schedule (enable "Dependabot
+# security updates" under Settings > Advanced Security if not already on).
+version: 2
+updates:
+  # npm dependencies (package.json / package-lock.json at repo root)
+  - package-ecosystem: npm
+    directory: /
+    schedule:
+      interval: weekly
+      day: monday
+      time: "06:00"
+      timezone: America/New_York
+    # Batch minor/patch bumps into two PRs; majors still get their own PR.
+    groups:
+      minor-and-patch:
+        applies-to: version-updates
+        update-types:
+          - minor
+          - patch
+      security:
+        applies-to: security-updates
+        update-types:
+          - minor
+          - patch
+    open-pull-requests-limit: 10
+    labels:
+      - dependencies
+
+  # Actions used by .github/workflows (e.g. deploy.yml)
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+      day: monday
+      time: "06:00"
+      timezone: America/New_York
+    labels:
+      - dependencies
+      - github-actions
