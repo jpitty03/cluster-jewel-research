@@ -105,6 +105,37 @@ for (const [base, pools] of Object.entries(poedbData.bases)) {
 const lookupMod = (base: string, clusterType: string, notable: string): ModMeta | undefined =>
   modLookup.get(`${base}||${clusterType}`)?.get(notable)
 
+// "Used by" rows: collapse one row per jewel into one row per character with a
+// count. Most jewels have no streamer attribution (public-ladder builds), in
+// which case only the character name is shown — previously the character name
+// was printed twice via the `streamer ?? character` fallback.
+interface UsedByRow {
+  key: string
+  streamer: string | null
+  character: string
+  class: string
+  passives: number | null
+  count: number
+}
+function usedByRows(jewels: ClusterJewel[]): UsedByRow[] {
+  const rows = new Map<string, UsedByRow>()
+  for (const j of jewels) {
+    const key = `${j.account}||${j.character}||${j.passives}`
+    const row = rows.get(key)
+    if (row) row.count++
+    else
+      rows.set(key, {
+        key,
+        streamer: j.streamer,
+        character: j.character,
+        class: j.class,
+        passives: j.passives,
+        count: 1,
+      })
+  }
+  return [...rows.values()].sort((a, b) => b.count - a.count)
+}
+
 // Fractured mods read "1 Added Passive Skill is <Notable>"; pull the notable name out.
 const notableFromFractured = (mod: string): string | null =>
   mod.match(/^1 Added Passive Skill is (.+)$/)?.[1] ?? null
@@ -542,13 +573,16 @@ function ClusterJewels() {
                             <div>
                               <h3>Used by</h3>
                               <ul>
-                                {g.jewels.map((j, i) => (
-                                  <li key={i}>
-                                    {j.streamer ?? j.character}
+                                {usedByRows(g.jewels).map((r) => (
+                                  <li key={r.key}>
+                                    <span className="count">{r.count}×</span>{' '}
+                                    {r.streamer ?? r.character}
                                     <span className="owner">
-                                      {' '}
-                                      · {j.character} ({j.class}
-                                      {j.passives != null && `, ${j.passives} passives`})
+                                      {r.streamer != null && r.streamer !== r.character && (
+                                        <> · {r.character}</>
+                                      )}{' '}
+                                      ({r.class}
+                                      {r.passives != null && `, ${r.passives} passives`})
                                     </span>
                                   </li>
                                 ))}
