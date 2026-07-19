@@ -10,6 +10,7 @@
     "preview": "vite preview",
     "scrape": "tsx scripts/scrape.ts",
     "scrape:poedb": "node scripts/scrape-poedb.mjs",
+    "build:trade-stats": "node scripts/build-trade-stats.mjs",
     "publish": "npm run scrape && node scripts/publish.mjs"
   },
   "dependencies": {
