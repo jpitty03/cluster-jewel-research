@@ -138,7 +138,8 @@ function App() {
       {tab === 'characters' && (
         <>
           <p className="subtitle">
-            <strong>{league}</strong> streamer builds (level 80+) scraped from poe.ninja
+            <strong>{league}</strong> streamer + top public cluster-jewel builds (level 80+) scraped
+            from poe.ninja
             {data && (
               <>
                 {' · '}

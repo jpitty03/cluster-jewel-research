@@ -74,6 +74,10 @@ const secsUntil = (epochMs: number) => Math.max(0, Math.round((epochMs - Date.no
 // Synthesised clusters are treated as their plain base (we don't care about synthesis).
 const normalizeBase = (base: string) => base.replace(/^Synthesised /, '')
 
+// Small-passive grants are templated so numeric variants merge into one entry,
+// e.g. "+8 to Strength" and "+3 to Strength" both become "+# to Strength".
+const normalizeGrant = (g: string) => g.replace(/\d+(\.\d+)?/g, '#')
+
 // poedb.tw craft data: per (base, cluster type), each notable's weight / ilvl /
 // prefix-suffix. Built once at module load into a lookup keyed by `${base}||${type}`,
 // then by notable name. `pct` = share of the pool's total weight (roll odds).
@@ -283,7 +287,10 @@ function ClusterJewels() {
         combos.set(combo, (combos.get(combo) ?? 0) + 1)
         if (j.fractured) fracturedCount++
         for (const f of j.fracturedMods) fractured.set(f, (fractured.get(f) ?? 0) + 1)
-        for (const g of j.smallGrants) smallGrants.set(g, (smallGrants.get(g) ?? 0) + 1)
+        for (const g of j.smallGrants) {
+          const grantKey = normalizeGrant(g)
+          smallGrants.set(grantKey, (smallGrants.get(grantKey) ?? 0) + 1)
+        }
       }
       out.push({
         key,

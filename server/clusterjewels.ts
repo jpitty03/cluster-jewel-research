@@ -271,14 +271,28 @@ function loadStore(league: string): CharStore {
   }
 }
 
-async function fetchCharacter(version: string, c: CharacterRef): Promise<Response> {
+interface CrawlVersions {
+  streamers: string
+  exp: string // '' when the league has no exp overview
+}
+
+async function fetchCharacter(
+  versions: CrawlVersions,
+  league: string,
+  c: CharacterRef,
+): Promise<Response> {
+  // Streamer builds live in the global "streamers" overview (type 2); public
+  // ladder builds live in the league's "exp" overview (type 0). Verified: the
+  // exp character endpoint accepts overview=<league>&type=0.
+  const isStreamer = !!c.streamer
   const qs = new URLSearchParams({
     account: c.account,
     name: c.name,
-    overview: 'streamers',
-    type: '2',
+    overview: isStreamer ? 'streamers' : slugify(league),
+    type: isStreamer ? '2' : '0',
     timeMachine: '',
   })
+  const version = isStreamer ? versions.streamers : versions.exp
   return fetch(`https://poe.ninja/poe1/api/builds/${version}/character?${qs}`, {
     headers: { 'user-agent': UA, accept: 'application/json' },
   })
@@ -291,6 +305,10 @@ async function runCrawl(league: string, force: boolean): Promise<void> {
   // resume pick up characters that appeared since the last crawl.
   const chars = await ensureClusterCharacters(league, true)
   const version = await fetchSnapshotVersion()
+  // Public (non-streamer) holders are fetched through the league's exp overview,
+  // which has its own snapshot version. Missing exp overview -> streamers only.
+  const expVersion = await fetchSnapshotVersion(slugify(league), 'exp').catch(() => '')
+  const versions: CrawlVersions = { streamers: version, exp: expVersion }
 
   const store: CharStore = force ? {} : loadStore(league)
   const pending = chars.filter((c) => !store[`${c.account}/${c.name}`])
@@ -324,7 +342,7 @@ async function runCrawl(league: string, force: boolean): Promise<void> {
     for (;;) {
       let res: Response
       try {
-        res = await fetchCharacter(version, c)
+        res = await fetchCharacter(versions, league, c)
       } catch {
         errors++
         break
