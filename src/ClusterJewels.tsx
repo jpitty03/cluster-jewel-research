@@ -1,6 +1,7 @@
 import { Fragment, useEffect, useMemo, useRef, useState } from 'react'
 import poedbData from './data/poedb-cluster-mods.json'
 import tradeStats from './data/trade-stats.json'
+import { DEFAULT_LEAGUE } from '../league'
 
 // In dev the Vite plugin serves a live scraping API; a production build is a static
 // site with no backend, so it reads the committed per-league snapshots bundled here.
@@ -239,9 +240,9 @@ function ClusterJewels() {
   const [error, setError] = useState<string | null>(null)
   const [progress, setProgress] = useState<Progress | null>(null)
   const [leagues, setLeagues] = useState<string[]>(snapshotLeagues)
-  const [league, setLeague] = useState<string>(snapshotLeagues[0] ?? 'Mirage')
+  const [league, setLeague] = useState<string>(snapshotLeagues[0] ?? DEFAULT_LEAGUE)
   const [scrapeLeagues, setScrapeLeagues] = useState<string[]>([])
-  const [scrapeLeague, setScrapeLeague] = useState<string>('Mirage')
+  const [scrapeLeague, setScrapeLeague] = useState<string>(DEFAULT_LEAGUE)
   const [query, setQuery] = useState('')
   const [baseFilter, setBaseFilter] = useState('All')
   const [raresOnly, setRaresOnly] = useState(true)
@@ -334,9 +335,9 @@ function ClusterJewels() {
       .then((r) => r.json())
       .then((d: { scraped: string[]; poe: string[] }) => {
         const scraped = d.scraped ?? []
-        setLeagues(scraped.length ? scraped : ['Mirage'])
+        setLeagues(scraped.length ? scraped : [DEFAULT_LEAGUE])
         setScrapeLeagues(d.poe ?? [])
-        setLeague((cur) => (scraped.includes(cur) ? cur : (scraped[0] ?? 'Mirage')))
+        setLeague((cur) => (scraped.includes(cur) ? cur : (scraped[0] ?? DEFAULT_LEAGUE)))
       })
       .catch(() => {})
     fetch('/api/cluster-jewels/progress')

@@ -85,3 +85,15 @@ Done:
   old flat `data/*` files) and old mixed-league crawl data.
 - ✅ Seeded Mirage: crawl complete (178 builds), `npx tsc -b` clean,
   `npm run build` + preview verified, committed & pushed (`facb787`) → Pages deploy.
+
+## Completed — single league flag (2026-07-26)
+
+Mirage ended; current league is **Allflame** (poe.ninja overviews: `streamers`
+and `allflame`/`exp`; verified 377 cluster holders).
+
+- ✅ New `league.ts` exporting `DEFAULT_LEAGUE` — the one place to change per league.
+- ✅ `vite.config.ts`, `scripts/scrape.ts`, `src/App.tsx`, `src/ClusterJewels.tsx`
+  all read it (no more hardcoded `'Mirage'`); node entry points also honour
+  `POE_LEAGUE`, and `--league=` still wins on the scrape script.
+- ✅ README: "New league" section + `league.ts` in the components map.
+- ⏳ Not yet done: seed the Allflame data (`npm run scrape`, then `npm run publish`).

@@ -1,5 +1,6 @@
 import { defineConfig, type Plugin } from 'vite'
 import react from '@vitejs/plugin-react'
+import { DEFAULT_LEAGUE as CONFIGURED_LEAGUE } from './league'
 import { getStreamerBuilds, listPoeLeagues } from './server/poeninja'
 import {
   charactersCsv,
@@ -10,7 +11,8 @@ import {
   stopCrawl,
 } from './server/clusterjewels'
 
-const DEFAULT_LEAGUE = 'Mirage'
+// League used when a request doesn't name one (see league.ts; POE_LEAGUE overrides).
+const DEFAULT_LEAGUE = process.env.POE_LEAGUE || CONFIGURED_LEAGUE
 
 // Dev-server API: scrapes poe.ninja server-side (avoids CORS, keeps parsing off the client)
 function poeNinjaApi(): Plugin {

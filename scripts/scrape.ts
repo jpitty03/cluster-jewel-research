@@ -2,7 +2,9 @@
 // scrapes standalone (no dev server) and writes the per-league snapshots the
 // production build bundles from src/data/<league-slug>/.
 //
-// Usage: npx tsx scripts/scrape.ts [--league=Mirage] [--full]
+// Usage: npx tsx scripts/scrape.ts [--league=<Name>] [--full]
+//
+// The league defaults to DEFAULT_LEAGUE in league.ts (env POE_LEAGUE overrides).
 //
 // Cluster crawling defaults to *resume* — only new/missing cluster-holders are
 // fetched (fast, thanks to the persistent store + raw-mod retention). Pass --full
@@ -11,13 +13,16 @@
 import { copyFileSync, mkdirSync, writeFileSync } from 'node:fs'
 import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
+import { DEFAULT_LEAGUE } from '../league.ts'
 import { getStreamerBuilds } from '../server/poeninja.ts'
 import { crawlToCompletion, slugify } from '../server/clusterjewels.ts'
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..')
 const full = process.argv.includes('--full')
 const league =
-  process.argv.find((a) => a.startsWith('--league='))?.slice('--league='.length) || 'Mirage'
+  process.argv.find((a) => a.startsWith('--league='))?.slice('--league='.length) ||
+  process.env.POE_LEAGUE ||
+  DEFAULT_LEAGUE
 
 const outDir = join(ROOT, 'src', 'data', slugify(league))
 mkdirSync(outDir, { recursive: true })

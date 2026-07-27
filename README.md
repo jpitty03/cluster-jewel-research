@@ -26,14 +26,24 @@ Open the app, pick a league, and:
 | Command | What it does |
 | --- | --- |
 | `npm run dev` | Dev server with live scraping API |
-| `npm run scrape` | Headless scrape (`npx tsx scripts/scrape.ts [--league=Mirage] [--full]`) — writes snapshots to `src/data/<league-slug>/` for the static build. `--full` clears the league store and refetches everything. |
+| `npm run scrape` | Headless scrape (`npx tsx scripts/scrape.ts [--league=<Name>] [--full]`) — writes snapshots to `src/data/<league-slug>/` for the static build. `--full` clears the league store and refetches everything. |
 | `npm run scrape:poedb` | One-time scrape of poedb.tw cluster enchantment pools (mod weights, ilvl, prefix/suffix) → `src/data/poedb-cluster-mods.json` |
 | `npm run publish` | `scrape` + commit/push `src/data`, which triggers the GitHub Actions rebuild/redeploy of the static site |
 | `npm run build` | Type-check + production build (bundles the committed data snapshots; no server needed) |
 
+### New league
+
+Set the league name once in `league.ts` (`DEFAULT_LEAGUE`) — poe.ninja's exact
+spelling, e.g. `Allflame`. It's the default for the dev server, the headless
+scrape, and the UI's league pickers. Override per run with `--league=<Name>` on
+`npm run scrape`, or with the `POE_LEAGUE` env var. Previously scraped leagues
+stay available in the league dropdown; their data lives in `data/<slug>/` and
+`src/data/<slug>/`.
+
 ## Main components
 
 ```
+league.ts                 DEFAULT_LEAGUE — the league to scrape/display (update each league)
 vite.config.ts            Dev-server API plugin — /api/leagues, /api/streamers,
                           /api/cluster-jewels (crawl control + progress), /api/characters.csv
 server/poeninja.ts        poe.ninja client: snapshot-version discovery (fetchSnapshotVersion),

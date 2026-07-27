@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import ClusterJewels from './ClusterJewels'
+import { DEFAULT_LEAGUE } from '../league'
 import './App.css'
 
 // Dev serves a live scraping API; a production build reads the committed snapshots.
@@ -45,7 +46,7 @@ function App() {
   const [error, setError] = useState<string | null>(null)
   const [loading, setLoading] = useState(true)
   const [leagues, setLeagues] = useState<string[]>(snapshotLeagues)
-  const [league, setLeague] = useState<string>(snapshotLeagues[0] ?? 'Mirage')
+  const [league, setLeague] = useState<string>(snapshotLeagues[0] ?? DEFAULT_LEAGUE)
   const [query, setQuery] = useState('')
   const [sortKey, setSortKey] = useState<SortKey>('level')
   const [sortDesc, setSortDesc] = useState(true)
@@ -78,8 +79,8 @@ function App() {
       .then((r) => r.json())
       .then((d: { scraped: string[] }) => {
         const scraped = d.scraped ?? []
-        setLeagues(scraped.length ? scraped : ['Mirage'])
-        setLeague((cur) => (scraped.includes(cur) ? cur : (scraped[0] ?? 'Mirage')))
+        setLeagues(scraped.length ? scraped : [DEFAULT_LEAGUE])
+        setLeague((cur) => (scraped.includes(cur) ? cur : (scraped[0] ?? DEFAULT_LEAGUE)))
       })
       .catch(() => {})
   }, [])
