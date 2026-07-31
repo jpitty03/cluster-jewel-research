@@ -131,10 +131,46 @@ function decodeSearch(bytes: Uint8Array): SearchDecoded {
   return { total: num(result[1]?.[0]) ?? 0, columns, dictionaryHashes };
 }
 
+// poe.ninja's dictionary endpoints now wrap the value table in a custom "NDIC"
+// binary container instead of plain protobuf. Layout (all little-endian):
+//   "NDIC" | u32 version | u32 reserved | u32 count | u64 hash |
+//   u32 (=16) | u32 n | u32 count | u64 (0) |
+//   (n-1) × { u32 offset, u32 size }   // ancillary columns we don't read
+//   count × u8 length                  // per-entry string length
+//   concatenated string bytes
+// The dictionaries the scraper consumes (class, league) hold short labels, so
+// lengths fit in a single byte. Fall back to the legacy protobuf shape if the
+// payload is not an NDIC container (older snapshots).
+function decodeDictionary(b: Uint8Array): string[] {
+  if (b.length < 44 || text.decode(b.subarray(0, 4)) !== 'NDIC') {
+    const msg = parseMessage(b);
+    // field 1 = dictionary name, field 2 = repeated values (0-based index)
+    return (msg[2] ?? []).map((v) => str(v) ?? '');
+  }
+  const view = new DataView(b.buffer, b.byteOffset, b.byteLength);
+  const count = view.getUint32(12, true);
+  const n = view.getUint32(28, true);
+  const lenOff = 44 + (n - 1) * 8;
+  // Validate the network-derived shape so a corrupt/format-shifted response
+  // fails loudly instead of spinning a huge loop or silently emitting garbage.
+  if (n < 1 || lenOff < 0 || lenOff + count > b.length) {
+    throw new Error(`malformed NDIC dictionary (n=${n} count=${count} len=${b.length})`);
+  }
+  let p = lenOff + count;
+  const out: string[] = [];
+  for (let i = 0; i < count; i++) {
+    const len = b[lenOff + i];
+    out.push(text.decode(b.subarray(p, p + len)));
+    p += len;
+  }
+  if (p !== b.length) {
+    throw new Error(`NDIC dictionary not fully consumed (end=${p} len=${b.length})`);
+  }
+  return out;
+}
+
 async function fetchDictionary(hash: string): Promise<string[]> {
-  const msg = parseMessage(await fetchBytes(`/poe1/api/builds/dictionary/${hash}`));
-  // field 1 = dictionary name, field 2 = repeated values (0-based index)
-  return (msg[2] ?? []).map((v) => str(v) ?? '');
+  return decodeDictionary(await fetchBytes(`/poe1/api/builds/dictionary/${hash}`));
 }
 
 // ---------- public API ----------
