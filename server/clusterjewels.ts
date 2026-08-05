@@ -78,6 +78,14 @@ export async function ensureClusterCharacters(
     })
   }
   const { holders } = await searchClusterHolders(league)
+  if (!holders.length) {
+    // An empty holder list is never a real answer for a live league — it means the
+    // search decode came up dry. Keep the existing target list rather than
+    // truncating it to a bare header and leaving the next resume with nothing to do.
+    throw new Error(
+      `no cluster-jewel holders found for "${league}" — search returned nothing usable`,
+    )
+  }
   mkdirSync(leagueDir(league), { recursive: true })
   writeFileSync(
     path,
@@ -311,6 +319,15 @@ async function runCrawl(league: string, force: boolean): Promise<void> {
   const versions: CrawlVersions = { streamers: version, exp: expVersion }
 
   const store: CharStore = force ? {} : loadStore(league)
+  // Drop characters that have fallen off the current holder list. The public slice
+  // is a rolling top-N by level, so without this a resume accumulates builds
+  // poe.ninja no longer ranks and blends them into the aggregate forever.
+  if (!force) {
+    const current = new Set(chars.map((c) => `${c.account}/${c.name}`))
+    const stale = Object.keys(store).filter((key) => !current.has(key))
+    for (const key of stale) delete store[key]
+    if (stale.length) console.log(`[crawl] dropped ${stale.length} stale characters from the store`)
+  }
   const pending = chars.filter((c) => !store[`${c.account}/${c.name}`])
   let errors = 0
 
@@ -410,14 +427,22 @@ function aggregate(
   version: string,
   errors: number,
 ): ClusterData {
+  // Walk the current holder list rather than the store, so the aggregate can never
+  // report jewels for a character poe.ninja no longer ranks even if a prune is missed.
   const jewels: ClusterJewel[] = []
-  for (const entry of Object.values(store)) jewels.push(...entry.jewels)
+  let fetched = 0
+  for (const c of chars) {
+    const entry = store[`${c.account}/${c.name}`]
+    if (!entry) continue
+    fetched++
+    jewels.push(...entry.jewels)
+  }
   return {
     fetchedAt: new Date().toISOString(),
     snapshotVersion: version,
     league,
     charactersTotal: chars.length,
-    charactersFetched: Object.keys(store).length,
+    charactersFetched: fetched,
     errors,
     jewels,
   }

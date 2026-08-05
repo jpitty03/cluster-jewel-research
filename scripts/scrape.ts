@@ -30,6 +30,16 @@ mkdirSync(outDir, { recursive: true })
 // 1. Streamers (Characters tab). Uses the non-rate-limited search endpoint.
 console.log(`[scrape] ${league}: streamers…`)
 const streamers = await getStreamerBuilds(league, true)
+// Bail before writing rather than overwrite a good snapshot with an empty one:
+// poe.ninja reporting matches but yielding no rows means the response format
+// shifted under the decoder, not that the league is empty.
+if (streamers.total > 0 && streamers.builds.length === 0) {
+  console.error(
+    `[scrape] ${league}: poe.ninja reports ${streamers.total} builds but none decoded — ` +
+      'aborting without writing. The search response format has likely changed.',
+  )
+  process.exit(1)
+}
 writeFileSync(join(outDir, 'streamers.json'), JSON.stringify(streamers))
 console.log(`[scrape] ${league}: ${streamers.builds.length} builds`)
 

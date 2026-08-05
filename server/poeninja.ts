@@ -6,6 +6,11 @@
 // The snapshot version hash rotates and is embedded in the HTML page props.
 // To get the full list we partition the search by class (each slice < 100)
 // and merge the results.
+//
+// Columns arrive as whole arrays, not per-row messages: a column holds either a
+// repeated string field (one raw UTF-8 value per row) or a single packed-varint
+// blob (one number per row), never both. Numeric columns that carry a dictionary
+// name hold indexes into that dictionary rather than values.
 
 export const UA =
   'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/150.0.0.0 Safari/537.36';
@@ -96,10 +101,30 @@ export async function fetchSnapshotVersion(url = 'streamers', type = 'streamers'
 
 // ---------- search response decoding ----------
 
+interface Column {
+  rows: number;
+  dict: string | null; // dictionary the numeric values index into, if any
+  strings: string[] | null; // set for string-valued columns
+  nums: number[] | null; // set for numeric / dictionary-indexed columns
+}
+
 interface SearchDecoded {
-  total: number;
-  columns: Record<string, Message[]>;
-  dictionaryHashes: Record<string, string>; // column name -> dictionary hash
+  total: number; // matching builds server-side, before the 100-row cap
+  rowCount: number; // rows actually returned
+  columns: Record<string, Column>;
+  dictionaryHashes: Record<string, string>; // dictionary name -> hash
+}
+
+// Split a packed-varint blob into one number per row.
+function unpackVarints(b: Uint8Array): number[] {
+  const out: number[] = [];
+  let p = 0;
+  while (p < b.length) {
+    let v: bigint;
+    [v, p] = readVarint(b, p);
+    out.push(Number(v));
+  }
+  return out;
 }
 
 function decodeSearch(bytes: Uint8Array): SearchDecoded {
@@ -108,15 +133,23 @@ function decodeSearch(bytes: Uint8Array): SearchDecoded {
   if (!(resultBuf instanceof Uint8Array)) throw new Error('search result missing');
   const result = parseMessage(resultBuf);
 
-  const columns: Record<string, Message[]> = {};
-  for (const colBuf of result[5] ?? []) {
+  const columns: Record<string, Column> = {};
+  let rowCount = 0;
+  for (const colBuf of result[12] ?? []) {
     if (!(colBuf instanceof Uint8Array)) continue;
     const col = parseMessage(colBuf);
     const name = str(col[1]?.[0]);
     if (!name) continue;
-    columns[name] = (col[2] ?? []).map((c) =>
-      c instanceof Uint8Array ? parseMessage(c) : {},
-    );
+    // Field 6 carries packed numbers, field 8 the same for boolean columns.
+    const packed = col[6]?.[0] ?? col[8]?.[0];
+    const rows = num(col[13]?.[0]) ?? 0;
+    columns[name] = {
+      rows,
+      dict: str(col[11]?.[0]) ?? null,
+      strings: col[7] ? col[7].map((c) => str(c) ?? '') : null,
+      nums: packed instanceof Uint8Array ? unpackVarints(packed) : null,
+    };
+    rowCount = Math.max(rowCount, rows);
   }
 
   const dictionaryHashes: Record<string, string> = {};
@@ -128,8 +161,26 @@ function decodeSearch(bytes: Uint8Array): SearchDecoded {
     if (name && hash) dictionaryHashes[name] = hash;
   }
 
-  return { total: num(result[1]?.[0]) ?? 0, columns, dictionaryHashes };
+  const total = num(result[1]?.[0]) ?? 0;
+  // A response that reports matches but yields no rows means poe.ninja moved the
+  // column payload again. Fail loudly — silently returning zero builds is how an
+  // empty snapshot got published before.
+  if (total > 0 && rowCount === 0) {
+    throw new Error(
+      `search returned total=${total} but no decodable rows — poe.ninja response format changed`,
+    );
+  }
+
+  return { total, rowCount, columns, dictionaryHashes };
 }
+
+// Per-row accessors. A column is absent when it was not requested.
+const cellStr = (d: SearchDecoded, col: string, i: number): string | null =>
+  d.columns[col]?.strings?.[i] || null;
+const cellNum = (d: SearchDecoded, col: string, i: number): number | null =>
+  d.columns[col]?.nums?.[i] ?? null;
+const cellDict = (d: SearchDecoded, col: string, i: number, names: string[]): string =>
+  names[cellNum(d, col, i) ?? -1] ?? 'Unknown';
 
 // poe.ninja's dictionary endpoints now wrap the value table in a custom "NDIC"
 // binary container instead of plain protobuf. Layout (all little-endian):
@@ -197,23 +248,19 @@ export interface StreamerData {
 }
 
 function rowsFrom(decoded: SearchDecoded, classNames: string[]): StreamerBuild[] {
-  const cols = decoded.columns;
-  const count = cols.name?.length ?? 0;
   const rows: StreamerBuild[] = [];
-  for (let i = 0; i < count; i++) {
-    const streamerCell = cols.streamer?.[i] ?? {};
-    const streamerPair = (streamerCell[4] ?? []).map((v) => str(v) ?? '');
+  for (let i = 0; i < decoded.rowCount; i++) {
     rows.push({
-      name: str(cols.name?.[i]?.[1]?.[0]) ?? '',
-      account: str(cols.account?.[i]?.[1]?.[0]) ?? '',
-      class: classNames[num(cols.class?.[i]?.[2]?.[0]) ?? -1] ?? 'Unknown',
-      level: num(cols.level?.[i]?.[2]?.[0]) ?? null,
-      dps: str(cols.dps?.[i]?.[1]?.[0]) ?? null,
-      league: str(cols.league?.[i]?.[1]?.[0]) ?? null,
-      seen: str(cols.seen?.[i]?.[1]?.[0]) ?? null,
-      streamerLogin: streamerPair[0] ?? null,
-      streamerName: streamerPair[1] ?? null,
-      live: num(streamerCell[5]?.[0]) === 1,
+      name: cellStr(decoded, 'name', i) ?? '',
+      account: cellStr(decoded, 'account', i) ?? '',
+      class: cellDict(decoded, 'class', i, classNames),
+      level: cellNum(decoded, 'level', i),
+      dps: cellStr(decoded, 'dps.total', i),
+      league: cellStr(decoded, 'league', i),
+      seen: cellStr(decoded, 'seen', i),
+      streamerLogin: cellStr(decoded, 'streamer.login', i),
+      streamerName: cellStr(decoded, 'streamer.display', i),
+      live: cellNum(decoded, 'streamer.online', i) === 1,
     });
   }
   return rows;
@@ -262,24 +309,22 @@ async function publicClusterBuilds(
 
   const byKey = new Map<string, StreamerBuild & { cjewels: number }>();
   const add = (decoded: SearchDecoded, clsOverride?: string) => {
-    const cols = decoded.columns;
-    const count = cols.name?.length ?? 0;
-    for (let i = 0; i < count; i++) {
-      const account = str(cols.account?.[i]?.[1]?.[0]) ?? '';
-      const name = str(cols.name?.[i]?.[1]?.[0]) ?? '';
+    for (let i = 0; i < decoded.rowCount; i++) {
+      const account = cellStr(decoded, 'account', i);
+      const name = cellStr(decoded, 'name', i);
       if (!account || !name) continue;
       byKey.set(`${account}\x00${name}`, {
         name,
         account,
-        class: clsOverride ?? classNames[num(cols.class?.[i]?.[2]?.[0]) ?? -1] ?? 'Unknown',
-        level: num(cols.level?.[i]?.[2]?.[0]) ?? null,
-        dps: str(cols.dps?.[i]?.[1]?.[0]) ?? null,
+        class: clsOverride ?? cellDict(decoded, 'class', i, classNames),
+        level: cellNum(decoded, 'level', i),
+        dps: cellStr(decoded, 'dps.total', i),
         league,
         seen: null,
         streamerLogin: null,
         streamerName: null,
         live: false,
-        cjewels: num(cols.cjewels?.[i]?.[2]?.[0]) ?? 0,
+        cjewels: cellNum(decoded, 'cjewels', i) ?? 0,
       });
     }
   };
@@ -403,22 +448,19 @@ export async function searchClusterHolders(league: string): Promise<{
 
   const byKey = new Map<string, ClusterHolder>();
   const add = (decoded: SearchDecoded, cls?: string) => {
-    const cols = decoded.columns;
-    const count = cols.name?.length ?? 0;
-    for (let i = 0; i < count; i++) {
-      const account = str(cols.account?.[i]?.[1]?.[0]) ?? '';
-      const name = str(cols.name?.[i]?.[1]?.[0]) ?? '';
+    for (let i = 0; i < decoded.rowCount; i++) {
+      const account = cellStr(decoded, 'account', i);
+      const name = cellStr(decoded, 'name', i);
       if (!account || !name) continue;
-      const streamerPair = (cols.streamer?.[i]?.[4] ?? []).map((v) => str(v) ?? '');
       byKey.set(`${account} ${name}`, {
         account,
         name,
-        class: cls ?? classNames[num(cols.class?.[i]?.[2]?.[0]) ?? -1] ?? 'Unknown',
-        streamerName: streamerPair[1] ?? null,
-        cjewels: num(cols.cjewels?.[i]?.[2]?.[0]) ?? 0,
-        lcjewels: num(cols.lcjewels?.[i]?.[2]?.[0]) ?? 0,
-        mcjewels: num(cols.mcjewels?.[i]?.[2]?.[0]) ?? 0,
-        scjewels: num(cols.scjewels?.[i]?.[2]?.[0]) ?? 0,
+        class: cls ?? cellDict(decoded, 'class', i, classNames),
+        streamerName: cellStr(decoded, 'streamer.display', i),
+        cjewels: cellNum(decoded, 'cjewels', i) ?? 0,
+        lcjewels: cellNum(decoded, 'lcjewels', i) ?? 0,
+        mcjewels: cellNum(decoded, 'mcjewels', i) ?? 0,
+        scjewels: cellNum(decoded, 'scjewels', i) ?? 0,
       });
     }
   };
@@ -462,22 +504,20 @@ export async function searchClusterHolders(league: string): Promise<{
     const pubClassHash = firstPub.dictionaryHashes['class'];
     const pubClassNames = pubClassHash ? await fetchDictionary(pubClassHash) : classNames;
     const addPub = (decoded: SearchDecoded, cls?: string) => {
-      const cols = decoded.columns;
-      const count = cols.name?.length ?? 0;
-      for (let i = 0; i < count; i++) {
-        const account = str(cols.account?.[i]?.[1]?.[0]) ?? '';
-        const name = str(cols.name?.[i]?.[1]?.[0]) ?? '';
+      for (let i = 0; i < decoded.rowCount; i++) {
+        const account = cellStr(decoded, 'account', i);
+        const name = cellStr(decoded, 'name', i);
         if (!account || !name) continue;
         pub.set(`${account} ${name}`, {
           account,
           name,
-          class: cls ?? pubClassNames[num(cols.class?.[i]?.[2]?.[0]) ?? -1] ?? 'Unknown',
+          class: cls ?? cellDict(decoded, 'class', i, pubClassNames),
           streamerName: null,
-          level: num(cols.level?.[i]?.[2]?.[0]) ?? 0,
-          cjewels: num(cols.cjewels?.[i]?.[2]?.[0]) ?? 0,
-          lcjewels: num(cols.lcjewels?.[i]?.[2]?.[0]) ?? 0,
-          mcjewels: num(cols.mcjewels?.[i]?.[2]?.[0]) ?? 0,
-          scjewels: num(cols.scjewels?.[i]?.[2]?.[0]) ?? 0,
+          level: cellNum(decoded, 'level', i) ?? 0,
+          cjewels: cellNum(decoded, 'cjewels', i) ?? 0,
+          lcjewels: cellNum(decoded, 'lcjewels', i) ?? 0,
+          mcjewels: cellNum(decoded, 'mcjewels', i) ?? 0,
+          scjewels: cellNum(decoded, 'scjewels', i) ?? 0,
         });
       }
     };
