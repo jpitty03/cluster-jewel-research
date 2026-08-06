@@ -404,6 +404,39 @@ export async function listPoeLeagues(): Promise<string[]> {
   return leagues.filter((l) => l && l !== 'league');
 }
 
+// ---------- currency rates ----------
+
+// Chaos value of every currency poe.ninja tracks, keyed by its currency id
+// ("divine" -> 219.1, "chaos" -> 1). Used by scripts/price.ts to normalize trade
+// listings, which come back in whatever currency the seller posted them in.
+//
+// This is the economy API, not the builds API — no snapshot version, no protobuf,
+// just a JSON GET. `core.primary` names the unit every `primaryValue` is quoted in
+// (chaos); it's asserted rather than assumed, since a league where poe.ninja moved
+// off chaos would otherwise silently produce rates off by a factor of ~200.
+export async function fetchCurrencyRates(league: string): Promise<Record<string, number>> {
+  const url =
+    `${BASE}/poe1/api/economy/exchange/current/overview` +
+    `?league=${encodeURIComponent(league)}&type=Currency`;
+  const res = await fetch(url, { headers: { 'user-agent': UA, accept: 'application/json' } });
+  if (!res.ok) throw new Error(`currency overview -> ${res.status}`);
+
+  const body = (await res.json()) as {
+    core?: { primary?: string };
+    lines?: { id?: string; primaryValue?: number }[];
+  };
+  if (body.core?.primary !== 'chaos')
+    throw new Error(`currency overview is quoted in ${body.core?.primary ?? '?'}, expected chaos`);
+
+  const rates: Record<string, number> = {};
+  for (const line of body.lines ?? []) {
+    if (line.id && typeof line.primaryValue === 'number' && line.primaryValue > 0)
+      rates[line.id] = line.primaryValue;
+  }
+  if (!rates.chaos) rates.chaos = 1; // present in practice, but the unit is true by definition
+  return rates;
+}
+
 // ---------- cluster-holder prioritization ----------
 
 export interface ClusterHolder {

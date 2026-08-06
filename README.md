@@ -39,17 +39,35 @@ top **5** combos per base + cluster-type group, plus the uncrafted white base be
 **ilvl 83 and ilvl 84** (84 is where the last notable tier unlocks, so it's priced separately from
 the cheaper 83), and caches the cheapest and median of the ten cheapest listings.
 
-In the UI the group row's **Base Price** column shows `i83` / `i84` for the passive roll its
-most-used combo targets, and each priced combo gets its cheapest listing next to it. Hovering either
-opens a card with both base prices (linked to the trade search), the completed cost, and a crafting
-steps section.
+In the UI the group row carries three price columns:
+
+| Column | What it is |
+| --- | --- |
+| **Base Price** | the white base at `i83` / `i84`, for the passive roll the group's most-used combo targets |
+| **Cheapest** | the cheapest listing across the group's priced combos |
+| **Median** | the median completed price across them, **weighted by usage** — a combo 142 characters run counts more than one nine of them run |
+
+Every column is click-to-sort (click again to reverse); unpriced groups always sink to the bottom.
+Hovering any price opens a card with both base prices (linked to the trade search), the completed
+cost, and a crafting steps section. Each priced combo also shows its cheapest listing inside the
+expanded row.
+
+Because the median covers only the top 5 combos in a group, it's the median of what's *popular*
+there, not of every combo in it.
 
 The query and the grouping are shared between the UI and the script (`src/tradeQuery.ts`,
 `src/clusterAggregate.ts`) so a displayed price always belongs to the search its link opens. Every
 search is uncorrupted, and `Adds # Passive Skills` is pinned by base size rather than taken from the
 snapshot: Large → 12 with an increased-effect mod else 8 for 3 notables; Medium → 4–5; Small → 3
-with a 25–35% effect mod. Amounts stay in the currency each listing was posted in — the trade API
-sorts across currencies, so no conversion is needed.
+with a 25–35% effect mod.
+
+Amounts are cached in the currency each listing was posted in (the trade API sorts across
+currencies, so the cheapest and median listings are right without converting). Alongside them the
+file carries a `rates` block — chaos value per currency, refreshed every run from poe.ninja's
+economy API (`/poe1/api/economy/exchange/current/overview`) — which is what lets the sortable
+columns and the median compare a divine listing with a chaos one. Sorted values are quoted in a
+single unit (divine once they're worth one, chaos below); the native amount stays in the tooltip
+and the hover card. A poe.ninja failure keeps the previous run's rates rather than aborting.
 
 GGG rate-limits these endpoints **per IP** (`X-Rate-Limit-Rules: Ip` — there is no account rule, so
 extra logins cannot raise the ceiling). Searches are capped at 30 per 5 minutes with a 1800s
@@ -83,7 +101,8 @@ vite.config.ts            Dev-server API plugin — /api/leagues, /api/streamers
                           /api/cluster-jewels (crawl control + progress), /api/characters.csv
 server/poeninja.ts        poe.ninja client: snapshot-version discovery (fetchSnapshotVersion),
                           streamer overview scraping (scrapeStreamerBuilds / getStreamerBuilds),
-                          public ladder cluster-holder search (searchClusterHolders), league list
+                          public ladder cluster-holder search (searchClusterHolders), league list,
+                          currency chaos rates from the economy API (fetchCurrencyRates)
 server/clusterjewels.ts   Crawl engine: rate-limited character fetching (ensureClusterCharacters),
                           cluster jewel extraction/parsing, persistent per-league store,
                           resumable start/stop crawl (startCrawl / stopCrawl / crawlToCompletion),
@@ -96,6 +115,8 @@ src/clusterAggregate.ts   Grouping of raw jewels into base+type groups and notab
                           shared by the UI and the pricing script
 src/tradeQuery.ts         Trade search query building (stat ids, passive-count pinning,
                           uncorrupted filter) and the price cache keys — shared likewise
+src/priceModel.ts         Shape of trade-prices.json plus the arithmetic for reading it:
+                          chaos conversion, money formatting, usage-weighted median
 scripts/scrape.ts         Headless scrape pipeline for the publish flow
 scripts/scrape-poedb.mjs  poedb.tw enchantment pool scraper
 scripts/price.ts          Publish-time trade pricing → src/data/<slug>/trade-prices.json

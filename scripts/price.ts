@@ -17,19 +17,21 @@
 // ~250 searches takes ~40 minutes. That's why results are cached with a TTL and why
 // the file is rewritten after *every* search: an interrupted run loses nothing.
 //
-// Prices are stored in the currency each listing is written in, not converted to a
-// common unit. The trade API already sorts results by price across currencies, so
-// the cheapest and median listings are correct without a conversion rate — and no
-// reliable rate source exists to convert with (poe.ninja's currency endpoints 404,
-// and the exchange book's cheapest offers are 1:1 lowballs).
+// Prices are stored in the currency each listing is written in — the trade API sorts
+// across currencies, so the cheapest and median listings are already correct without
+// converting. Alongside them the file carries a `rates` block (chaos value per
+// currency, from poe.ninja's economy API) so the UI can compare and aggregate prices
+// posted in different currencies without losing what was actually asked.
 
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs'
 import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { DEFAULT_LEAGUE } from '../league.ts'
 import { slugify } from '../server/clusterjewels.ts'
+import { fetchCurrencyRates } from '../server/poeninja.ts'
 import { credentialMode, tradeFetch, tradeSearch, type Price } from '../server/tradeprices.ts'
 import { groupJewels, type ClusterData } from '../src/clusterAggregate.ts'
+import { CACHE_VERSION, type PriceFile } from '../src/priceModel.ts'
 import {
   BASE_ILVLS,
   PRICED_TOP,
@@ -62,28 +64,6 @@ if (!existsSync(clusterPath)) {
 }
 
 // ---------- work list ----------
-
-interface Entry {
-  low: Price | null
-  mid: Price | null
-  listed: number
-  sampled: number
-  passivesMin: number | null
-  passivesMax: number | null
-  at: string
-}
-
-interface PriceFile {
-  version: number
-  league: string
-  fetchedAt: string
-  prices: Record<string, Entry>
-  bases: Record<string, Entry>
-}
-
-// Bump when the cache keys or the queries behind them change, so a stale file is
-// discarded instead of leaving entries that no lookup can ever match again.
-const CACHE_VERSION = 2
 
 interface Job {
   kind: 'combo' | 'base'
@@ -140,6 +120,7 @@ const empty = (): PriceFile => ({
   version: CACHE_VERSION,
   league,
   fetchedAt: '',
+  rates: {},
   prices: {},
   bases: {},
 })
@@ -156,6 +137,7 @@ if (cache.version !== CACHE_VERSION) {
 cache.league = league
 cache.prices ??= {}
 cache.bases ??= {}
+cache.rates ??= {}
 
 const bucket = (job: Job) => (job.kind === 'combo' ? cache.prices : cache.bases)
 const fresh = (job: Job): boolean => {
@@ -180,6 +162,26 @@ console.log(
   `[price] ${pending.length} stale or missing, ${jobs.length - pending.length} cached ` +
     `(${ttlMs / 3600_000}h TTL) · requests are ${credentialMode}`,
 )
+
+// Refreshed every run regardless of the price TTL — it's one request, and rates move
+// faster than listings do. A poe.ninja outage must not take a 55-minute pricing run
+// with it, so a failure keeps whatever rates the file already had.
+try {
+  const rates = await fetchCurrencyRates(league)
+  cache.rates = rates
+  cache.ratesAt = new Date().toISOString()
+  console.log(
+    `[price] currency rates: ${Object.keys(rates).length} from poe.ninja ` +
+      `(1 divine = ${rates.divine ?? '?'} chaos)`,
+  )
+} catch (err) {
+  const known = Object.keys(cache.rates ?? {}).length
+  console.warn(
+    `[price] currency rates FAILED: ${err} — keeping ${known} rate(s) from ` +
+      `${cache.ratesAt ?? 'a previous run'}`,
+  )
+}
+
 if (pending.length === 0) {
   save()
   console.log('[price] nothing to do.')

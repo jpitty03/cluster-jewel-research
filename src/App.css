@@ -424,6 +424,15 @@ td a {
   gap: 5px;
 }
 
+/* Cheapest / median completed price. Both are quoted in one unit so the sorted
+   column reads monotonically, hence right-aligned like the other numbers. */
+.price-col {
+  text-align: right;
+  color: var(--text-h);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
 .hc-label {
   color: var(--text-dim);
   font-size: 11.5px;
@@ -497,6 +506,13 @@ td a {
   .hc-combo {
     color: var(--accent-2);
     margin-top: 3px;
+  }
+
+  /* Why this combo is the one being quoted, on the group row's price cells. */
+  .hc-note {
+    font-size: 11.5px;
+    font-style: italic;
+    opacity: 0.85;
   }
 }
 

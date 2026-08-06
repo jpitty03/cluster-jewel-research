@@ -19,6 +19,17 @@ import {
   type ComboCount,
   type PassiveRange,
 } from './tradeQuery'
+import {
+  chaosValue,
+  formatChaos,
+  money,
+  num,
+  shortMoney,
+  weightedMedian,
+  type Money,
+  type PriceEntry,
+  type PriceFile,
+} from './priceModel'
 
 // In dev the Vite plugin serves a live scraping API; a production build is a static
 // site with no backend, so it reads the committed per-league snapshots bundled here.
@@ -52,30 +63,8 @@ const secsUntil = (epochMs: number) => Math.max(0, Math.round((epochMs - Date.no
 // --- trade prices -----------------------------------------------------------
 // Cached by scripts/price.ts at publish time, one snapshot per league, bundled the
 // same way as the cluster data above. Amounts stay in the currency each listing was
-// posted in — the trade API sorts across currencies, so no conversion is needed.
-
-interface Money {
-  amount: number
-  currency: string
-}
-
-interface PriceEntry {
-  low: Money | null
-  mid: Money | null
-  listed: number
-  sampled: number
-  passivesMin: number | null
-  passivesMax: number | null
-  at: string
-}
-
-interface PriceFile {
-  version: number
-  league: string
-  fetchedAt: string
-  prices: Record<string, PriceEntry>
-  bases: Record<string, PriceEntry>
-}
+// posted in; the file's `rates` block converts them to chaos where prices have to be
+// compared to each other (the sortable columns and the per-group median).
 
 const priceSnapshots = import.meta.glob('./data/*/trade-prices.json', {
   eager: true,
@@ -83,19 +72,6 @@ const priceSnapshots = import.meta.glob('./data/*/trade-prices.json', {
 }) as Record<string, PriceFile>
 const pricesByLeague: Record<string, PriceFile> = {}
 for (const p of Object.values(priceSnapshots)) pricesByLeague[p.league] = p
-
-// Only the currencies that actually carry cluster jewel prices get an abbreviation;
-// anything else prints as the trade site names it rather than guessing.
-const SHORT_CURRENCY: Record<string, string> = {
-  chaos: 'c',
-  divine: 'div',
-  exalted: 'ex',
-  mirror: 'mir',
-}
-const num = (n: number) => (Number.isInteger(n) ? String(n) : n.toFixed(2).replace(/0+$/, ''))
-const money = (p: Money | null | undefined) => (p ? `${num(p.amount)} ${p.currency}` : '—')
-const shortMoney = (p: Money | null | undefined) =>
-  p ? `${num(p.amount)}${SHORT_CURRENCY[p.currency] ?? ` ${p.currency}`}` : '—'
 
 const daysAgo = (iso: string) => {
   const d = Math.round((Date.now() - Date.parse(iso)) / 86_400_000)
@@ -113,6 +89,69 @@ function groupBasePassives(file: PriceFile, g: Group) {
       return { passives, cc }
   }
   return null
+}
+
+// One priced combo, resolved to chaos so it can be compared with the others.
+interface Quote {
+  cc: ComboCount
+  entry: PriceEntry
+  money: Money
+  chaos: number
+}
+
+interface GroupPrice {
+  cheapest: Quote | null
+  median: Quote | null
+  /** Chaos value of the group's white base, for sorting the Base Price column. */
+  base: number | null
+}
+
+const NO_PRICE: GroupPrice = { cheapest: null, median: null, base: null }
+
+// What the collapsed group row summarizes: the cheapest combo anyone in this group
+// runs, and the price of a *typical purchase* within it.
+//
+// Only the top PRICED_TOP combos are ever priced, so the median is over those — and
+// weighted by usage, so a combo 142 characters run outweighs one nine of them run.
+// Combos priced in a currency missing from the rate table are skipped rather than
+// counted at zero.
+function groupPrices(file: PriceFile | undefined, g: Group): GroupPrice {
+  if (!file) return NO_PRICE
+  const rates = file.rates
+
+  const lows: Quote[] = []
+  const mids: (Quote & { weight: number })[] = []
+  for (const cc of g.comboCounts.slice(0, PRICED_TOP)) {
+    const entry = file.prices[priceKey(g.base, g.clusterType, cc.combo)]
+    if (!entry || entry.listed === 0) continue
+
+    const low = chaosValue(rates, entry.low)
+    if (low != null && entry.low) lows.push({ cc, entry, money: entry.low, chaos: low })
+    const mid = chaosValue(rates, entry.mid)
+    if (mid != null && entry.mid)
+      mids.push({ cc, entry, money: entry.mid, chaos: mid, weight: cc.count })
+  }
+
+  const pick = groupBasePassives(file, g)
+  let base: number | null = null
+  if (pick) {
+    // ilvl 83 is what the column leads with; 84 only stands in when 83 has nothing.
+    for (const ilvl of BASE_ILVLS) {
+      const b = file.bases[baseKey(g.base, g.clusterType, pick.passives, ilvl)]
+      if (!b || b.listed === 0) continue
+      const chaos = chaosValue(rates, b.low)
+      if (chaos != null) {
+        base = chaos
+        break
+      }
+    }
+  }
+
+  return {
+    cheapest: lows.reduce<Quote | null>((min, q) => (!min || q.chaos < min.chaos ? q : min), null),
+    median: weightedMedian(mids),
+    base,
+  }
 }
 
 // --- hover card -------------------------------------------------------------
@@ -188,6 +227,7 @@ function PriceCard({
   clusterType,
   passives,
   comboLabel,
+  note,
   entry,
 }: {
   league: string
@@ -195,6 +235,7 @@ function PriceCard({
   clusterType: string
   passives: PassiveRange
   comboLabel: string | null
+  note?: string
   entry: PriceEntry | null
 }) {
   const file = pricesByLeague[league]
@@ -211,6 +252,7 @@ function PriceCard({
         <strong>{base}</strong>
         <span>{clusterType}</span>
         {comboLabel && <span className="hc-combo">{comboLabel}</span>}
+        {note && <span className="hc-note">{note}</span>}
       </div>
 
       <div className="hc-section">
@@ -352,6 +394,47 @@ function GroupBasePrice({ league, g }: { league: string; g: Group }) {
   )
 }
 
+// Cheapest / median cell on the collapsed group row. Both are quoted in one unit
+// (divine once they're worth one, chaos below) rather than the currency the listing
+// was posted in: the columns sort, and a "150c" sitting above a "1div" reads as
+// broken even when the order is right. The native amount stays in the tooltip and
+// the card, which is what you'd actually pay.
+function GroupPriceCell({
+  league,
+  g,
+  quote,
+  label,
+}: {
+  league: string
+  g: Group
+  quote: Quote | null
+  label: string
+}) {
+  const rates = pricesByLeague[league]?.rates
+  if (!quote) return <span className="dim">—</span>
+  const { cc } = quote
+
+  return (
+    <HoverCard
+      card={
+        <PriceCard
+          league={league}
+          base={g.base}
+          clusterType={g.clusterType}
+          passives={pinnedPassives(g.base, cc.notables, cc.passivesMin, cc.passivesMax)}
+          comboLabel={cc.combo}
+          note={`${label} of the group's priced combos · ${cc.count} characters`}
+          entry={quote.entry}
+        />
+      }
+    >
+      <span title={`${money(quote.money)} · ${num(quote.chaos)} chaos · ${cc.combo}`}>
+        {formatChaos(quote.chaos, rates)}
+      </span>
+    </HoverCard>
+  )
+}
+
 // poedb.tw craft data: per (base, cluster type), each notable's weight / ilvl /
 // prefix-suffix. Built once at module load into a lookup keyed by `${base}||${type}`,
 // then by notable name. `pct` = share of the pool's total weight (roll odds).
@@ -434,6 +517,35 @@ function ModMetaTag({
   )
 }
 
+type SortKey = 'base' | 'clusterType' | 'count' | 'fractured' | 'basePrice' | 'cheapest' | 'median'
+
+// Columns that open descending when you first click them — for a count or a price,
+// "show me the biggest" is what you meant.
+const DESC_FIRST: SortKey[] = ['count', 'fractured', 'basePrice', 'cheapest', 'median']
+
+interface Row extends GroupPrice {
+  g: Group
+}
+
+const sortValue = (r: Row, key: SortKey): string | number | null => {
+  switch (key) {
+    case 'base':
+      return r.g.base
+    case 'clusterType':
+      return r.g.clusterType
+    case 'count':
+      return r.g.jewels.length
+    case 'fractured':
+      return r.g.fracturedCount
+    case 'basePrice':
+      return r.base
+    case 'cheapest':
+      return r.cheapest?.chaos ?? null
+    case 'median':
+      return r.median?.chaos ?? null
+  }
+}
+
 function ClusterJewels() {
   const [data, setData] = useState<ClusterData | null>(null)
   const [error, setError] = useState<string | null>(null)
@@ -446,6 +558,8 @@ function ClusterJewels() {
   const [baseFilter, setBaseFilter] = useState('All')
   const [raresOnly, setRaresOnly] = useState(true)
   const [expanded, setExpanded] = useState<string | null>(null)
+  const [sortKey, setSortKey] = useState<SortKey>('count')
+  const [sortDesc, setSortDesc] = useState(true)
   const [, setTick] = useState(0)
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null)
 
@@ -554,10 +668,43 @@ function ClusterJewels() {
   }, [])
 
   // Shared with scripts/price.ts so the combos priced are the ones rendered here.
+  // Sorting stays out of groupJewels: the script depends on its count ordering to
+  // decide which combos are worth a trade request.
   const groups = useMemo(
     () => (data ? groupJewels(data.jewels, { raresOnly, baseFilter, query }) : []),
     [data, query, baseFilter, raresOnly],
   )
+
+  const rows = useMemo<Row[]>(
+    () => groups.map((g) => ({ g, ...groupPrices(pricesByLeague[league], g) })),
+    [groups, league],
+  )
+
+  const sortedRows = useMemo(() => {
+    const dir = sortDesc ? -1 : 1
+    // Count descending is the tiebreak everywhere, so equal prices keep the
+    // popularity order the table is really about.
+    const popularity = (a: Row, b: Row) => b.g.jewels.length - a.g.jewels.length
+
+    return [...rows].sort((a, b) => {
+      const av = sortValue(a, sortKey)
+      const bv = sortValue(b, sortKey)
+      // Unpriced groups sink to the bottom either way — sorting a price column
+      // ascending shouldn't open with a wall of em dashes.
+      if (av == null || bv == null) return av === bv ? popularity(a, b) : av == null ? 1 : -1
+      const cmp = typeof av === 'string' ? av.localeCompare(bv as string) : av - (bv as number)
+      return cmp !== 0 ? dir * cmp : popularity(a, b)
+    })
+  }, [rows, sortKey, sortDesc])
+
+  const setSort = (key: SortKey) => {
+    if (key === sortKey) setSortDesc((d) => !d)
+    else {
+      setSortKey(key)
+      setSortDesc(DESC_FIRST.includes(key))
+    }
+  }
+  const arrow = (key: SortKey) => (sortKey === key ? (sortDesc ? ' ▾' : ' ▴') : '')
 
   const totalShown = groups.reduce((s, g) => s + g.jewels.length, 0)
 
@@ -702,15 +849,36 @@ function ClusterJewels() {
             <table>
               <thead>
                 <tr>
-                  <th>Base</th>
-                  <th>Cluster Type</th>
-                  <th className="num">Count</th>
-                  <th className="num">Fractured</th>
-                  <th>Base Price</th>
+                  <th onClick={() => setSort('base')}>Base{arrow('base')}</th>
+                  <th onClick={() => setSort('clusterType')}>Cluster Type{arrow('clusterType')}</th>
+                  <th onClick={() => setSort('count')} className="num">
+                    Count{arrow('count')}
+                  </th>
+                  <th onClick={() => setSort('fractured')} className="num">
+                    Fractured{arrow('fractured')}
+                  </th>
+                  <th onClick={() => setSort('basePrice')}>Base Price{arrow('basePrice')}</th>
+                  <th
+                    onClick={() => setSort('cheapest')}
+                    className="num"
+                    title="Cheapest listing across this group's priced combos"
+                  >
+                    Cheapest{arrow('cheapest')}
+                  </th>
+                  <th
+                    onClick={() => setSort('median')}
+                    className="num"
+                    title={
+                      "Median completed price across this group's priced combos, weighted by " +
+                      'how many characters run each'
+                    }
+                  >
+                    Median{arrow('median')}
+                  </th>
                 </tr>
               </thead>
               <tbody>
-                {groups.map((g) => (
+                {sortedRows.map(({ g, cheapest, median }) => (
                   <Fragment key={g.key}>
                     <tr
                       className="clickable"
@@ -723,10 +891,16 @@ function ClusterJewels() {
                       <td className="base-price-col">
                         <GroupBasePrice league={league} g={g} />
                       </td>
+                      <td className="price-col">
+                        <GroupPriceCell league={league} g={g} quote={cheapest} label="cheapest" />
+                      </td>
+                      <td className="price-col">
+                        <GroupPriceCell league={league} g={g} quote={median} label="median" />
+                      </td>
                     </tr>
                     {expanded === g.key && (
                       <tr className="detail-row">
-                        <td colSpan={5}>
+                        <td colSpan={7}>
                           <div className="detail">
                             <div>
                               <h3>Notable combinations</h3>
