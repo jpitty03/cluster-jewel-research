@@ -17,6 +17,10 @@ dist-ssr
 # Leading slash anchors this to the repo root so it does NOT match src/data/.
 /data/
 
+# Optional trade-site credentials for `npm run price` (POESESSID / CF_CLEARANCE).
+.env
+.env.local
+
 # Editor directories and files
 .vscode/*
 !.vscode/extensions.json

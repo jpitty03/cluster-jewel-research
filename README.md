@@ -28,8 +28,43 @@ Open the app, pick a league, and:
 | `npm run dev` | Dev server with live scraping API |
 | `npm run scrape` | Headless scrape (`npx tsx scripts/scrape.ts [--league=<Name>] [--full]`) — writes snapshots to `src/data/<league-slug>/` for the static build. `--full` clears the league store and refetches everything. |
 | `npm run scrape:poedb` | One-time scrape of poedb.tw cluster enchantment pools (mod weights, ilvl, prefix/suffix) → `src/data/poedb-cluster-mods.json` |
-| `npm run publish` | `scrape` + commit/push `src/data`, which triggers the GitHub Actions rebuild/redeploy of the static site |
+| `npm run price` | Prices the most-used notable combos on pathofexile.com/trade (`npx tsx scripts/price.ts [--league=<Name>] [--top=N] [--ttl=<hours>] [--max=N] [--full]`) → `src/data/<league-slug>/trade-prices.json` |
+| `npm run publish` | `scrape` + `price` + commit/push `src/data`, which triggers the GitHub Actions rebuild/redeploy of the static site |
 | `npm run build` | Type-check + production build (bundles the committed data snapshots; no server needed) |
+
+### Trade prices
+
+`npm run price` runs the same `pathofexile.com/trade` search the UI links to for each of the
+top **5** combos per base + cluster-type group, plus the uncrafted white base behind each of them at
+**ilvl 83 and ilvl 84** (84 is where the last notable tier unlocks, so it's priced separately from
+the cheaper 83), and caches the cheapest and median of the ten cheapest listings.
+
+In the UI the group row's **Base Price** column shows `i83` / `i84` for the passive roll its
+most-used combo targets, and each priced combo gets its cheapest listing next to it. Hovering either
+opens a card with both base prices (linked to the trade search), the completed cost, and a crafting
+steps section.
+
+The query and the grouping are shared between the UI and the script (`src/tradeQuery.ts`,
+`src/clusterAggregate.ts`) so a displayed price always belongs to the search its link opens. Every
+search is uncorrupted, and `Adds # Passive Skills` is pinned by base size rather than taken from the
+snapshot: Large → 12 with an increased-effect mod else 8 for 3 notables; Medium → 4–5; Small → 3
+with a 25–35% effect mod. Amounts stay in the currency each listing was posted in — the trade API
+sorts across currencies, so no conversion is needed.
+
+GGG rate-limits these endpoints **per IP** (`X-Rate-Limit-Rules: Ip` — there is no account rule, so
+extra logins cannot raise the ceiling). Searches are capped at 30 per 5 minutes with a 1800s
+penalty, so a cold run — 318 queries for Allflame — takes **~55 minutes**. The client paces itself
+from the `X-Rate-Limit-*-State` headers, which count your own trade-site browsing too, and rewrites
+the cache after every query — Ctrl-C loses nothing. Results are reused for 24h (`--ttl`), so a
+repeat publish issues no requests.
+
+The endpoints work anonymously. If that ever changes, an optional gitignored `.env` is read at
+startup:
+
+```
+POESESSID=...
+CF_CLEARANCE=...
+```
 
 ### New league
 
@@ -53,14 +88,22 @@ server/clusterjewels.ts   Crawl engine: rate-limited character fetching (ensureC
                           cluster jewel extraction/parsing, persistent per-league store,
                           resumable start/stop crawl (startCrawl / stopCrawl / crawlToCompletion),
                           progress reporting (getProgress)
+server/tradeprices.ts     pathofexile.com/trade client: search/fetch with per-policy rate limiting
+                          paced off the response headers (used only by scripts/price.ts)
 src/App.tsx               App shell: league picker, tabs, streamer build table
 src/ClusterJewels.tsx     Cluster jewel aggregation UI (usage counts, notables, enchant metadata)
+src/clusterAggregate.ts   Grouping of raw jewels into base+type groups and notable combos —
+                          shared by the UI and the pricing script
+src/tradeQuery.ts         Trade search query building (stat ids, passive-count pinning,
+                          uncorrupted filter) and the price cache keys — shared likewise
 scripts/scrape.ts         Headless scrape pipeline for the publish flow
 scripts/scrape-poedb.mjs  poedb.tw enchantment pool scraper
+scripts/price.ts          Publish-time trade pricing → src/data/<slug>/trade-prices.json
 scripts/publish.mjs       Commits scraped data + pushes to trigger deploy
 data/<league-slug>/       Working store: characters.csv, cluster-characters.csv,
                           cluster-jewels.json, character-jewels.json
-src/data/<league-slug>/   Committed snapshots bundled into the production build
+src/data/<league-slug>/   Committed snapshots bundled into the production build:
+                          cluster-jewels.json, trade-prices.json
 ```
 
 ## How it works

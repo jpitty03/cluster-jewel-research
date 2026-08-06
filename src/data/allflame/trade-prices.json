@@ -1,0 +1,162 @@
+{
+ "version": 2,
+ "league": "Allflame",
+ "fetchedAt": "2026-08-06T18:26:54.098Z",
+ "prices": {
+  "Small Cluster Jewel||6% increased Mana Reservation Efficiency of Skills||35% increased Small Passive Effect": {
+   "low": {
+    "type": "~b/o",
+    "amount": 5,
+    "currency": "divine"
+   },
+   "mid": {
+    "type": "~b/o",
+    "amount": 5,
+    "currency": "divine"
+   },
+   "listed": 1239,
+   "sampled": 10,
+   "passivesMin": 3,
+   "passivesMax": 3,
+   "at": "2026-08-06T18:25:46.921Z"
+  },
+  "Medium Cluster Jewel||10% increased Damage while affected by a Herald||Empowered Envoy + Endbringer": {
+   "low": {
+    "type": "~b/o",
+    "amount": 120,
+    "currency": "chaos"
+   },
+   "mid": {
+    "type": "~b/o",
+    "amount": 140,
+    "currency": "chaos"
+   },
+   "listed": 2342,
+   "sampled": 10,
+   "passivesMin": 4,
+   "passivesMax": 5,
+   "at": "2026-08-06T18:25:47.897Z"
+  },
+  "Medium Cluster Jewel||12% increased Chaos Damage over Time||Eldritch Inspiration + Low Tolerance": {
+   "low": {
+    "type": "~b/o",
+    "amount": 4,
+    "currency": "divine"
+   },
+   "mid": {
+    "type": "~b/o",
+    "amount": 4,
+    "currency": "divine"
+   },
+   "listed": 206,
+   "sampled": 10,
+   "passivesMin": 4,
+   "passivesMax": 5,
+   "at": "2026-08-06T18:25:57.578Z"
+  }
+ },
+ "bases": {
+  "Small Cluster Jewel||6% increased Mana Reservation Efficiency of Skills||3-3||i83": {
+   "low": {
+    "type": "~b/o",
+    "amount": 12,
+    "currency": "chaos"
+   },
+   "mid": {
+    "type": "~b/o",
+    "amount": 14,
+    "currency": "chaos"
+   },
+   "listed": 300,
+   "sampled": 10,
+   "passivesMin": 3,
+   "passivesMax": 3,
+   "at": "2026-08-06T18:25:47.246Z"
+  },
+  "Small Cluster Jewel||6% increased Mana Reservation Efficiency of Skills||3-3||i84": {
+   "low": {
+    "type": "~b/o",
+    "amount": 6,
+    "currency": "divine"
+   },
+   "mid": {
+    "type": "~b/o",
+    "amount": 1200,
+    "currency": "chaos"
+   },
+   "listed": 25,
+   "sampled": 10,
+   "passivesMin": 3,
+   "passivesMax": 3,
+   "at": "2026-08-06T18:25:47.576Z"
+  },
+  "Medium Cluster Jewel||10% increased Damage while affected by a Herald||4-5||i83": {
+   "low": {
+    "type": "~b/o",
+    "amount": 5,
+    "currency": "chaos"
+   },
+   "mid": {
+    "type": "~b/o",
+    "amount": 6,
+    "currency": "chaos"
+   },
+   "listed": 508,
+   "sampled": 10,
+   "passivesMin": 4,
+   "passivesMax": 5,
+   "at": "2026-08-06T18:25:56.838Z"
+  },
+  "Medium Cluster Jewel||10% increased Damage while affected by a Herald||4-5||i84": {
+   "low": {
+    "type": "~b/o",
+    "amount": 18,
+    "currency": "chaos"
+   },
+   "mid": {
+    "type": "~b/o",
+    "amount": 29,
+    "currency": "chaos"
+   },
+   "listed": 61,
+   "sampled": 10,
+   "passivesMin": 4,
+   "passivesMax": 5,
+   "at": "2026-08-06T18:25:57.266Z"
+  },
+  "Medium Cluster Jewel||12% increased Chaos Damage over Time||4-5||i83": {
+   "low": {
+    "type": "~b/o",
+    "amount": 10,
+    "currency": "chaos"
+   },
+   "mid": {
+    "type": "~b/o",
+    "amount": 10,
+    "currency": "chaos"
+   },
+   "listed": 389,
+   "sampled": 10,
+   "passivesMin": 4,
+   "passivesMax": 5,
+   "at": "2026-08-06T18:25:57.946Z"
+  },
+  "Medium Cluster Jewel||12% increased Chaos Damage over Time||4-5||i84": {
+   "low": {
+    "type": "~b/o",
+    "amount": 9,
+    "currency": "chaos"
+   },
+   "mid": {
+    "type": "~b/o",
+    "amount": 10,
+    "currency": "chaos"
+   },
+   "listed": 54,
+   "sampled": 10,
+   "passivesMin": 4,
+   "passivesMax": 5,
+   "at": "2026-08-06T18:26:06.861Z"
+  }
+ }
+}

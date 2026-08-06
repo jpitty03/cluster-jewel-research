@@ -14,7 +14,8 @@
     "scrape": "tsx scripts/scrape.ts",
     "scrape:poedb": "node scripts/scrape-poedb.mjs",
     "build:trade-stats": "node scripts/build-trade-stats.mjs",
-    "publish": "npm run scrape && node scripts/publish.mjs"
+    "price": "tsx scripts/price.ts",
+    "publish": "npm run scrape && npm run price && node scripts/publish.mjs"
   },
   "dependencies": {
     "react": "^19.2.7",
