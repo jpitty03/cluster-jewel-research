@@ -1,7 +1,7 @@
 // One-time scrape of poedb.tw cluster jewel mod pools. Two independent pools per base:
 //
-//   bases[base]     — the ENCHANTMENT pool (notables). Server-rendered weight tables:
-//                     per cluster type, each notable's weight, required ilvl, Prefix/Suffix.
+//   bases[base]     — the ENCHANTMENT pool (notables). Server-rendered weight tables: per
+//                     cluster type, each notable's weight, required ilvl, Prefix/Suffix, tags.
 //   baseMods[base]  — the EXPLICIT pool (regular prefixes/suffixes). The Modifiers Calc tab
 //                     is hydrated client-side from a `new ModsView({...})` JSON blob, so we
 //                     lift that blob out of the HTML and read its `normal` array. Only
@@ -32,7 +32,7 @@ const HORTICRAFTING_PAGE = 'Horticrafting'
 
 // Hand-written, not scraped: what each craft `action` actually does to an item. poedb only
 // prints the bench's one-line blurb, which leaves out the mechanics that matter for odds.
-// Keyed by lowercased `action`; only the actions with non-obvious behaviour are described.
+// Keyed by the craft's `action` field; only the actions with non-obvious behaviour are described.
 const ACTION_TYPES = {
   Reforge:
     'Rerolls a rare item that guarantees a modifier with the respective modTag. 50% chance to roll 3-6 modifiers.',
@@ -74,13 +74,18 @@ function parseWeightTable(tableHtml) {
   for (const row of tableHtml.matchAll(/<tr>(.*?)<\/tr>/gs)) {
     const cells = [...row[1].matchAll(/<td[^>]*>(.*?)<\/td>/gs)].map((m) => m[1])
     if (cells.length < 4) continue
+    // The Passive cell carries the notable's tag badges in a right-floated block ahead of
+    // the name link: <span class="badge … " data-tag="physical">Physical</span> …
+    const tags = [...cells[0].matchAll(/data-tag="([^"]+)"/g)].map((m) => m[1])
     const nameMatch = cells[0].match(/<a[^>]*>([^<]+)<\/a>/)
-    const name = nameMatch ? nameMatch[1].trim() : stripTags(cells[0]).trim()
+    const name = nameMatch
+      ? nameMatch[1].trim()
+      : stripTags(cells[0].replace(/<span class='float-end'>.*?<\/span>\s*<\/span>/s, '')).trim()
     const weight = Number(stripTags(cells[1]))
     const ilvl = Number(stripTags(cells[2]))
     const genType = stripTags(cells[3]).trim()
     if (!name || !Number.isFinite(weight)) continue
-    notables.push({ name, weight, ilvl, genType })
+    notables.push({ name, weight, ilvl, genType, tags })
   }
   return notables
 }
