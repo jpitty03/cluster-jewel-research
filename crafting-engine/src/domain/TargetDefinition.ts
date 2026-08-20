@@ -1,40 +1,42 @@
+import type { Mod, RolledMod } from './Mod.ts';
 import type { ItemState } from './ItemState.ts';
 
 export interface ModRequirement {
-  name?: string;
   modId?: string;
   modGroup?: string;
-  tier?: number;
-  maxTierNumber?: number; // e.g. 1 means T1 only; 2 means T1 or T2
+  name?: string;
+  minTierNumber?: number; // 1 = T1, 2 = T2, etc.
+  maxTierNumber?: number; // e.g. 1 means must be T1
 }
 
-export interface NumericRollRequirement {
-  name?: string;
-  modGroup?: string;
+export interface RollRequirement {
   modId?: string;
+  modGroup?: string;
+  name?: string;
   statIndex?: number;
-  minValue: number;
+  minValue?: number;
+  maxValue?: number;
 }
 
 export interface TargetOutcomeBranch {
   name: string;
   requiredMods: ModRequirement[];
   saleValueChaos?: number;
+  weight?: number;
 }
 
 export interface TargetDefinition {
   requiredMods: ModRequirement[];
-  acceptableAnyOf?: ModRequirement[][];
   outcomeBranches?: TargetOutcomeBranch[];
-  finalRollRequirements?: NumericRollRequirement[];
-  minimumSaleValue?: number;
+  acceptableAnyOf?: ModRequirement[][];
+  finalRollRequirements?: RollRequirement[];
 }
 
-export function matchesModRequirement(mod: { name: string; modId: string; modGroup: string; tier: number }, req: ModRequirement): boolean {
+export function matchesModRequirement(mod: RolledMod | Mod, req: ModRequirement): boolean {
   if (req.modId && mod.modId !== req.modId) return false;
-  if (req.name && mod.name !== req.name) return false;
   if (req.modGroup && mod.modGroup !== req.modGroup) return false;
-  if (req.tier !== undefined && mod.tier !== req.tier) return false;
+  if (req.name && mod.name !== req.name) return false;
+  if (req.minTierNumber !== undefined && mod.tier < req.minTierNumber) return false;
   if (req.maxTierNumber !== undefined && mod.tier > req.maxTierNumber) return false;
   return true;
 }
@@ -42,55 +44,42 @@ export function matchesModRequirement(mod: { name: string; modId: string; modGro
 export function satisfiesTarget(state: ItemState, target: TargetDefinition): boolean {
   const affixes = [...state.prefixes, ...state.suffixes];
 
-  // 1. All requiredMods must be present
+  // 1. Check all base required mods
   for (const req of target.requiredMods) {
     const found = affixes.some((m) => matchesModRequirement(m, req));
     if (!found) return false;
   }
 
-  // 2. If acceptableAnyOf is present, at least one group of requirements must be satisfied
-  if (target.acceptableAnyOf && target.acceptableAnyOf.length > 0) {
-    const anySatisfied = target.acceptableAnyOf.some((optionGroup) =>
-      optionGroup.every((req) => affixes.some((m) => matchesModRequirement(m, req)))
-    );
-    if (!anySatisfied) return false;
-  }
-
-  // 2b. If outcomeBranches is present, at least one branch must be satisfied
-  if (target.outcomeBranches && target.outcomeBranches.length > 0) {
-    const anyBranchSatisfied = target.outcomeBranches.some((branch) =>
-      branch.requiredMods.every((req) => affixes.some((m) => matchesModRequirement(m, req)))
-    );
-    if (!anyBranchSatisfied) return false;
-  }
-
-  // 3. Numeric roll requirements check
-  if (target.finalRollRequirements && target.finalRollRequirements.length > 0) {
+  // 2. Check final roll requirements if specified
+  if (target.finalRollRequirements) {
     for (const rollReq of target.finalRollRequirements) {
-      if (!rollReq.name && !rollReq.modGroup && !rollReq.modId) {
-        return false; // Requirement must specify a selector
-      }
-
-      const matchingAffixes = affixes.filter((m) => {
-        if (rollReq.modId && m.modId !== rollReq.modId) return false;
-        if (rollReq.name && m.name !== rollReq.name) return false;
-        if (rollReq.modGroup && m.modGroup !== rollReq.modGroup) return false;
-        return true;
-      });
-
-      if (matchingAffixes.length === 0) {
-        return false;
-      }
-
-      const anySatisfiesRoll = matchingAffixes.some((m) => {
-        const val = m.currentRoll?.[rollReq.statIndex ?? 0];
-        return val !== undefined && val >= rollReq.minValue;
-      });
-
-      if (!anySatisfiesRoll) {
+      const match = affixes.find((m) =>
+        (rollReq.modGroup ? m.modGroup === rollReq.modGroup : true) &&
+        (rollReq.modId ? m.modId === rollReq.modId : true) &&
+        (rollReq.name ? m.name === rollReq.name : true)
+      );
+      if (!match) return false;
+      const currentVal = match.currentRoll?.[rollReq.statIndex ?? 0];
+      if (currentVal !== undefined && rollReq.minValue !== undefined && currentVal < rollReq.minValue) {
         return false;
       }
     }
+  }
+
+  // 3. If outcome branches exist, check if at least one branch is satisfied
+  if (target.outcomeBranches && target.outcomeBranches.length > 0) {
+    const hasBranchMatch = target.outcomeBranches.some((branch) =>
+      branch.requiredMods.every((req) => affixes.some((m) => matchesModRequirement(m, req)))
+    );
+    if (!hasBranchMatch) return false;
+  }
+
+  // 4. If acceptableAnyOf exists, check if at least one branch is satisfied
+  if (target.acceptableAnyOf && target.acceptableAnyOf.length > 0) {
+    const hasAnyMatch = target.acceptableAnyOf.some((branch) =>
+      branch.every((req) => affixes.some((m) => matchesModRequirement(m, req)))
+    );
+    if (!hasAnyMatch) return false;
   }
 
   return true;
@@ -104,6 +93,30 @@ export function getMatchingOutcomeBranch(
     return undefined;
   }
   const affixes = [...state.prefixes, ...state.suffixes];
+
+  // 1. All base requiredMods must be present first
+  for (const req of target.requiredMods) {
+    const found = affixes.some((m) => matchesModRequirement(m, req));
+    if (!found) return undefined;
+  }
+
+  // 2. Check final roll requirements if present
+  if (target.finalRollRequirements) {
+    for (const rollReq of target.finalRollRequirements) {
+      const match = affixes.find((m) =>
+        (rollReq.modGroup ? m.modGroup === rollReq.modGroup : true) &&
+        (rollReq.modId ? m.modId === rollReq.modId : true) &&
+        (rollReq.name ? m.name === rollReq.name : true)
+      );
+      if (!match) return undefined;
+      const currentVal = match.currentRoll?.[rollReq.statIndex ?? 0];
+      if (currentVal !== undefined && rollReq.minValue !== undefined && currentVal < rollReq.minValue) {
+        return undefined;
+      }
+    }
+  }
+
+  // 3. Find matching branch
   return target.outcomeBranches.find((branch) =>
     branch.requiredMods.every((req) => affixes.some((m) => matchesModRequirement(m, req)))
   );

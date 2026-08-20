@@ -1,18 +1,17 @@
-import type { CraftAction, CraftOutcome, CurrencyCost, SolverContext } from '../domain/CraftAction.ts';
+import type { CraftAction, SolverContext, CraftOutcome, CurrencyCost } from '../domain/CraftAction.ts';
 import type { ItemState } from '../domain/ItemState.ts';
-import { cloneItemState, getAllAffixes } from '../domain/ItemState.ts';
 import type { TargetDefinition } from '../domain/TargetDefinition.ts';
+import { cloneItemState, getAllAffixes } from '../domain/ItemState.ts';
 
 export class DivineAction implements CraftAction {
-  readonly id = 'divine';
-  readonly name = 'Divine Orb';
+  id = 'divine_orb';
+  name = 'Divine Orb';
 
-  isAvailable(state: ItemState, _context: SolverContext): boolean {
-    const affixes = getAllAffixes(state);
-    return affixes.some((m) => m.statValues.some((s) => s.min < s.max));
+  isAvailable(state: ItemState): boolean {
+    return state.rarity === 'rare';
   }
 
-  cost(_state: ItemState, _context: SolverContext): CurrencyCost {
+  cost(): CurrencyCost {
     return { divine: 1 };
   }
 
@@ -23,12 +22,11 @@ export class DivineAction implements CraftAction {
         {
           probability: 1.0,
           state: cloneItemState(state),
-          description: 'Divine Orb rerolled numeric values',
+          description: 'Divine Orb rerolled explicit numeric values',
         },
       ];
     }
 
-    // Produce next state satisfying all roll requirements
     const nextState = cloneItemState(state);
     for (const rollReq of target.finalRollRequirements) {
       const match = [...nextState.prefixes, ...nextState.suffixes].find(
@@ -38,7 +36,7 @@ export class DivineAction implements CraftAction {
           (rollReq.name ? m.name === rollReq.name : true)
       );
 
-      if (match) {
+      if (match && rollReq.minValue !== undefined) {
         const statIdx = rollReq.statIndex ?? 0;
         if (!match.currentRoll) {
           match.currentRoll = match.statValues.map((s) => s.min);
@@ -73,12 +71,11 @@ export class DivineAction implements CraftAction {
           (rollReq.name ? m.name === rollReq.name : true)
       );
 
-      if (!match) continue;
+      if (!match || rollReq.minValue === undefined) continue;
 
       const statIndex = rollReq.statIndex ?? 0;
       const range = match.statValues[statIndex];
       if (!range || range.min >= range.max || range.max < rollReq.minValue) {
-        // Range does not exist, has zero variance, or cannot achieve target roll
         continue;
       }
 
@@ -87,7 +84,6 @@ export class DivineAction implements CraftAction {
       const acceptableValuesCount = Math.max(0, range.max - rollReq.minValue + 1);
 
       if (currentVal !== undefined && currentVal >= rollReq.minValue) {
-        // Current value already satisfies this requirement
         continue;
       }
 
@@ -100,11 +96,6 @@ export class DivineAction implements CraftAction {
       return 0;
     }
 
-    if (jointSuccessProbability <= 0) {
-      return 0;
-    }
-
-    // Geometric distribution expectation = 1 / p
-    return 1 / jointSuccessProbability;
+    return jointSuccessProbability > 0 ? 1 / jointSuccessProbability : Infinity;
   }
 }

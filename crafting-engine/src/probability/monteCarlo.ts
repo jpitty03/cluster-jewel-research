@@ -8,6 +8,42 @@ import { DivineAction } from '../actions/divine.ts';
 import { getRemovableAffixes } from '../domain/ItemState.ts';
 import { getEligibleMods, calculateTotalWeight } from '../rules/modEligibility.ts';
 import { canAcceptPrefix, canAcceptSuffix } from '../rules/affixRules.ts';
+import { CraftingPolicyEngine } from '../solver/policyEngine.ts';
+import { getDefenceModsForCluster } from '../rules/clusterPoolHelpers.ts';
+
+export interface HarvestCensusData {
+  totalHarvests: number;
+  t1ESSuccesses: number;
+  t1ESSuccessRate: number;
+  t1ESOnlyPct: number;
+  t1ESPlus35EffPct: number;
+  t1ESPlusAttributesPct: number;
+  t1ESPlusAttackSpeedPct: number;
+  t1ESPlusAllResPct: number;
+  t1ESPlus35AndPremiumPct: number;
+  t1ESPlusJunkOnlyPct: number;
+}
+
+export interface TraceStepLog {
+  step: number;
+  actionTaken: string;
+  details: string;
+  costChaos: number;
+  resultStatePrefixes: string[];
+  resultStateSuffixes: string[];
+}
+
+export interface SampleCraftTrace {
+  trialNumber: number;
+  stepCount: number;
+  finalPrefixes: string[];
+  finalSuffixes: string[];
+  harvestCount: number;
+  annulCount: number;
+  exaltCount: number;
+  totalCostChaos: number;
+  stepLogs: TraceStepLog[];
+}
 
 export interface SimulationResult {
   totalTrials: number;
@@ -21,6 +57,21 @@ export interface SimulationResult {
   p90CostChaos?: number;
   p95CostChaos?: number;
   currencyAverages?: Record<string, number>;
+  stepwiseCostAverages?: {
+    step1AcquisitionChaos: number;
+    step2HarvestChaos: number;
+    step3CleanupChaos: number;
+    step4ExaltChaos: number;
+    step5ExaltChaos: number;
+    step6DivineChaos: number;
+  };
+  policyStats: {
+    resolvedStatesCount: number;
+    missingPolicyStates: number;
+    fallbackActionsUsed: number;
+  };
+  harvestCensus?: HarvestCensusData;
+  sampleTraces?: SampleCraftTrace[];
   status: 'SUCCESS' | 'PARTIAL' | 'FAILED';
   message?: string;
 }
@@ -29,104 +80,182 @@ export class MonteCarloSimulator {
   private context: SolverContext;
   private target: TargetDefinition;
   private allflameEnabled: boolean;
+  private policyEngine: CraftingPolicyEngine;
   private divineAction = new DivineAction();
 
-  constructor(context: SolverContext, target: TargetDefinition, allflameEnabled = false) {
+  constructor(
+    context: SolverContext,
+    target: TargetDefinition,
+    allflameEnabled = false,
+    policyEngine?: CraftingPolicyEngine
+  ) {
     this.context = context;
     this.target = target;
     this.allflameEnabled = allflameEnabled;
+    this.policyEngine = policyEngine ?? new CraftingPolicyEngine(target, context.priceBook, context.pool);
   }
 
   runSimulation(
     startStateFactory: () => ItemState,
     baseCostChaos: number,
     numTrials = 2000,
-    maxStepsPerTrial = 500
+    maxStepsPerTrial = 3000,
+    traceTrialsCount = 0
   ): SimulationResult {
     const allMods = this.context.pool.getAllMods();
     const priceBook = this.context.priceBook;
 
     const completedCosts: number[] = [];
     const currencyTotals: Record<string, number> = {};
+    const stepwiseTotals = {
+      step1: 0,
+      step2: 0,
+      step3: 0,
+      step4: 0,
+      step5: 0,
+      step6: 0,
+    };
+
     let timedOutCount = 0;
     let failedCount = 0;
+    let resolvedStatesCount = 0;
+    let missingPolicyStates = 0;
+    let fallbackActionsUsed = 0;
+    const sampleTraces: SampleCraftTrace[] = [];
 
-    // Full Defence pool matching Shield Large Cluster (total weight ~4200)
-    const defenceMods = allMods.filter((m) =>
-      (m.craftTags.includes('defences') ||
-        m.tags.includes('defences') ||
-        m.modGroup.includes('ES') ||
-        m.modGroup.includes('Armour') ||
-        m.modGroup.includes('Shield') ||
-        m.modGroup.includes('Block')) &&
-      m.ilvl <= 84
-    );
+    // Detailed census tracking
+    let totalHarvests = 0;
+    let t1ESSuccesses = 0;
+    let countT1ESOnly = 0;
+    let countT1ESPlus35 = 0;
+    let countT1ESPlusAttr = 0;
+    let countT1ESPlusAS = 0;
+    let countT1ESPlusAllRes = 0;
+    let countT1ESPlus35AndPremium = 0;
+    let countT1ESPlusJunkOnly = 0;
+
+    // Use unified helper for Defence pool
+    const defenceMods = getDefenceModsForCluster(this.context.pool, 84);
 
     for (let trial = 0; trial < numTrials; trial++) {
       let state = startStateFactory();
       let trialCostChaos = baseCostChaos;
       const trialCurrencies: Record<string, number> = {};
+      const trialStepCosts = { step1: baseCostChaos, step2: 0, step3: 0, step4: 0, step5: 0, step6: 0 };
+      const trialStepLogs: TraceStepLog[] = [];
+      const captureTrace = sampleTraces.length < traceTrialsCount;
 
       let steps = 0;
       let isCompleted = false;
+      let trialHarvests = 0;
+      let trialAnnuls = 0;
+      let trialExalts = 0;
 
       while (steps < maxStepsPerTrial) {
-        // Goal check
-        if (satisfiesTarget(state, this.target) || getMatchingOutcomeBranch(state, this.target)) {
+        steps++;
+        resolvedStatesCount++;
+
+        // Consult policy engine
+        const decision = this.policyEngine.getBestAction(state);
+
+        if (decision.actionType === 'TERMINAL') {
           isCompleted = true;
           break;
         }
 
-        steps++;
+        // Strict unhandled state detection
+        if (decision.expectedContinuationCostChaos === Infinity) {
+          missingPolicyStates++;
+          fallbackActionsUsed++;
+          failedCount++;
+          break;
+        }
 
-        // ------------------------------------------------------------- 1. If prefixes lack T1 ES -> Harvest Reforge Defence
-        const hasT1ES = state.prefixes.some(
-          (p) => p.modGroup === 'AfflictionJewelSmallPassivesGrantES' && p.tier === 1
-        );
-
-        if (!hasT1ES) {
-          // Harvest Reforge Defence cost: 75 Primal Lifeforce (1.5625c)
+        // ------------------------------------------------------------- 1. HARVEST_DEFENCE
+        if (decision.actionType === 'HARVEST_DEFENCE') {
+          totalHarvests++;
+          trialHarvests++;
           const costChaos = priceBook.toChaos(75, 'primalLifeforce');
           trialCostChaos += costChaos;
           trialCurrencies.primalLifeforce = (trialCurrencies.primalLifeforce ?? 0) + 75;
+          trialStepCosts.step2 += costChaos;
 
           // Preserve fractured mods
           state.prefixes = state.prefixes.filter((m) => m.isFractured);
           state.suffixes = state.suffixes.filter((m) => m.isFractured);
 
-          // Guarantee 1 defence mod from full defence pool (T1 ES = 300 / 4200 = 7.14%)
+          // Guarantee 1 defence mod
           const chosenDefence = this.sampleWeightedMod(defenceMods);
           if (chosenDefence) {
             state.prefixes.push(toRolledMod(chosenDefence));
           }
 
-          // Random additional affixes (PoE rare rules: 50% 1 extra, 50% 2 extra)
+          // Random additional affixes (50% 1 extra, 50% 2 extra)
           const extraAffixesCount = Math.random() < 0.5 ? 1 : 2;
+          const extraMods: Mod[] = [];
           for (let e = 0; e < extraAffixesCount; e++) {
             const eligible = getEligibleMods(state, allMods);
             const extra = this.sampleWeightedMod(eligible);
             if (extra) {
               if (extra.genType === 'Prefix' && canAcceptPrefix(state)) {
+                extraMods.push(extra);
                 state.prefixes.push(toRolledMod(extra));
               } else if (extra.genType === 'Suffix' && canAcceptSuffix(state)) {
+                extraMods.push(extra);
                 state.suffixes.push(toRolledMod(extra));
               }
             }
           }
+
+          // Comprehensive census tracking
+          const isT1ES = chosenDefence?.modGroup === 'AfflictionJewelSmallPassivesGrantES' && chosenDefence?.tier === 1;
+          if (isT1ES) {
+            t1ESSuccesses++;
+            const has35 = extraMods.some((m) => m.modGroup === 'AfflictionJewelSmallPassivesHaveIncreasedEffect' && m.tier === 1);
+            const hasAttr = extraMods.some((m) => m.modGroup === 'AfflictionJewelSmallPassivesGrantAttributes' && m.tier === 1);
+            const hasAS = extraMods.some((m) => m.name.includes('3% increased Attack Speed') && m.tier === 1);
+            const hasAllRes = extraMods.some((m) => m.modGroup === 'AfflictionJewelSmallPassivesGrantElementalRes' && m.tier === 1);
+            const hasAnyPremium = hasAttr || hasAS || hasAllRes;
+
+            if (extraMods.length === 0) countT1ESOnly++;
+            else if (has35 && hasAnyPremium) countT1ESPlus35AndPremium++;
+            else if (has35) countT1ESPlus35++;
+            else if (hasAttr) countT1ESPlusAttr++;
+            else if (hasAS) countT1ESPlusAS++;
+            else if (hasAllRes) countT1ESPlusAllRes++;
+            else countT1ESPlusJunkOnly++;
+          }
+
+          if (captureTrace) {
+            trialStepLogs.push({
+              step: steps,
+              actionTaken: 'Harvest Reforge Defence',
+              details: `Reforged item (guaranteed Defence: ${chosenDefence?.name ?? 'none'})`,
+              costChaos,
+              resultStatePrefixes: state.prefixes.map((p) => `${p.name} (t${p.tier})`),
+              resultStateSuffixes: state.suffixes.map((s) => `${s.name} (t${s.tier})`),
+            });
+          }
           continue;
         }
 
-        // ------------------------------------------------------------- 2. Clean non-target junk affixes
-        const removable = getRemovableAffixes(state);
-        const junkMods = removable.filter((m) => !this.matchesTargetRequirement(m));
+        // ------------------------------------------------------------- 2. ANNUL
+        if (decision.actionType === 'ANNUL') {
+          const removable = getRemovableAffixes(state);
+          if (removable.length === 0) {
+            failedCount++;
+            break;
+          }
 
-        if (junkMods.length > 0) {
-          // Annul cost: 1 Annul (9c)
+          trialAnnuls++;
           const costChaos = priceBook.toChaos(1, 'annul');
           trialCostChaos += costChaos;
           trialCurrencies.annul = (trialCurrencies.annul ?? 0) + 1;
 
-          // Pick a random removable mod uniformly
+          if (decision.stepAttribution === 4) trialStepCosts.step4 += costChaos;
+          else if (decision.stepAttribution === 5) trialStepCosts.step5 += costChaos;
+          else trialStepCosts.step3 += costChaos;
+
           const targetIndex = Math.floor(Math.random() * removable.length);
           const removedMod = removable[targetIndex];
 
@@ -137,95 +266,122 @@ export class MonteCarloSimulator {
             const idx = state.suffixes.findIndex((m) => m.modId === removedMod.modId && !m.isFractured);
             if (idx !== -1) state.suffixes.splice(idx, 1);
           }
+
+          if (captureTrace) {
+            trialStepLogs.push({
+              step: steps,
+              actionTaken: 'Orb of Annulment',
+              details: `Annul removed ${removedMod.name} (${removedMod.genType}) [Step ${decision.stepAttribution} Cleanup]`,
+              costChaos,
+              resultStatePrefixes: state.prefixes.map((p) => `${p.name} (t${p.tier})`),
+              resultStateSuffixes: state.suffixes.map((s) => `${s.name} (t${s.tier})`),
+            });
+          }
           continue;
         }
 
-        // ------------------------------------------------------------- 3. Step 4: Slam 35% Effect (Prefix) if missing
-        const has35Eff = state.prefixes.some(
-          (p) => p.modGroup === 'AfflictionJewelSmallPassivesHaveIncreasedEffect' && p.tier === 1
-        );
-
-        if (!has35Eff && canAcceptPrefix(state)) {
+        // ------------------------------------------------------------- 3. ALLFLAME_EXALT_PREFIX
+        if (decision.actionType === 'ALLFLAME_EXALT_PREFIX') {
           const eligiblePrefixes = getEligibleMods(state, allMods, { requiredGenType: 'Prefix' });
-          if (eligiblePrefixes.length > 0) {
-            const costChaos = priceBook.toChaos(1, 'exalt');
-            trialCostChaos += costChaos;
-            trialCurrencies.exalt = (trialCurrencies.exalt ?? 0) + 1;
-
-            let chosenMod: Mod;
-            if (this.allflameEnabled) {
-              const candidates = [
-                this.sampleWeightedMod(eligiblePrefixes),
-                this.sampleWeightedMod(eligiblePrefixes),
-                this.sampleWeightedMod(eligiblePrefixes),
-                this.sampleWeightedMod(eligiblePrefixes),
-              ].filter((m): m is Mod => m !== null);
-
-              chosenMod = candidates.reduce((best, cur) => {
-                const curScore = this.scoreModProgress(cur);
-                const bestScore = this.scoreModProgress(best);
-                return curScore > bestScore ? cur : best;
-              }, candidates[0]);
-            } else {
-              chosenMod = this.sampleWeightedMod(eligiblePrefixes)!;
-            }
-
-            if (chosenMod) {
-              state.prefixes.push(toRolledMod(chosenMod));
-            }
-            continue;
+          if (eligiblePrefixes.length === 0) {
+            failedCount++;
+            break;
           }
+
+          trialExalts++;
+          const costChaos = priceBook.toChaos(1, 'exalt');
+          trialCostChaos += costChaos;
+          trialCurrencies.exalt = (trialCurrencies.exalt ?? 0) + 1;
+          trialStepCosts.step4 += costChaos;
+
+          let chosenMod: Mod;
+          let evalSummary = '';
+          if (this.allflameEnabled) {
+            const candidates = [
+              this.sampleWeightedMod(eligiblePrefixes),
+              this.sampleWeightedMod(eligiblePrefixes),
+              this.sampleWeightedMod(eligiblePrefixes),
+              this.sampleWeightedMod(eligiblePrefixes),
+            ].filter((m): m is Mod => m !== null);
+
+            const selection = this.policyEngine.selectBestAllflameCandidate(candidates, state);
+            chosenMod = selection.chosenMod;
+            evalSummary = ` [Candidates: ${selection.evaluations.map((e) => `${e.mod.name} (V=${e.resultingStateValue.toFixed(1)}c)`).join(', ')}]`;
+          } else {
+            chosenMod = this.sampleWeightedMod(eligiblePrefixes)!;
+          }
+
+          if (chosenMod) {
+            state.prefixes.push(toRolledMod(chosenMod));
+          }
+
+          if (captureTrace) {
+            trialStepLogs.push({
+              step: steps,
+              actionTaken: 'Allflame Exalted Orb (Prefix)',
+              details: `Slammed ${chosenMod.name}${evalSummary}`,
+              costChaos,
+              resultStatePrefixes: state.prefixes.map((p) => `${p.name} (t${p.tier})`),
+              resultStateSuffixes: state.suffixes.map((s) => `${s.name} (t${s.tier})`),
+            });
+          }
+          continue;
         }
 
-        // ------------------------------------------------------------- 4. Step 5: Slam Final Target Suffix if missing
-        const hasTargetSuffix = state.suffixes.some((s) =>
-          this.target.outcomeBranches?.some((b) =>
-            b.requiredMods.some((req) =>
-              (req.modGroup ? s.modGroup === req.modGroup : true) &&
-              (req.maxTierNumber !== undefined ? s.tier <= req.maxTierNumber : true)
-            )
-          )
-        );
-
-        if (has35Eff && !hasTargetSuffix && canAcceptSuffix(state)) {
+        // ------------------------------------------------------------- 4. ALLFLAME_EXALT_SUFFIX
+        if (decision.actionType === 'ALLFLAME_EXALT_SUFFIX') {
           const eligibleSuffixes = getEligibleMods(state, allMods, { requiredGenType: 'Suffix' });
-          if (eligibleSuffixes.length > 0) {
-            const costChaos = priceBook.toChaos(1, 'exalt');
-            trialCostChaos += costChaos;
-            trialCurrencies.exalt = (trialCurrencies.exalt ?? 0) + 1;
-
-            let chosenMod: Mod;
-            if (this.allflameEnabled) {
-              const candidates = [
-                this.sampleWeightedMod(eligibleSuffixes),
-                this.sampleWeightedMod(eligibleSuffixes),
-                this.sampleWeightedMod(eligibleSuffixes),
-                this.sampleWeightedMod(eligibleSuffixes),
-              ].filter((m): m is Mod => m !== null);
-
-              chosenMod = candidates.reduce((best, cur) => {
-                const curScore = this.scoreModProgress(cur);
-                const bestScore = this.scoreModProgress(best);
-                return curScore > bestScore ? cur : best;
-              }, candidates[0]);
-            } else {
-              chosenMod = this.sampleWeightedMod(eligibleSuffixes)!;
-            }
-
-            if (chosenMod) {
-              state.suffixes.push(toRolledMod(chosenMod));
-            }
-            continue;
+          if (eligibleSuffixes.length === 0) {
+            failedCount++;
+            break;
           }
+
+          trialExalts++;
+          const costChaos = priceBook.toChaos(1, 'exalt');
+          trialCostChaos += costChaos;
+          trialCurrencies.exalt = (trialCurrencies.exalt ?? 0) + 1;
+          trialStepCosts.step5 += costChaos;
+
+          let chosenMod: Mod;
+          let evalSummary = '';
+          if (this.allflameEnabled) {
+            const candidates = [
+              this.sampleWeightedMod(eligibleSuffixes),
+              this.sampleWeightedMod(eligibleSuffixes),
+              this.sampleWeightedMod(eligibleSuffixes),
+              this.sampleWeightedMod(eligibleSuffixes),
+            ].filter((m): m is Mod => m !== null);
+
+            const selection = this.policyEngine.selectBestAllflameCandidate(candidates, state);
+            chosenMod = selection.chosenMod;
+            evalSummary = ` [Candidates: ${selection.evaluations.map((e) => `${e.mod.name} (V=${e.resultingStateValue.toFixed(1)}c)`).join(', ')}]`;
+          } else {
+            chosenMod = this.sampleWeightedMod(eligibleSuffixes)!;
+          }
+
+          if (chosenMod) {
+            state.suffixes.push(toRolledMod(chosenMod));
+          }
+
+          if (captureTrace) {
+            trialStepLogs.push({
+              step: steps,
+              actionTaken: 'Allflame Exalted Orb (Suffix)',
+              details: `Slammed ${chosenMod.name}${evalSummary}`,
+              costChaos,
+              resultStatePrefixes: state.prefixes.map((p) => `${p.name} (t${p.tier})`),
+              resultStateSuffixes: state.suffixes.map((s) => `${s.name} (t${s.tier})`),
+            });
+          }
+          continue;
         }
 
-        // Check completion
+        // Goal check
         if (satisfiesTarget(state, this.target) || getMatchingOutcomeBranch(state, this.target)) {
           isCompleted = true;
           break;
         }
 
-        // No action took progress
         failedCount++;
         break;
       }
@@ -237,11 +393,32 @@ export class MonteCarloSimulator {
           const divineCost = finishingDivines * priceBook.getRate('divine');
           trialCostChaos += divineCost;
           trialCurrencies.divine = (trialCurrencies.divine ?? 0) + finishingDivines;
+          trialStepCosts.step6 += divineCost;
         }
 
         completedCosts.push(trialCostChaos);
         for (const [curr, amount] of Object.entries(trialCurrencies)) {
           currencyTotals[curr] = (currencyTotals[curr] ?? 0) + amount;
+        }
+        stepwiseTotals.step1 += trialStepCosts.step1;
+        stepwiseTotals.step2 += trialStepCosts.step2;
+        stepwiseTotals.step3 += trialStepCosts.step3;
+        stepwiseTotals.step4 += trialStepCosts.step4;
+        stepwiseTotals.step5 += trialStepCosts.step5;
+        stepwiseTotals.step6 += trialStepCosts.step6;
+
+        if (sampleTraces.length < traceTrialsCount && trialStepLogs.length > 0) {
+          sampleTraces.push({
+            trialNumber: trial + 1,
+            stepCount: steps,
+            finalPrefixes: state.prefixes.map((p) => `${p.name} (t${p.tier})`),
+            finalSuffixes: state.suffixes.map((s) => `${s.name} (t${s.tier})`),
+            harvestCount: trialHarvests,
+            annulCount: trialAnnuls,
+            exaltCount: trialExalts,
+            totalCostChaos: trialCostChaos,
+            stepLogs: trialStepLogs,
+          });
         }
       } else if (steps >= maxStepsPerTrial) {
         timedOutCount++;
@@ -258,6 +435,11 @@ export class MonteCarloSimulator {
         failedTrials: failedCount,
         timedOutTrials: timedOutCount,
         completionRate: 0,
+        policyStats: {
+          resolvedStatesCount,
+          missingPolicyStates,
+          fallbackActionsUsed,
+        },
         status: 'FAILED',
         message: `VALIDATION FAILED: 0 / ${numTrials} simulations reached a terminal state within step limit (${maxStepsPerTrial}).`,
       };
@@ -275,6 +457,28 @@ export class MonteCarloSimulator {
       currencyAverages[curr] = total / completedCount;
     }
 
+    const stepwiseCostAverages = {
+      step1AcquisitionChaos: stepwiseTotals.step1 / completedCount,
+      step2HarvestChaos: stepwiseTotals.step2 / completedCount,
+      step3CleanupChaos: stepwiseTotals.step3 / completedCount,
+      step4ExaltChaos: stepwiseTotals.step4 / completedCount,
+      step5ExaltChaos: stepwiseTotals.step5 / completedCount,
+      step6DivineChaos: stepwiseTotals.step6 / completedCount,
+    };
+
+    const harvestCensus: HarvestCensusData = {
+      totalHarvests,
+      t1ESSuccesses,
+      t1ESSuccessRate: totalHarvests > 0 ? (t1ESSuccesses / totalHarvests) * 100 : 0,
+      t1ESOnlyPct: t1ESSuccesses > 0 ? (countT1ESOnly / t1ESSuccesses) * 100 : 0,
+      t1ESPlus35EffPct: t1ESSuccesses > 0 ? (countT1ESPlus35 / t1ESSuccesses) * 100 : 0,
+      t1ESPlusAttributesPct: t1ESSuccesses > 0 ? (countT1ESPlusAttr / t1ESSuccesses) * 100 : 0,
+      t1ESPlusAttackSpeedPct: t1ESSuccesses > 0 ? (countT1ESPlusAS / t1ESSuccesses) * 100 : 0,
+      t1ESPlusAllResPct: t1ESSuccesses > 0 ? (countT1ESPlusAllRes / t1ESSuccesses) * 100 : 0,
+      t1ESPlus35AndPremiumPct: t1ESSuccesses > 0 ? (countT1ESPlus35AndPremium / t1ESSuccesses) * 100 : 0,
+      t1ESPlusJunkOnlyPct: t1ESSuccesses > 0 ? (countT1ESPlusJunkOnly / t1ESSuccesses) * 100 : 0,
+    };
+
     const status = completionRate >= 95 ? 'SUCCESS' : 'PARTIAL';
 
     return {
@@ -289,6 +493,14 @@ export class MonteCarloSimulator {
       p90CostChaos,
       p95CostChaos,
       currencyAverages,
+      stepwiseCostAverages,
+      policyStats: {
+        resolvedStatesCount,
+        missingPolicyStates,
+        fallbackActionsUsed,
+      },
+      harvestCensus,
+      sampleTraces,
       status,
       message:
         completionRate < 100
@@ -311,60 +523,5 @@ export class MonteCarloSimulator {
       }
     }
     return mods[mods.length - 1];
-  }
-
-  private matchesTargetRequirement(mod: Mod | { modId: string; modGroup: string; tier: number; name: string }): boolean {
-    const matchesMain = this.target.requiredMods.some((req) =>
-      (req.modGroup ? mod.modGroup === req.modGroup : true) &&
-      (req.modId ? mod.modId === req.modId : true) &&
-      (req.name ? mod.name === req.name : true) &&
-      (req.maxTierNumber !== undefined ? mod.tier <= req.maxTierNumber : true)
-    );
-    if (matchesMain) return true;
-
-    if (this.target.outcomeBranches) {
-      return this.target.outcomeBranches.some((b) =>
-        b.requiredMods.some((req) =>
-          (req.modGroup ? mod.modGroup === req.modGroup : true) &&
-          (req.modId ? mod.modId === req.modId : true) &&
-          (req.name ? mod.name === req.name : true) &&
-          (req.maxTierNumber !== undefined ? mod.tier <= req.maxTierNumber : true)
-        )
-      );
-    }
-    return false;
-  }
-
-  private scoreModProgress(mod: Mod): number {
-    // Check main required mods
-    for (const req of this.target.requiredMods) {
-      if (
-        (req.modGroup ? mod.modGroup === req.modGroup : true) &&
-        (req.modId ? mod.modId === req.modId : true) &&
-        (req.name ? mod.name === req.name : true) &&
-        (req.maxTierNumber !== undefined ? mod.tier <= req.maxTierNumber : true)
-      ) {
-        return 1000 - mod.tier * 10;
-      }
-    }
-
-    // Check outcome branches
-    if (this.target.outcomeBranches) {
-      for (const branch of this.target.outcomeBranches) {
-        for (const req of branch.requiredMods) {
-          if (
-            (req.modGroup ? mod.modGroup === req.modGroup : true) &&
-            (req.modId ? mod.modId === req.modId : true) &&
-            (req.name ? mod.name === req.name : true) &&
-            (req.maxTierNumber !== undefined ? mod.tier <= req.maxTierNumber : true)
-          ) {
-            const saleVal = branch.saleValueChaos ?? 100;
-            return 500 + saleVal / 100;
-          }
-        }
-      }
-    }
-
-    return 0;
   }
 }

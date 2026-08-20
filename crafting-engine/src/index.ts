@@ -23,6 +23,7 @@ export interface OptimizeCraftRequest {
   priceBook?: PriceBook;
   runMonteCarloValidation?: boolean;
   monteCarloTrials?: number;
+  traceTrialsCount?: number;
 }
 
 export interface OptimizeCraftResponse {
@@ -88,12 +89,25 @@ export class CraftingOptimizer {
     if (request.runMonteCarloValidation && request.startingStates && request.startingStates.length > 0) {
       const bestStart = request.startingStates.find((s) => s.name === recommended.strategyName) ?? request.startingStates[0];
       if (bestStart) {
-        const mc = new MonteCarloSimulator(context, request.target, request.enableAllflame ?? false);
+        const mc = new MonteCarloSimulator(
+          context,
+          request.target,
+          request.enableAllflame ?? false,
+          recommended.policyEngine
+        );
         simulationValidation = mc.runSimulation(
           () => structuredClone(bestStart.state),
           bestStart.baseCostChaos,
-          request.monteCarloTrials ?? 2000
+          request.monteCarloTrials ?? 2000,
+          3000,
+          request.traceTrialsCount ?? 3
         );
+
+        if (simulationValidation && simulationValidation.meanCostChaos !== undefined) {
+          const diffPct = (Math.abs(simulationValidation.meanCostChaos - recommended.totalExpectedCostChaos) / recommended.totalExpectedCostChaos) * 100;
+          const zeroFallback = simulationValidation.policyStats.fallbackActionsUsed === 0 && simulationValidation.policyStats.missingPolicyStates === 0;
+          recommended.isValidated = diffPct <= 2.0 && simulationValidation.completionRate >= 98.0 && zeroFallback;
+        }
       }
     }
 
