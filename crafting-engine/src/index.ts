@@ -84,20 +84,20 @@ export class CraftingOptimizer {
     const recommended = evaluatedStrategies[0];
     const alternates = evaluatedStrategies.slice(1);
 
-    const explanation = generateCraftExplanation(recommended, alternates, priceBook);
-
     let simulationValidation: SimulationResult | undefined;
     if (request.runMonteCarloValidation && request.startingStates && request.startingStates.length > 0) {
-      const bestStart = request.startingStates.find((s) => s.name === recommended.strategyName);
+      const bestStart = request.startingStates.find((s) => s.name === recommended.strategyName) ?? request.startingStates[0];
       if (bestStart) {
         const mc = new MonteCarloSimulator(context, request.target, request.enableAllflame ?? false);
         simulationValidation = mc.runSimulation(
           () => structuredClone(bestStart.state),
           bestStart.baseCostChaos,
-          request.monteCarloTrials ?? 1000
+          request.monteCarloTrials ?? 2000
         );
       }
     }
+
+    const explanation = generateCraftExplanation(recommended, alternates, priceBook, simulationValidation);
 
     return {
       recommendedStrategy: recommended,

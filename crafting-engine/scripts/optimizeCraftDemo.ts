@@ -70,18 +70,18 @@ const craftAResponse = optimizer.optimizeCraft({
     ],
     outcomeBranches: [
       {
-        name: '+4 All Attributes',
+        name: '+4 All Attributes (T1)',
         requiredMods: [{ modGroup: 'AfflictionJewelSmallPassivesGrantAttributes', maxTierNumber: 1 }],
         saleValueChaos: 85 * 200, // 85 div = 17000c
       },
       {
-        name: '3% Attack Speed',
-        requiredMods: [{ modGroup: 'AfflictionJewelSmallPassivesGrantAttackSpeed', maxTierNumber: 1 }],
+        name: '3% Attack Speed (T1)',
+        requiredMods: [{ modGroup: 'Added Small Passive Skills also grant: #% increased Attack Speed', maxTierNumber: 1 }],
         saleValueChaos: 39 * 200, // 39 div = 7800c
       },
       {
-        name: '+4% All Elemental Resistance',
-        requiredMods: [{ modGroup: 'AfflictionJewelSmallPassivesGrantAllElementalResistances', maxTierNumber: 1 }],
+        name: '+4% All Elemental Resistance (T1)',
+        requiredMods: [{ modGroup: 'AfflictionJewelSmallPassivesGrantElementalRes', maxTierNumber: 1 }],
         saleValueChaos: 7 * 200, // 7 div = 1400c
       },
     ],
@@ -91,14 +91,14 @@ const craftAResponse = optimizer.optimizeCraft({
   },
   startingStates: [
     {
-      name: 'Buy Fractured T1 Intelligence Base',
+      name: 'Buy Fractured T1 Intelligence Base (+8 Roll)',
       state: fracIntState,
       baseCostChaos: 1600, // 8 divines
     },
     {
       name: 'Self-Fracture T1 Intelligence (Clean 12p Base)',
       state: cleanBaseState,
-      baseCostChaos: 1576, // 4 * (10c base + 25c prep + 359c fracture)
+      baseCostChaos: 1516.6, // 4 * (10c base + 10.16c prep + 359c fracture)
     },
     {
       name: 'Buy Fractured 35% Effect Base',
@@ -108,7 +108,7 @@ const craftAResponse = optimizer.optimizeCraft({
     {
       name: 'Self-Fracture 35% Effect (Clean 12p Base)',
       state: cleanBaseState,
-      baseCostChaos: 1616, // 4 * (10c base + 35c prep + 359c fracture)
+      baseCostChaos: 1550.0, // 4 * (10c base + 18.5c prep + 359c fracture)
     },
   ],
   enableAllflame: true,
@@ -118,21 +118,6 @@ const craftAResponse = optimizer.optimizeCraft({
 });
 
 console.log(craftAResponse.explanation);
-if (craftAResponse.simulationValidation) {
-  const mc = craftAResponse.simulationValidation;
-  console.log('\nMonte Carlo Empirical Validation (2,000 Trials):');
-  console.log(`  Status: ${mc.status} (${mc.completedTrials}/${mc.totalTrials} trials completed - ${mc.completionRate.toFixed(1)}%)`);
-  if (mc.meanCostChaos !== undefined) {
-    console.log(`  Empirical Mean Total Cost: ${mc.meanCostChaos.toFixed(1)}c (~${(mc.meanCostChaos / 200).toFixed(2)} div)`);
-    console.log(`  Median Cost: ${mc.medianCostChaos?.toFixed(1)}c (~${((mc.medianCostChaos ?? 0) / 200).toFixed(2)} div)`);
-    console.log(`  75th Percentile: ${mc.p75CostChaos?.toFixed(1)}c (~${((mc.p75CostChaos ?? 0) / 200).toFixed(2)} div)`);
-    console.log(`  90th Percentile: ${mc.p90CostChaos?.toFixed(1)}c (~${((mc.p90CostChaos ?? 0) / 200).toFixed(2)} div)`);
-    console.log(`  95th Percentile: ${mc.p95CostChaos?.toFixed(1)}c (~${((mc.p95CostChaos ?? 0) / 200).toFixed(2)} div)`);
-  }
-  if (mc.message) {
-    console.log(`  Note: ${mc.message}`);
-  }
-}
 
 // ------------------------------------------------------------- DEMO 2: Reference Craft B
 console.log('\n>>> OPTIMIZING REFERENCE CRAFT B: 8-Passive Cold Cluster (ilvl 83)');

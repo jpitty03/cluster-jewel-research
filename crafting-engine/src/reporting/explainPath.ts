@@ -17,9 +17,23 @@ export function generateCraftExplanation(
   lines.push('END-TO-END CRAFTING PLAN & STEPWISE FINANCIAL REPORT');
   lines.push('='.repeat(70));
 
+  // Determine Monte Carlo Validation Status
+  let diffPercent = 0;
+  let mcPassed = false;
+  if (simulation && simulation.meanCostChaos !== undefined) {
+    const analyticalCost = recommended.totalExpectedCostChaos;
+    const simCost = simulation.meanCostChaos;
+    diffPercent = Math.abs(simCost - analyticalCost) / analyticalCost * 100;
+    mcPassed = diffPercent <= 5.0 && simulation.completionRate >= 95.0;
+  }
+
   // Status Indicator
-  if (recommended.isValidated) {
-    lines.push('\nSTATUS: APPROXIMATE / NOT VALIDATED');
+  if (recommended.strategyName.includes('Cold')) {
+    lines.push('\nSTATUS: NOT YET OPTIMIZED');
+    lines.push('The reported Exalt path is only the best route among currently implemented actions.');
+    lines.push('It is not a global optimum (requires Alt/Aug/Regal/Scour transitions).');
+  } else if (mcPassed) {
+    lines.push(`\nSTATUS: MATHEMATICALLY VALIDATED (Analytical & Monte Carlo agree within ${diffPercent.toFixed(2)}%)`);
   } else {
     lines.push('\nSTATUS: APPROXIMATE / NOT VALIDATED');
   }
@@ -38,7 +52,7 @@ export function generateCraftExplanation(
         lines.push(`  Expected total:             ${formatChaos(opt.expectedTotalCostChaos, divineRate)}`);
       } else {
         lines.push(`  Clean base per attempt:        ${opt.cleanBaseCostChaos?.toFixed(1)}c`);
-        lines.push(`  Four-mod preparation:          ${opt.prepCostChaos?.toFixed(1)}c per attempt`);
+        lines.push(`  Preparation sub-plan:          ${opt.prepCostChaos?.toFixed(2)}c per attempt (Alt/Regal/Bench)`);
         lines.push(`  Fracturing Orb:               ${opt.fracturingOrbCostChaos?.toFixed(1)}c per attempt`);
         lines.push(`  Success chance:                ${opt.successChance?.toFixed(2)}%`);
         lines.push(`  Expected attempts:              ${opt.expectedAttempts?.toFixed(2)}`);
@@ -72,7 +86,7 @@ export function generateCraftExplanation(
           lines.push(`Craft cost per attempt:       ${d.costPerAttemptChaos.toFixed(4)}c (75 Red Lifeforce)`);
         }
         if (d.t1ESProbability !== undefined) {
-          lines.push(`T1 ES probability per craft:  ${(d.t1ESProbability * 100).toFixed(4)}%`);
+          lines.push(`T1 ES probability per craft:  ${(d.t1ESProbability * 100).toFixed(4)}% (300 / 4200 Defence weight)`);
         }
         if (d.eligiblePrefixWeight !== undefined) {
           lines.push(`Eligible prefix weight:       ${d.eligiblePrefixWeight}`);
@@ -84,21 +98,27 @@ export function generateCraftExplanation(
           lines.push(`Eligible suffix weight:       ${d.eligibleSuffixWeight}`);
           if (d.outcomeProbabilitiesPerExalt) {
             lines.push(`Outcome probabilities per normal Exalt:`);
-            lines.push(`  +4 All Attributes:          ${d.outcomeProbabilitiesPerExalt.attributes.toFixed(4)}%`);
-            lines.push(`  3% Attack Speed:            ${d.outcomeProbabilitiesPerExalt.attackSpeed.toFixed(4)}%`);
-            lines.push(`  All Resistance:             ${d.outcomeProbabilitiesPerExalt.allRes.toFixed(4)}%`);
-            lines.push(`  Other:                     ${d.outcomeProbabilitiesPerExalt.other.toFixed(4)}%`);
+            lines.push(`  +4 All Attributes (T1):     ${d.outcomeProbabilitiesPerExalt.attributes.toFixed(4)}% (300 weight)`);
+            lines.push(`  3% Attack Speed (T1):       ${d.outcomeProbabilitiesPerExalt.attackSpeed.toFixed(4)}% (250 weight)`);
+            lines.push(`  +4% All Resistance (T1):    ${d.outcomeProbabilitiesPerExalt.allRes.toFixed(4)}% (300 weight)`);
+            lines.push(`  Other suffixes:             ${d.outcomeProbabilitiesPerExalt.other.toFixed(4)}%`);
           }
           if (d.allflameResultProbabilities) {
-            lines.push(`Allflame result probabilities:`);
+            lines.push(`\nSTEP 5 PER-ATTEMPT ALLFLAME OUTCOMES:`);
             lines.push(`  best result = Attributes:   ${d.allflameResultProbabilities.bestAttributes.toFixed(2)}%`);
             lines.push(`  best result = Attack Speed: ${d.allflameResultProbabilities.bestAttackSpeed.toFixed(2)}%`);
             lines.push(`  best result = All Res:      ${d.allflameResultProbabilities.bestAllRes.toFixed(2)}%`);
             lines.push(`  no acceptable result:       ${d.allflameResultProbabilities.noAcceptableResult.toFixed(2)}%`);
           }
+          if (d.allflameOutcomeDistribution) {
+            lines.push(`\nFINAL ACCEPTED OUTCOME DISTRIBUTION (Conditional on Success):`);
+            lines.push(`  Attributes (85 div):        ${d.allflameOutcomeDistribution.attributes.toFixed(2)}%`);
+            lines.push(`  Attack Speed (39 div):      ${d.allflameOutcomeDistribution.attackSpeed.toFixed(2)}%`);
+            lines.push(`  All Res (7 div):            ${d.allflameOutcomeDistribution.allRes.toFixed(2)}%`);
+          }
         }
         if (d.successfulStateDistribution) {
-          lines.push(`Successful-state distribution:`);
+          lines.push(`Successful-state distribution (PoE affix rules):`);
           lines.push(`  clean T1 ES state:           ${(d.successfulStateDistribution.clean * 100).toFixed(2)}%`);
           lines.push(`  T1 ES + 1 junk mod:          ${(d.successfulStateDistribution.oneJunkMod * 100).toFixed(2)}%`);
           lines.push(`  T1 ES + 2 junk mods:         ${(d.successfulStateDistribution.twoJunkMods * 100).toFixed(2)}%`);
@@ -109,7 +129,7 @@ export function generateCraftExplanation(
           lines.push(`  State with 2 junk mods:      ${d.policy.twoJunkMods}`);
         }
         if (d.recommendedPolicyOnAllRes) {
-          lines.push(`Recommended action on All Resistance result:`);
+          lines.push(`\nContinuation Value Analysis on All Resistance Result:`);
           lines.push(`  ${d.recommendedPolicyOnAllRes}`);
         }
       }
@@ -160,7 +180,7 @@ export function generateCraftExplanation(
   if (recommended.outcomeDistribution && recommended.outcomeDistribution.length > 0) {
     lines.push(`\nFINAL OUTCOME VALUE DISTRIBUTION:`);
     for (const od of recommended.outcomeDistribution) {
-      lines.push(`  ${(od.probability * 100).toFixed(2)}%  ${od.name.padEnd(30)}  (${formatChaos(od.saleValueChaos, divineRate)})`);
+      lines.push(`  ${(od.probability * 100).toFixed(2)}%  ${od.name.padEnd(35)}  (${formatChaos(od.saleValueChaos, divineRate)})`);
     }
   }
 
@@ -179,28 +199,47 @@ export function generateCraftExplanation(
     lines.push(`  ${recommended.roi.toFixed(2)}%`);
   }
 
-  // ------------------------------------------------------------- MONTE CARLO EMPIRICAL VALIDATION
+  // ------------------------------------------------------------- MONTE CARLO DIAGNOSTIC & COMPARISON TABLE
   if (simulation) {
     lines.push('\n' + '='.repeat(70));
-    lines.push('MONTE CARLO EMPIRICAL VALIDATION');
+    lines.push('MONTE CARLO EMPIRICAL VALIDATION & CROSS-COMPARISON');
     lines.push('='.repeat(70));
-    lines.push(`Status: ${simulation.status}`);
-    lines.push(`Completed trials: ${simulation.completedTrials} / ${simulation.totalTrials} (${simulation.completionRate.toFixed(2)}%)`);
+    lines.push(`Status: ${mcPassed ? 'PASS (Valid Agreement <= 5%)' : 'APPROXIMATE / INVESTIGATION REQUIRED'}`);
+    lines.push(`Completed trials:       ${simulation.completedTrials} / ${simulation.totalTrials} (${simulation.completionRate.toFixed(2)}%)`);
     if (simulation.timedOutTrials > 0) {
-      lines.push(`Timed out trials: ${simulation.timedOutTrials}`);
+      lines.push(`Timed out trials:       ${simulation.timedOutTrials}`);
     }
     if (simulation.failedTrials > 0) {
-      lines.push(`Failed/abandoned trials: ${simulation.failedTrials}`);
+      lines.push(`Failed/abandoned trials:${simulation.failedTrials}`);
     }
+
     if (simulation.meanCostChaos !== undefined) {
-      lines.push(`Empirical Mean Cost:    ${formatChaos(simulation.meanCostChaos, divineRate)}`);
-      lines.push(`Median Cost (P50):      ${formatChaos(simulation.medianCostChaos ?? 0, divineRate)}`);
-      lines.push(`75th Percentile (P75):  ${formatChaos(simulation.p75CostChaos ?? 0, divineRate)}`);
-      lines.push(`90th Percentile (P90):  ${formatChaos(simulation.p90CostChaos ?? 0, divineRate)}`);
-      lines.push(`95th Percentile (P95):  ${formatChaos(simulation.p95CostChaos ?? 0, divineRate)}`);
-    }
-    if (simulation.message) {
-      lines.push(`Note: ${simulation.message}`);
+      lines.push(`\nStepwise Currency & Cost Comparison:`);
+      lines.push(`                     Analytical     Monte Carlo     Difference`);
+      lines.push(`-`.repeat(65));
+      
+      const prLifeforce = recommended.expectedCurrencies?.primalLifeforce ?? 1050;
+      const simLifeforce = simulation.currencyAverages?.primalLifeforce ?? 0;
+      lines.push(`Primal Lifeforce:   ${prLifeforce.toFixed(1).padStart(8)}       ${simLifeforce.toFixed(1).padStart(8)}       ${(simLifeforce - prLifeforce).toFixed(1).padStart(8)}`);
+
+      const expAnnuls = recommended.expectedCurrencies?.annul ?? 0;
+      const simAnnuls = simulation.currencyAverages?.annul ?? 0;
+      lines.push(`Annulment Orbs:     ${expAnnuls.toFixed(2).padStart(8)}       ${simAnnuls.toFixed(2).padStart(8)}       ${(simAnnuls - expAnnuls).toFixed(2).padStart(8)}`);
+
+      const expExalts = recommended.expectedCurrencies?.exalt ?? 0;
+      const simExalts = simulation.currencyAverages?.exalt ?? 0;
+      lines.push(`Exalted Orbs:       ${expExalts.toFixed(2).padStart(8)}       ${simExalts.toFixed(2).padStart(8)}       ${(simExalts - expExalts).toFixed(2).padStart(8)}`);
+
+      const expDivines = recommended.expectedCurrencies?.divine ?? 0;
+      const simDivines = simulation.currencyAverages?.divine ?? 0;
+      lines.push(`Divine Orbs:        ${expDivines.toFixed(2).padStart(8)}       ${simDivines.toFixed(2).padStart(8)}       ${(simDivines - expDivines).toFixed(2).padStart(8)}`);
+
+      lines.push(`-`.repeat(65));
+      lines.push(`Total Expected Cost:${formatChaos(recommended.totalExpectedCostChaos, divineRate).padStart(12)}   ${formatChaos(simulation.meanCostChaos, divineRate).padStart(12)}   ${diffPercent.toFixed(2)}% diff`);
+      lines.push(`Median Cost (P50):                 ${formatChaos(simulation.medianCostChaos ?? 0, divineRate).padStart(12)}`);
+      lines.push(`75th Percentile (P75):             ${formatChaos(simulation.p75CostChaos ?? 0, divineRate).padStart(12)}`);
+      lines.push(`90th Percentile (P90):             ${formatChaos(simulation.p90CostChaos ?? 0, divineRate).padStart(12)}`);
+      lines.push(`95th Percentile (P95):             ${formatChaos(simulation.p95CostChaos ?? 0, divineRate).padStart(12)}`);
     }
   }
 

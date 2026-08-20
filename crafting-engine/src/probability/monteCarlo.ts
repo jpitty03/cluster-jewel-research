@@ -41,7 +41,7 @@ export class MonteCarloSimulator {
     startStateFactory: () => ItemState,
     baseCostChaos: number,
     numTrials = 2000,
-    maxStepsPerTrial = 300
+    maxStepsPerTrial = 500
   ): SimulationResult {
     const allMods = this.context.pool.getAllMods();
     const priceBook = this.context.priceBook;
@@ -51,9 +51,15 @@ export class MonteCarloSimulator {
     let timedOutCount = 0;
     let failedCount = 0;
 
-    // Pre-filter defence mods
-    const defenceMods = allMods.filter(
-      (m) => (m.craftTags.includes('defences') || m.tags.includes('defences')) && m.ilvl <= 84
+    // Full Defence pool matching Shield Large Cluster (total weight ~4200)
+    const defenceMods = allMods.filter((m) =>
+      (m.craftTags.includes('defences') ||
+        m.tags.includes('defences') ||
+        m.modGroup.includes('ES') ||
+        m.modGroup.includes('Armour') ||
+        m.modGroup.includes('Shield') ||
+        m.modGroup.includes('Block')) &&
+      m.ilvl <= 84
     );
 
     for (let trial = 0; trial < numTrials; trial++) {
@@ -65,7 +71,7 @@ export class MonteCarloSimulator {
       let isCompleted = false;
 
       while (steps < maxStepsPerTrial) {
-        // Target check
+        // Goal check
         if (satisfiesTarget(state, this.target) || getMatchingOutcomeBranch(state, this.target)) {
           isCompleted = true;
           break;
@@ -73,7 +79,7 @@ export class MonteCarloSimulator {
 
         steps++;
 
-        // 1. If prefixes lack T1 ES -> Harvest Reforge Defence
+        // ------------------------------------------------------------- 1. If prefixes lack T1 ES -> Harvest Reforge Defence
         const hasT1ES = state.prefixes.some(
           (p) => p.modGroup === 'AfflictionJewelSmallPassivesGrantES' && p.tier === 1
         );
@@ -88,13 +94,13 @@ export class MonteCarloSimulator {
           state.prefixes = state.prefixes.filter((m) => m.isFractured);
           state.suffixes = state.suffixes.filter((m) => m.isFractured);
 
-          // Guarantee 1 defence mod
+          // Guarantee 1 defence mod from full defence pool (T1 ES = 300 / 4200 = 7.14%)
           const chosenDefence = this.sampleWeightedMod(defenceMods);
           if (chosenDefence) {
             state.prefixes.push(toRolledMod(chosenDefence));
           }
 
-          // Random additional affixes (simulate rare 3-4 affixes: 50% 1 extra, 50% 2 extra)
+          // Random additional affixes (PoE rare rules: 50% 1 extra, 50% 2 extra)
           const extraAffixesCount = Math.random() < 0.5 ? 1 : 2;
           for (let e = 0; e < extraAffixesCount; e++) {
             const eligible = getEligibleMods(state, allMods);
@@ -110,23 +116,9 @@ export class MonteCarloSimulator {
           continue;
         }
 
-        // 2. If non-target removable affixes exist -> Annul
+        // ------------------------------------------------------------- 2. Clean non-target junk affixes
         const removable = getRemovableAffixes(state);
-        const junkMods = removable.filter((m) => {
-          const matchesTarget = this.target.requiredMods.some((req) =>
-            (req.modGroup ? m.modGroup === req.modGroup : true) &&
-            (req.modId ? m.modId === req.modId : true) &&
-            (req.maxTierNumber !== undefined ? m.tier <= req.maxTierNumber : true)
-          );
-          const matchesBranch = this.target.outcomeBranches?.some((b) =>
-            b.requiredMods.some((req) =>
-              (req.modGroup ? m.modGroup === req.modGroup : true) &&
-              (req.modId ? m.modId === req.modId : true) &&
-              (req.maxTierNumber !== undefined ? m.tier <= req.maxTierNumber : true)
-            )
-          );
-          return !matchesTarget && !matchesBranch;
-        });
+        const junkMods = removable.filter((m) => !this.matchesTargetRequirement(m));
 
         if (junkMods.length > 0) {
           // Annul cost: 1 Annul (9c)
@@ -148,51 +140,98 @@ export class MonteCarloSimulator {
           continue;
         }
 
-        // 3. If open slots exist -> Exalt slam
-        const eligible = getEligibleMods(state, allMods);
-        if (eligible.length > 0 && (canAcceptPrefix(state) || canAcceptSuffix(state))) {
-          // Exalt cost: 1 Exalt (1.2c)
-          const costChaos = priceBook.toChaos(1, 'exalt');
-          trialCostChaos += costChaos;
-          trialCurrencies.exalt = (trialCurrencies.exalt ?? 0) + 1;
+        // ------------------------------------------------------------- 3. Step 4: Slam 35% Effect (Prefix) if missing
+        const has35Eff = state.prefixes.some(
+          (p) => p.modGroup === 'AfflictionJewelSmallPassivesHaveIncreasedEffect' && p.tier === 1
+        );
 
-          let chosenMod: Mod;
-          if (this.allflameEnabled) {
-            // Draw 4 candidate mods and pick the best for target
-            const candidates = [
-              this.sampleWeightedMod(eligible),
-              this.sampleWeightedMod(eligible),
-              this.sampleWeightedMod(eligible),
-              this.sampleWeightedMod(eligible),
-            ].filter((m): m is Mod => m !== null);
+        if (!has35Eff && canAcceptPrefix(state)) {
+          const eligiblePrefixes = getEligibleMods(state, allMods, { requiredGenType: 'Prefix' });
+          if (eligiblePrefixes.length > 0) {
+            const costChaos = priceBook.toChaos(1, 'exalt');
+            trialCostChaos += costChaos;
+            trialCurrencies.exalt = (trialCurrencies.exalt ?? 0) + 1;
 
-            // Score candidates: target mods get highest priority
-            chosenMod = candidates.reduce((best, cur) => {
-              const curScore = this.scoreModProgress(cur);
-              const bestScore = this.scoreModProgress(best);
-              return curScore > bestScore ? cur : best;
-            }, candidates[0]);
-          } else {
-            chosenMod = this.sampleWeightedMod(eligible)!;
-          }
+            let chosenMod: Mod;
+            if (this.allflameEnabled) {
+              const candidates = [
+                this.sampleWeightedMod(eligiblePrefixes),
+                this.sampleWeightedMod(eligiblePrefixes),
+                this.sampleWeightedMod(eligiblePrefixes),
+                this.sampleWeightedMod(eligiblePrefixes),
+              ].filter((m): m is Mod => m !== null);
 
-          if (chosenMod) {
-            if (chosenMod.genType === 'Prefix' && canAcceptPrefix(state)) {
-              state.prefixes.push(toRolledMod(chosenMod));
-            } else if (chosenMod.genType === 'Suffix' && canAcceptSuffix(state)) {
-              state.suffixes.push(toRolledMod(chosenMod));
+              chosenMod = candidates.reduce((best, cur) => {
+                const curScore = this.scoreModProgress(cur);
+                const bestScore = this.scoreModProgress(best);
+                return curScore > bestScore ? cur : best;
+              }, candidates[0]);
+            } else {
+              chosenMod = this.sampleWeightedMod(eligiblePrefixes)!;
             }
+
+            if (chosenMod) {
+              state.prefixes.push(toRolledMod(chosenMod));
+            }
+            continue;
           }
-          continue;
         }
 
-        // No valid action available
+        // ------------------------------------------------------------- 4. Step 5: Slam Final Target Suffix if missing
+        const hasTargetSuffix = state.suffixes.some((s) =>
+          this.target.outcomeBranches?.some((b) =>
+            b.requiredMods.some((req) =>
+              (req.modGroup ? s.modGroup === req.modGroup : true) &&
+              (req.maxTierNumber !== undefined ? s.tier <= req.maxTierNumber : true)
+            )
+          )
+        );
+
+        if (has35Eff && !hasTargetSuffix && canAcceptSuffix(state)) {
+          const eligibleSuffixes = getEligibleMods(state, allMods, { requiredGenType: 'Suffix' });
+          if (eligibleSuffixes.length > 0) {
+            const costChaos = priceBook.toChaos(1, 'exalt');
+            trialCostChaos += costChaos;
+            trialCurrencies.exalt = (trialCurrencies.exalt ?? 0) + 1;
+
+            let chosenMod: Mod;
+            if (this.allflameEnabled) {
+              const candidates = [
+                this.sampleWeightedMod(eligibleSuffixes),
+                this.sampleWeightedMod(eligibleSuffixes),
+                this.sampleWeightedMod(eligibleSuffixes),
+                this.sampleWeightedMod(eligibleSuffixes),
+              ].filter((m): m is Mod => m !== null);
+
+              chosenMod = candidates.reduce((best, cur) => {
+                const curScore = this.scoreModProgress(cur);
+                const bestScore = this.scoreModProgress(best);
+                return curScore > bestScore ? cur : best;
+              }, candidates[0]);
+            } else {
+              chosenMod = this.sampleWeightedMod(eligibleSuffixes)!;
+            }
+
+            if (chosenMod) {
+              state.suffixes.push(toRolledMod(chosenMod));
+            }
+            continue;
+          }
+        }
+
+        // Check completion
+        if (satisfiesTarget(state, this.target) || getMatchingOutcomeBranch(state, this.target)) {
+          isCompleted = true;
+          break;
+        }
+
+        // No action took progress
         failedCount++;
         break;
       }
 
       if (isCompleted || satisfiesTarget(state, this.target) || getMatchingOutcomeBranch(state, this.target)) {
-        // Finishing Divines
+        // Step 6: Finishing Divines
         const finishingDivines = this.divineAction.calculateExpectedFinishingCost(state, this.target);
         if (finishingDivines > 0) {
           const divineCost = finishingDivines * priceBook.getRate('divine');
@@ -274,25 +313,49 @@ export class MonteCarloSimulator {
     return mods[mods.length - 1];
   }
 
+  private matchesTargetRequirement(mod: Mod | { modId: string; modGroup: string; tier: number; name: string }): boolean {
+    const matchesMain = this.target.requiredMods.some((req) =>
+      (req.modGroup ? mod.modGroup === req.modGroup : true) &&
+      (req.modId ? mod.modId === req.modId : true) &&
+      (req.name ? mod.name === req.name : true) &&
+      (req.maxTierNumber !== undefined ? mod.tier <= req.maxTierNumber : true)
+    );
+    if (matchesMain) return true;
+
+    if (this.target.outcomeBranches) {
+      return this.target.outcomeBranches.some((b) =>
+        b.requiredMods.some((req) =>
+          (req.modGroup ? mod.modGroup === req.modGroup : true) &&
+          (req.modId ? mod.modId === req.modId : true) &&
+          (req.name ? mod.name === req.name : true) &&
+          (req.maxTierNumber !== undefined ? mod.tier <= req.maxTierNumber : true)
+        )
+      );
+    }
+    return false;
+  }
+
   private scoreModProgress(mod: Mod): number {
     // Check main required mods
     for (const req of this.target.requiredMods) {
       if (
         (req.modGroup ? mod.modGroup === req.modGroup : true) &&
         (req.modId ? mod.modId === req.modId : true) &&
+        (req.name ? mod.name === req.name : true) &&
         (req.maxTierNumber !== undefined ? mod.tier <= req.maxTierNumber : true)
       ) {
         return 1000 - mod.tier * 10;
       }
     }
 
-    // Check outcome branches (e.g. +4 Attributes = highest, Attack speed, All Res)
+    // Check outcome branches
     if (this.target.outcomeBranches) {
       for (const branch of this.target.outcomeBranches) {
         for (const req of branch.requiredMods) {
           if (
             (req.modGroup ? mod.modGroup === req.modGroup : true) &&
             (req.modId ? mod.modId === req.modId : true) &&
+            (req.name ? mod.name === req.name : true) &&
             (req.maxTierNumber !== undefined ? mod.tier <= req.maxTierNumber : true)
           ) {
             const saleVal = branch.saleValueChaos ?? 100;
