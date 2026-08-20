@@ -16,9 +16,16 @@ export interface NumericRollRequirement {
   minValue: number;
 }
 
+export interface TargetOutcomeBranch {
+  name: string;
+  requiredMods: ModRequirement[];
+  saleValueChaos?: number;
+}
+
 export interface TargetDefinition {
   requiredMods: ModRequirement[];
   acceptableAnyOf?: ModRequirement[][];
+  outcomeBranches?: TargetOutcomeBranch[];
   finalRollRequirements?: NumericRollRequirement[];
   minimumSaleValue?: number;
 }
@@ -47,6 +54,14 @@ export function satisfiesTarget(state: ItemState, target: TargetDefinition): boo
       optionGroup.every((req) => affixes.some((m) => matchesModRequirement(m, req)))
     );
     if (!anySatisfied) return false;
+  }
+
+  // 2b. If outcomeBranches is present, at least one branch must be satisfied
+  if (target.outcomeBranches && target.outcomeBranches.length > 0) {
+    const anyBranchSatisfied = target.outcomeBranches.some((branch) =>
+      branch.requiredMods.every((req) => affixes.some((m) => matchesModRequirement(m, req)))
+    );
+    if (!anyBranchSatisfied) return false;
   }
 
   // 3. Numeric roll requirements check
@@ -79,4 +94,17 @@ export function satisfiesTarget(state: ItemState, target: TargetDefinition): boo
   }
 
   return true;
+}
+
+export function getMatchingOutcomeBranch(
+  state: ItemState,
+  target: TargetDefinition
+): TargetOutcomeBranch | undefined {
+  if (!target.outcomeBranches || target.outcomeBranches.length === 0) {
+    return undefined;
+  }
+  const affixes = [...state.prefixes, ...state.suffixes];
+  return target.outcomeBranches.find((branch) =>
+    branch.requiredMods.every((req) => affixes.some((m) => matchesModRequirement(m, req)))
+  );
 }

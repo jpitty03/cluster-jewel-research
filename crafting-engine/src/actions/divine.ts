@@ -77,7 +77,10 @@ export class DivineAction implements CraftAction {
 
       const statIndex = rollReq.statIndex ?? 0;
       const range = match.statValues[statIndex];
-      if (!range || range.min >= range.max) continue;
+      if (!range || range.min >= range.max || range.max < rollReq.minValue) {
+        // Range does not exist, has zero variance, or cannot achieve target roll
+        continue;
+      }
 
       const currentVal = match.currentRoll?.[statIndex];
       const totalPossibleValues = range.max - range.min + 1;
@@ -98,7 +101,7 @@ export class DivineAction implements CraftAction {
     }
 
     if (jointSuccessProbability <= 0) {
-      return 1e6; // Unsatisfiable roll requirement
+      return 0;
     }
 
     // Geometric distribution expectation = 1 / p

@@ -3,8 +3,10 @@ import { ClusterModRepository } from '../src/data/loadClusterMods.ts';
 import { ModPool } from '../src/domain/ModPool.ts';
 import { toRolledMod } from '../src/domain/Mod.ts';
 import type { ItemState } from '../src/domain/ItemState.ts';
+import { PriceBook } from '../src/domain/PriceBook.ts';
 
-const optimizer = new CraftingOptimizer();
+const priceBook = new PriceBook();
+const optimizer = new CraftingOptimizer(undefined, priceBook);
 const repo = new ClusterModRepository();
 
 console.log('='.repeat(80));
@@ -65,7 +67,23 @@ const craftAResponse = optimizer.optimizeCraft({
       { modGroup: 'AfflictionJewelSmallPassivesGrantES', maxTierNumber: 1 },
       { modGroup: 'AfflictionJewelSmallPassivesHaveIncreasedEffect', maxTierNumber: 1 },
       { modGroup: 'AfflictionJewelSmallPassivesGrantInt', maxTierNumber: 1 },
-      { modGroup: 'AfflictionJewelSmallPassivesGrantAttributes', maxTierNumber: 1 },
+    ],
+    outcomeBranches: [
+      {
+        name: '+4 All Attributes',
+        requiredMods: [{ modGroup: 'AfflictionJewelSmallPassivesGrantAttributes', maxTierNumber: 1 }],
+        saleValueChaos: 85 * 200, // 85 div = 17000c
+      },
+      {
+        name: '3% Attack Speed',
+        requiredMods: [{ modGroup: 'AfflictionJewelSmallPassivesGrantAttackSpeed', maxTierNumber: 1 }],
+        saleValueChaos: 39 * 200, // 39 div = 7800c
+      },
+      {
+        name: '+4% All Elemental Resistance',
+        requiredMods: [{ modGroup: 'AfflictionJewelSmallPassivesGrantAllElementalResistances', maxTierNumber: 1 }],
+        saleValueChaos: 7 * 200, // 7 div = 1400c
+      },
     ],
     finalRollRequirements: [
       { modGroup: 'AfflictionJewelSmallPassivesGrantInt', minValue: 8 },
@@ -73,23 +91,28 @@ const craftAResponse = optimizer.optimizeCraft({
   },
   startingStates: [
     {
-      name: 'Purchased Fractured T1 Intelligence Base',
+      name: 'Buy Fractured T1 Intelligence Base',
       state: fracIntState,
-      baseCostChaos: 1000, // 5 divines
+      baseCostChaos: 1600, // 8 divines
     },
     {
-      name: 'Purchased Fractured 35% Effect Base',
-      state: fracEffState,
-      baseCostChaos: 6000, // 30 divines
-    },
-    {
-      name: 'Clean 12-Passive Base (Self-Fracture Route)',
+      name: 'Self-Fracture T1 Intelligence (Clean 12p Base)',
       state: cleanBaseState,
-      baseCostChaos: 400, // 2 divines base
+      baseCostChaos: 1576, // 4 * (10c base + 25c prep + 359c fracture)
+    },
+    {
+      name: 'Buy Fractured 35% Effect Base',
+      state: fracEffState,
+      baseCostChaos: 2600, // 13 divines
+    },
+    {
+      name: 'Self-Fracture 35% Effect (Clean 12p Base)',
+      state: cleanBaseState,
+      baseCostChaos: 1616, // 4 * (10c base + 35c prep + 359c fracture)
     },
   ],
-  saleValueChaos: 12000, // 60 divines finished sale price
   enableAllflame: true,
+  priceBook,
   runMonteCarloValidation: true,
   monteCarloTrials: 2000,
 });
@@ -98,11 +121,17 @@ console.log(craftAResponse.explanation);
 if (craftAResponse.simulationValidation) {
   const mc = craftAResponse.simulationValidation;
   console.log('\nMonte Carlo Empirical Validation (2,000 Trials):');
-  console.log(`  Empirical Mean Total Cost: ${mc.meanCostChaos.toFixed(1)}c (~${(mc.meanCostChaos / 200).toFixed(2)} div)`);
-  console.log(`  Median Cost: ${mc.medianCostChaos.toFixed(1)}c (~${(mc.medianCostChaos / 200).toFixed(2)} div)`);
-  console.log(`  75th Percentile: ${mc.p75CostChaos.toFixed(1)}c (~${(mc.p75CostChaos / 200).toFixed(2)} div)`);
-  console.log(`  90th Percentile: ${mc.p90CostChaos.toFixed(1)}c (~${(mc.p90CostChaos / 200).toFixed(2)} div)`);
-  console.log(`  95th Percentile: ${mc.p95CostChaos.toFixed(1)}c (~${(mc.p95CostChaos / 200).toFixed(2)} div)`);
+  console.log(`  Status: ${mc.status} (${mc.completedTrials}/${mc.totalTrials} trials completed - ${mc.completionRate.toFixed(1)}%)`);
+  if (mc.meanCostChaos !== undefined) {
+    console.log(`  Empirical Mean Total Cost: ${mc.meanCostChaos.toFixed(1)}c (~${(mc.meanCostChaos / 200).toFixed(2)} div)`);
+    console.log(`  Median Cost: ${mc.medianCostChaos?.toFixed(1)}c (~${((mc.medianCostChaos ?? 0) / 200).toFixed(2)} div)`);
+    console.log(`  75th Percentile: ${mc.p75CostChaos?.toFixed(1)}c (~${((mc.p75CostChaos ?? 0) / 200).toFixed(2)} div)`);
+    console.log(`  90th Percentile: ${mc.p90CostChaos?.toFixed(1)}c (~${((mc.p90CostChaos ?? 0) / 200).toFixed(2)} div)`);
+    console.log(`  95th Percentile: ${mc.p95CostChaos?.toFixed(1)}c (~${((mc.p95CostChaos ?? 0) / 200).toFixed(2)} div)`);
+  }
+  if (mc.message) {
+    console.log(`  Note: ${mc.message}`);
+  }
 }
 
 // ------------------------------------------------------------- DEMO 2: Reference Craft B
@@ -138,6 +167,7 @@ const craftBResponse = optimizer.optimizeCraft({
     },
   ],
   saleValueChaos: 800, // 4 div finished sale price
+  priceBook,
 });
 
 console.log(craftBResponse.explanation);

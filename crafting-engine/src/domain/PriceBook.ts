@@ -19,9 +19,9 @@ export const DEFAULT_CURRENCY_RATES: CurrencyRates = {
   annul: 9,
   exalt: 1.2,
   scour: 0.5,
-  wildLifeforce: 1 / 13, // Yellow lifeforce
-  vividLifeforce: 1 / 26, // Blue lifeforce
-  primalLifeforce: 1 / 48, // Red lifeforce
+  wildLifeforce: 1 / 13, // Yellow lifeforce (1/13c each)
+  vividLifeforce: 1 / 26, // Blue lifeforce (1/26c each)
+  primalLifeforce: 1 / 48, // Red lifeforce (1/48c each)
   crystallisedRancour: 10,
 };
 
@@ -30,6 +30,16 @@ export interface BaseItemPrices {
   fracturedBasesChaos?: Record<string, number>;
 }
 
+export const DEFAULT_BASE_PRICES: Record<string, BaseItemPrices> = {
+  'Large Cluster Jewel:12% increased Attack Damage while holding a Shield': {
+    cleanBaseChaos: 10,
+    fracturedBasesChaos: {
+      'AfflictionJewelSmallPassivesGrantInt3': 1600, // 8 div
+      'AfflictionJewelSmallPassivesHaveIncreasedEffect2': 2600, // 13 div
+    },
+  },
+};
+
 export class PriceBook {
   private rates: CurrencyRates;
   private basePrices: Map<string, BaseItemPrices>;
@@ -37,7 +47,7 @@ export class PriceBook {
 
   constructor(
     rates: Partial<CurrencyRates> = {},
-    basePrices: Record<string, BaseItemPrices> = {},
+    basePrices: Record<string, BaseItemPrices> = DEFAULT_BASE_PRICES,
     finishedItemPrices: Record<string, number> = {}
   ) {
     this.rates = { ...DEFAULT_CURRENCY_RATES, ...rates };

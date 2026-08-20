@@ -88,8 +88,61 @@ crafting-engine/
 4. **Passive Count Constraints**:
    - Max notables supported: Large (3), Medium (2), Small (1).
 
-## Running Tests
+## Running Tests & Diagnostics
 
 ```bash
+# Run unit & regression test suites
 npm test
+
+# Run diagnostic mod-pool & blocked-group report for Reference Crafts A & B
+npx tsx crafting-engine/scripts/diagnosticReport.ts
+
+# Run single-action debug inspector (e.g. Exalted Orb probability distribution)
+npx tsx crafting-engine/scripts/debugAction.ts
+
+# Run end-to-end Crafting Optimizer demonstration
+npx tsx crafting-engine/scripts/optimizeCraftDemo.ts
+
+# Typecheck the engine
+npx tsc -b
 ```
+
+## Validation Findings & Implementation Gaps (from First End-to-End Run)
+
+Detailed findings and benchmark reporting standards are documented in [`docs/crafting-engine/VALIDATION_FINDINGS_AND_REPORTING_FORMAT.md`](../docs/crafting-engine/VALIDATION_FINDINGS_AND_REPORTING_FORMAT.md).
+
+### Key Findings & Required Engine Fixes
+
+1. **Finding 1 — True Self-Fracture Modeling**:
+   - Initial prototypes labeled an empty rare base as "Clean 12-Passive Base (Self-Fracture Route)" without executing a Fracturing Orb or accounting for preparation costs.
+   - A valid self-fracture starting strategy must model:
+     1. Clean base acquisition;
+     2. Rolling candidate target modifier (e.g. T1 Int);
+     3. Preparing exactly four eligible explicit modifiers;
+     4. Fracturing Orb use (25% success rate on 4-mod rare cluster);
+     5. Handling failure outcomes and repeated preparation loops.
+   - *Economic baseline*: At 359c per Fracturing Orb and 10c per clean base, the theoretical floor before preparation is $4 \times (359\text{c} + 10\text{c}) = 1476\text{c} = 7.38\text{ div}$. With purchased fractured Int bases at 8 div (1600c), self-fracture preparation headroom is only $\approx 31\text{c}$ per attempt.
+
+2. **Finding 2 — Dynamic PriceBook vs Hard-Coded Constants**:
+   - Prototype scripts must not use stale inline prices. All currency exchange rates and base market valuations must be injected dynamically via `PriceBook` and trade fixtures.
+
+3. **Finding 3 — State-Transition Graph & Recovery Loops**:
+   - The solver must not sum independent requirement costs or use static heuristics (e.g. `expectedAnnuls = expectedSlams * 0.8`).
+   - It must evaluate concrete Markov decision transitions $V(s) = \min_A \left[ \text{cost}(A) + \sum P(s'|s, A) V(s') \right]$ with exact failure recovery (e.g. Annul removing T1 ES with probability $1/3$ returning to Step 2).
+
+4. **Finding 4 — Joint Divine Orb Numeric Finishing**:
+   - Divine Orbs reroll all non-fractured explicit numeric values simultaneously. Reroll expectations across multiple target numeric values must be calculated using joint probability distributions rather than summing independent expectations.
+
+5. **Finding 5 — Multi-Tier Outcome Valuation & Profit Optimization**:
+   - For Step 5 suffix slamming on Craft A, acceptable outcomes have differing market valuations (+4 All Attributes $\approx 85\text{ div}$, 3% Attack Speed $\approx 39\text{ div}$, All Elemental Res $\approx 7\text{ div}$).
+   - The policy must decide whether to accept/sell or annul/retry based on continuation value.
+
+6. **Finding 6 — Standardized 6-Step Crafting Plan Reporting**:
+   - Output must follow the step-by-step reporting format:
+     - **Step 1**: Starting Base Acquisition (Buy Fractured vs Self-Fracture comparison).
+     - **Step 2**: Harvest Reforge for primary prefix (e.g. Reforge Defence for T1 ES).
+     - **Step 3**: Cleanup of non-target modifiers with exact Annul risk.
+     - **Step 4**: Exalt / Allflame for secondary prefix (35% Effect).
+     - **Step 5**: Exalt / Allflame for premium suffix (+4 Attributes / 3% AS / All Res).
+     - **Step 6**: Divine numeric finishing.
+     - **Financial Summary**: Expected total cost, outcome value distribution, net profit, and ROI comparison against alternate starting routes.

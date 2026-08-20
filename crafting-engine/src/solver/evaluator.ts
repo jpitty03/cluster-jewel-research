@@ -1,7 +1,12 @@
 import type { ItemState } from '../domain/ItemState.ts';
 import type { TargetDefinition } from '../domain/TargetDefinition.ts';
 import type { SolverContext, CraftAction } from '../domain/CraftAction.ts';
-import { ExpectedCostSolver } from './expectedCost.ts';
+import {
+  ExpectedCostSolver,
+  type CraftPlanStep,
+  type StartingOptionAnalysis,
+  type FinalOutcomeDistribution,
+} from './expectedCost.ts';
 import { ExaltAction } from '../actions/exalt.ts';
 import { AnnulAction } from '../actions/annul.ts';
 import { HarvestReforgeAction } from '../actions/harvestReforge.ts';
@@ -15,6 +20,11 @@ export interface StartingStrategyResult {
   expectedCurrencies: Record<string, number>;
   expectedProfitChaos?: number;
   roi?: number;
+  expectedSaleValueChaos?: number;
+  outcomeDistribution?: FinalOutcomeDistribution[];
+  steps?: CraftPlanStep[];
+  step1Options?: StartingOptionAnalysis[];
+  isValidated: boolean;
 }
 
 export class CraftEvaluator {
@@ -52,11 +62,12 @@ export class CraftEvaluator {
     const expectedCraftingCostChaos = result.expectedCostChaos;
     const totalExpectedCostChaos = baseCostChaos + expectedCraftingCostChaos;
 
+    const effectiveSaleValue = saleValueChaos ?? result.expectedSaleValueChaos;
     let expectedProfitChaos: number | undefined;
     let roi: number | undefined;
 
-    if (saleValueChaos !== undefined) {
-      expectedProfitChaos = saleValueChaos - totalExpectedCostChaos;
+    if (effectiveSaleValue !== undefined) {
+      expectedProfitChaos = effectiveSaleValue - totalExpectedCostChaos;
       roi = totalExpectedCostChaos > 0 ? (expectedProfitChaos / totalExpectedCostChaos) * 100 : 0;
     }
 
@@ -68,6 +79,11 @@ export class CraftEvaluator {
       expectedCurrencies: result.expectedCurrencies,
       expectedProfitChaos,
       roi,
+      expectedSaleValueChaos: effectiveSaleValue,
+      outcomeDistribution: result.outcomeDistribution,
+      steps: result.steps,
+      step1Options: result.step1Options,
+      isValidated: true,
     };
   }
 }
