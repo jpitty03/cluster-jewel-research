@@ -8,6 +8,22 @@ The most important requirement is that optimizer output must be presented as a *
 
 The current end-to-end output is **not yet trustworthy**. Several implementation issues were identified that cause the reported costs to be materially wrong. These must be fixed before the optimizer is used to make real crafting decisions.
 
+## Testing constraint — do not create unit tests
+
+For this follow-up work, **do not create, expand, or spend implementation time on unit tests for the crafting engine**.
+
+Validation should instead be performed through:
+
+- focused diagnostic/demo scripts that print the actual eligible pools, weights, probabilities, state transitions, and costs;
+- hand-checking important probabilities against the raw PoEDB data;
+- end-to-end reference-craft runs;
+- Monte Carlo cross-validation once the Monte Carlo implementation is repaired;
+- regression/reference scripts where useful to ensure the demonstrated craft outputs do not unexpectedly drift.
+
+The goal is to keep iteration focused on making the mathematical model and state transitions correct rather than building a unit-test suite at this stage.
+
+If an existing unit test breaks because the implementation changes, do not broaden the task into building new unit-test coverage unless explicitly requested. Prefer validating the corrected behavior through the diagnostic and reference-craft workflows described in this document.
+
 ---
 
 # Current Reference Prices
@@ -256,7 +272,7 @@ These are not the current reference values.
 
 Reference craft prices must come from a fixture/PriceBook or explicit request input rather than stale constants in the demonstration script.
 
-Tests should fail if the fixture and demo silently diverge.
+The diagnostic/reference run should clearly flag when fixture prices and demo prices silently diverge.
 
 ---
 
@@ -1042,7 +1058,7 @@ SUFFIXES
   Premium fourth suffix
 ```
 
-Add regression tests so this cannot drift back to standard rare-item 3-prefix/3-suffix assumptions.
+Add a regression/reference validation so this cannot drift back to standard rare-item 3-prefix/3-suffix assumptions.
 
 ---
 
