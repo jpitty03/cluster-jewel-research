@@ -9,25 +9,19 @@ import { getRemovableAffixes } from '../domain/ItemState.ts';
 import { getEligibleMods, calculateTotalWeight } from '../rules/modEligibility.ts';
 import { canAcceptPrefix, canAcceptSuffix } from '../rules/affixRules.ts';
 import { CraftingPolicyEngine } from '../solver/policyEngine.ts';
-import { getDefenceModsForCluster, getTaggedModsForCluster } from '../rules/clusterPoolHelpers.ts';
+import { getTaggedModsForCluster } from '../rules/clusterPoolHelpers.ts';
 
 export interface HarvestCensusData {
   totalHarvests: number;
-  t1ESSuccesses: number;
-  t1ESSuccessRate: number;
-  t1ESAdditional0AffixesPct: number;
-  t1ESAdditional1AffixesPct: number;
-  t1ESAdditional2AffixesPct: number;
-  t1ESOnlyPct: number;
-  t1ESPlusJunk1OnlyPct: number;
-  t1ESPlusJunk2OnlyPct: number;
-  t1ESPlusIntPct: number;
-  t1ESPlusAttributesPct: number;
-  t1ESPlusAttackSpeedPct: number;
-  t1ESPlusAllResPct: number;
-  t1ESPlusIntAndPremiumPct: number;
-  t1ESPlus35EffPct: number;
-  t1ESPlus35AndPremiumPct: number;
+  t1HarvestSuccesses: number;
+  t1HarvestSuccessRate: number;
+  t1HarvestAdditional0AffixesPct: number;
+  t1HarvestAdditional1AffixesPct: number;
+  t1HarvestAdditional2AffixesPct: number;
+  t1HarvestOnlyPct: number;
+  t1HarvestPlusJunk1OnlyPct: number;
+  t1HarvestPlusJunk2OnlyPct: number;
+  targetSuffixHitsPct: Record<string, number>;
 }
 
 export interface TraceStepLog {
@@ -102,17 +96,39 @@ export class MonteCarloSimulator {
     this.policyEngine = policyEngine ?? new CraftingPolicyEngine(target, context.priceBook, context.pool, allflameEnabled);
   }
 
-  runSimulation(
-    startStateFactory: () => ItemState,
-    baseCostChaos: number,
+  public runSimulation(
+    startState: ItemState,
     numTrials = 2000,
-    maxStepsPerTrial = 25000,
-    traceTrialsCount = 0
+    baseCostChaos = 0,
+    maxStepsPerTrial = 25000
   ): SimulationResult {
-    const allMods = this.context.pool.getAllMods();
     const priceBook = this.context.priceBook;
+    const pool = this.context.pool;
+    const allMods = pool ? pool.getAllMods().filter((m) => m.ilvl <= (startState.itemLevel ?? 84)) : [];
 
-    const completedCosts: number[] = [];
+    let completedCount = 0;
+    let failedCount = 0;
+    let timedOutCount = 0;
+    let totalAttempts = 0;
+
+    let resolvedStatesCount = 0;
+    let missingPolicyStates = 0;
+    let fallbackActionsUsed = 0;
+
+    // Harvest Census counters
+    let totalHarvests = 0;
+    let t1HarvestSuccesses = 0;
+    let countT1Additional0 = 0;
+    let countT1Additional1 = 0;
+    let countT1Additional2 = 0;
+    let countT1Only = 0;
+    let countT1PlusJunk1Only = 0;
+    let countT1PlusJunk2Only = 0;
+    const targetSuffixHitCounts: Record<string, number> = {};
+    for (const g of this.policyEngine.targetSuffixGroups) {
+      targetSuffixHitCounts[g.name] = 0;
+    }
+
     const currencyTotals: Record<string, number> = {};
     const stepwiseTotals = {
       step1: 0,
@@ -123,48 +139,38 @@ export class MonteCarloSimulator {
       step6: 0,
     };
 
-    let timedOutCount = 0;
-    let failedCount = 0;
-    let resolvedStatesCount = 0;
-    let missingPolicyStates = 0;
-    let fallbackActionsUsed = 0;
+    const completedCosts: number[] = [];
+    const outcomeBranchCounts: Record<string, number> = {};
     const sampleTraces: SampleCraftTrace[] = [];
 
-    // Detailed census tracking
-    let totalHarvests = 0;
-    let t1ESSuccesses = 0;
-    let countT1ESAdditional0 = 0;
-    let countT1ESAdditional1 = 0;
-    let countT1ESAdditional2 = 0;
-    let countT1ESOnly = 0;
-    let countT1ESPlusJunk1Only = 0;
-    let countT1ESPlusJunk2Only = 0;
-    let countT1ESPlusInt = 0;
-    let countT1ESPlusAttr = 0;
-    let countT1ESPlusAS = 0;
-    let countT1ESPlusAllRes = 0;
-    let countT1ESPlusIntAndPremium = 0;
-    let countT1ESPlus35 = 0;
-    let countT1ESPlus35AndPremium = 0;
-
-    // Use unified helper for Defence pool
-    const defenceMods = getDefenceModsForCluster(this.context.pool, 84);
-
-    let totalAttempts = 0;
-    const maxTotalAttempts = numTrials * 3;
-
-    const outcomeBranchCounts: Record<string, number> = {};
-
-    while (completedCosts.length < numTrials && totalAttempts < maxTotalAttempts) {
+    for (let trial = 1; trial <= numTrials; trial++) {
       totalAttempts++;
-      let state = startStateFactory();
-      let trialCostChaos = baseCostChaos;
-      const trialCurrencies: Record<string, number> = {};
-      const trialStepCosts = { step1: baseCostChaos, step2: 0, step3: 0, step4: 0, step5: 0, step6: 0 };
-      const trialStepLogs: TraceStepLog[] = [];
-      const captureTrace = sampleTraces.length < traceTrialsCount;
+
+      const state: ItemState = {
+        baseType: startState.baseType,
+        clusterType: startState.clusterType,
+        itemLevel: startState.itemLevel,
+        passiveCount: startState.passiveCount,
+        rarity: startState.rarity,
+        prefixes: startState.prefixes.map((p) => ({ ...p })),
+        suffixes: startState.suffixes.map((s) => ({ ...s })),
+        fracturedModIds: [...startState.fracturedModIds],
+      };
 
       let steps = 0;
+      let trialCostChaos = baseCostChaos;
+      const trialCurrencies: Record<string, number> = {};
+      const trialStepCosts = {
+        step1: baseCostChaos,
+        step2: 0,
+        step3: 0,
+        step4: 0,
+        step5: 0,
+        step6: 0,
+      };
+
+      const captureTrace = trial <= 5;
+      const trialStepLogs: TraceStepLog[] = [];
       let isCompleted = false;
       let trialHarvests = 0;
       let trialAnnuls = 0;
@@ -175,7 +181,7 @@ export class MonteCarloSimulator {
         steps++;
         resolvedStatesCount++;
 
-        // Consult policy engine
+        // Consult mechanical policy engine
         const decision = this.policyEngine.getBestAction(state);
 
         if (decision.actionType === 'TERMINAL') {
@@ -183,7 +189,6 @@ export class MonteCarloSimulator {
           break;
         }
 
-        // Strict unhandled state detection
         if (decision.expectedContinuationCostChaos === Infinity) {
           missingPolicyStates++;
           fallbackActionsUsed++;
@@ -191,7 +196,7 @@ export class MonteCarloSimulator {
           break;
         }
 
-        // ------------------------------------------------------------- 1. HARVEST_DEFENCE / HARVEST_REFORGE
+        // 1. HARVEST_DEFENCE / HARVEST_REFORGE
         if (decision.actionType === 'HARVEST_DEFENCE' || decision.actionType === 'HARVEST_REFORGE') {
           totalHarvests++;
           trialHarvests++;
@@ -209,7 +214,7 @@ export class MonteCarloSimulator {
 
           // Guarantee 1 tagged mod
           const taggedMods = this.context.pool ? getTaggedModsForCluster(this.context.pool, harvestTag, 84) : [];
-          const chosenTagged = this.sampleWeightedMod(taggedMods.length > 0 ? taggedMods : defenceMods);
+          const chosenTagged = this.sampleWeightedMod(taggedMods);
           if (chosenTagged) {
             if (chosenTagged.genType === 'Prefix') {
               state.prefixes.push(toRolledMod(chosenTagged));
@@ -222,7 +227,8 @@ export class MonteCarloSimulator {
           const extraAffixesCount = Math.random() < 0.5 ? 1 : 2;
           const extraMods: Mod[] = [];
           for (let e = 0; e < extraAffixesCount; e++) {
-            const eligible = getEligibleMods(state, allMods);
+            const reqGenType = !canAcceptPrefix(state) ? 'Suffix' : (!canAcceptSuffix(state) ? 'Prefix' : undefined);
+            const eligible = getEligibleMods(state, allMods, reqGenType ? { requiredGenType: reqGenType } : undefined);
             const extra = this.sampleWeightedMod(eligible);
             if (extra) {
               if (extra.genType === 'Prefix' && canAcceptPrefix(state)) {
@@ -235,40 +241,28 @@ export class MonteCarloSimulator {
             }
           }
 
-          // Comprehensive census tracking
-          const isT1ES = chosenTagged?.modGroup === 'AfflictionJewelSmallPassivesGrantES' && chosenTagged?.tier === 1;
-          if (isT1ES) {
-            t1ESSuccesses++;
-            if (extraMods.length === 0) countT1ESAdditional0++;
-            else if (extraMods.length === 1) countT1ESAdditional1++;
-            else if (extraMods.length === 2) countT1ESAdditional2++;
+          // Dynamic Census tracking
+          const isT1Harvest = chosenTagged?.modGroup === this.policyEngine.harvestModGroup && chosenTagged?.tier === 1;
+          if (isT1Harvest) {
+            t1HarvestSuccesses++;
+            if (extraMods.length === 0) countT1Additional0++;
+            else if (extraMods.length === 1) countT1Additional1++;
+            else if (extraMods.length === 2) countT1Additional2++;
 
-            const has35 = extraMods.some((m) => m.modGroup === 'AfflictionJewelSmallPassivesHaveIncreasedEffect' && m.tier === 1);
-            const hasInt = extraMods.some((m) => m.modGroup === 'AfflictionJewelSmallPassivesGrantInt' && m.tier === 1);
-            const hasAttr = extraMods.some((m) => m.modGroup === 'AfflictionJewelSmallPassivesGrantAttributes' && m.tier === 1);
-            const hasAS = extraMods.some((m) => m.name.includes('3% increased Attack Speed') && m.tier === 1);
-            const hasAllRes = extraMods.some((m) => m.modGroup === 'AfflictionJewelSmallPassivesGrantElementalRes' && m.tier === 1);
-            const hasAnyPremium = hasAttr || hasAS || hasAllRes;
+            let hasTargetSuffix = false;
+            for (const g of this.policyEngine.targetSuffixGroups) {
+              const hit = extraMods.some((m) => m.modGroup === g.modGroup && m.tier <= g.tier);
+              if (hit) {
+                targetSuffixHitCounts[g.name] = (targetSuffixHitCounts[g.name] ?? 0) + 1;
+                hasTargetSuffix = true;
+              }
+            }
 
             if (extraMods.length === 0) {
-              countT1ESOnly++;
-            } else if (hasInt && hasAnyPremium) {
-              countT1ESPlusIntAndPremium++;
-            } else if (has35 && hasAnyPremium) {
-              countT1ESPlus35AndPremium++;
-            } else if (has35) {
-              countT1ESPlus35++;
-            } else if (hasInt) {
-              countT1ESPlusInt++;
-            } else if (hasAttr) {
-              countT1ESPlusAttr++;
-            } else if (hasAS) {
-              countT1ESPlusAS++;
-            } else if (hasAllRes) {
-              countT1ESPlusAllRes++;
-            } else {
-              if (extraMods.length === 1) countT1ESPlusJunk1Only++;
-              else countT1ESPlusJunk2Only++;
+              countT1Only++;
+            } else if (!hasTargetSuffix) {
+              if (extraMods.length === 1) countT1PlusJunk1Only++;
+              else countT1PlusJunk2Only++;
             }
           }
 
@@ -285,7 +279,7 @@ export class MonteCarloSimulator {
           continue;
         }
 
-        // ------------------------------------------------------------- 2. ANNUL
+        // 2. ANNUL
         if (decision.actionType === 'ANNUL') {
           const removable = getRemovableAffixes(state);
           if (removable.length === 0) {
@@ -334,8 +328,8 @@ export class MonteCarloSimulator {
           continue;
         }
 
-        // ------------------------------------------------------------- 3. ALLFLAME_EXALT_PREFIX / EXALT_PREFIX
-        if (decision.actionType === 'ALLFLAME_EXALT_PREFIX' || decision.actionType === 'EXALT_PREFIX') {
+        // 3. EXALT_PREFIX
+        if (decision.actionType === 'EXALT_PREFIX' || decision.actionType === 'ALLFLAME_EXALT_PREFIX') {
           const eligiblePrefixes = getEligibleMods(state, allMods, { requiredGenType: 'Prefix' });
           if (eligiblePrefixes.length === 0) {
             failedCount++;
@@ -348,24 +342,7 @@ export class MonteCarloSimulator {
           trialCurrencies.exalt = (trialCurrencies.exalt ?? 0) + 1;
           trialStepCosts.step4 += costChaos;
 
-          let chosenMod: Mod;
-          let evalSummary = '';
-          const isAllflame = decision.actionType === 'ALLFLAME_EXALT_PREFIX' && this.allflameEnabled;
-          if (isAllflame) {
-            const candidates = [
-              this.sampleWeightedMod(eligiblePrefixes),
-              this.sampleWeightedMod(eligiblePrefixes),
-              this.sampleWeightedMod(eligiblePrefixes),
-              this.sampleWeightedMod(eligiblePrefixes),
-            ].filter((m): m is Mod => m !== null);
-
-            const selection = this.policyEngine.selectBestAllflameCandidate(candidates, state);
-            chosenMod = selection.chosenMod;
-            evalSummary = ` [Candidates: ${selection.evaluations.map((e) => `${e.mod.name} (V=${e.resultingStateValue.toFixed(1)}c)`).join(', ')}]`;
-          } else {
-            chosenMod = this.sampleWeightedMod(eligiblePrefixes)!;
-          }
-
+          const chosenMod = this.sampleWeightedMod(eligiblePrefixes)!;
           if (chosenMod) {
             state.prefixes.push(toRolledMod(chosenMod));
           }
@@ -374,7 +351,7 @@ export class MonteCarloSimulator {
             trialStepLogs.push({
               step: steps,
               actionTaken: decision.actionName,
-              details: `Slammed ${chosenMod.name}${evalSummary}`,
+              details: `Slammed ${chosenMod.name}`,
               costChaos,
               resultStatePrefixes: state.prefixes.map((p) => `${p.name} (t${p.tier})`),
               resultStateSuffixes: state.suffixes.map((s) => `${s.name} (t${s.tier})`),
@@ -383,8 +360,8 @@ export class MonteCarloSimulator {
           continue;
         }
 
-        // ------------------------------------------------------------- 4. ALLFLAME_EXALT_SUFFIX / EXALT_SUFFIX
-        if (decision.actionType === 'ALLFLAME_EXALT_SUFFIX' || decision.actionType === 'EXALT_SUFFIX') {
+        // 4. EXALT_SUFFIX
+        if (decision.actionType === 'EXALT_SUFFIX' || decision.actionType === 'ALLFLAME_EXALT_SUFFIX') {
           const eligibleSuffixes = getEligibleMods(state, allMods, { requiredGenType: 'Suffix' });
           if (eligibleSuffixes.length === 0) {
             failedCount++;
@@ -396,30 +373,9 @@ export class MonteCarloSimulator {
           const costChaos = priceBook.toChaos(1, 'exalt');
           trialCostChaos += costChaos;
           trialCurrencies.exalt = (trialCurrencies.exalt ?? 0) + 1;
-          if (decision.stepAttribution === 4) {
-            trialStepCosts.step4 += costChaos;
-          } else {
-            trialStepCosts.step5 += costChaos;
-          }
+          trialStepCosts.step4 += costChaos;
 
-          let chosenMod: Mod;
-          let evalSummary = '';
-          const isAllflame = decision.actionType === 'ALLFLAME_EXALT_SUFFIX' && this.allflameEnabled;
-          if (isAllflame) {
-            const candidates = [
-              this.sampleWeightedMod(eligibleSuffixes),
-              this.sampleWeightedMod(eligibleSuffixes),
-              this.sampleWeightedMod(eligibleSuffixes),
-              this.sampleWeightedMod(eligibleSuffixes),
-            ].filter((m): m is Mod => m !== null);
-
-            const selection = this.policyEngine.selectBestAllflameCandidate(candidates, state);
-            chosenMod = selection.chosenMod;
-            evalSummary = ` [Candidates: ${selection.evaluations.map((e) => `${e.mod.name} (V=${e.resultingStateValue.toFixed(1)}c)`).join(', ')}]`;
-          } else {
-            chosenMod = this.sampleWeightedMod(eligibleSuffixes)!;
-          }
-
+          const chosenMod = this.sampleWeightedMod(eligibleSuffixes)!;
           if (chosenMod) {
             state.suffixes.push(toRolledMod(chosenMod));
           }
@@ -428,7 +384,7 @@ export class MonteCarloSimulator {
             trialStepLogs.push({
               step: steps,
               actionTaken: decision.actionName,
-              details: `Slammed ${chosenMod.name}${evalSummary}`,
+              details: `Slammed ${chosenMod.name}`,
               costChaos,
               resultStatePrefixes: state.prefixes.map((p) => `${p.name} (t${p.tier})`),
               resultStateSuffixes: state.suffixes.map((s) => `${s.name} (t${s.tier})`),
@@ -448,24 +404,21 @@ export class MonteCarloSimulator {
       }
 
       if (isCompleted || satisfiesTarget(state, this.target) || getMatchingOutcomeBranch(state, this.target)) {
-        // Track outcome branch
-        const matchingBranch = getMatchingOutcomeBranch(state, this.target);
-        if (matchingBranch) {
-          outcomeBranchCounts[matchingBranch.name] = (outcomeBranchCounts[matchingBranch.name] || 0) + 1;
-        }
+        completedCount++;
 
-        // Optional Step 6: Finishing Divines
-        const finishingDivines = this.divineAction.calculateExpectedFinishingCost(state, this.target);
-        if (finishingDivines > 0) {
-          const divineCost = finishingDivines * priceBook.getRate('divine');
+        // Divine Finishing if applicable
+        const divineAttempts = this.divineAction.calculateExpectedFinishingCost(state, this.target);
+        if (divineAttempts > 0) {
+          const divineCost = divineAttempts * priceBook.getRate('divine');
           trialCostChaos += divineCost;
-          trialCurrencies.divine = (trialCurrencies.divine ?? 0) + finishingDivines;
+          trialCurrencies.divine = (trialCurrencies.divine ?? 0) + divineAttempts;
           trialStepCosts.step6 += divineCost;
         }
 
         completedCosts.push(trialCostChaos);
-        for (const [curr, amount] of Object.entries(trialCurrencies)) {
-          currencyTotals[curr] = (currencyTotals[curr] ?? 0) + amount;
+
+        for (const [curr, amt] of Object.entries(trialCurrencies)) {
+          currencyTotals[curr] = (currencyTotals[curr] ?? 0) + amt;
         }
         stepwiseTotals.step1 += trialStepCosts.step1;
         stepwiseTotals.step2 += trialStepCosts.step2;
@@ -474,9 +427,13 @@ export class MonteCarloSimulator {
         stepwiseTotals.step5 += trialStepCosts.step5;
         stepwiseTotals.step6 += trialStepCosts.step6;
 
-        if (sampleTraces.length < traceTrialsCount && trialStepLogs.length > 0) {
+        const matchedBranch = getMatchingOutcomeBranch(state, this.target);
+        const branchName = matchedBranch?.name ?? 'Target Satisfied';
+        outcomeBranchCounts[branchName] = (outcomeBranchCounts[branchName] ?? 0) + 1;
+
+        if (captureTrace) {
           sampleTraces.push({
-            trialNumber: completedCosts.length,
+            trialNumber: trial,
             stepCount: steps,
             finalPrefixes: state.prefixes.map((p) => `${p.name} (t${p.tier})`),
             finalSuffixes: state.suffixes.map((s) => `${s.name} (t${s.tier})`),
@@ -487,12 +444,11 @@ export class MonteCarloSimulator {
             stepLogs: trialStepLogs,
           });
         }
-      } else if (steps >= maxStepsPerTrial) {
+      } else {
         timedOutCount++;
       }
     }
 
-    const completedCount = completedCosts.length;
     const completionRate = totalAttempts > 0 ? (completedCount / totalAttempts) * 100 : 0;
 
     if (completedCount === 0) {
@@ -533,23 +489,22 @@ export class MonteCarloSimulator {
       step6DivineChaos: stepwiseTotals.step6 / completedCount,
     };
 
+    const targetSuffixHitsPct: Record<string, number> = {};
+    for (const [name, count] of Object.entries(targetSuffixHitCounts)) {
+      targetSuffixHitsPct[name] = t1HarvestSuccesses > 0 ? (count / t1HarvestSuccesses) * 100 : 0;
+    }
+
     const harvestCensus: HarvestCensusData = {
       totalHarvests,
-      t1ESSuccesses,
-      t1ESSuccessRate: totalHarvests > 0 ? (t1ESSuccesses / totalHarvests) * 100 : 0,
-      t1ESAdditional0AffixesPct: t1ESSuccesses > 0 ? (countT1ESAdditional0 / t1ESSuccesses) * 100 : 0,
-      t1ESAdditional1AffixesPct: t1ESSuccesses > 0 ? (countT1ESAdditional1 / t1ESSuccesses) * 100 : 0,
-      t1ESAdditional2AffixesPct: t1ESSuccesses > 0 ? (countT1ESAdditional2 / t1ESSuccesses) * 100 : 0,
-      t1ESOnlyPct: t1ESSuccesses > 0 ? (countT1ESOnly / t1ESSuccesses) * 100 : 0,
-      t1ESPlusJunk1OnlyPct: t1ESSuccesses > 0 ? (countT1ESPlusJunk1Only / t1ESSuccesses) * 100 : 0,
-      t1ESPlusJunk2OnlyPct: t1ESSuccesses > 0 ? (countT1ESPlusJunk2Only / t1ESSuccesses) * 100 : 0,
-      t1ESPlusIntPct: t1ESSuccesses > 0 ? (countT1ESPlusInt / t1ESSuccesses) * 100 : 0,
-      t1ESPlusAttributesPct: t1ESSuccesses > 0 ? (countT1ESPlusAttr / t1ESSuccesses) * 100 : 0,
-      t1ESPlusAttackSpeedPct: t1ESSuccesses > 0 ? (countT1ESPlusAS / t1ESSuccesses) * 100 : 0,
-      t1ESPlusAllResPct: t1ESSuccesses > 0 ? (countT1ESPlusAllRes / t1ESSuccesses) * 100 : 0,
-      t1ESPlusIntAndPremiumPct: t1ESSuccesses > 0 ? (countT1ESPlusIntAndPremium / t1ESSuccesses) * 100 : 0,
-      t1ESPlus35EffPct: t1ESSuccesses > 0 ? (countT1ESPlus35 / t1ESSuccesses) * 100 : 0,
-      t1ESPlus35AndPremiumPct: t1ESSuccesses > 0 ? (countT1ESPlus35AndPremium / t1ESSuccesses) * 100 : 0,
+      t1HarvestSuccesses,
+      t1HarvestSuccessRate: totalHarvests > 0 ? (t1HarvestSuccesses / totalHarvests) * 100 : 0,
+      t1HarvestAdditional0AffixesPct: t1HarvestSuccesses > 0 ? (countT1Additional0 / t1HarvestSuccesses) * 100 : 0,
+      t1HarvestAdditional1AffixesPct: t1HarvestSuccesses > 0 ? (countT1Additional1 / t1HarvestSuccesses) * 100 : 0,
+      t1HarvestAdditional2AffixesPct: t1HarvestSuccesses > 0 ? (countT1Additional2 / t1HarvestSuccesses) * 100 : 0,
+      t1HarvestOnlyPct: t1HarvestSuccesses > 0 ? (countT1Only / t1HarvestSuccesses) * 100 : 0,
+      t1HarvestPlusJunk1OnlyPct: t1HarvestSuccesses > 0 ? (countT1PlusJunk1Only / t1HarvestSuccesses) * 100 : 0,
+      t1HarvestPlusJunk2OnlyPct: t1HarvestSuccesses > 0 ? (countT1PlusJunk2Only / t1HarvestSuccesses) * 100 : 0,
+      targetSuffixHitsPct,
     };
 
     const outcomeBranchDistribution: Record<string, number> = {};

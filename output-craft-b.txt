@@ -6,70 +6,140 @@ STATUS: NOT YET OPTIMIZED
 The reported Exalt path is only the best route among currently implemented actions.
 It is not a global optimum (requires Alt/Aug/Regal/Scour transitions).
 
+======================================================================
+HARVEST STOPPING POLICY COMPARISON
+======================================================================
+
+Strategy A: Stop Harvest at First T1 Maximum Energy Shield (Sequential Exalts):
+  Expected Harvests:           0.00
+  Expected Annulments:          0.00
+  Expected Exalted Slams:       0.00
+  Expected Crafting Cost:      0.0c
+  Expected Total Craft Cost:   100.0c
+  Expected Sale Value:         0.0c
+  Expected Profit:             -100.0c
+  Expected ROI:                -100.00%
+  Description:                 Stop Harvest upon hitting T1 Maximum Energy Shield, clean junk suffixes with Annuls, and slam target suffixes with Exalted Orbs.
+
+Strategy B: Pure Harvest Fishing (Until T1 Maximum Energy Shield + Target Suffixes):
+  Expected Harvests:           1000000.00
+  Expected Annulments:          0.00
+  Expected Exalted Slams:       0.00
+  Expected Crafting Cost:      1562500.0c (~7812.50 div)
+  Expected Total Craft Cost:   1562600.0c (~7813.00 div)
+  Expected Sale Value:         0.0c
+  Expected Profit:             -1562600.0c (~-7813.00 div)
+  Expected ROI:                -100.00%
+  Description:                 Remain in Harvest until BOTH T1 Maximum Energy Shield and all Target Suffixes appear simultaneously directly from Harvest (1 in ~1,000,000 crafts).
+
+Strategy C: State-Aware Optimal Stopping Policy:
+  Expected Harvests:           0.00
+  Expected Annulments:          0.00
+  Expected Exalted Slams:       0.00
+  Expected Crafting Cost:      0.0c
+  Expected Total Craft Cost:   100.0c
+  Expected Sale Value:         0.0c
+  Expected Profit:             -100.0c
+  Expected ROI:                -100.00%
+  Description:                 Dynamic Bellman policy choosing min-cost action at every state; preserves any target suffix hit in Harvest, cleans junk, and slams remainder with Exalted Orbs.
+
+Recommended Policy:
+  Strategy C: State-Aware Optimal Stopping Policy
+Reason:
+  Strategy B requires roughly 1,000,000 Harvest crafts on average to hit T1 Maximum Energy Shield and all target suffixes simultaneously directly from Harvest. This is far more expensive than stopping at T1 Maximum Energy Shield, preserving partial target suffixes, and completing remainder with Exalted Orbs (Strategy A/C).
+
+----------------------------------------------------------------------
+SUFFIX POOL DIAGNOSTIC AUDIT (FRACTURED 35% ROUTE)
+----------------------------------------------------------------------
+
+State A — Frac 35 + T1 Maximum Energy Shield, no suffixes:
+  Description:            Initial clean prefix state before suffix slams
+  Eligible Suffix Count:  39
+  Total Suffix Weight:    15,003
+  Widespread Destruction Weight: 505
+    Normal Exalt chance:  3.37%
+  Total Target Weight:    505
+    Normal Exalt chance:  3.37%
+  Blocked Mod Groups:     None (Full suffix pool)
+
+State B — Frac 35 + T1 Maximum Energy Shield + Widespread Destruction:
+  Description:            Widespread Destruction locked, rolling for final compatible suffix
+  Eligible Suffix Count:  36
+  Total Suffix Weight:    14,498
+  Total Target Weight:    0
+    Normal Exalt chance:  0.00%
+  Blocked Mod Groups:     Widespread Destruction (505 weight blocked)
+
+----------------------------------------------------------------------
+REPRESENTATIVE STATE DECISIONS & CONTINUATION VALUES
+----------------------------------------------------------------------
+
+1. State: Frac 35 + T1 Maximum Energy Shield (Clean S0)
+   Candidate Actions:
+     - Harvest Reforge Defences                 Continuation EV: 0.0c
+     - Orb of Annulment                         Continuation EV: 0.0c
+   Recommended Action: Harvest Reforge Defences
+   Reason:             Harvest Reforge Defences has continuation EV of 0.0c vs 1.6c to reforge.
+
+2. State: Frac 35 + T1 Maximum Energy Shield + Widespread Destruction
+   Candidate Actions:
+     - Harvest Reforge Defences                 Continuation EV: 0.0c
+     - Orb of Annulment                         Continuation EV: 9.7c
+   Recommended Action: Harvest Reforge Defences
+   Reason:             Harvest Reforge Defences has continuation EV of 0.0c vs 1.6c to reforge.
+
+3. State: Frac 35 + T1 Maximum Energy Shield + 1 Junk Suffix
+   Candidate Actions:
+     - Harvest Reforge Defences                 Continuation EV: 0.0c
+     - Orb of Annulment                         Continuation EV: 9.7c
+   Recommended Action: Harvest Reforge Defences
+   Reason:             Harvest Reforge Defences has continuation EV of 0.0c vs 1.6c to reforge.
+
 ----------------------------------------------------------------------
 Base Acquisition
 ----------------------------------------------------------------------
-Action: Acquire Clean Base
+Action: Buy Fractured Base
+Note: Starting clean base
 Raw step cost:                100.0c
 Expected step total:          100.0c
 Expected cumulative cost:     100.0c
 
 ----------------------------------------------------------------------
-Magic Alt/Aug Rolling
+Non-Fractured 35% Route: Sequential Exalt & Annul Completion
 ----------------------------------------------------------------------
-Action: Orb of Alteration / Orb of Augmentation
-Note: Roll magic base until key notable or suffix is hit.
-Expected attempts:            250.00
-Raw step cost:                50.0c
-Expected step total:          50.0c
-Expected cumulative cost:     150.0c
-
-----------------------------------------------------------------------
-Regal Orb & Exalt Slams
-----------------------------------------------------------------------
-Action: Exalted Orb Slam
-Note: Regal into rare and slam open affixes.
-Expected attempts:            4.00
-Raw step cost:                400.0c (~2.00 div)
-Expected step total:          400.0c (~2.00 div)
-Expected cumulative cost:     550.0c (~2.75 div)
+Action: Exalted Orb Slam & Annul Recovery
+Note: Exalt slam prefixes/suffixes with Annul recovery on non-Fractured 35% Effect base.
+Raw step cost:                0.0c
+Expected step total:          0.0c
+Expected cumulative cost:     100.0c
 
 ======================================================================
 RECOMMENDED CRAFTING PLAN
 ======================================================================
 
-STEP 1 -- Starting base:
-  Clean 8-Passive Cold Cluster Base
-  Expected cost: 100.0c
-
 Base Acquisition:
+  Selected Option:            Clean 8-Passive Cold Cluster Base
   Expected step cost:         100.0c
   Cumulative:                 100.0c
 
-Magic Alt/Aug Rolling:
-  Expected attempts:          250.00
-  Expected step cost:         50.0c
-  Cumulative:                 150.0c
-
-Regal Orb & Exalt Slams:
-  Expected attempts:          4.00
-  Expected step cost:         400.0c (~2.00 div)
-  Cumulative:                 550.0c (~2.75 div)
+Non-Fractured 35% Route: Sequential Exalt & Annul Completion:
+  Expected step cost:         0.0c
+  Cumulative:                 100.0c
 
 ----------------------------------------------------------------------
 EXPECTED TOTAL CRAFT COST:
-  550.0c (~2.75 div)
+  100.0c
 
 FINAL OUTCOME VALUE DISTRIBUTION:
-  100.00%  Target Notables Satisfied            (4000.0c (~20.00 div))
+  100.00%  Target Satisfied                     (0.0c)
 
 EXPECTED SALE VALUE:
   800.0c (~4.00 div)
 
 EXPECTED PROFIT:
-  250.0c (~1.25 div)
+  700.0c (~3.50 div)
 
 EXPECTED ROI:
-  45.45%
+  700.00%
 
 ======================================================================

@@ -3,10 +3,11 @@ import type { TargetDefinition, ModRequirement, TargetOutcomeBranch } from '../d
 import type { PriceBook } from '../domain/PriceBook.ts';
 import type { Mod, RolledMod } from '../domain/Mod.ts';
 import type { ModPool } from '../domain/ModPool.ts';
-import { satisfiesTarget, getMatchingOutcomeBranch } from '../domain/TargetDefinition.ts';
+import { satisfiesTarget, getMatchingOutcomeBranch, matchesModRequirement } from '../domain/TargetDefinition.ts';
 import { getRemovableAffixes } from '../domain/ItemState.ts';
 import { canAcceptPrefix, canAcceptSuffix } from '../rules/affixRules.ts';
 import { calculateTotalWeight } from '../rules/modEligibility.ts';
+import { getTaggedModsForCluster } from '../rules/clusterPoolHelpers.ts';
 
 export type ActionType =
   | 'HARVEST_DEFENCE'
@@ -27,9 +28,14 @@ export interface PolicyDecision {
   stepAttribution: 1 | 2 | 3 | 4 | 5;
 }
 
-export interface CandidateEvaluation {
-  mod: Mod;
-  resultingStateValue: number;
+export interface CandidateActionEvaluation {
+  actionType: ActionType;
+  actionName: string;
+  immediateCostChaos: number;
+  expectedContinuationCostChaos: number;
+  expectedTotalCostChaos: number;
+  stepAttribution: 1 | 2 | 3 | 4 | 5;
+  reason: string;
 }
 
 export interface RepresentativeStateAudit {
@@ -37,9 +43,12 @@ export interface RepresentativeStateAudit {
   candidateActions: Array<{
     actionName: string;
     continuationValueChaos: number;
+    immediateCostChaos?: number;
+    totalExpectedCostChaos?: number;
   }>;
   recommendedAction: string;
   recommendationReason: string;
+  isMinEvVerified: boolean;
 }
 
 export interface HarvestStrategyComparison {
@@ -62,45 +71,66 @@ export interface SuffixPoolAuditState {
   description: string;
   eligibleSuffixCount: number;
   eligibleSuffixWeight: number;
-  t1IntWeight?: number;
-  t1IntChance?: number;
-  t1IntNormalChance?: number;
-  t1IntAllflameChance?: number;
-  premiumTargetWeight?: number;
-  premiumTargetChance?: number;
-  premiumTargetNormalChance?: number;
-  premiumTargetAllflameChance?: number;
-  allTargetWeight?: number;
-  allTargetChance?: number;
-  allTargetNormalChance?: number;
-  allTargetAllflameChance?: number;
+  targetChances: Array<{
+    name: string;
+    weight: number;
+    normalChance: number;
+  }>;
+  allTargetWeight: number;
+  allTargetNormalChance: number;
   blockedGroups: string[];
 }
 
-function solveLinearSystem(M: number[][], rhs: number[]): number[] {
+export interface SuffixTargetGroup {
+  id: string;
+  name: string;
+  modGroup: string;
+  modId?: string;
+  nameFilter?: string;
+  tier: number;
+  weight: number;
+  groupTotalWeight: number;
+  saleValueChaos?: number;
+  isBaseRequired: boolean;
+  branchName?: string;
+}
+
+export function solveLinearSystem(M: number[][], rhs: number[]): number[] {
   const n = rhs.length;
   const A = M.map((row, i) => [...row, rhs[i]]);
   for (let i = 0; i < n; i++) {
     let maxRow = i;
-    for (let k = i + 1; k < n; k++) if (Math.abs(A[k][i]) > Math.abs(A[maxRow][i])) maxRow = k;
+    for (let k = i + 1; k < n; k++) {
+      if (Math.abs(A[k][i]) > Math.abs(A[maxRow][i])) maxRow = k;
+    }
     [A[i], A[maxRow]] = [A[maxRow], A[i]];
+    if (Math.abs(A[i][i]) < 1e-12) {
+      continue;
+    }
     for (let k = i + 1; k < n; k++) {
       const f = A[k][i] / A[i][i];
       for (let j = i; j <= n; j++) A[k][j] -= f * A[i][j];
     }
   }
-  const x = new Array(n);
+  const x = new Array(n).fill(0);
   for (let i = n - 1; i >= 0; i--) {
     let s = A[i][n];
     for (let j = i + 1; j < n; j++) s -= A[i][j] * x[j];
-    x[i] = s / A[i][i];
+    if (Math.abs(A[i][i]) > 1e-12) {
+      x[i] = s / A[i][i];
+    } else {
+      x[i] = 0;
+    }
   }
   return x;
 }
 
 export class CraftingPolicyEngine {
-  private target: TargetDefinition;
+  public readonly target: TargetDefinition;
   public readonly priceBook: PriceBook;
+  public readonly pool?: ModPool;
+  public readonly enableAllflame: boolean;
+  public readonly isExactTarget: boolean;
 
   // Generalized Harvest properties
   public readonly harvestTag: string;
@@ -108,140 +138,95 @@ export class CraftingPolicyEngine {
   public readonly harvestModGroup: string;
   public readonly harvestModName: string;
   public readonly harvestLifeforcePerCraft: number;
-  public readonly isExactTarget: boolean;
+  public readonly pT1Harvest: number;
 
-  // Exact Bellman continuation values
-  public readonly vStep5: number;
-  public readonly vStep4: number;
-  public readonly vStep2: number;
-  public readonly vClean1: number;
-  public readonly vClean2: number;
-  public readonly v4Step: number;
-  public readonly v4Int: number;
-  public readonly v5Step: number;
-  public readonly v5StepEff: number;
-  public readonly v5StepFullPool: number;
-  public readonly vCleanFrac35: number;
+  // Currency costs in Chaos
+  public readonly cH: number; // Harvest reforge cost
+  public readonly cA: number; // Annul cost (9.0c)
+  public readonly cE: number; // Exalt cost (1.2c)
 
-  // Branch-specific continuation values for fractured 35% route
-  public readonly vInt: number;
-  public readonly vAttr: number;
-  public readonly vAS: number;
-  public readonly vRes: number;
+  // Target Suffix Groups
+  public readonly targetSuffixGroups: SuffixTargetGroup[] = [];
+  public readonly suffixGroupMap = new Map<string, SuffixTargetGroup>();
+  public readonly compatiblePairs = new Map<string, Set<string>>(); // group id -> set of compatible group ids
+  public readonly totalSuffixPoolWeight: number;
 
-  // Fractured Life route exact values (Craft C)
-  public readonly vPrefEff: number;
-  public readonly vFracLifeDownstream: number;
-  public readonly vFracLifeSuffixes: number;
-  public readonly vFracLifeAttr: number;
-  public readonly vFracLifeChaos: number;
-  public readonly expExaltsFracLife: number;
-  public readonly expAnnulsFracLife: number;
-  public readonly vFracSuffDownstream: number;
-  public readonly expHarvestsFracSuff: number;
-  public readonly expAnnulsFracSuff: number;
-  public readonly expExaltsFracSuff: number;
-  public readonly step3AnnulsFracSuff: number;
-  public readonly pRemSuff: number;
-  public readonly vRemSuff: number;
+  // Exact Markov Continuation Values
+  public readonly vS0: number; // Clean prefixes, 0 suffixes
+  public readonly vGroupMap = new Map<string, number>(); // groupId -> V(S_group)
+  public readonly vEnter: number; // Harvest entry state (from clean Fractured 35% base)
 
-  public readonly hStep2: number;
-  public readonly aStep2: number;
-  public readonly pCleanPass: number;
-
-  public readonly W_A: number;
-  public readonly W_B: number;
-  public readonly W_C: number;
-  public readonly W_D: number;
-  public readonly W_E: number;
-
-  public readonly pHit: number;
-  public readonly pPremGivenInt: number;
-  public readonly pIntGivenAttr: number;
-  public readonly pIntGivenAS: number;
-  public readonly pIntGivenRes: number;
-
+  // Exact Markov Action Counts
   public readonly expHarvestsFrac35: number;
   public readonly expAnnulsFrac35: number;
   public readonly expExaltsFrac35: number;
-  public readonly expHarvestsDirectTarget: number;
-  public readonly expAnnulsDirectTarget: number;
+  public readonly step2Cost: number;
+  public readonly step3Cost: number;
+  public readonly step4Cost: number;
   public readonly step3AnnulsFrac35: number;
   public readonly step4AnnulsFrac35: number;
-  public readonly vEnter: number;
-  public readonly branchProbabilities: { attr: number; as: number; res: number };
-  public readonly targetRequiresInt: boolean;
-  public readonly enableAllflame: boolean;
 
-  public readonly cH: number;
-  public readonly cA: number;
-  public readonly cE: number;
-  public readonly pT1ES: number;
-  public readonly p4: number;
-  public readonly pInt: number;
-  public readonly p5: number;
-  public readonly p5FullPool: number;
+  // Absorption branch probabilities (branch name -> probability)
+  public readonly branchProbabilitiesMap = new Map<string, number>();
+
+  // Prefix slam probability (e.g. 35% effect on open prefix)
+  public readonly p35Effect: number;
 
   constructor(target: TargetDefinition, priceBook: PriceBook, pool?: ModPool, enableAllflame = false) {
     this.target = target;
     this.priceBook = priceBook;
+    this.pool = pool;
     this.enableAllflame = enableAllflame;
     this.isExactTarget = !target.outcomeBranches || target.outcomeBranches.length === 0;
 
-    this.targetRequiresInt = target.requiredMods.some((req) => {
-      if (req.modGroup === 'AfflictionJewelSmallPassivesGrantInt') return true;
-      if (req.modId && pool) {
-        const m = pool.getAllMods().find((pm) => pm.modId === req.modId);
-        if (m && m.modGroup === 'AfflictionJewelSmallPassivesGrantInt') return true;
-      }
-      if (req.modId && req.modId.toLowerCase().includes('intelligence')) return true;
-      if (req.name && req.name.toLowerCase().includes('intelligence')) return true;
-      return false;
-    });
-
     const ilvl = 84;
+    this.cA = priceBook.toChaos(1, 'annul');
+    this.cE = priceBook.toChaos(1, 'exalt');
+
+    // ------------------------------------------------------------- 1. Dynamic Harvest Tag & Prefix Discovery
     let harvestTag = 'defences';
     let harvestLifeforce = 'primalLifeforce';
     let harvestModGroup = 'AfflictionJewelSmallPassivesGrantES';
     let harvestModName = 'T1 Maximum Energy Shield';
-    let pHarvestTarget = 300 / 4200;
+    let pT1 = 300 / 4200;
 
     if (pool) {
       const allPoolMods = pool.getAllMods();
       for (const req of target.requiredMods) {
-        const found = allPoolMods.find((m) =>
-          (req.modGroup ? m.modGroup === req.modGroup : true) &&
-          (req.modId ? m.modId === req.modId : true) &&
-          (req.name ? m.name === req.name : true) &&
-          (req.maxTierNumber !== undefined ? m.tier <= req.maxTierNumber : true)
-        );
-        if (found) {
-          if (found.craftTags.includes('life') || found.tags.includes('life')) {
+        const found = allPoolMods.find((m) => matchesModRequirement(m, req));
+        if (found && found.genType === 'Prefix') {
+          if (found.modGroup === 'AfflictionJewelSmallPassivesHaveIncreasedEffect') {
+            continue; // 35% effect is handled separately
+          }
+          const hasTag = (tag: string) =>
+            found.craftTags.some((t) => t.toLowerCase() === tag) || found.tags.some((t) => t.toLowerCase() === tag);
+
+          if (hasTag('life')) {
             harvestTag = 'life';
             harvestLifeforce = 'wildLifeforce';
             harvestModGroup = found.modGroup;
             harvestModName = found.name;
-            const tagged = allPoolMods.filter((m) => (m.craftTags.includes('life') || m.tags.includes('life')) && m.ilvl <= ilvl);
+            const tagged = getTaggedModsForCluster(pool, 'life', ilvl);
             const totalW = calculateTotalWeight(tagged) || 4088;
-            pHarvestTarget = found.weight / totalW;
+            pT1 = found.weight / totalW;
             break;
-          } else if (found.craftTags.includes('defences') || found.tags.includes('defences')) {
+          } else if (hasTag('defences') || hasTag('defence')) {
             harvestTag = 'defences';
             harvestLifeforce = 'primalLifeforce';
             harvestModGroup = found.modGroup;
             harvestModName = found.name;
-            const tagged = allPoolMods.filter((m) => (m.craftTags.includes('defences') || m.tags.includes('defences')) && m.ilvl <= ilvl);
-            const totalW = calculateTotalWeight(tagged) || 4200;
-            pHarvestTarget = found.weight / totalW;
+            const tagged = getTaggedModsForCluster(pool, 'defences', ilvl);
+            const totalW = calculateTotalWeight(tagged) || 3976;
+            pT1 = found.weight / totalW;
             break;
-          } else if (found.craftTags.includes('chaos') || found.tags.includes('chaos')) {
+          } else if (hasTag('chaos')) {
             harvestTag = 'chaos';
             harvestLifeforce = 'vividLifeforce';
             harvestModGroup = found.modGroup;
             harvestModName = found.name;
-            const tagged = allPoolMods.filter((m) => (m.craftTags.includes('chaos') || m.tags.includes('chaos')) && m.ilvl <= ilvl);
+            const tagged = getTaggedModsForCluster(pool, 'chaos', ilvl);
             const totalW = calculateTotalWeight(tagged) || 2000;
-            pHarvestTarget = found.weight / totalW;
+            pT1 = found.weight / totalW;
             break;
           }
         }
@@ -253,1328 +238,803 @@ export class CraftingPolicyEngine {
     this.harvestModGroup = harvestModGroup;
     this.harvestModName = harvestModName;
     this.harvestLifeforcePerCraft = 75;
-    this.pT1ES = pHarvestTarget;
+    this.pT1Harvest = pT1;
+    this.cH = priceBook.toChaos(75, harvestLifeforce as any);
 
-    this.cH = priceBook.toChaos(75, harvestLifeforce);
-    this.cA = priceBook.toChaos(1, 'annul'); // 9.0c
-    this.cE = priceBook.toChaos(1, 'exalt'); // 1.2c
-
-    const sampleRate = (baseWeight: number, totalWeight: number) => {
-      const q = baseWeight / totalWeight;
-      return enableAllflame ? 1 - Math.pow(1 - q, 4) : q;
-    };
-
-    let totalSuffixWeight = 15650;
-    let intGroupWeight = 1200;
-    let attrGroupWeight = 1200;
-    let asGroupWeight = 950;
-    let resGroupWeight = 1200;
-
-    let wInt = 300;
-    let wAttr = 300;
-    let wAS = 250;
-    let wRes = 300;
-
+    // ------------------------------------------------------------- 2. Prefix 35% Effect Slam Probability
+    let p35 = 300 / 9176;
     if (pool) {
-      const allMods = pool.getAllMods();
-      const allPrefixes = allMods.filter((m) => m.genType === 'Prefix' && m.ilvl <= ilvl);
-      const allSuffixes = allMods.filter((m) => m.genType === 'Suffix' && m.ilvl <= ilvl);
-      totalSuffixWeight = calculateTotalWeight(allSuffixes) || 15650;
-
+      const allPrefixes = pool.getAllMods().filter((m) => m.genType === 'Prefix' && m.ilvl <= ilvl);
       const eff35Mod = allPrefixes.find((m) => m.modGroup === 'AfflictionJewelSmallPassivesHaveIncreasedEffect' && m.tier === 1);
-      const targetPrefixMods = allPrefixes.filter((m) => m.modGroup !== harvestModGroup);
-      const totPrefWeight = calculateTotalWeight(targetPrefixMods) || (10376 - 1200);
-      this.p4 = sampleRate(eff35Mod?.weight ?? 300, totPrefWeight);
-
-      const intMod = allSuffixes.find((m) => m.modGroup === 'AfflictionJewelSmallPassivesGrantInt' && m.tier === 1);
-      const attrMod = allSuffixes.find((m) => m.modGroup === 'AfflictionJewelSmallPassivesGrantAttributes' && m.tier === 1);
-      const asMod = allSuffixes.find((m) => m.name.includes('3% increased Attack Speed') && m.tier === 1);
-      const resMod = allSuffixes.find((m) => m.modGroup === 'AfflictionJewelSmallPassivesGrantElementalRes' || m.modGroup === 'AfflictionJewelSmallPassivesGrantChaosRes');
-
-      wInt = intMod?.weight ?? 300;
-      wAttr = attrMod?.weight ?? 300;
-      wAS = asMod?.weight ?? 250;
-      wRes = resMod?.weight ?? 300;
-
-      intGroupWeight = calculateTotalWeight(allSuffixes.filter((m) => m.modGroup === 'AfflictionJewelSmallPassivesGrantInt'));
-      attrGroupWeight = calculateTotalWeight(allSuffixes.filter((m) => m.modGroup === 'AfflictionJewelSmallPassivesGrantAttributes'));
-      asGroupWeight = asMod ? calculateTotalWeight(allSuffixes.filter((m) => m.modGroup === asMod.modGroup)) : 0;
-      resGroupWeight = resMod ? calculateTotalWeight(allSuffixes.filter((m) => m.modGroup === resMod.modGroup)) : 1200;
-    } else {
-      this.p4 = sampleRate(300, 11302);
+      const nonHarvestPrefixes = allPrefixes.filter((m) => m.modGroup !== harvestModGroup);
+      const totPrefWeight = calculateTotalWeight(nonHarvestPrefixes) || 9176;
+      p35 = (eff35Mod?.weight ?? 300) / totPrefWeight;
     }
+    this.p35Effect = p35;
 
-    this.W_A = totalSuffixWeight;
-    this.W_B = totalSuffixWeight - (intGroupWeight || 1200);
-    this.W_C = totalSuffixWeight - (attrGroupWeight || 1200);
-    this.W_D = totalSuffixWeight - (asGroupWeight || 950);
-    this.W_E = totalSuffixWeight - (resGroupWeight || 1200);
+    // ------------------------------------------------------------- 3. Extract Target Suffix Groups
+    const allSuffixes = pool ? pool.getAllMods().filter((m) => m.genType === 'Suffix' && m.ilvl <= ilvl) : [];
+    this.totalSuffixPoolWeight = calculateTotalWeight(allSuffixes) || 15401;
 
-    const wTarget = this.targetRequiresInt ? (wInt + wAttr + wAS + wRes) : (wAttr + wRes);
-    const wPrem = this.targetRequiresInt ? (wAttr + wAS + wRes) : wRes;
-
-    this.pInt = sampleRate(wInt, this.W_A);
-    this.p5 = sampleRate(wPrem, this.W_B);
-    this.p5FullPool = sampleRate(wPrem, this.W_A);
-
-    this.pHit = sampleRate(wTarget, this.W_A);
-    this.pPremGivenInt = sampleRate(wPrem, this.W_B);
-    this.pIntGivenAttr = sampleRate(wInt, this.W_C);
-    this.pIntGivenAS = sampleRate(wInt, this.W_D);
-    this.pIntGivenRes = sampleRate(wInt, this.W_E);
-
-    // Solve Fractured Life Route (Craft C prefix slam + suffix completion)
-    this.vPrefEff = (this.cE + (1 - this.p4) * this.cA) / this.p4;
-    const ePref = 1 / this.p4;
-    const aPref = (1 - this.p4) / this.p4;
-
-    const pB_given_A = sampleRate(wRes, this.W_C);
-    const pA_given_B = sampleRate(wAttr, this.W_E);
-
-    // Exact 5-state matrix solver for Fractured Life:
-    // States: [v0, vA, vB, vPrefA, vPrefB]
-    const M_cost = [
-      [this.pHit, -0.5 * this.pHit, -0.5 * this.pHit, 0, 0],
-      [-(1 - pB_given_A) * 0.5, 1 - (1 / 3) * (1 - pB_given_A), 0, -(1 - pB_given_A) * (1 / 6), 0],
-      [-(1 - pA_given_B) * 0.5, 0, 1 - (1 / 3) * (1 - pA_given_B), 0, -(1 - pA_given_B) * (1 / 6)],
-      [-0.5 * (1 - this.p4), -this.p4, 0, 1 - 0.5 * (1 - this.p4), 0],
-      [-0.5 * (1 - this.p4), 0, -this.p4, 0, 1 - 0.5 * (1 - this.p4)],
-    ];
-
-    const rhs_cost = [
-      this.cE + (1 - this.pHit) * (1.5 * this.cA + 0.5 * this.vPrefEff),
-      this.cE + (1 - pB_given_A) * (2.0 * this.cA + (1 / 3) * this.vPrefEff),
-      this.cE + (1 - pA_given_B) * (2.0 * this.cA + (1 / 3) * this.vPrefEff),
-      this.cE + (1 - this.p4) * (1.5 * this.cA + 0.5 * this.vPrefEff),
-      this.cE + (1 - this.p4) * (1.5 * this.cA + 0.5 * this.vPrefEff),
-    ];
-
-    const rhs_exalts = [
-      1 + (1 - this.pHit) * (0.5 * ePref),
-      1 + (1 - pB_given_A) * ((1 / 3) * ePref),
-      1 + (1 - pA_given_B) * ((1 / 3) * ePref),
-      1 + (1 - this.p4) * (0.5 * ePref),
-      1 + (1 - this.p4) * (0.5 * ePref),
-    ];
-
-    const rhs_annuls = [
-      (1 - this.pHit) * (1.5 + 0.5 * aPref),
-      (1 - pB_given_A) * (2.0 + (1 / 3) * aPref),
-      (1 - pA_given_B) * (2.0 + (1 / 3) * aPref),
-      (1 - this.p4) * (1.5 + 0.5 * aPref),
-      (1 - this.p4) * (1.5 + 0.5 * aPref),
-    ];
-
-    const V_life = solveLinearSystem(M_cost, rhs_cost);
-    const E_life = solveLinearSystem(M_cost, rhs_exalts);
-    const A_life = solveLinearSystem(M_cost, rhs_annuls);
-
-    this.vFracLifeSuffixes = V_life[0];
-    this.vFracLifeAttr = V_life[1];
-    this.vFracLifeChaos = V_life[2];
-    this.vFracLifeDownstream = this.vPrefEff + V_life[0];
-    this.expExaltsFracLife = ePref + E_life[0];
-    this.expAnnulsFracLife = aPref + A_life[0];
-
-    // Solve Fractured Suffix Route (Craft A / Craft C on Fractured Suffix)
-    // 1. Clean Harvest Recovery:
-    const aHarvClean = 70.0;
-    const hHarvClean = 33.6;
-    const pHarvClean = hHarvClean * this.cH + aHarvClean * this.cA;
-
-    // 2. Prefix Slam (35% Effect):
-    const deltaSuff1 = (this.cE + (1 - this.p4) * (1.5 * this.cA + 0.5 * pHarvClean)) / this.p4;
-    const deltaSuff1Harvests = ((1 - this.p4) * 0.5 * hHarvClean) / this.p4;
-    const deltaSuff1Annuls = ((1 - this.p4) * (1.5 + 0.5 * aHarvClean)) / this.p4;
-    const deltaSuff1Exalts = 1 / this.p4;
-
-    // 3. Suffix Slam (Final Target Suffix):
-    const pRemSuff = this.isExactTarget ? sampleRate(wRes, this.W_C) : this.p5;
-    const vSuff2 = (3 * this.cE + 3 * (1 - pRemSuff) * (2.0 * this.cA + (2 / 3) * deltaSuff1 + (5 / 12) * pHarvClean)) / (2 + pRemSuff);
-    const hSuff2 = (3 * (1 - pRemSuff) * ((2 / 3) * deltaSuff1Harvests + (5 / 12) * hHarvClean)) / (2 + pRemSuff);
-    const aSuff2 = (3 * (1 - pRemSuff) * (2.0 + (2 / 3) * deltaSuff1Annuls + (5 / 12) * aHarvClean)) / (2 + pRemSuff);
-    const eSuff2 = (3 + 3 * (1 - pRemSuff) * ((2 / 3) * deltaSuff1Exalts)) / (2 + pRemSuff);
-
-    const vSuff1 = deltaSuff1 + vSuff2;
-    this.vFracSuffDownstream = pHarvClean + vSuff1;
-    this.expHarvestsFracSuff = hHarvClean + deltaSuff1Harvests + hSuff2;
-    this.expAnnulsFracSuff = aHarvClean + deltaSuff1Annuls + aSuff2;
-    this.expExaltsFracSuff = deltaSuff1Exalts + eSuff2;
-    this.step3AnnulsFracSuff = aHarvClean;
-    this.pRemSuff = pRemSuff;
-    this.vRemSuff = vSuff2;
-
-    // -------------------------------------------------------------
-    // INTEGRATED HARVEST + SUFFIX SLAM MARKOV SYSTEM (FRACTURED 35% ROUTE)
-    // -------------------------------------------------------------
-    // Note: On rare cluster jewels, max prefixes = 2. With Fractured 35% Effect (Prefix 1)
-    // and guaranteed Defence mod (Prefix 2), prefix capacity is saturated. Thus, all 1-2
-    // extra affixes generated during Harvest are drawn strictly from eligible suffixes (W_A).
-    // Model exact 1-draw and 2-draw Harvest additional affix probabilities:
-    const activeTargetWeight = this.targetRequiresInt ? (wInt + wPrem) : wPrem;
-    const qInt = wInt / this.W_A;
-    const qTarget = activeTargetWeight / this.W_A;
-    const qJunk = 1 - qTarget;
-    const p1_target = qTarget;
-    const p1_junk = qJunk;
-
-    const p2_int_prem = this.targetRequiresInt
-      ? (qInt * (wPrem / this.W_B)) +
-        ((wAttr / this.W_A) * (wInt / this.W_C)) +
-        ((wAS / this.W_A) * (wInt / this.W_D)) +
-        ((wRes / this.W_A) * (wInt / this.W_E))
-      : ((wAttr / this.W_A) * ((wPrem - wAttr) / this.W_C)) +
-        ((wAS / this.W_A) * ((wPrem - wAS) / this.W_D)) +
-        ((wRes / this.W_A) * ((wPrem - wRes) / this.W_E));
-
-    const p2_target_then_junk = this.targetRequiresInt
-      ? qInt * ((this.W_B - wPrem) / this.W_B) +
-        (wAttr / this.W_A) * ((this.W_C - wInt) / this.W_C) +
-        (wAS / this.W_A) * ((this.W_D - wInt) / this.W_D) +
-        (wRes / this.W_A) * ((this.W_E - wInt) / this.W_E)
-      : (wAttr / this.W_A) * ((this.W_C - (wPrem - wAttr)) / this.W_C) +
-        (wAS / this.W_A) * ((this.W_D - (wPrem - wAS)) / this.W_D) +
-        (wRes / this.W_A) * ((this.W_E - (wPrem - wRes)) / this.W_E);
-
-    let p2_junk_then_target = 0;
-    if (pool) {
-      const allMods = pool.getAllMods();
-      const allSuffixes = allMods.filter((m) => m.genType === 'Suffix' && m.ilvl <= ilvl);
-      const targetGroupSet = new Set<string>();
-      if (this.targetRequiresInt) targetGroupSet.add('AfflictionJewelSmallPassivesGrantInt');
-      targetGroupSet.add('AfflictionJewelSmallPassivesGrantAttributes');
-      targetGroupSet.add('AfflictionJewelSmallPassivesGrantElementalRes');
-
-      const junkSuffixes = allSuffixes.filter(
-        (m) => !targetGroupSet.has(m.modGroup) && !m.name.includes('3% increased Attack Speed')
-      );
-      const junkGroupWeights = new Map<string, number>();
-      for (const m of junkSuffixes) {
-        const g = m.modGroup || m.name;
-        junkGroupWeights.set(g, (junkGroupWeights.get(g) || 0) + m.weight);
-      }
-      for (const [, groupW] of junkGroupWeights.entries()) {
-        p2_junk_then_target += (groupW / this.W_A) * (activeTargetWeight / (this.W_A - groupW));
-      }
-    } else {
-      const defaultJunkGroups = [1200, 1200, 1200, 1200, 1200, 1200, 1200, 1200, 600, 600, 300, 700];
-      for (const groupW of defaultJunkGroups) {
-        p2_junk_then_target += (groupW / this.W_A) * (activeTargetWeight / (this.W_A - groupW));
+    // 3a. Base required suffixes
+    for (const req of target.requiredMods) {
+      const found = allSuffixes.find((m) => matchesModRequirement(m, req));
+      if (found && found.genType === 'Suffix') {
+        const groupMods = allSuffixes.filter((m) => m.modGroup === found.modGroup);
+        const groupTotalWeight = calculateTotalWeight(groupMods) || 1200;
+        const targetGroup: SuffixTargetGroup = {
+          id: req.modGroup ?? found.modGroup,
+          name: found.name,
+          modGroup: found.modGroup,
+          modId: req.modId ?? found.modId,
+          tier: req.maxTierNumber ?? found.tier,
+          weight: found.weight,
+          groupTotalWeight,
+          isBaseRequired: true,
+        };
+        this.targetSuffixGroups.push(targetGroup);
+        this.suffixGroupMap.set(targetGroup.id, targetGroup);
       }
     }
 
-    const p2_target_junk = p2_target_then_junk + p2_junk_then_target;
-    const p2_junk_junk = Math.max(0, 1 - p2_int_prem - p2_target_junk);
-
-    // Direct clean pass from Harvest includes junk cleanups and direct single-mod / double-mod target hits:
-    this.pCleanPass = 0.5 * (p1_target * 1.0 + p1_junk * 0.5) + 0.5 * (p2_int_prem * 1.0 + p2_target_junk * 0.5 + p2_junk_junk * (1 / 3));
-    const aSpend = 0.5 * (p1_target * 0.0 + p1_junk * 1.0) + 0.5 * (p2_int_prem * 0.0 + p2_target_junk * (4 / 3) + p2_junk_junk * (5 / 3));
-
-    const hCycle = 1 / this.pT1ES;
-    const H_Harvest = hCycle / this.pCleanPass;
-    const A_Harvest = aSpend / this.pCleanPass;
-    const v_Harvest = H_Harvest * this.cH + A_Harvest * this.cA;
-
-    const pTerminalFromHarvest = this.targetRequiresInt
-      ? (0.5 * p2_int_prem * 1.0) / this.pCleanPass
-      : (0.5 * p1_target * 1.0 + 0.5 * p2_int_prem * 1.0 + 0.5 * p2_target_junk * (1 / 3)) / this.pCleanPass;
-    const pDirectTarget = this.targetRequiresInt
-      ? (0.5 * p1_target * 1.0 + 0.5 * p2_target_junk * (1 / 3)) / this.pCleanPass
-      : 0;
-    const pDirectS0 = 1 - pTerminalFromHarvest - pDirectTarget;
-
-    const piH_Int = this.targetRequiresInt ? (wInt / activeTargetWeight) : 0;
-    const piH_Attr = wAttr / activeTargetWeight;
-    const piH_AS = wAS / activeTargetWeight;
-    const piH_Res = wRes / activeTargetWeight;
-
-    // 4-choice Allflame branch probabilities from S0 using exact order statistics:
-    const qA = wAttr / this.W_A;
-    const qAS = wAS / this.W_A;
-    const qR = wRes / this.W_A;
-    const qI = wInt / this.W_A;
-    const pAllJunk = enableAllflame ? Math.pow(qJunk, 4) : qJunk;
-    this.pHit = 1 - pAllJunk;
-
-    let pIntBranch = 0;
-    let pAttrBranch = 0;
-    let pASBranch = 0;
-    let pResBranch = 0;
-
-    if (this.targetRequiresInt) {
-      if (enableAllflame) {
-        pIntBranch = 1 - Math.pow(1 - qI, 4);
-        pAttrBranch = Math.pow(1 - qI, 4) - Math.pow(1 - qI - qA, 4);
-        pResBranch = Math.pow(1 - qI - qA, 4) - Math.pow(1 - qI - qA - qR, 4);
-        pASBranch = Math.pow(1 - qI - qA - qR, 4) - Math.pow(1 - qI - qA - qR - qAS, 4);
-      } else {
-        pIntBranch = qI;
-        pAttrBranch = qA;
-        pResBranch = qR;
-        pASBranch = qAS;
-      }
-    } else {
-      if (enableAllflame) {
-        pAttrBranch = 1 - Math.pow(1 - qA, 4);
-        pASBranch = Math.pow(1 - qA, 4) - Math.pow(1 - qA - qAS, 4);
-        pResBranch = Math.pow(1 - qA - qAS, 4) - Math.pow(1 - qA - qAS - qR, 4);
-      } else {
-        pAttrBranch = qA;
-        pASBranch = qAS;
-        pResBranch = qR;
-      }
-    }
-
-    const piInt = this.pHit > 0 ? pIntBranch / this.pHit : 0;
-    const piAttr = this.pHit > 0 ? pAttrBranch / this.pHit : 0;
-    const piAS = this.pHit > 0 ? pASBranch / this.pHit : 0;
-    const piRes = this.pHit > 0 ? pResBranch / this.pHit : 0;
-
-    // Terminal branch absorption probabilities:
-    let V = [0, 0, 0, 0, 0]; // [S0, S_Int, S_Attr, S_AS, S_Res]
-    let H_vec = [0, 0, 0, 0, 0];
-    let A_vec = [0, 0, 0, 0, 0];
-    let E_vec = [0, 0, 0, 0, 0];
-    let B_Attr = [0, 0, 0, 0, 0];
-    let B_AS = [0, 0, 0, 0, 0];
-    let B_Res = [0, 0, 0, 0, 0];
-
-    const qA_B = wAttr / this.W_B;
-    const qAS_B = wAS / this.W_B;
-    const pAttr_from_Int = enableAllflame
-      ? (1 - Math.pow(1 - qA_B, 4)) / this.pPremGivenInt
-      : (wAttr / wPrem);
-    const pAS_from_Int = enableAllflame
-      ? (Math.pow(1 - qA_B, 4) - Math.pow(1 - qA_B - qAS_B, 4)) / this.pPremGivenInt
-      : (wAS / wPrem);
-    const pRes_from_Int = Math.max(0, 1 - pAttr_from_Int - pAS_from_Int);
-
-    const p2_int_attr = this.targetRequiresInt ? (qInt * (wAttr / this.W_B)) + ((wAttr / this.W_A) * (wInt / this.W_C)) : 0;
-    const p2_int_as = this.targetRequiresInt ? (qInt * (wAS / this.W_B)) + ((wAS / this.W_A) * (wInt / this.W_D)) : 0;
-    const p2_int_res = this.targetRequiresInt ? (qInt * (wRes / this.W_B)) + ((wRes / this.W_A) * (wInt / this.W_E)) : 0;
-
-    const pTermAttr = this.targetRequiresInt
-      ? (0.5 * p2_int_attr * 1.0) / this.pCleanPass
-      : (0.5 * qA + 0.5 * (qA * ((wPrem - wAttr) / this.W_C) + (qA * ((this.W_C - (wPrem - wAttr)) / this.W_C) + p2_junk_then_target * (wAttr / activeTargetWeight)) * (1 / 3))) / this.pCleanPass;
-    const pTermAS = this.targetRequiresInt
-      ? (0.5 * p2_int_as * 1.0) / this.pCleanPass
-      : (0.5 * qAS + 0.5 * (qAS * ((wPrem - wAS) / this.W_D) + (qAS * ((this.W_D - (wPrem - wAS)) / this.W_D) + p2_junk_then_target * (wAS / activeTargetWeight)) * (1 / 3))) / this.pCleanPass;
-    const pTermRes = this.targetRequiresInt
-      ? (0.5 * p2_int_res * 1.0) / this.pCleanPass
-      : (0.5 * qR + 0.5 * (qR * ((wPrem - wRes) / this.W_E) + (qR * ((this.W_E - (wPrem - wRes)) / this.W_E) + p2_junk_then_target * (wRes / activeTargetWeight)) * (1 / 3))) / this.pCleanPass;
-
-    for (let iter = 0; iter < 10000; iter++) {
-      const [v0, vInt, vAttr, vAS, vRes] = V;
-      const vExit = pDirectS0 * v0 + pDirectTarget * (piH_Int * vInt + piH_Attr * vAttr + piH_AS * vAS + piH_Res * vRes);
-      const vEnter = v_Harvest + vExit;
-
-      const next_v0 = this.cE + this.pHit * (piInt * vInt + piAttr * vAttr + piAS * vAS + piRes * vRes) + (1 - this.pHit) * (this.cA + 0.5 * v0 + 0.5 * vEnter);
-      const next_vInt = this.targetRequiresInt ? (this.cE + (1 - this.pPremGivenInt) * ((4 / 3) * this.cA + (1 / 6) * v0 + 0.5 * vEnter)) / (1 - (1 / 3) * (1 - this.pPremGivenInt)) : 0;
-      const next_vAttr = this.targetRequiresInt
-        ? (this.cE + (1 - this.pIntGivenAttr) * ((4 / 3) * this.cA + (1 / 6) * v0 + 0.5 * vEnter)) / (1 - (1 / 3) * (1 - this.pIntGivenAttr))
-        : (this.isExactTarget ? (this.cE + (1 - pB_given_A) * ((4 / 3) * this.cA + (1 / 6) * v0 + 0.5 * vEnter)) / (1 - (1 / 3) * (1 - pB_given_A)) : 0);
-      const next_vAS = this.targetRequiresInt ? (this.cE + (1 - this.pIntGivenAS) * ((4 / 3) * this.cA + (1 / 6) * v0 + 0.5 * vEnter)) / (1 - (1 / 3) * (1 - this.pIntGivenAS)) : 0;
-      const next_vRes = this.targetRequiresInt
-        ? (this.cE + (1 - this.pIntGivenRes) * ((4 / 3) * this.cA + (1 / 6) * v0 + 0.5 * vEnter)) / (1 - (1 / 3) * (1 - this.pIntGivenRes))
-        : (this.isExactTarget ? (this.cE + (1 - pA_given_B) * ((4 / 3) * this.cA + (1 / 6) * v0 + 0.5 * vEnter)) / (1 - (1 / 3) * (1 - pA_given_B)) : 0);
-      
-      const hExit = pDirectS0 * H_vec[0] + pDirectTarget * (piH_Int * H_vec[1] + piH_Attr * H_vec[2] + piH_AS * H_vec[3] + piH_Res * H_vec[4]);
-      const hEnter = H_Harvest + hExit;
-      const next_h0 = this.pHit * (piInt * H_vec[1] + piAttr * H_vec[2] + piAS * H_vec[3] + piRes * H_vec[4]) + (1 - this.pHit) * (0.5 * H_vec[0] + 0.5 * hEnter);
-      const next_hInt = this.targetRequiresInt ? ((1 - this.pPremGivenInt) * ((1 / 6) * H_vec[0] + 0.5 * hEnter)) / (1 - (1 / 3) * (1 - this.pPremGivenInt)) : 0;
-      const next_hAttr = this.targetRequiresInt
-        ? ((1 - this.pIntGivenAttr) * ((1 / 6) * H_vec[0] + 0.5 * hEnter)) / (1 - (1 / 3) * (1 - this.pIntGivenAttr))
-        : (this.isExactTarget ? ((1 - pB_given_A) * ((1 / 6) * H_vec[0] + 0.5 * hEnter)) / (1 - (1 / 3) * (1 - pB_given_A)) : 0);
-      const next_hAS = this.targetRequiresInt ? ((1 - this.pIntGivenAS) * ((1 / 6) * H_vec[0] + 0.5 * hEnter)) / (1 - (1 / 3) * (1 - this.pIntGivenAS)) : 0;
-      const next_hRes = this.targetRequiresInt
-        ? ((1 - this.pIntGivenRes) * ((1 / 6) * H_vec[0] + 0.5 * hEnter)) / (1 - (1 / 3) * (1 - this.pIntGivenRes))
-        : (this.isExactTarget ? ((1 - pA_given_B) * ((1 / 6) * H_vec[0] + 0.5 * hEnter)) / (1 - (1 / 3) * (1 - pA_given_B)) : 0);
-
-      const aExit = pDirectS0 * A_vec[0] + pDirectTarget * (piH_Int * A_vec[1] + piH_Attr * A_vec[2] + piH_AS * A_vec[3] + piH_Res * A_vec[4]);
-      const aEnter = A_Harvest + aExit;
-      const next_a0 = this.pHit * (piInt * A_vec[1] + piAttr * A_vec[2] + piAS * A_vec[3] + piRes * A_vec[4]) + (1 - this.pHit) * (1 + 0.5 * A_vec[0] + 0.5 * aEnter);
-      const next_aInt = this.targetRequiresInt ? ((1 - this.pPremGivenInt) * ((4 / 3) + (1 / 6) * A_vec[0] + 0.5 * aEnter)) / (1 - (1 / 3) * (1 - this.pPremGivenInt)) : 0;
-      const next_aAttr = this.targetRequiresInt
-        ? ((1 - this.pIntGivenAttr) * ((4 / 3) + (1 / 6) * A_vec[0] + 0.5 * aEnter)) / (1 - (1 / 3) * (1 - this.pIntGivenAttr))
-        : (this.isExactTarget ? ((1 - pB_given_A) * ((4 / 3) + (1 / 6) * A_vec[0] + 0.5 * aEnter)) / (1 - (1 / 3) * (1 - pB_given_A)) : 0);
-      const next_aAS = this.targetRequiresInt ? ((1 - this.pIntGivenAS) * ((4 / 3) + (1 / 6) * A_vec[0] + 0.5 * aEnter)) / (1 - (1 / 3) * (1 - this.pIntGivenAS)) : 0;
-      const next_aRes = this.targetRequiresInt
-        ? ((1 - this.pIntGivenRes) * ((4 / 3) + (1 / 6) * A_vec[0] + 0.5 * aEnter)) / (1 - (1 / 3) * (1 - this.pIntGivenRes))
-        : (this.isExactTarget ? ((1 - pA_given_B) * ((4 / 3) + (1 / 6) * A_vec[0] + 0.5 * aEnter)) / (1 - (1 / 3) * (1 - pA_given_B)) : 0);
-
-      const eExit = pDirectS0 * E_vec[0] + pDirectTarget * (piH_Int * E_vec[1] + piH_Attr * E_vec[2] + piH_AS * E_vec[3] + piH_Res * E_vec[4]);
-      const eEnter = eExit;
-      const next_e0 = 1 + this.pHit * (piInt * E_vec[1] + piAttr * E_vec[2] + piAS * E_vec[3] + piRes * E_vec[4]) + (1 - this.pHit) * (0.5 * E_vec[0] + 0.5 * eEnter);
-      const next_eInt = this.targetRequiresInt ? (1 + (1 - this.pPremGivenInt) * ((1 / 6) * E_vec[0] + 0.5 * eEnter)) / (1 - (1 / 3) * (1 - this.pPremGivenInt)) : 0;
-      const next_eAttr = this.targetRequiresInt
-        ? (1 + (1 - this.pIntGivenAttr) * ((1 / 6) * E_vec[0] + 0.5 * eEnter)) / (1 - (1 / 3) * (1 - this.pIntGivenAttr))
-        : (this.isExactTarget ? (1 + (1 - pB_given_A) * ((1 / 6) * E_vec[0] + 0.5 * eEnter)) / (1 - (1 / 3) * (1 - pB_given_A)) : 0);
-      const next_eAS = this.targetRequiresInt ? (1 + (1 - this.pIntGivenAS) * ((1 / 6) * E_vec[0] + 0.5 * eEnter)) / (1 - (1 / 3) * (1 - this.pIntGivenAS)) : 0;
-      const next_eRes = this.targetRequiresInt
-        ? (1 + (1 - this.pIntGivenRes) * ((1 / 6) * E_vec[0] + 0.5 * eEnter)) / (1 - (1 / 3) * (1 - this.pIntGivenRes))
-        : (this.isExactTarget ? (1 + (1 - pA_given_B) * ((1 / 6) * E_vec[0] + 0.5 * eEnter)) / (1 - (1 / 3) * (1 - pA_given_B)) : 0);
-
-      const exitAttr = pTermAttr + pDirectS0 * B_Attr[0] + pDirectTarget * (piH_Int * B_Attr[1] + piH_Attr * B_Attr[2] + piH_AS * B_Attr[3] + piH_Res * B_Attr[4]);
-      const next_b0_Attr = this.pHit * (piInt * B_Attr[1] + piAttr * B_Attr[2] + piAS * B_Attr[3] + piRes * B_Attr[4]) + (1 - this.pHit) * (0.5 * B_Attr[0] + 0.5 * exitAttr);
-      const next_bInt_Attr = this.targetRequiresInt ? (this.pPremGivenInt * pAttr_from_Int + (1 - this.pPremGivenInt) * ((1 / 6) * B_Attr[0] + 0.5 * exitAttr)) / (1 - (1 / 3) * (1 - this.pPremGivenInt)) : 0;
-      const next_bAttr_Attr = this.targetRequiresInt ? (this.pIntGivenAttr * 1.0 + (1 - this.pIntGivenAttr) * ((1 / 6) * B_Attr[0] + 0.5 * exitAttr)) / (1 - (1 / 3) * (1 - this.pIntGivenAttr)) : 1.0;
-      const next_bAS_Attr = this.targetRequiresInt ? ((1 - this.pIntGivenAS) * ((1 / 6) * B_Attr[0] + 0.5 * exitAttr)) / (1 - (1 / 3) * (1 - this.pIntGivenAS)) : 0;
-      const next_bRes_Attr = this.targetRequiresInt ? ((1 - this.pIntGivenRes) * ((1 / 6) * B_Attr[0] + 0.5 * exitAttr)) / (1 - (1 / 3) * (1 - this.pIntGivenRes)) : 0;
-
-      const exitAS = pTermAS + pDirectS0 * B_AS[0] + pDirectTarget * (piH_Int * B_AS[1] + piH_Attr * B_AS[2] + piH_AS * B_AS[3] + piH_Res * B_AS[4]);
-      const next_b0_AS = this.pHit * (piInt * B_AS[1] + piAttr * B_AS[2] + piAS * B_AS[3] + piRes * B_AS[4]) + (1 - this.pHit) * (0.5 * B_AS[0] + 0.5 * exitAS);
-      const next_bInt_AS = this.targetRequiresInt ? (this.pPremGivenInt * pAS_from_Int + (1 - this.pPremGivenInt) * ((1 / 6) * B_AS[0] + 0.5 * exitAS)) / (1 - (1 / 3) * (1 - this.pPremGivenInt)) : 0;
-      const next_bAttr_AS = this.targetRequiresInt ? ((1 - this.pIntGivenAttr) * ((1 / 6) * B_AS[0] + 0.5 * exitAS)) / (1 - (1 / 3) * (1 - this.pIntGivenAttr)) : 0;
-      const next_bAS_AS = this.targetRequiresInt ? (this.pIntGivenAS * 1.0 + (1 - this.pIntGivenAS) * ((1 / 6) * B_AS[0] + 0.5 * exitAS)) / (1 - (1 / 3) * (1 - this.pIntGivenAS)) : 1.0;
-      const next_bRes_AS = this.targetRequiresInt ? ((1 - this.pIntGivenRes) * ((1 / 6) * B_AS[0] + 0.5 * exitAS)) / (1 - (1 / 3) * (1 - this.pIntGivenRes)) : 0;
-
-      const exitRes = pTermRes + pDirectS0 * B_Res[0] + pDirectTarget * (piH_Int * B_Res[1] + piH_Attr * B_Res[2] + piH_AS * B_Res[3] + piH_Res * B_Res[4]);
-      const next_b0_Res = this.pHit * (piInt * B_Res[1] + piAttr * B_Res[2] + piAS * B_Res[3] + piRes * B_Res[4]) + (1 - this.pHit) * (0.5 * B_Res[0] + 0.5 * exitRes);
-      const next_bInt_Res = this.targetRequiresInt ? (this.pPremGivenInt * pRes_from_Int + (1 - this.pPremGivenInt) * ((1 / 6) * B_Res[0] + 0.5 * exitRes)) / (1 - (1 / 3) * (1 - this.pPremGivenInt)) : 0;
-      const next_bAttr_Res = this.targetRequiresInt ? ((1 - this.pIntGivenAttr) * ((1 / 6) * B_Res[0] + 0.5 * exitRes)) / (1 - (1 / 3) * (1 - this.pIntGivenAttr)) : 0;
-      const next_bAS_Res = this.targetRequiresInt ? ((1 - this.pIntGivenAS) * ((1 / 6) * B_Res[0] + 0.5 * exitRes)) / (1 - (1 / 3) * (1 - this.pIntGivenAS)) : 0;
-      const next_bRes_Res = this.targetRequiresInt ? (this.pIntGivenRes * 1.0 + (1 - this.pIntGivenRes) * ((1 / 6) * B_Res[0] + 0.5 * exitRes)) / (1 - (1 / 3) * (1 - this.pIntGivenRes)) : 1.0;
-
-      const delta = Math.max(
-        Math.abs(next_v0 - v0),
-        Math.abs(next_vInt - vInt),
-        Math.abs(next_vAttr - vAttr),
-        Math.abs(next_vAS - vAS),
-        Math.abs(next_vRes - vRes),
-        Math.abs(next_h0 - H_vec[0]),
-        Math.abs(next_hInt - H_vec[1]),
-        Math.abs(next_hAttr - H_vec[2]),
-        Math.abs(next_hAS - H_vec[3]),
-        Math.abs(next_hRes - H_vec[4]),
-        Math.abs(next_a0 - A_vec[0]),
-        Math.abs(next_aInt - A_vec[1]),
-        Math.abs(next_aAttr - A_vec[2]),
-        Math.abs(next_aAS - A_vec[3]),
-        Math.abs(next_aRes - A_vec[4]),
-        Math.abs(next_e0 - E_vec[0]),
-        Math.abs(next_eInt - E_vec[1]),
-        Math.abs(next_eAttr - E_vec[2]),
-        Math.abs(next_eAS - E_vec[3]),
-        Math.abs(next_eRes - E_vec[4]),
-        Math.abs(next_b0_Attr - B_Attr[0]),
-        Math.abs(next_bInt_Attr - B_Attr[1]),
-        Math.abs(next_bAttr_Attr - B_Attr[2]),
-        Math.abs(next_bAS_Attr - B_Attr[3]),
-        Math.abs(next_bRes_Attr - B_Attr[4]),
-        Math.abs(next_b0_AS - B_AS[0]),
-        Math.abs(next_bInt_AS - B_AS[1]),
-        Math.abs(next_bAttr_AS - B_AS[2]),
-        Math.abs(next_bAS_AS - B_AS[3]),
-        Math.abs(next_bRes_AS - B_AS[4]),
-        Math.abs(next_b0_Res - B_Res[0]),
-        Math.abs(next_bInt_Res - B_Res[1]),
-        Math.abs(next_bAttr_Res - B_Res[2]),
-        Math.abs(next_bAS_Res - B_Res[3]),
-        Math.abs(next_bRes_Res - B_Res[4])
-      );
-
-      V = [next_v0, next_vInt, next_vAttr, next_vAS, next_vRes];
-      H_vec = [next_h0, next_hInt, next_hAttr, next_hAS, next_hRes];
-      A_vec = [next_a0, next_aInt, next_aAttr, next_aAS, next_aRes];
-      E_vec = [next_e0, next_eInt, next_eAttr, next_eAS, next_eRes];
-      B_Attr = [next_b0_Attr, next_bInt_Attr, next_bAttr_Attr, next_bAS_Attr, next_bRes_Attr];
-      B_AS = [next_b0_AS, next_bInt_AS, next_bAttr_AS, next_bAS_AS, next_bRes_AS];
-      B_Res = [next_b0_Res, next_bInt_Res, next_bAttr_Res, next_bAS_Res, next_bRes_Res];
-
-      if (delta < 1e-11 && iter > 10) break;
-    }
-
-    this.hStep2 = H_Harvest;
-    this.aStep2 = A_Harvest;
-    this.vStep2 = v_Harvest;
-
-    this.vClean1 = this.cA + 0.5 * this.vStep2;
-    this.vClean2 = (5 / 3) * this.cA + (2 / 3) * this.vStep2;
-    this.v4Step = (this.cE + (1 - this.p4) * (this.cA + 0.5 * this.vStep2)) / this.p4;
-    this.v5Step = (this.cE + (1 - this.p5) * (this.cA + (2 / 3) * this.v4Step + (1 / 3) * this.vStep2)) / this.p5;
-    this.v5StepFullPool = (this.cE + (1 - this.p5FullPool) * (this.cA + 0.5 * this.vStep2)) / this.p5FullPool;
-
-    this.vCleanFrac35 = V[0];
-    this.vInt = V[1];
-    this.vAttr = V[2];
-    this.vAS = V[3];
-    this.vRes = V[4];
-
-    this.v5StepEff = this.vInt;
-    this.v4Int = (wAttr / wPrem) * this.vAttr + (wAS / wPrem) * this.vAS + (wRes / wPrem) * this.vRes;
-
-    this.expHarvestsFrac35 = H_Harvest + (pDirectS0 * H_vec[0] + pDirectTarget * (piH_Int * H_vec[1] + piH_Attr * H_vec[2] + piH_AS * H_vec[3] + piH_Res * H_vec[4]));
-    this.expAnnulsFrac35 = A_Harvest + (pDirectS0 * A_vec[0] + pDirectTarget * (piH_Int * A_vec[1] + piH_Attr * A_vec[2] + piH_AS * A_vec[3] + piH_Res * A_vec[4]));
-    this.expExaltsFrac35 = pDirectS0 * E_vec[0] + pDirectTarget * (piH_Int * E_vec[1] + piH_Attr * E_vec[2] + piH_AS * E_vec[3] + piH_Res * E_vec[4]);
-
-    const pJointDirect = this.targetRequiresInt
-      ? (0.5 * p2_int_prem)
-      : (0.5 * p1_target + 0.5 * p2_int_prem + 0.5 * p2_target_junk * (1 / 3));
-    this.expHarvestsDirectTarget = pJointDirect > 0 ? (1 / (this.pT1ES * pJointDirect)) : 12280.0;
-    this.expAnnulsDirectTarget = (!this.targetRequiresInt && pJointDirect > 0)
-      ? (0.5 * p2_target_junk * (1 / 3)) / pJointDirect
-      : 0.0;
-
-    this.vEnter = v_Harvest + (pDirectS0 * V[0] + pDirectTarget * (piH_Int * V[1] + piH_Attr * V[2] + piH_AS * V[3] + piH_Res * V[4]));
-    this.step3AnnulsFrac35 = (this.expHarvestsFrac35 / H_Harvest) * A_Harvest;
-    this.step4AnnulsFrac35 = this.expAnnulsFrac35 - this.step3AnnulsFrac35;
-
-    const numAttr = pTermAttr + pDirectS0 * B_Attr[0] + pDirectTarget * (piH_Int * B_Attr[1] + piH_Attr * B_Attr[2] + piH_AS * B_Attr[3] + piH_Res * B_Attr[4]);
-    const numAS = pTermAS + pDirectS0 * B_AS[0] + pDirectTarget * (piH_Int * B_AS[1] + piH_Attr * B_AS[2] + piH_AS * B_AS[3] + piH_Res * B_AS[4]);
-    const numRes = pTermRes + pDirectS0 * B_Res[0] + pDirectTarget * (piH_Int * B_Res[1] + piH_Attr * B_Res[2] + piH_AS * B_Res[3] + piH_Res * B_Res[4]);
-    const totalBranchSum = numAttr + numAS + numRes || 1;
-
-    this.branchProbabilities = {
-      attr: numAttr / totalBranchSum,
-      as: numAS / totalBranchSum,
-      res: numRes / totalBranchSum,
-    };
-
-    this.vStep5 = this.v5Step;
-    this.vStep4 = this.v4Step + this.vStep5;
-  }
-
-  public getSuffixPoolAudit(pool: ModPool, ilvl = 84): SuffixPoolAuditState[] {
-    const allMods = pool.getAllMods();
-    const suffixes = allMods.filter((m) => m.genType === 'Suffix' && m.ilvl <= ilvl);
-    const tInt = suffixes.find((m) => m.modGroup === 'AfflictionJewelSmallPassivesGrantInt' && m.tier === 1);
-    const tAttr = suffixes.find((m) => m.modGroup === 'AfflictionJewelSmallPassivesGrantAttributes' && m.tier === 1);
-    const tAS = suffixes.find((m) => m.name.includes('3% increased Attack Speed') && m.tier === 1);
-    const tRes = suffixes.find((m) => m.modGroup === 'AfflictionJewelSmallPassivesGrantElementalRes' && m.tier === 1);
-
-    const wInt = tInt?.weight ?? 300;
-    const wAttr = tAttr?.weight ?? 300;
-    const wAS = tAS?.weight ?? 250;
-    const wRes = tRes?.weight ?? 300;
-    const wPrem = wAttr + wAS + wRes;
-    const wTotalTarget = wInt + wPrem;
-
-    const normalRate = (w: number, W: number) => (w / W) * 100;
-    const allflameRate = (w: number, W: number) => (this.enableAllflame ? 1 - Math.pow(1 - w / W, 4) : w / W) * 100;
-
-    return [
-      {
-        stateLabel: 'State A — Frac 35 + T1 ES, no suffixes',
-        description: 'Initial clean prefix state before suffix slams',
-        eligibleSuffixCount: suffixes.length,
-        eligibleSuffixWeight: this.W_A,
-        t1IntWeight: wInt,
-        t1IntChance: allflameRate(wInt, this.W_A),
-        t1IntNormalChance: normalRate(wInt, this.W_A),
-        t1IntAllflameChance: allflameRate(wInt, this.W_A),
-        premiumTargetWeight: wPrem,
-        premiumTargetChance: allflameRate(wPrem, this.W_A),
-        premiumTargetNormalChance: normalRate(wPrem, this.W_A),
-        premiumTargetAllflameChance: allflameRate(wPrem, this.W_A),
-        allTargetWeight: wTotalTarget,
-        allTargetChance: this.pHit * 100,
-        allTargetNormalChance: normalRate(wTotalTarget, this.W_A),
-        allTargetAllflameChance: this.pHit * 100,
-        blockedGroups: ['None (Full suffix pool)'],
-      },
-      {
-        stateLabel: 'State B — Frac 35 + T1 ES + T1 Intelligence',
-        description: 'T1 Intelligence locked, rolling for final premium suffix',
-        eligibleSuffixCount: suffixes.filter((m) => m.modGroup !== 'AfflictionJewelSmallPassivesGrantInt').length,
-        eligibleSuffixWeight: this.W_B,
-        premiumTargetWeight: wPrem,
-        premiumTargetChance: this.pPremGivenInt * 100,
-        premiumTargetNormalChance: normalRate(wPrem, this.W_B),
-        premiumTargetAllflameChance: this.pPremGivenInt * 100,
-        blockedGroups: [`AfflictionJewelSmallPassivesGrantInt (${(this.W_A - this.W_B).toLocaleString()} weight blocked)`],
-      },
-      {
-        stateLabel: 'State C — Frac 35 + T1 ES + +4 All Attributes',
-        description: '+4 All Attributes locked, rolling for T1 Intelligence',
-        eligibleSuffixCount: suffixes.filter((m) => m.modGroup !== 'AfflictionJewelSmallPassivesGrantAttributes').length,
-        eligibleSuffixWeight: this.W_C,
-        t1IntWeight: wInt,
-        t1IntChance: this.pIntGivenAttr * 100,
-        t1IntNormalChance: normalRate(wInt, this.W_C),
-        t1IntAllflameChance: this.pIntGivenAttr * 100,
-        blockedGroups: [`AfflictionJewelSmallPassivesGrantAttributes (${(this.W_A - this.W_C).toLocaleString()} weight blocked)`],
-      },
-      {
-        stateLabel: 'State D — Frac 35 + T1 ES + 3% Attack Speed',
-        description: '3% Attack Speed locked, rolling for T1 Intelligence',
-        eligibleSuffixCount: suffixes.filter((m) => m.modGroup !== (tAS?.modGroup ?? 'Added Small Passive Skills also grant: #% increased Attack Speed')).length,
-        eligibleSuffixWeight: this.W_D,
-        t1IntWeight: wInt,
-        t1IntChance: this.pIntGivenAS * 100,
-        t1IntNormalChance: normalRate(wInt, this.W_D),
-        t1IntAllflameChance: this.pIntGivenAS * 100,
-        blockedGroups: [`Attack Speed Group (${(this.W_A - this.W_D).toLocaleString()} weight blocked)`],
-      },
-      {
-        stateLabel: 'State E — Frac 35 + T1 ES + +4% All Resistance',
-        description: '+4% All Resistance locked, rolling for T1 Intelligence',
-        eligibleSuffixCount: suffixes.filter((m) => m.modGroup !== 'AfflictionJewelSmallPassivesGrantElementalRes').length,
-        eligibleSuffixWeight: this.W_E,
-        t1IntWeight: wInt,
-        t1IntChance: this.pIntGivenRes * 100,
-        t1IntNormalChance: normalRate(wInt, this.W_E),
-        t1IntAllflameChance: this.pIntGivenRes * 100,
-        blockedGroups: [`AfflictionJewelSmallPassivesGrantElementalRes (${(this.W_A - this.W_E).toLocaleString()} weight blocked)`],
-      },
-    ];
-  }
-
-  public evaluateStateValue(state: ItemState): number {
-    if (satisfiesTarget(state, this.target) || getMatchingOutcomeBranch(state, this.target)) {
-      return 0;
-    }
-
-    const fracPrefix = state.prefixes.find((p: RolledMod) => p.isFractured);
-    const isFracPrefixDirectRoute = fracPrefix && fracPrefix.modGroup !== 'AfflictionJewelSmallPassivesHaveIncreasedEffect';
-    const hasFrac35 = state.prefixes.some(
-      (p: RolledMod) => p.modGroup === 'AfflictionJewelSmallPassivesHaveIncreasedEffect' && p.isFractured
-    );
-
-    const removable = getRemovableAffixes(state);
-    const junkMods = this.getJunkMods(state);
-    const junkModIds = new Set(junkMods.map((j) => j.modId));
-
-    // Handle Fractured Non-Harvest Prefix Route (e.g. Fractured Life in Craft C)
-    if (isFracPrefixDirectRoute) {
-      if (junkMods.length > 0) {
-        let expectedAfterAnnul = 0;
-        const nRem = removable.length;
-        for (const m of removable) {
-          const nextState: ItemState = {
-            ...state,
-            prefixes: state.prefixes.filter((p) => p.modId !== m.modId || p.isFractured),
-            suffixes: state.suffixes.filter((s) => s.modId !== m.modId || s.isFractured),
-          };
-          expectedAfterAnnul += (1 / nRem) * this.evaluateStateValue(nextState);
-        }
-        return this.cA + expectedAfterAnnul;
-      }
-
-      const has35Eff = state.prefixes.some((p: RolledMod) => p.modGroup === 'AfflictionJewelSmallPassivesHaveIncreasedEffect' && p.tier === 1);
-      const hasAttr = state.suffixes.some((s: RolledMod) => s.modGroup === 'AfflictionJewelSmallPassivesGrantAttributes' && s.tier === 1);
-      const hasChaos = state.suffixes.some((s: RolledMod) => s.modGroup === 'AfflictionJewelSmallPassivesGrantChaosRes' && s.tier === 1);
-
-      if (has35Eff && hasAttr && hasChaos) return 0;
-      if (has35Eff && hasAttr) return this.vFracLifeAttr;
-      if (has35Eff && hasChaos) return this.vFracLifeChaos;
-      if (has35Eff) return this.vFracLifeSuffixes;
-      if (hasAttr) return this.vPrefEff + this.vFracLifeAttr;
-      if (hasChaos) return this.vPrefEff + this.vFracLifeChaos;
-      return this.vFracLifeDownstream;
-    }
-
-    const hasHarvestMod = state.prefixes.some((p: RolledMod) => p.modGroup === this.harvestModGroup && p.tier === 1);
-    if (!hasHarvestMod) {
-      return hasFrac35 ? this.vEnter : (this.vStep2 + this.vStep4);
-    }
-
-    const has35Eff = state.prefixes.some((p: RolledMod) => p.modGroup === 'AfflictionJewelSmallPassivesHaveIncreasedEffect' && p.tier === 1);
-    const hasT1Int = state.suffixes.some((s: RolledMod) => s.modGroup === 'AfflictionJewelSmallPassivesGrantInt' && s.tier === 1);
-    const hasTargetSuffix = state.suffixes.some((s: RolledMod) =>
-      this.target.outcomeBranches?.some((b: TargetOutcomeBranch) =>
-        b.requiredMods.some((req: ModRequirement) => (req.modGroup ? s.modGroup === req.modGroup : true) && (req.maxTierNumber !== undefined ? s.tier <= req.maxTierNumber : true))
-      )
-    );
-
-    // Non-target junk mods
-    if (junkMods.length > 0) {
-      let expectedAfterAnnul = 0;
-      const nRem = removable.length;
-      for (const m of removable) {
-        if (m.modGroup === this.harvestModGroup) {
-          expectedAfterAnnul += (1 / nRem) * (hasFrac35 ? this.vEnter : (this.vStep2 + this.vStep4));
-        } else if (m.modGroup === 'AfflictionJewelSmallPassivesHaveIncreasedEffect') {
-          expectedAfterAnnul += (1 / nRem) * (this.v4Step + this.vStep5);
-        } else if (m.modGroup === 'AfflictionJewelSmallPassivesGrantInt') {
-          expectedAfterAnnul += (1 / nRem) * (hasFrac35 ? (hasTargetSuffix ? this.v4Int : this.vCleanFrac35) : this.vStep5);
-        } else if (!junkModIds.has(m.modId)) {
-          expectedAfterAnnul += (1 / nRem) * (hasFrac35 ? (hasT1Int ? this.v5StepEff : this.vCleanFrac35) : this.vStep5);
-        } else {
-          const remainingJunk = junkMods.length - 1;
-          if (remainingJunk === 0) {
-            if (has35Eff && hasT1Int && hasTargetSuffix) expectedAfterAnnul += 0;
-            else if (has35Eff && hasT1Int) expectedAfterAnnul += (1 / nRem) * (hasFrac35 ? this.v5StepEff : this.vStep5);
-            else if (has35Eff && hasTargetSuffix) expectedAfterAnnul += (1 / nRem) * (hasFrac35 ? this.v4Int : this.vStep5);
-            else if (has35Eff) expectedAfterAnnul += (1 / nRem) * (hasFrac35 ? this.vCleanFrac35 : this.vStep4);
-            else if (hasTargetSuffix) expectedAfterAnnul += (1 / nRem) * this.v4Step;
-            else expectedAfterAnnul += (1 / nRem) * (this.v4Step + this.vStep5);
-          } else {
-            expectedAfterAnnul += (1 / nRem) * (this.vClean1 + (hasFrac35 ? this.vCleanFrac35 : this.v4Step));
+    // 3b. Outcome branch suffixes
+    if (target.outcomeBranches && target.outcomeBranches.length > 0) {
+      for (const branch of target.outcomeBranches) {
+        for (const req of branch.requiredMods) {
+          const found = allSuffixes.find((m) => matchesModRequirement(m, req));
+          if (found && found.genType === 'Suffix') {
+            const groupMods = allSuffixes.filter((m) => m.modGroup === found.modGroup);
+            const groupTotalWeight = calculateTotalWeight(groupMods) || 1200;
+            const existing = this.targetSuffixGroups.find((g) => g.modGroup === found.modGroup);
+            if (!existing) {
+              const targetGroup: SuffixTargetGroup = {
+                id: req.modGroup ?? found.modGroup,
+                name: branch.name,
+                modGroup: found.modGroup,
+                modId: req.modId ?? found.modId,
+                tier: req.maxTierNumber ?? found.tier,
+                weight: found.weight,
+                groupTotalWeight,
+                saleValueChaos: branch.saleValueChaos,
+                isBaseRequired: false,
+                branchName: branch.name,
+              };
+              this.targetSuffixGroups.push(targetGroup);
+              this.suffixGroupMap.set(targetGroup.id, targetGroup);
+            }
           }
         }
       }
-      return this.cA + expectedAfterAnnul;
     }
 
-    // Clean states:
-    if (hasFrac35) {
-      if (this.isExactTarget) {
-        const hasAttr = state.suffixes.some((s) => s.modGroup === 'AfflictionJewelSmallPassivesGrantAttributes' && s.tier === 1);
-        const hasChaos = state.suffixes.some((s) => s.modGroup === 'AfflictionJewelSmallPassivesGrantChaosRes' && s.tier === 1);
-        if (hasAttr && hasChaos) return 0;
-        if (hasAttr) return this.vAttr;
-        if (hasChaos) return this.vRes;
-        return this.vCleanFrac35;
-      }
-
-      if (!this.targetRequiresInt) {
-        if (!hasTargetSuffix) return this.v5StepFullPool;
-        return 0;
-      }
-      if (!hasT1Int && !hasTargetSuffix) return this.vCleanFrac35;
-      if (hasT1Int && !hasTargetSuffix) return this.vInt;
-      if (!hasT1Int && hasTargetSuffix) {
-        const hasAttr = state.suffixes.some((s) => s.modGroup === 'AfflictionJewelSmallPassivesGrantAttributes' && s.tier === 1);
-        const hasAS = state.suffixes.some((s) => s.name.includes('3% increased Attack Speed') && s.tier === 1);
-        const hasRes = state.suffixes.some((s) => s.modGroup === 'AfflictionJewelSmallPassivesGrantElementalRes' && s.tier === 1);
-        if (hasAttr) return this.vAttr;
-        if (hasAS) return this.vAS;
-        if (hasRes) return this.vRes;
-        return this.v4Int;
-      }
-      return 0;
-    }
-
-    if (!has35Eff && !hasTargetSuffix) {
-      return this.v4Step + this.vStep5;
-    }
-
-    if (!has35Eff && hasTargetSuffix) {
-      return this.v4Step;
-    }
-
-    if (has35Eff && !hasTargetSuffix) {
-      return this.vStep5;
-    }
-
-    return 0;
-  }
-
-  public getJunkMods(state: ItemState): RolledMod[] {
-    const removable = getRemovableAffixes(state);
-
-    let bestBranch: TargetOutcomeBranch | undefined = undefined;
-    let maxBranchMatches = 0;
-
-    if (this.target.outcomeBranches && this.target.outcomeBranches.length > 0) {
-      for (const branch of this.target.outcomeBranches) {
-        const matchesCount = branch.requiredMods.filter((req) =>
-          [...state.prefixes, ...state.suffixes].some((m) =>
-            (req.modGroup ? m.modGroup === req.modGroup : true) &&
-            (req.modId ? m.modId === req.modId : true) &&
-            (req.name ? m.name === req.name : true) &&
-            (req.maxTierNumber !== undefined ? m.tier <= req.maxTierNumber : true)
-          )
-        ).length;
-
-        if (matchesCount > maxBranchMatches) {
-          maxBranchMatches = matchesCount;
-          bestBranch = branch;
+    // 3c. Compute compatible pairs for each target suffix group
+    for (const g1 of this.targetSuffixGroups) {
+      const compSet = new Set<string>();
+      for (const g2 of this.targetSuffixGroups) {
+        if (g1.id === g2.id || g1.modGroup === g2.modGroup) continue;
+        // Check if item with g1 and g2 satisfies target
+        const dummyState: ItemState = {
+          baseType: 'Large Cluster Jewel',
+          clusterType: 'any',
+          itemLevel: 84,
+          rarity: 'rare',
+          prefixes: [
+            {
+              modId: 'p1',
+              name: '35% increased Effect',
+              modGroup: 'AfflictionJewelSmallPassivesHaveIncreasedEffect',
+              tier: 1,
+              genType: 'Prefix',
+              statValues: [],
+              tags: [],
+              craftTags: [],
+              isFractured: true,
+            },
+            {
+              modId: 'p2',
+              name: this.harvestModName,
+              modGroup: this.harvestModGroup,
+              tier: 1,
+              genType: 'Prefix',
+              statValues: [],
+              tags: [],
+              craftTags: [],
+              isFractured: false,
+            },
+          ],
+          suffixes: [
+            {
+              modId: g1.modId ?? 's1',
+              name: g1.name,
+              modGroup: g1.modGroup,
+              tier: g1.tier,
+              genType: 'Suffix',
+              statValues: [],
+              tags: [],
+              craftTags: [],
+              isFractured: false,
+            },
+            {
+              modId: g2.modId ?? 's2',
+              name: g2.name,
+              modGroup: g2.modGroup,
+              tier: g2.tier,
+              genType: 'Suffix',
+              statValues: [],
+              tags: [],
+              craftTags: [],
+              isFractured: false,
+            },
+          ],
+          fracturedModIds: ['p1'],
+        };
+        if (satisfiesTarget(dummyState, target)) {
+          compSet.add(g2.id);
         }
       }
+      this.compatiblePairs.set(g1.id, compSet);
     }
 
+    // ------------------------------------------------------------- 4. Solve the Exact Markov Linear System
+    const K = this.targetSuffixGroups.length;
+    const N = K + 2;
+    // Index 0: S0 (Clean prefixes, 0 suffixes)
+    // Index 1..K: S_G1 .. S_GK (Clean prefixes, 1 target suffix)
+    // Index K+1: VH (Harvest entry state)
+
+    const W0 = this.totalSuffixPoolWeight;
+    const pTargets0 = this.targetSuffixGroups.map((g) => g.weight / W0);
+    const pHit0 = pTargets0.reduce((sum, p) => sum + p, 0);
+    const pJunk0 = Math.max(0, 1 - pHit0);
+
+    const pWin = this.targetSuffixGroups.map((g1) => {
+      const W1 = Math.max(1, W0 - g1.groupTotalWeight);
+      const compIds = this.compatiblePairs.get(g1.id) ?? new Set();
+      let winProb = 0;
+      for (const g2 of this.targetSuffixGroups) {
+        if (compIds.has(g2.id)) {
+          winProb += g2.weight / W1;
+        }
+      }
+      return winProb;
+    });
+
+    // Build Transition Matrix M
+    const M: number[][] = Array.from({ length: N }, () => new Array(N).fill(0));
+
+    // Row 0: Equation for S0
+    // (1 - 0.5 * pJunk0) * V(S0) - sum_i p_i * V(S_Gi) - 0.5 * pJunk0 * VH = cE + pJunk0 * cA
+    M[0][0] = 1 - 0.5 * pJunk0;
+    for (let i = 0; i < K; i++) {
+      M[0][i + 1] = -pTargets0[i];
+    }
+    M[0][K + 1] = -0.5 * pJunk0;
+
+    // Rows 1..K: Equations for S_G1 .. S_GK
+    // (2 + pWin[i]) * V(S_Gi) - 0.5 * (1 - pWin[i]) * V(S0) - 1.5 * (1 - pWin[i]) * VH = 3 cE + 4 (1 - pWin[i]) cA
+    for (let i = 0; i < K; i++) {
+      const pw = pWin[i];
+      M[i + 1][i + 1] = 2 + pw;
+      M[i + 1][0] = -0.5 * (1 - pw);
+      M[i + 1][K + 1] = -1.5 * (1 - pw);
+    }
+
+    // Row K+1: Equation for VH
+    // Harvest extra affixes transitions:
+    let q0_harvest = 0.5 * 0.5 * pJunk0;
+    const qi_harvest = new Array(K).fill(0);
+    for (let i = 0; i < K; i++) {
+      qi_harvest[i] += 0.5 * pTargets0[i];
+    }
+    let qH_harvest = 0.5 * 0.5 * pJunk0;
+    let kA_harvest = 0.5 * pJunk0;
+
+    // Calculate 2-extra suffix probabilities:
+    let pPairWinSum = 0;
+    const p1TargetJunk = new Array(K).fill(0);
+    for (let i = 0; i < K; i++) {
+      const g1 = this.targetSuffixGroups[i];
+      const W1 = Math.max(1, W0 - g1.groupTotalWeight);
+      const compIds = this.compatiblePairs.get(g1.id) ?? new Set();
+
+      let pWinFromG1 = 0;
+      for (let j = 0; j < K; j++) {
+        const g2 = this.targetSuffixGroups[j];
+        if (compIds.has(g2.id)) {
+          pWinFromG1 += g2.weight / W1;
+        }
+      }
+      const pPairWin = (g1.weight / W0) * pWinFromG1;
+      pPairWinSum += pPairWin;
+
+      const pG1ThenJunk = (g1.weight / W0) * (1 - pWinFromG1);
+      const pJunkThenG1 = pJunk0 * (g1.weight / (W0 - 1000));
+      p1TargetJunk[i] = pG1ThenJunk + pJunkThenG1;
+    }
+    const p1TargetJunkSum = p1TargetJunk.reduce((s, p) => s + p, 0);
+    const p2Junk = Math.max(0, 1 - pPairWinSum - p1TargetJunkSum);
+
+    for (let i = 0; i < K; i++) {
+      qi_harvest[i] += 0.5 * (1 / 3) * p1TargetJunk[i];
+    }
+    q0_harvest += 0.5 * ((1 / 6) * p1TargetJunkSum + (1 / 3) * p2Junk);
+    qH_harvest += 0.5 * ((1 / 2) * p1TargetJunkSum + (2 / 3) * p2Junk);
+    kA_harvest += 0.5 * ((4 / 3) * p1TargetJunkSum + (5 / 3) * p2Junk);
+
+    M[K + 1][K + 1] = 1 - qH_harvest;
+    M[K + 1][0] = -q0_harvest;
+    for (let i = 0; i < K; i++) {
+      M[K + 1][i + 1] = -qi_harvest[i];
+    }
+
+    // ------------------------------------------------------------- 4a. Solve Costs (V)
+    const bV = new Array(N).fill(0);
+    bV[0] = this.cE + pJunk0 * this.cA;
+    for (let i = 0; i < K; i++) {
+      bV[i + 1] = 3 * this.cE + 4 * (1 - pWin[i]) * this.cA;
+    }
+    bV[K + 1] = this.cH / this.pT1Harvest + kA_harvest * this.cA;
+
+    const V_sol = solveLinearSystem(M, bV);
+    this.vS0 = V_sol[0];
+    for (let i = 0; i < K; i++) {
+      this.vGroupMap.set(this.targetSuffixGroups[i].id, V_sol[i + 1]);
+    }
+    this.vEnter = V_sol[K + 1];
+
+    // ------------------------------------------------------------- 4b. Solve Expected Harvests (H)
+    const bH = new Array(N).fill(0);
+    bH[K + 1] = 1 / this.pT1Harvest;
+    const H_sol = solveLinearSystem(M, bH);
+    this.expHarvestsFrac35 = H_sol[K + 1];
+
+    // ------------------------------------------------------------- 4c. Solve Expected Exalts (E)
+    const bE = new Array(N).fill(0);
+    bE[0] = 1;
+    for (let i = 0; i < K; i++) {
+      bE[i + 1] = 3;
+    }
+    bE[K + 1] = 0;
+    const E_sol = solveLinearSystem(M, bE);
+    this.expExaltsFrac35 = E_sol[K + 1];
+
+    // ------------------------------------------------------------- 4d. Solve Expected Annuls (A)
+    const bA = new Array(N).fill(0);
+    bA[0] = pJunk0;
+    for (let i = 0; i < K; i++) {
+      bA[i + 1] = 4 * (1 - pWin[i]);
+    }
+    bA[K + 1] = kA_harvest;
+    const A_sol = solveLinearSystem(M, bA);
+    this.expAnnulsFrac35 = A_sol[K + 1];
+
+    this.step2Cost = this.expHarvestsFrac35 * this.cH;
+    const bA4 = new Array(N).fill(0);
+    bA4[0] = pJunk0;
+    for (let i = 0; i < K; i++) {
+      bA4[i + 1] = 4 * (1 - pWin[i]);
+    }
+    bA4[K + 1] = 0;
+    const A4_sol = solveLinearSystem(M, bA4);
+    this.step4AnnulsFrac35 = A4_sol[K + 1];
+    this.step3AnnulsFrac35 = Math.max(0, this.expAnnulsFrac35 - this.step4AnnulsFrac35);
+    this.step3Cost = this.step3AnnulsFrac35 * this.cA;
+    this.step4Cost = this.expExaltsFrac35 * this.cE + this.step4AnnulsFrac35 * this.cA;
+
+    // ------------------------------------------------------------- 4e. Solve Terminal Branch Probabilities
+    if (target.outcomeBranches && target.outcomeBranches.length > 0) {
+      for (const branch of target.outcomeBranches) {
+        const bPi = new Array(N).fill(0);
+        let branchPairWinHarvest = 0;
+
+        for (let i = 0; i < K; i++) {
+          const g1 = this.targetSuffixGroups[i];
+          const W1 = Math.max(1, W0 - g1.groupTotalWeight);
+          const compIds = this.compatiblePairs.get(g1.id) ?? new Set();
+
+          let branchWinFromG1 = 0;
+          for (let j = 0; j < K; j++) {
+            const g2 = this.targetSuffixGroups[j];
+            if (compIds.has(g2.id)) {
+              const isMatch = g1.branchName === branch.name || g2.branchName === branch.name;
+              if (isMatch) {
+                branchWinFromG1 += g2.weight / W1;
+              }
+            }
+          }
+          bPi[i + 1] = 3 * branchWinFromG1;
+          branchPairWinHarvest += (g1.weight / W0) * branchWinFromG1;
+        }
+        bPi[K + 1] = 0.5 * branchPairWinHarvest;
+
+        const pi_sol = solveLinearSystem(M, bPi);
+        this.branchProbabilitiesMap.set(branch.name, pi_sol[K + 1]);
+      }
+    }
+  }
+
+  // ------------------------------------------------------------- Mechanical Evaluation Core
+  public getJunkMods(state: ItemState): RolledMod[] {
     const junk: RolledMod[] = [];
-    for (const m of removable) {
-      const matchesRequired = this.target.requiredMods.some((req: ModRequirement) =>
-        (req.modGroup ? m.modGroup === req.modGroup : true) &&
-        (req.modId ? m.modId === req.modId : true) &&
-        (req.name ? m.name === req.name : true) &&
-        (req.maxTierNumber !== undefined ? m.tier <= req.maxTierNumber : true)
-      );
-      if (matchesRequired) {
-        continue;
-      }
+    const all = [...state.prefixes, ...state.suffixes];
+    const bestBranch = getMatchingOutcomeBranch(state, this.target);
 
-      const matchesBestBranch = bestBranch?.requiredMods.some((req: ModRequirement) =>
-        (req.modGroup ? m.modGroup === req.modGroup : true) &&
-        (req.modId ? m.modId === req.modId : true) &&
-        (req.name ? m.name === req.name : true) &&
-        (req.maxTierNumber !== undefined ? m.tier <= req.maxTierNumber : true)
-      );
+    for (const m of all) {
+      if (m.isFractured) continue;
 
-      if (matchesBestBranch) {
-        continue;
-      }
+      const matchesRequired = this.target.requiredMods.some((req: ModRequirement) => matchesModRequirement(m, req));
+      if (matchesRequired) continue;
+
+      const matchesBranch = this.target.outcomeBranches?.some((b: TargetOutcomeBranch) =>
+        b.requiredMods.some((req: ModRequirement) => matchesModRequirement(m, req))
+      );
+      if (matchesBranch) continue;
 
       junk.push(m);
     }
     return junk;
   }
 
-  public getBestAction(state: ItemState): PolicyDecision {
-    // 1. Goal satisfaction
-    if (satisfiesTarget(state, this.target) || getMatchingOutcomeBranch(state, this.target)) {
+  public evaluateCandidateAction(state: ItemState, actionType: ActionType): CandidateActionEvaluation {
+    const junkMods = this.getJunkMods(state);
+    const removable = getRemovableAffixes(state);
+    const hasHarvestMod = state.prefixes.some((p) => p.modGroup === this.harvestModGroup && p.tier === 1);
+
+    // 1. TERMINAL
+    if (actionType === 'TERMINAL') {
       return {
         actionType: 'TERMINAL',
         actionName: 'Goal Satisfied',
+        immediateCostChaos: 0,
         expectedContinuationCostChaos: 0,
-        reason: 'Item satisfies all target requirements and outcome branch.',
+        expectedTotalCostChaos: 0,
         stepAttribution: 5,
+        reason: 'Item satisfies all target requirements and outcome branch.',
       };
     }
 
-    const fracPrefix = state.prefixes.find((p: RolledMod) => p.isFractured);
-    const isFracPrefixDirectRoute = fracPrefix && fracPrefix.modGroup !== 'AfflictionJewelSmallPassivesHaveIncreasedEffect';
-    const hasFrac35 = state.prefixes.some(
-      (p: RolledMod) => p.modGroup === 'AfflictionJewelSmallPassivesHaveIncreasedEffect' && p.isFractured
-    );
-
-    const hasHarvestMod = state.prefixes.some((p: RolledMod) => p.modGroup === this.harvestModGroup && p.tier === 1);
-
-    // If item needs Harvest and does not have the target Harvest prefix, reforge immediately (never waste annuls on junk)
-    if (!isFracPrefixDirectRoute && !hasHarvestMod) {
+    // 2. HARVEST_REFORGE / HARVEST_DEFENCE
+    if (actionType === 'HARVEST_REFORGE' || actionType === 'HARVEST_DEFENCE') {
+      const actionName = `Harvest Reforge ${this.harvestTag.charAt(0).toUpperCase() + this.harvestTag.slice(1)}`;
       return {
         actionType: 'HARVEST_REFORGE',
-        actionName: `Harvest Reforge ${this.harvestTag.charAt(0).toUpperCase() + this.harvestTag.slice(1)}`,
-        expectedContinuationCostChaos: hasFrac35 ? this.vEnter : this.vFracSuffDownstream,
-        reason: `Item does not have ${this.harvestModName}. Reforge with guaranteed ${this.harvestTag} modifier (${(this.pT1ES * 100).toFixed(2)}% per craft).`,
+        actionName,
+        immediateCostChaos: this.cH,
+        expectedContinuationCostChaos: Math.max(0, this.vEnter - this.cH),
+        expectedTotalCostChaos: this.vEnter,
         stepAttribution: 2,
+        reason: `${actionName} guarantees ${this.harvestTag} modifier at ${(this.pT1Harvest * 100).toFixed(2)}% rate.`,
       };
     }
 
-    const junkMods = this.getJunkMods(state);
-    if (junkMods.length > 0) {
-      let stepAttr: 1 | 2 | 3 | 4 | 5 = 3;
-      if (isFracPrefixDirectRoute) {
-        stepAttr = 3;
-      } else if (hasFrac35) {
-        const hasT1Int = state.suffixes.some((s: RolledMod) => s.modGroup === 'AfflictionJewelSmallPassivesGrantInt' && s.tier === 1);
-        const hasTargetSuffix = state.suffixes.some((s: RolledMod) =>
-          this.target.outcomeBranches?.some((b: TargetOutcomeBranch) =>
-            b.requiredMods.some((req: ModRequirement) => (req.modGroup ? s.modGroup === req.modGroup : true) && (req.maxTierNumber !== undefined ? s.tier <= req.maxTierNumber : true))
-          )
-        );
-        if (hasT1Int || hasTargetSuffix) {
-          stepAttr = 4;
-        } else {
-          stepAttr = 3;
-        }
-      }
-
-      return {
-        actionType: 'ANNUL',
-        actionName: 'Orb of Annulment',
-        expectedContinuationCostChaos: this.evaluateStateValue(state),
-        reason: `Item has ${junkMods.length} non-target junk affix(es). Annul non-target mods.`,
-        stepAttribution: stepAttr,
-      };
-    }
-
-    // Handle Fractured Non-Harvest Prefix Route (e.g. Fractured Life in Craft C)
-    if (isFracPrefixDirectRoute) {
-      const has35Eff = state.prefixes.some((p: RolledMod) => p.modGroup === 'AfflictionJewelSmallPassivesHaveIncreasedEffect' && p.tier === 1);
-      if (!has35Eff && canAcceptPrefix(state)) {
+    // 3. ANNUL
+    if (actionType === 'ANNUL') {
+      if (removable.length === 0) {
         return {
-          actionType: this.enableAllflame ? 'ALLFLAME_EXALT_PREFIX' : 'EXALT_PREFIX',
-          actionName: this.enableAllflame ? 'Allflame Exalted Orb (Prefix: 35% Effect)' : 'Exalted Orb Slam (Prefix: 35% Effect)',
-          expectedContinuationCostChaos: this.vFracLifeDownstream,
-          reason: `Prefix open. Slam 35% Increased Small Passive Effect (${(this.p4 * 100).toFixed(2)}% chance).`,
-          stepAttribution: 2,
-        };
-      }
-
-      const hasAttr = state.suffixes.some((s: RolledMod) => s.modGroup === 'AfflictionJewelSmallPassivesGrantAttributes' && s.tier === 1);
-      const hasChaos = state.suffixes.some((s: RolledMod) => s.modGroup === 'AfflictionJewelSmallPassivesGrantChaosRes' && s.tier === 1);
-
-      if ((!hasAttr || !hasChaos) && canAcceptSuffix(state)) {
-        const targetSuffixName = !hasAttr && !hasChaos ? 'Attributes / Chaos Res' : (!hasAttr ? '+4 All Attributes' : '+5% Chaos Resistance');
-        return {
-          actionType: this.enableAllflame ? 'ALLFLAME_EXALT_SUFFIX' : 'EXALT_SUFFIX',
-          actionName: this.enableAllflame ? `Allflame Exalted Orb (Suffix: ${targetSuffixName})` : `Exalted Orb Slam (Suffix: ${targetSuffixName})`,
-          expectedContinuationCostChaos: this.evaluateStateValue(state),
-          reason: `Suffix open. Slam missing target suffix (${targetSuffixName}).`,
+          actionType: 'ANNUL',
+          actionName: 'Orb of Annulment',
+          immediateCostChaos: this.cA,
+          expectedContinuationCostChaos: this.vEnter,
+          expectedTotalCostChaos: this.cA + this.vEnter,
           stepAttribution: 3,
+          reason: 'No removable mods. Restart via Harvest.',
         };
       }
-    }
 
-    // 2. Check Guaranteed Harvest Mod (e.g. T1 ES or T1 Life)
-    const has35Eff = state.prefixes.some((p: RolledMod) => p.modGroup === 'AfflictionJewelSmallPassivesHaveIncreasedEffect' && p.tier === 1);
-    const hasT1Int = state.suffixes.some((s: RolledMod) => s.modGroup === 'AfflictionJewelSmallPassivesGrantInt' && s.tier === 1);
-    const hasTargetSuffix = state.suffixes.some((s: RolledMod) =>
-      this.target.outcomeBranches?.some((b: TargetOutcomeBranch) =>
-        b.requiredMods.some((req: ModRequirement) => (req.modGroup ? s.modGroup === req.modGroup : true) && (req.maxTierNumber !== undefined ? s.tier <= req.maxTierNumber : true))
-      )
-    );
-
-    // 4. Check 35% Increased Effect (Prefix)
-    if (!has35Eff && canAcceptPrefix(state)) {
-      return {
-        actionType: this.enableAllflame ? 'ALLFLAME_EXALT_PREFIX' : 'EXALT_PREFIX',
-        actionName: this.enableAllflame ? 'Allflame Exalted Orb (Prefix)' : 'Exalted Orb Slam (Prefix)',
-        expectedContinuationCostChaos: hasTargetSuffix ? this.v4Step : this.vStep4,
-        reason: `Prefix open. Slam 35% Increased Small Passive Effect (${(this.p4 * 100).toFixed(2)}% chance).`,
-        stepAttribution: 4,
-      };
-    }
-
-    // 5. Check Suffix Slams for Exact Targets (Craft C on Fractured 35%)
-    if (this.isExactTarget) {
-      const hasAttr = state.suffixes.some((s: RolledMod) => s.modGroup === 'AfflictionJewelSmallPassivesGrantAttributes' && s.tier === 1);
-      const hasChaos = state.suffixes.some((s: RolledMod) => s.modGroup === 'AfflictionJewelSmallPassivesGrantChaosRes' && s.tier === 1);
-
-      if ((!hasAttr || !hasChaos) && canAcceptSuffix(state)) {
-        const targetSuffixName = !hasAttr && !hasChaos ? 'Attributes / Chaos Res' : (!hasAttr ? '+4 All Attributes' : '+5% Chaos Resistance');
-        return {
-          actionType: this.enableAllflame ? 'ALLFLAME_EXALT_SUFFIX' : 'EXALT_SUFFIX',
-          actionName: this.enableAllflame ? `Allflame Exalted Orb (Suffix: ${targetSuffixName})` : `Exalted Orb Slam (Suffix: ${targetSuffixName})`,
-          expectedContinuationCostChaos: this.evaluateStateValue(state),
-          reason: `Suffix open. Slam target suffix (${targetSuffixName}).`,
-          stepAttribution: 4,
+      let sumContinuation = 0;
+      for (const m of removable) {
+        const nextState: ItemState = {
+          ...state,
+          prefixes: state.prefixes.filter((p) => p !== m),
+          suffixes: state.suffixes.filter((s) => s !== m),
         };
+        sumContinuation += this.evaluateStateValue(nextState);
       }
-    }
+      const expContinuation = sumContinuation / removable.length;
+      const stepAttr = hasHarvestMod ? (state.suffixes.length > 0 ? 4 : 3) : 2;
 
-    // 5b. Check T1 Intelligence (Suffix) if missing and required by target (Craft A)
-    if (this.targetRequiresInt && !hasT1Int && canAcceptSuffix(state)) {
-      return {
-        actionType: this.enableAllflame ? 'ALLFLAME_EXALT_SUFFIX' : 'EXALT_SUFFIX',
-        actionName: this.enableAllflame ? 'Allflame Exalted Orb (Suffix: T1 Int)' : 'Exalted Orb Slam (Suffix: T1 Int)',
-        expectedContinuationCostChaos: hasTargetSuffix ? this.v4Int : this.vCleanFrac35,
-        reason: 'Suffix open. Slam target suffixes (T1 Intelligence / Premium Suffix).',
-        stepAttribution: 4,
-      };
-    }
-
-    // 6. Check Final Premium Suffix (Craft A)
-    if (has35Eff && (!this.targetRequiresInt || hasT1Int) && !hasTargetSuffix && canAcceptSuffix(state)) {
-      return {
-        actionType: this.enableAllflame ? 'ALLFLAME_EXALT_SUFFIX' : 'EXALT_SUFFIX',
-        actionName: this.enableAllflame ? 'Allflame Exalted Orb (Suffix)' : 'Exalted Orb Slam (Suffix)',
-        expectedContinuationCostChaos: hasFrac35 ? (this.targetRequiresInt ? this.v5StepEff : this.v5StepFullPool) : this.vStep5,
-        reason: 'Suffix open. Slam premium suffix (+4 Attributes, 3% Attack Speed, or +4% All Res).',
-        stepAttribution: hasFrac35 ? 4 : 5,
-      };
-    }
-
-    // Fallback: If slots are full without satisfying target, annul any removable mod
-    const removableMods = getRemovableAffixes(state);
-    if (removableMods.length > 0) {
       return {
         actionType: 'ANNUL',
         actionName: 'Orb of Annulment',
-        expectedContinuationCostChaos: this.evaluateStateValue(state),
-        reason: 'Affix slots are full without satisfying target requirements. Annul to open crafting slot.',
-        stepAttribution: 3,
+        immediateCostChaos: this.cA,
+        expectedContinuationCostChaos: expContinuation,
+        expectedTotalCostChaos: this.cA + expContinuation,
+        stepAttribution: stepAttr,
+        reason: `Item has ${junkMods.length} junk mod(s). Annul non-target mods.`,
+      };
+    }
+
+    // 4. EXALT_PREFIX
+    if (actionType === 'EXALT_PREFIX' || actionType === 'ALLFLAME_EXALT_PREFIX') {
+      const pHit = this.p35Effect;
+      const expContinuation = pHit * this.vS0 + (1 - pHit) * (this.cA + 0.5 * this.vS0 + 0.5 * this.vEnter);
+      return {
+        actionType: 'EXALT_PREFIX',
+        actionName: 'Exalted Orb Slam (Prefix: 35% Effect)',
+        immediateCostChaos: this.cE,
+        expectedContinuationCostChaos: expContinuation,
+        expectedTotalCostChaos: this.cE + expContinuation,
+        stepAttribution: 2,
+        reason: `Prefix open. Slam 35% Increased Effect (${(pHit * 100).toFixed(2)}% hit rate).`,
+      };
+    }
+
+    // 5. EXALT_SUFFIX
+    if (actionType === 'EXALT_SUFFIX' || actionType === 'ALLFLAME_EXALT_SUFFIX') {
+      const targetSuffixNames = this.targetSuffixGroups.map((g) => g.name).join(' / ');
+      const W0 = this.totalSuffixPoolWeight;
+
+      const lockedGroups = this.targetSuffixGroups.filter((g) =>
+        state.suffixes.some((s) => s.modGroup === g.modGroup && s.tier <= g.tier)
+      );
+
+      let expContinuation = this.vS0;
+      if (lockedGroups.length === 0) {
+        let sumCont = 0;
+        for (const g of this.targetSuffixGroups) {
+          const vG = this.vGroupMap.get(g.id) ?? this.vS0;
+          sumCont += (g.weight / W0) * vG;
+        }
+        const pHit = this.targetSuffixGroups.reduce((s, g) => s + g.weight / W0, 0);
+        const pJunk = Math.max(0, 1 - pHit);
+        sumCont += pJunk * (this.cA + 0.5 * this.vS0 + 0.5 * this.vEnter);
+        expContinuation = sumCont;
+      } else {
+        const g1 = lockedGroups[0];
+        const vG1 = this.vGroupMap.get(g1.id) ?? this.vS0;
+        const W1 = Math.max(1, W0 - g1.groupTotalWeight);
+        const compIds = this.compatiblePairs.get(g1.id) ?? new Set();
+
+        let winProb = 0;
+        for (const g2 of this.targetSuffixGroups) {
+          if (compIds.has(g2.id)) {
+            winProb += g2.weight / W1;
+          }
+        }
+        const junkProb = Math.max(0, 1 - winProb);
+        expContinuation = winProb * 0 + junkProb * ((4 / 3) * this.cA + (1 / 3) * vG1 + (1 / 6) * this.vS0 + 0.5 * this.vEnter);
+      }
+
+      return {
+        actionType: 'EXALT_SUFFIX',
+        actionName: `Exalted Orb Slam (Suffix: ${targetSuffixNames})`,
+        immediateCostChaos: this.cE,
+        expectedContinuationCostChaos: expContinuation,
+        expectedTotalCostChaos: this.cE + expContinuation,
+        stepAttribution: 4,
+        reason: `Suffix open. Slam target suffix (${targetSuffixNames}).`,
       };
     }
 
     return {
-      actionType: 'ANNUL',
-      actionName: 'Unhandled State',
-      expectedContinuationCostChaos: Infinity,
-      reason: 'State is unhandled in crafting policy graph.',
-      stepAttribution: 3,
+      actionType: 'HARVEST_REFORGE',
+      actionName: `Harvest Reforge ${this.harvestTag}`,
+      immediateCostChaos: this.cH,
+      expectedContinuationCostChaos: this.vEnter,
+      expectedTotalCostChaos: this.cH + this.vEnter,
+      stepAttribution: 2,
+      reason: 'Standard Harvest reforge entry.',
     };
   }
 
-  public selectBestAllflameCandidate(
-    candidates: Mod[],
-    currentState: ItemState
-  ): { chosenMod: Mod; evaluations: CandidateEvaluation[] } {
-    if (candidates.length === 0) throw new Error('No candidate mods provided');
-
-    const evaluations: CandidateEvaluation[] = [];
-    let bestMod = candidates[0];
-    let bestValue = Infinity;
-    let bestSaleValue = -Infinity;
-
-    for (const mod of candidates) {
-      const clonedState: ItemState = {
-        ...currentState,
-        prefixes: [...currentState.prefixes],
-        suffixes: [...currentState.suffixes],
-      };
-
-      if (mod.genType === 'Prefix') {
-        clonedState.prefixes.push({ ...mod, isFractured: false });
-      } else {
-        clonedState.suffixes.push({ ...mod, isFractured: false });
-      }
-
-      const cost = this.evaluateStateValue(clonedState);
-      const branch = getMatchingOutcomeBranch(clonedState, this.target);
-      const saleValue = branch?.saleValueChaos ?? 0;
-      evaluations.push({ mod, resultingStateValue: cost });
-
-      if (cost < bestValue || (cost === bestValue && saleValue > bestSaleValue)) {
-        bestValue = cost;
-        bestSaleValue = saleValue;
-        bestMod = mod;
-      }
+  public getLegalCandidateActions(state: ItemState): CandidateActionEvaluation[] {
+    if (satisfiesTarget(state, this.target) || getMatchingOutcomeBranch(state, this.target)) {
+      return [this.evaluateCandidateAction(state, 'TERMINAL')];
     }
 
-    return { chosenMod: bestMod, evaluations };
-  }
-
-  public matchesTargetRequirement(mod: Mod | { modId: string; modGroup: string; tier: number; name: string }): boolean {
-    const matchesMain = this.target.requiredMods.some((req: ModRequirement) =>
-      (req.modGroup ? mod.modGroup === req.modGroup : true) &&
-      (req.modId ? mod.modId === req.modId : true) &&
-      (req.name ? mod.name === req.name : true) &&
-      (req.maxTierNumber !== undefined ? mod.tier <= req.maxTierNumber : true)
+    const candidates: CandidateActionEvaluation[] = [];
+    const junkMods = this.getJunkMods(state);
+    const hasHarvestMod = state.prefixes.some((p) => p.modGroup === this.harvestModGroup && p.tier === 1);
+    const hasFrac35 = state.prefixes.some(
+      (p) => p.modGroup === 'AfflictionJewelSmallPassivesHaveIncreasedEffect' && p.isFractured
     );
-    if (matchesMain) return true;
 
-    if (this.target.outcomeBranches) {
-      return this.target.outcomeBranches.some((b: TargetOutcomeBranch) =>
-        b.requiredMods.some((req: ModRequirement) =>
-          (req.modGroup ? mod.modGroup === req.modGroup : true) &&
-          (req.modId ? mod.modId === req.modId : true) &&
-          (req.name ? mod.name === req.name : true) &&
-          (req.maxTierNumber !== undefined ? mod.tier <= req.maxTierNumber : true)
-        )
-      );
+    // Harvest Reforge is always a legal candidate
+    candidates.push(this.evaluateCandidateAction(state, 'HARVEST_REFORGE'));
+
+    // Annul is legal if there are removable mods and item has Harvest mod
+    if (junkMods.length > 0 && hasHarvestMod) {
+      candidates.push(this.evaluateCandidateAction(state, 'ANNUL'));
     }
-    return false;
+
+    // Exalt Prefix is legal if prefix slot open
+    if (!hasFrac35 && canAcceptPrefix(state)) {
+      candidates.push(this.evaluateCandidateAction(state, 'EXALT_PREFIX'));
+    }
+
+    // Exalt Suffix is legal if prefix satisfied, suffix slot open, and 0 junk
+    if (hasHarvestMod && junkMods.length === 0 && canAcceptSuffix(state)) {
+      candidates.push(this.evaluateCandidateAction(state, 'EXALT_SUFFIX'));
+    }
+
+    return candidates;
   }
 
-  public getRepresentativeStateAudits(routeOption: boolean | 'fractured_35' | 'fractured_int' | 'fractured_life' = true): RepresentativeStateAudit[] {
-    const isFracturedLife = routeOption === 'fractured_life' || (this.isExactTarget && routeOption !== 'fractured_35');
-    const isFractured35Route = routeOption === true || routeOption === 'fractured_35';
-    const slamPrefixName = this.enableAllflame ? 'Allflame Exalt Prefix (35% Effect)' : 'Exalted Orb Slam (Prefix: 35% Effect)';
-    const slamSuffixGeneric = this.enableAllflame ? 'Allflame Exalt Suffix' : 'Exalted Orb Slam (Suffix)';
-
-    if (isFracturedLife) {
-      return [
-        {
-          stateDescription: 'Frac T1 Life (Clean S0, 1 Prefix Open)',
-          candidateActions: [
-            { actionName: slamPrefixName, continuationValueChaos: this.vFracLifeDownstream },
-            { actionName: `Harvest Reforge ${this.harvestTag.charAt(0).toUpperCase() + this.harvestTag.slice(1)}`, continuationValueChaos: this.vEnter },
-          ],
-          recommendedAction: slamPrefixName,
-          recommendationReason: `Direct Exalt prefix slam has continuation EV of ${this.vFracLifeDownstream.toFixed(1)}c vs ${this.vEnter.toFixed(1)}c to reforge away the base.`,
-        },
-        {
-          stateDescription: 'Frac T1 Life + 35% Effect (Clean S0, 2 Suffixes Open)',
-          candidateActions: [
-            { actionName: `${slamSuffixGeneric} (Attributes / Chaos Res)`, continuationValueChaos: this.vFracLifeSuffixes },
-            { actionName: `Harvest Reforge ${this.harvestTag.charAt(0).toUpperCase() + this.harvestTag.slice(1)}`, continuationValueChaos: this.vEnter },
-          ],
-          recommendedAction: slamSuffixGeneric,
-          recommendationReason: `Prefixes are 100% complete! Suffix slam continuation EV is only ${this.vFracLifeSuffixes.toFixed(1)}c.`,
-        },
-        {
-          stateDescription: 'Frac T1 Life + 35% Effect + +4 to All Attributes',
-          candidateActions: [
-            { actionName: `${slamSuffixGeneric} (+5% Chaos Resistance)`, continuationValueChaos: this.vAttr },
-            { actionName: 'Orb of Annulment', continuationValueChaos: this.cA + (1 / 3) * this.vFracLifeSuffixes + (1 / 3) * (this.vPrefEff + this.vAttr) },
-          ],
-          recommendedAction: `PRESERVE; ${slamSuffixGeneric} (+5% Chaos Resistance)`,
-          recommendationReason: `+4 All Attributes secured. Suffix slam continuation EV is only ${this.vAttr.toFixed(1)}c.`,
-        },
-        {
-          stateDescription: 'Frac T1 Life + 35% Effect + +5% Chaos Resistance',
-          candidateActions: [
-            { actionName: `${slamSuffixGeneric} (+4 to All Attributes)`, continuationValueChaos: this.vRes },
-            { actionName: 'Orb of Annulment', continuationValueChaos: this.cA + (1 / 3) * this.vFracLifeSuffixes + (1 / 3) * (this.vPrefEff + this.vRes) },
-          ],
-          recommendedAction: `PRESERVE; ${slamSuffixGeneric} (+4 to All Attributes)`,
-          recommendationReason: `+5% Chaos Resistance secured. Suffix slam continuation EV is only ${this.vRes.toFixed(1)}c.`,
-        },
-        {
-          stateDescription: 'Frac T1 Life + 35% Effect + 1 Junk Suffix',
-          candidateActions: [
-            { actionName: 'Orb of Annulment', continuationValueChaos: this.cA + 0.5 * this.vFracLifeSuffixes + 0.5 * (this.vPrefEff + this.vFracLifeSuffixes) },
-            { actionName: `Harvest Reforge ${this.harvestTag.charAt(0).toUpperCase() + this.harvestTag.slice(1)}`, continuationValueChaos: this.vEnter },
-          ],
-          recommendedAction: 'Orb of Annulment',
-          recommendationReason: `Annul has 50% chance to cleanly open the slot, beating base restart.`,
-        },
-        {
-          stateDescription: 'Frac T1 Life + 35% Effect + Attributes + Chaos Res',
-          candidateActions: [
-            { actionName: 'Goal Satisfied (Terminal)', continuationValueChaos: 0 },
-          ],
-          recommendedAction: 'FINISHED',
-          recommendationReason: 'Target definition fully satisfied; item complete.',
-        },
-      ];
+  public getBestAction(state: ItemState): PolicyDecision {
+    const candidates = this.getLegalCandidateActions(state);
+    if (candidates.length === 0) {
+      return {
+        actionType: 'HARVEST_REFORGE',
+        actionName: `Harvest Reforge ${this.harvestTag}`,
+        expectedContinuationCostChaos: this.vEnter,
+        reason: 'Default Harvest reforge.',
+        stepAttribution: 2,
+      };
     }
 
-    if (isFractured35Route) {
-      const harvestRestartEV = this.cH + this.vEnter;
-
-      return [
-        {
-          stateDescription: 'Frac 35 + T1 ES (Clean S0)',
-          candidateActions: [
-            { actionName: `${slamSuffixGeneric} (T1 Int / Premium)`, continuationValueChaos: this.vCleanFrac35 },
-            { actionName: 'Harvest Reforge Defence again', continuationValueChaos: harvestRestartEV },
-          ],
-          recommendedAction: slamSuffixGeneric,
-          recommendationReason: `Direct Exalt suffix slam has continuation EV of ${this.vCleanFrac35.toFixed(1)}c vs ${harvestRestartEV.toFixed(1)}c to reforge away T1 ES.`,
-        },
-        {
-          stateDescription: 'Frac 35 + T1 ES + T1 Intelligence',
-          candidateActions: [
-            { actionName: `${slamSuffixGeneric} (Premium Suffix)`, continuationValueChaos: this.vInt },
-            { actionName: 'Orb of Annulment', continuationValueChaos: this.cA + (1 / 3) * this.vInt + (1 / 3) * this.vCleanFrac35 + (1 / 3) * this.vEnter },
-            { actionName: 'Harvest Reforge Defence again', continuationValueChaos: harvestRestartEV },
-          ],
-          recommendedAction: `PRESERVE; ${slamSuffixGeneric} (Premium Suffix)`,
-          recommendationReason: `T1 Intelligence secured. Open suffix slam continuation EV is only ${this.vInt.toFixed(1)}c vs ${harvestRestartEV.toFixed(1)}c restart.`,
-        },
-        {
-          stateDescription: 'Frac 35 + T1 ES + +4 All Attributes',
-          candidateActions: [
-            { actionName: `${slamSuffixGeneric} (T1 Intelligence)`, continuationValueChaos: this.vAttr },
-            { actionName: 'Harvest Reforge Defence again', continuationValueChaos: harvestRestartEV },
-          ],
-          recommendedAction: `PRESERVE; ${slamSuffixGeneric} (T1 Intelligence)`,
-          recommendationReason: `+4 All Attributes secured. Suffix slam continuation EV is only ${this.vAttr.toFixed(1)}c vs ${harvestRestartEV.toFixed(1)}c restart.`,
-        },
-        {
-          stateDescription: 'Frac 35 + T1 ES + 3% Attack Speed',
-          candidateActions: [
-            { actionName: `${slamSuffixGeneric} (T1 Intelligence)`, continuationValueChaos: this.vAS },
-            { actionName: 'Harvest Reforge Defence again', continuationValueChaos: harvestRestartEV },
-          ],
-          recommendedAction: `PRESERVE; ${slamSuffixGeneric} (T1 Intelligence)`,
-          recommendationReason: `3% Attack Speed secured. Suffix slam continuation EV is only ${this.vAS.toFixed(1)}c vs ${harvestRestartEV.toFixed(1)}c restart.`,
-        },
-        {
-          stateDescription: 'Frac 35 + T1 ES + +4% All Resistance',
-          candidateActions: [
-            { actionName: `${slamSuffixGeneric} (T1 Intelligence)`, continuationValueChaos: this.vRes },
-            { actionName: 'Harvest Reforge Defence again', continuationValueChaos: harvestRestartEV },
-          ],
-          recommendedAction: `PRESERVE; ${slamSuffixGeneric} (T1 Intelligence)`,
-          recommendationReason: `+4% All Resistance secured. Suffix slam continuation EV is only ${this.vRes.toFixed(1)}c vs ${harvestRestartEV.toFixed(1)}c restart.`,
-        },
-        {
-          stateDescription: 'Frac 35 + T1 ES + 1 Junk Suffix',
-          candidateActions: [
-            { actionName: 'Orb of Annulment', continuationValueChaos: this.cA + 0.5 * this.vCleanFrac35 + 0.5 * this.vEnter },
-            { actionName: 'Harvest Reforge Defence again', continuationValueChaos: harvestRestartEV },
-          ],
-          recommendedAction: 'Orb of Annulment',
-          recommendationReason: `Annul has 50% clean success rate with EV of ${(this.cA + 0.5 * this.vCleanFrac35 + 0.5 * this.vEnter).toFixed(1)}c, beating Harvest restart (${harvestRestartEV.toFixed(1)}c).`,
-        },
-        {
-          stateDescription: 'Frac 35 + T1 ES + T1 Intelligence + 1 Junk Suffix',
-          candidateActions: [
-            { actionName: 'Orb of Annulment', continuationValueChaos: this.cA + (1 / 3) * this.vInt + (1 / 3) * this.vCleanFrac35 + (1 / 3) * this.vEnter },
-            { actionName: 'Harvest Reforge Defence again', continuationValueChaos: harvestRestartEV },
-          ],
-          recommendedAction: 'Orb of Annulment',
-          recommendationReason: `Annul has 1/3 chance to isolate T1 Int and 1/3 for clean S0, beating Harvest restart.`,
-        },
-        {
-          stateDescription: 'Frac 35 + T1 ES + Premium Suffix + 1 Junk Suffix',
-          candidateActions: [
-            { actionName: 'Orb of Annulment', continuationValueChaos: this.cA + (1 / 3) * this.vAttr + (1 / 3) * this.vCleanFrac35 + (1 / 3) * this.vEnter },
-            { actionName: 'Harvest Reforge Defence again', continuationValueChaos: harvestRestartEV },
-          ],
-          recommendedAction: 'Orb of Annulment',
-          recommendationReason: `Annul has 1/3 chance to isolate Premium suffix and 1/3 for clean S0, beating Harvest restart.`,
-        },
-        {
-          stateDescription: 'Frac 35 + T1 ES + T1 Intelligence + Premium Suffix',
-          candidateActions: [
-            { actionName: 'Goal Satisfied (Terminal)', continuationValueChaos: 0 },
-            { actionName: 'Harvest Reforge Defence again', continuationValueChaos: harvestRestartEV },
-          ],
-          recommendedAction: 'FINISHED',
-          recommendationReason: 'Target definition fully satisfied; item complete.',
-        },
-      ];
+    // Mechanical min-EV selection
+    let best = candidates[0];
+    for (let i = 1; i < candidates.length; i++) {
+      if (candidates[i].expectedTotalCostChaos < best.expectedTotalCostChaos) {
+        best = candidates[i];
+      }
     }
 
-    // Fractured Suffix route representative decisions
-    const harvestRestartEV = this.cH + this.vStep2 + this.vStep4;
+    return {
+      actionType: best.actionType,
+      actionName: best.actionName,
+      expectedContinuationCostChaos: best.expectedContinuationCostChaos,
+      reason: best.reason,
+      stepAttribution: best.stepAttribution,
+    };
+  }
+
+  public evaluateStateValue(state: ItemState): number {
+    if (satisfiesTarget(state, this.target) || getMatchingOutcomeBranch(state, this.target)) {
+      return 0;
+    }
+    const hasHarvestMod = state.prefixes.some((p) => p.modGroup === this.harvestModGroup && p.tier === 1);
+    if (!hasHarvestMod) {
+      return this.vEnter;
+    }
+
+    const junkMods = this.getJunkMods(state);
+    const lockedGroups = this.targetSuffixGroups.filter((g) =>
+      state.suffixes.some((s) => s.modGroup === g.modGroup && s.tier <= g.tier)
+    );
+
+    if (junkMods.length === 0) {
+      if (lockedGroups.length === 0) {
+        return this.vS0;
+      }
+      return this.vGroupMap.get(lockedGroups[0].id) ?? this.vS0;
+    }
+
+    if (junkMods.length === 1) {
+      if (lockedGroups.length === 0) {
+        return this.cA + 0.5 * this.vS0 + 0.5 * this.vEnter;
+      }
+      const vG1 = this.vGroupMap.get(lockedGroups[0].id) ?? this.vS0;
+      return (4 / 3) * this.cA + (1 / 3) * vG1 + (1 / 6) * this.vS0 + 0.5 * this.vEnter;
+    }
+
+    // 2 junk mods
+    return (5 / 3) * this.cA + (1 / 3) * this.vS0 + (2 / 3) * this.vEnter;
+  }
+
+  // ------------------------------------------------------------- Representative State Audits
+  public getRepresentativeStateAudits(): RepresentativeStateAudit[] {
+    const audits: RepresentativeStateAudit[] = [];
+
+    const makeState = (desc: string, suffixes: RolledMod[]): ItemState => ({
+      baseType: 'Large Cluster Jewel',
+      clusterType: 'any',
+      itemLevel: 84,
+      rarity: 'rare',
+      prefixes: [
+        {
+          modId: 'p1',
+          name: '35% increased Effect',
+          modGroup: 'AfflictionJewelSmallPassivesHaveIncreasedEffect',
+          tier: 1,
+          genType: 'Prefix',
+          statValues: [],
+          tags: [],
+          craftTags: [],
+          isFractured: true,
+        },
+        {
+          modId: 'p2',
+          name: this.harvestModName,
+          modGroup: this.harvestModGroup,
+          tier: 1,
+          genType: 'Prefix',
+          statValues: [],
+          tags: [],
+          craftTags: [],
+          isFractured: false,
+        },
+      ],
+      suffixes,
+      fracturedModIds: ['p1'],
+    });
+
+    const junkMod: RolledMod = {
+      modId: 'junk1',
+      name: 'Junk Suffix',
+      modGroup: 'JunkGroup',
+      tier: 2,
+      genType: 'Suffix',
+      statValues: [],
+      tags: [],
+      craftTags: [],
+      isFractured: false,
+    };
+
+    // 1. Clean S0
+    const s0State = makeState(`Frac 35 + ${this.harvestModName} (Clean S0)`, []);
+    audits.push(this.auditState(`Frac 35 + ${this.harvestModName} (Clean S0)`, s0State));
+
+    // 2..K+1. Clean S_Gi for each target suffix group
+    for (const g of this.targetSuffixGroups) {
+      const targetMod: RolledMod = {
+        modId: g.modId ?? g.id,
+        name: g.name,
+        modGroup: g.modGroup,
+        tier: g.tier,
+        genType: 'Suffix',
+        statValues: [],
+        tags: [],
+        craftTags: [],
+        isFractured: false,
+      };
+      const sGiState = makeState(`Frac 35 + ${this.harvestModName} + ${g.name}`, [targetMod]);
+      audits.push(this.auditState(`Frac 35 + ${this.harvestModName} + ${g.name}`, sGiState));
+    }
+
+    // K+2. 1 Junk Suffix
+    const junkState = makeState(`Frac 35 + ${this.harvestModName} + 1 Junk Suffix`, [junkMod]);
+    audits.push(this.auditState(`Frac 35 + ${this.harvestModName} + 1 Junk Suffix`, junkState));
+
+    return audits;
+  }
+
+  private auditState(desc: string, state: ItemState): RepresentativeStateAudit {
+    const candidates = this.getLegalCandidateActions(state);
+    const best = this.getBestAction(state);
+
+    const minCandidateCost = Math.min(...candidates.map((c) => c.expectedTotalCostChaos));
+    const bestCandidate = candidates.find((c) => c.actionType === best.actionType);
+    const isMinEvVerified = Math.abs((bestCandidate?.expectedTotalCostChaos ?? 0) - minCandidateCost) < 1e-4;
+
+    return {
+      stateDescription: desc,
+      candidateActions: candidates.map((c) => ({
+        actionName: c.actionName,
+        continuationValueChaos: c.expectedContinuationCostChaos,
+        immediateCostChaos: c.immediateCostChaos,
+        totalExpectedCostChaos: c.expectedTotalCostChaos,
+      })),
+      recommendedAction: best.actionName,
+      recommendationReason: `${best.actionName} has continuation EV of ${best.expectedContinuationCostChaos.toFixed(1)}c vs ${(this.cH + this.vEnter).toFixed(1)}c to reforge.`,
+      isMinEvVerified,
+    };
+  }
+
+  // ------------------------------------------------------------- Suffix Pool Diagnostic Audit
+  public getSuffixPoolAudit(): SuffixPoolAuditState[] {
+    const audits: SuffixPoolAuditState[] = [];
+    const W0 = this.totalSuffixPoolWeight;
+
+    // State A: Clean S0
+    audits.push({
+      stateLabel: `State A — Frac 35 + ${this.harvestModName}, no suffixes`,
+      description: 'Initial clean prefix state before suffix slams',
+      eligibleSuffixCount: 39,
+      eligibleSuffixWeight: W0,
+      targetChances: this.targetSuffixGroups.map((g) => ({
+        name: g.name,
+        weight: g.weight,
+        normalChance: (g.weight / W0) * 100,
+      })),
+      allTargetWeight: this.targetSuffixGroups.reduce((s, g) => s + g.weight, 0),
+      allTargetNormalChance: (this.targetSuffixGroups.reduce((s, g) => s + g.weight, 0) / W0) * 100,
+      blockedGroups: ['None (Full suffix pool)'],
+    });
+
+    // State B..: Each target suffix group locked
+    for (let i = 0; i < this.targetSuffixGroups.length; i++) {
+      const g = this.targetSuffixGroups[i];
+      const W1 = Math.max(1, W0 - g.groupTotalWeight);
+      const label = String.fromCharCode(66 + i);
+      const compIds = this.compatiblePairs.get(g.id) ?? new Set();
+
+      audits.push({
+        stateLabel: `State ${label} — Frac 35 + ${this.harvestModName} + ${g.name}`,
+        description: `${g.name} locked, rolling for final compatible suffix`,
+        eligibleSuffixCount: 36,
+        eligibleSuffixWeight: W1,
+        targetChances: this.targetSuffixGroups
+          .filter((g2) => compIds.has(g2.id))
+          .map((g2) => ({
+            name: g2.name,
+            weight: g2.weight,
+            normalChance: (g2.weight / W1) * 100,
+          })),
+        allTargetWeight: this.targetSuffixGroups.filter((g2) => compIds.has(g2.id)).reduce((s, g2) => s + g2.weight, 0),
+        allTargetNormalChance:
+          (this.targetSuffixGroups.filter((g2) => compIds.has(g2.id)).reduce((s, g2) => s + g2.weight, 0) / W1) * 100,
+        blockedGroups: [`${g.modGroup} (${g.groupTotalWeight} weight blocked)`],
+      });
+    }
+
+    return audits;
+  }
+
+  // ------------------------------------------------------------- Harvest Stopping Policy Comparison
+  public getHarvestStrategyComparison(saleValueChaos = 7380.1, baseCostChaos = 1533.4): HarvestStrategyComparison[] {
+    // Strategy A: Stop at first T1 Harvest mod, sequential exalts
+    const expCraftCostA = this.vEnter;
+    const expTotalCostA = baseCostChaos + expCraftCostA;
+    const profitA = saleValueChaos - expTotalCostA;
+    const roiA = (profitA / expTotalCostA) * 100;
+
+    // Strategy B: Pure Harvest Fishing (Harvest until T1 Harvest mod AND both target suffixes roll simultaneously)
+    const W0 = this.totalSuffixPoolWeight;
+    let pPairSuccess = 0;
+    for (const g1 of this.targetSuffixGroups) {
+      const W1 = Math.max(1, W0 - g1.groupTotalWeight);
+      const compIds = this.compatiblePairs.get(g1.id) ?? new Set();
+      for (const g2 of this.targetSuffixGroups) {
+        if (compIds.has(g2.id)) {
+          pPairSuccess += (g1.weight / W0) * (g2.weight / W1);
+        }
+      }
+    }
+    const pHarvestPureSuccess = this.pT1Harvest * 0.5 * pPairSuccess;
+    const expHarvestsB = 1 / Math.max(1e-6, pHarvestPureSuccess);
+    const expCraftCostB = expHarvestsB * this.cH;
+    const expTotalCostB = baseCostChaos + expCraftCostB;
+    const profitB = saleValueChaos - expTotalCostB;
+    const roiB = (profitB / expTotalCostB) * 100;
+
+    // Strategy C: State-Aware Optimal Policy (Identical to A with dynamic preserve)
+    const expCraftCostC = this.vEnter;
+    const expTotalCostC = baseCostChaos + expCraftCostC;
+    const profitC = saleValueChaos - expTotalCostC;
+    const roiC = (profitC / expTotalCostC) * 100;
 
     return [
       {
-        stateDescription: 'Fractured Int + T1 ES (Clean)',
-        candidateActions: [
-          { actionName: slamPrefixName, continuationValueChaos: this.v4Step + this.vStep5 },
-          { actionName: 'Harvest Reforge Defence again', continuationValueChaos: harvestRestartEV },
-        ],
-        recommendedAction: slamPrefixName,
-        recommendationReason: `Direct Exalt prefix slam has continuation EV of ${(this.v4Step + this.vStep5).toFixed(1)}c vs ${harvestRestartEV.toFixed(1)}c to reforge away T1 ES.`,
-      },
-      {
-        stateDescription: 'Fractured Int + T1 ES + 1 Junk Suffix',
-        candidateActions: [
-          { actionName: 'Orb of Annulment', continuationValueChaos: this.vClean1 + this.vStep4 },
-          { actionName: 'Harvest Reforge Defence again', continuationValueChaos: harvestRestartEV },
-        ],
-        recommendedAction: 'Orb of Annulment',
-        recommendationReason: `Annul has 50% clean success rate with EV of ${(this.vClean1 + this.vStep4).toFixed(1)}c, beating Harvest reroll (${harvestRestartEV.toFixed(1)}c).`,
-      },
-      {
-        stateDescription: 'Fractured Int + T1 ES + 35% Effect (Prefixes Full 2/2)',
-        candidateActions: [
-          { actionName: `${slamSuffixGeneric} (Premium Suffix)`, continuationValueChaos: this.vStep5 },
-          { actionName: 'Harvest Reforge Defence again', continuationValueChaos: harvestRestartEV },
-        ],
-        recommendedAction: `PRESERVE; ${slamSuffixGeneric}`,
-        recommendationReason: `Both key prefixes are locked. Suffix slam continuation EV is only ${this.vStep5.toFixed(1)}c vs ${harvestRestartEV.toFixed(1)}c restart.`,
-      },
-      {
-        stateDescription: 'Fractured Int + T1 ES + Premium Suffix (Suffixes Full 2/2)',
-        candidateActions: [
-          { actionName: slamPrefixName, continuationValueChaos: this.v4Step },
-          { actionName: 'Harvest Reforge Defence again', continuationValueChaos: harvestRestartEV },
-        ],
-        recommendedAction: `PRESERVE; ${slamPrefixName}`,
-        recommendationReason: `Premium suffix and T1 ES secured. Open prefix slam continuation EV is only ${this.v4Step.toFixed(1)}c vs ${harvestRestartEV.toFixed(1)}c restart.`,
-      },
-      {
-        stateDescription: 'Fractured Int + T1 ES + 35% Effect + Premium Suffix',
-        candidateActions: [
-          { actionName: 'Goal Satisfied (Terminal)', continuationValueChaos: 0 },
-          { actionName: 'Harvest Reforge Defence again', continuationValueChaos: harvestRestartEV },
-        ],
-        recommendedAction: 'FINISHED',
-        recommendationReason: 'Target definition fully satisfied; item complete.',
-      },
-    ];
-  }
-
-  public getHarvestStrategyComparisons(
-    baseCostChaos = 1533.4,
-    saleValueChaos = 8946.0,
-    divineFinishingCostChaos = 0,
-    isFractured35Route = true
-  ): HarvestStrategyComparison[] {
-    const slamDescriptionSuffix = this.enableAllflame ? 'Allflame Exalts' : 'Exalted Orbs';
-    const slamStrategySuffix = this.enableAllflame ? 'Sequential Allflame' : 'Sequential Exalts';
-
-    if (isFractured35Route) {
-      const expectedHarvestsA = this.expHarvestsFrac35;
-      const expectedAnnulsA = this.expAnnulsFrac35;
-      const expectedExaltsA = this.expExaltsFrac35;
-      const costA_craft = this.vEnter + divineFinishingCostChaos;
-      const costA_total = baseCostChaos + costA_craft;
-      const profitA = saleValueChaos - costA_total;
-      const roiA = costA_total > 0 ? (profitA / costA_total) * 100 : 0;
-
-      // Strategy B: Stay in Harvest until complete target is hit directly from Harvest
-      const expectedHarvestsB = this.expHarvestsDirectTarget;
-      const expectedAnnulsB = this.expAnnulsDirectTarget;
-      const expectedExaltsB = 0.0;
-      const costB_craft =
-        expectedHarvestsB * this.cH +
-        expectedAnnulsB * this.cA +
-        divineFinishingCostChaos;
-      const costB_total = baseCostChaos + costB_craft;
-      const profitB = saleValueChaos - costB_total;
-      const roiB = costB_total > 0 ? (profitB / costB_total) * 100 : 0;
-
-      return [
-        {
-          name: `Strategy A: Stop Harvest at First T1 ES (${slamStrategySuffix})`,
-          code: 'A',
-          expectedHarvests: expectedHarvestsA,
-          expectedAnnuls: expectedAnnulsA,
-          expectedExalts: expectedExaltsA,
-          expectedCraftingCostChaos: costA_craft,
-          expectedTotalCraftCostChaos: costA_total,
-          expectedSaleValueChaos: saleValueChaos,
-          expectedProfitChaos: profitA,
-          roi: roiA,
-          description: `Stop Harvest upon hitting T1 ES, clean junk suffixes with Annuls, and slam target suffixes with ${slamDescriptionSuffix}.`,
-          isRecommended: true,
-        },
-        {
-          name: 'Strategy B: Continue Harvest until T1 ES + Target Suffixes',
-          code: 'B',
-          expectedHarvests: expectedHarvestsB,
-          expectedAnnuls: expectedAnnulsB,
-          expectedExalts: expectedExaltsB,
-          expectedCraftingCostChaos: costB_craft,
-          expectedTotalCraftCostChaos: costB_total,
-          expectedSaleValueChaos: saleValueChaos,
-          expectedProfitChaos: profitB,
-          roi: roiB,
-          description: this.targetRequiresInt
-            ? `Remain in Harvest until BOTH T1 ES, T1 Intelligence, and Premium Suffix appear simultaneously (1 in ~${Math.round(expectedHarvestsB).toLocaleString()} crafts directly from Harvest).`
-            : `Remain in Harvest until BOTH T1 ES and a Premium Suffix appear simultaneously (1 in ~${Math.round(expectedHarvestsB).toLocaleString()} crafts directly from Harvest).`,
-          isRecommended: false,
-        },
-        {
-          name: 'Strategy C: State-Aware Optimal Stopping Policy',
-          code: 'C',
-          expectedHarvests: expectedHarvestsA,
-          expectedAnnuls: expectedAnnulsA,
-          expectedExalts: expectedExaltsA,
-          expectedCraftingCostChaos: costA_craft,
-          expectedTotalCraftCostChaos: costA_total,
-          expectedSaleValueChaos: saleValueChaos,
-          expectedProfitChaos: profitA,
-          roi: roiA,
-          description: `Dynamic Bellman policy choosing min-cost action at every state; preserves any target suffix hit in Harvest, cleans junk, and slams remainder with ${slamDescriptionSuffix}.`,
-          isRecommended: true,
-        },
-      ];
-    }
-
-    // Fractured Suffix route comparison
-    const expectedHarvestsA = 398.0;
-    const expectedAnnulsA = 73.5;
-    const expectedExaltsA = 30.5;
-    const costA_craft = this.vStep2 + this.vStep4 + divineFinishingCostChaos;
-    const costA_total = baseCostChaos + costA_craft;
-    const profitA = saleValueChaos - costA_total;
-    const roiA = costA_total > 0 ? (profitA / costA_total) * 100 : 0;
-
-    const expectedHarvestsB = 1126.0;
-    const expectedAnnulsB = 104.5;
-    const expectedExaltsB = 4.64;
-    const costB_craft =
-      expectedHarvestsB * this.cH +
-      expectedAnnulsB * this.cA +
-      expectedExaltsB * this.cE +
-      divineFinishingCostChaos;
-    const costB_total = baseCostChaos + costB_craft;
-    const profitB = saleValueChaos - costB_total;
-    const roiB = costB_total > 0 ? (profitB / costB_total) * 100 : 0;
-
-    return [
-      {
-        name: `Strategy A: Stop Harvest at First T1 ES (${slamStrategySuffix})`,
+        name: `Strategy A: Stop Harvest at First ${this.harvestModName} (Sequential Exalts)`,
         code: 'A',
-        expectedHarvests: expectedHarvestsA,
-        expectedAnnuls: expectedAnnulsA,
-        expectedExalts: expectedExaltsA,
-        expectedCraftingCostChaos: costA_craft,
-        expectedTotalCraftCostChaos: costA_total,
+        expectedHarvests: this.expHarvestsFrac35,
+        expectedAnnuls: this.expAnnulsFrac35,
+        expectedExalts: this.expExaltsFrac35,
+        expectedCraftingCostChaos: expCraftCostA,
+        expectedTotalCraftCostChaos: expTotalCostA,
         expectedSaleValueChaos: saleValueChaos,
         expectedProfitChaos: profitA,
         roi: roiA,
-        description: `Stop Harvest upon hitting T1 ES, clean junk with Annuls, and slam 35% Effect and final suffix with ${slamDescriptionSuffix}.`,
-        isRecommended: true,
+        description: `Stop Harvest upon hitting ${this.harvestModName}, clean junk suffixes with Annuls, and slam target suffixes with Exalted Orbs.`,
+        isRecommended: false,
       },
       {
-        name: 'Strategy B: Continue Harvest until T1 ES + 35% Effect',
+        name: `Strategy B: Pure Harvest Fishing (Until ${this.harvestModName} + Target Suffixes)`,
         code: 'B',
-        expectedHarvests: expectedHarvestsB,
-        expectedAnnuls: expectedAnnulsB,
-        expectedExalts: expectedExaltsB,
-        expectedCraftingCostChaos: costB_craft,
-        expectedTotalCraftCostChaos: costB_total,
+        expectedHarvests: expHarvestsB,
+        expectedAnnuls: 0,
+        expectedExalts: 0,
+        expectedCraftingCostChaos: expCraftCostB,
+        expectedTotalCraftCostChaos: expTotalCostB,
         expectedSaleValueChaos: saleValueChaos,
         expectedProfitChaos: profitB,
         roi: roiB,
-        description: `Remain in Harvest until BOTH T1 ES and 35% Effect appear simultaneously (1 in ~751 crafts), then Exalt only the final suffix with ${slamDescriptionSuffix}.`,
+        description: `Remain in Harvest until BOTH ${this.harvestModName} and all Target Suffixes appear simultaneously directly from Harvest (1 in ~${Math.round(expHarvestsB).toLocaleString()} crafts).`,
         isRecommended: false,
       },
       {
         name: 'Strategy C: State-Aware Optimal Stopping Policy',
         code: 'C',
-        expectedHarvests: expectedHarvestsA,
-        expectedAnnuls: expectedAnnulsA,
-        expectedExalts: expectedExaltsA,
-        expectedCraftingCostChaos: costA_craft,
-        expectedTotalCraftCostChaos: costA_total,
+        expectedHarvests: this.expHarvestsFrac35,
+        expectedAnnuls: this.expAnnulsFrac35,
+        expectedExalts: this.expExaltsFrac35,
+        expectedCraftingCostChaos: expCraftCostC,
+        expectedTotalCraftCostChaos: expTotalCostC,
         expectedSaleValueChaos: saleValueChaos,
-        expectedProfitChaos: profitA,
-        roi: roiA,
-        description: `Dynamic Bellman policy choosing min-cost action at every state; recovers T1 ES via Harvest and completes prefixes/suffixes via ${slamDescriptionSuffix}.`,
+        expectedProfitChaos: profitC,
+        roi: roiC,
+        description: `Dynamic Bellman policy choosing min-cost action at every state; preserves any target suffix hit in Harvest, cleans junk, and slams remainder with Exalted Orbs.`,
         isRecommended: true,
       },
     ];

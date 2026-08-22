@@ -96,11 +96,10 @@ export class CraftingOptimizer {
           recommended.policyEngine
         );
         simulationValidation = mc.runSimulation(
-          () => structuredClone(bestStart.state),
-          bestStart.baseCostChaos,
+          bestStart.state,
           request.monteCarloTrials ?? 2000,
-          25000,
-          request.traceTrialsCount ?? 3
+          bestStart.baseCostChaos,
+          25000
         );
 
         if (simulationValidation && simulationValidation.meanCostChaos !== undefined) {

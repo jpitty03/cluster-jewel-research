@@ -2,12 +2,12 @@
 REFERENCE CRAFT C VALIDATION REPORT & STEPWISE FINANCIAL PLAN (MINION CLUSTER)
 ======================================================================
 
-POLICY COST MODEL: INVESTIGATION REQUIRED (Cost Diff: 464.20%, Harvest Diff: 581.85%, Annul Diff: 668.39%, Exalt Diff: 677.28%)
+POLICY COST MODEL: INVESTIGATION REQUIRED (Cost Diff: 11.85%, Harvest Diff: 14.13%, Annul Diff: 5.30%, Exalt Diff: 6.58%)
 
 ----------------------------------------------------------------------
 POLICY CONSISTENCY
 ----------------------------------------------------------------------
-  Monte Carlo policy states resolved: 13694200
+  Monte Carlo policy states resolved: 12913740
   Missing policy states:                 0
   Fallback actions used:                  0
 
@@ -15,672 +15,542 @@ POLICY CONSISTENCY
 HARVEST STOPPING POLICY COMPARISON
 ======================================================================
 
-Strategy A: Stop Harvest at First T1 ES (Sequential Exalts):
-  Expected Harvests:           722.99
-  Expected Annulments:          114.00
-  Expected Exalted Slams:       45.41
-  Expected Crafting Cost:      5251.6c (~26.26 div)
-  Expected Total Craft Cost:   6785.0c (~33.92 div)
-  Expected Sale Value:         32000.0c (~160.00 div)
-  Expected Profit:             25215.0c (~126.08 div)
-  Expected ROI:                371.63%
-  Description:                 Stop Harvest upon hitting T1 ES, clean junk suffixes with Annuls, and slam target suffixes with Exalted Orbs.
+Strategy A: Stop Harvest at First Sanguine (Sequential Exalts):
+  Expected Harvests:           5657.92
+  Expected Annulments:          910.37
+  Expected Exalted Slams:       371.51
+  Expected Crafting Cost:      41281.0c (~206.40 div)
+  Expected Total Craft Cost:   42814.4c (~214.07 div)
+  Expected Sale Value:         0.0c
+  Expected Profit:             -42814.4c (~-214.07 div)
+  Expected ROI:                -100.00%
+  Description:                 Stop Harvest upon hitting Sanguine, clean junk suffixes with Annuls, and slam target suffixes with Exalted Orbs.
 
-Strategy B: Continue Harvest until T1 ES + Target Suffixes:
-  Expected Harvests:           416.51
-  Expected Annulments:          0.50
+Strategy B: Pure Harvest Fishing (Until Sanguine + Target Suffixes):
+  Expected Harvests:           33114.25
+  Expected Annulments:          0.00
   Expected Exalted Slams:       0.00
-  Expected Crafting Cost:      2407.4c (~12.04 div)
-  Expected Total Craft Cost:   3940.8c (~19.70 div)
-  Expected Sale Value:         32000.0c (~160.00 div)
-  Expected Profit:             28059.2c (~140.30 div)
-  Expected ROI:                712.02%
-  Description:                 Remain in Harvest until BOTH T1 ES and a Premium Suffix appear simultaneously (1 in ~417 crafts directly from Harvest).
+  Expected Crafting Cost:      191043.8c (~955.22 div)
+  Expected Total Craft Cost:   192577.2c (~962.89 div)
+  Expected Sale Value:         0.0c
+  Expected Profit:             -192577.2c (~-962.89 div)
+  Expected ROI:                -100.00%
+  Description:                 Remain in Harvest until BOTH Sanguine and all Target Suffixes appear simultaneously directly from Harvest (1 in ~33,114 crafts).
 
 Strategy C: State-Aware Optimal Stopping Policy:
-  Expected Harvests:           722.99
-  Expected Annulments:          114.00
-  Expected Exalted Slams:       45.41
-  Expected Crafting Cost:      5251.6c (~26.26 div)
-  Expected Total Craft Cost:   6785.0c (~33.92 div)
-  Expected Sale Value:         32000.0c (~160.00 div)
-  Expected Profit:             25215.0c (~126.08 div)
-  Expected ROI:                371.63%
+  Expected Harvests:           5657.92
+  Expected Annulments:          910.37
+  Expected Exalted Slams:       371.51
+  Expected Crafting Cost:      41281.0c (~206.40 div)
+  Expected Total Craft Cost:   42814.4c (~214.07 div)
+  Expected Sale Value:         0.0c
+  Expected Profit:             -42814.4c (~-214.07 div)
+  Expected ROI:                -100.00%
   Description:                 Dynamic Bellman policy choosing min-cost action at every state; preserves any target suffix hit in Harvest, cleans junk, and slams remainder with Exalted Orbs.
 
 Recommended Policy:
   Strategy C: State-Aware Optimal Stopping Policy
 Reason:
-  Strategy B intentionally keeps Harvesting until a single T1 ES result also supplies both required suffix targets (T1 Intelligence + one premium suffix). This requires roughly 417 Harvests on average and is far more expensive than preserving useful partial Harvest outcomes and completing the remaining suffix with Allflame Exalts.
+  Strategy B requires roughly 33,114 Harvest crafts on average to hit Sanguine and all target suffixes simultaneously directly from Harvest. This is far more expensive than stopping at Sanguine, preserving partial target suffixes, and completing remainder with Exalted Orbs (Strategy A/C).
 
 ----------------------------------------------------------------------
 SUFFIX POOL DIAGNOSTIC AUDIT (FRACTURED 35% ROUTE)
 ----------------------------------------------------------------------
 
-State A — Frac 35 + T1 ES, no suffixes:
+State A — Frac 35 + Sanguine, no suffixes:
   Description:            Initial clean prefix state before suffix slams
   Eligible Suffix Count:  39
   Total Suffix Weight:    15,401
-  T1 Int Weight:          300
+  of the Meteor Weight: 300
     Normal Exalt chance:  1.95%
-    Allflame (4-choice):  1.95%
-  Premium Target Weight:  850
-    Normal Exalt chance:  5.52%
-    Allflame (4-choice):  5.52%
-  Total Target Weight:    1150
-    Normal Exalt chance:  7.47%
-    Allflame (4-choice):  3.25%
+  of Eviction Weight: 300
+    Normal Exalt chance:  1.95%
+  Total Target Weight:    600
+    Normal Exalt chance:  3.90%
   Blocked Mod Groups:     None (Full suffix pool)
 
-State B — Frac 35 + T1 ES + T1 Intelligence:
-  Description:            T1 Intelligence locked, rolling for final premium suffix
+State B — Frac 35 + Sanguine + of the Meteor:
+  Description:            of the Meteor locked, rolling for final compatible suffix
   Eligible Suffix Count:  36
   Total Suffix Weight:    14,201
-  Premium Target Weight:  850
-    Normal Exalt chance:  5.99%
-    Allflame (4-choice):  3.52%
-  Blocked Mod Groups:     AfflictionJewelSmallPassivesGrantInt (1,200 weight blocked)
-
-State C — Frac 35 + T1 ES + +4 All Attributes:
-  Description:            +4 All Attributes locked, rolling for T1 Intelligence
-  Eligible Suffix Count:  36
-  Total Suffix Weight:    14,201
-  T1 Int Weight:          300
+  of Eviction Weight: 300
     Normal Exalt chance:  2.11%
-    Allflame (4-choice):  2.11%
-  Blocked Mod Groups:     AfflictionJewelSmallPassivesGrantAttributes (1,200 weight blocked)
+  Total Target Weight:    300
+    Normal Exalt chance:  2.11%
+  Blocked Mod Groups:     AfflictionJewelSmallPassivesGrantAttributes (1200 weight blocked)
 
-State D — Frac 35 + T1 ES + 3% Attack Speed:
-  Description:            3% Attack Speed locked, rolling for T1 Intelligence
-  Eligible Suffix Count:  39
-  Total Suffix Weight:    14,451
-  T1 Int Weight:          300
-    Normal Exalt chance:  2.08%
-    Allflame (4-choice):  2.08%
-  Blocked Mod Groups:     Attack Speed Group (950 weight blocked)
-
-State E — Frac 35 + T1 ES + +4% All Resistance:
-  Description:            +4% All Resistance locked, rolling for T1 Intelligence
+State C — Frac 35 + Sanguine + of Eviction:
+  Description:            of Eviction locked, rolling for final compatible suffix
   Eligible Suffix Count:  36
   Total Suffix Weight:    14,201
-  T1 Int Weight:          300
+  of the Meteor Weight: 300
     Normal Exalt chance:  2.11%
-    Allflame (4-choice):  2.11%
-  Blocked Mod Groups:     AfflictionJewelSmallPassivesGrantElementalRes (1,200 weight blocked)
+  Total Target Weight:    300
+    Normal Exalt chance:  2.11%
+  Blocked Mod Groups:     AfflictionJewelSmallPassivesGrantChaosRes (1200 weight blocked)
 
 ----------------------------------------------------------------------
 REPRESENTATIVE STATE DECISIONS & CONTINUATION VALUES
 ----------------------------------------------------------------------
 
-1. State: Frac 35 + T1 ES (Clean S0)
+1. State: Frac 35 + Sanguine (Clean S0)
    Candidate Actions:
-     - Exalted Orb Slam (Suffix) (T1 Int / Premium) Continuation EV: 5455.2c (~27.28 div)
-     - Harvest Reforge Defence again            Continuation EV: 5257.4c (~26.29 div)
-   Recommended Action: Exalted Orb Slam (Suffix)
-   Reason:             Direct Exalt suffix slam has continuation EV of 5455.2c vs 5257.4c to reforge away T1 ES.
+     - Harvest Reforge Life                     Continuation EV: 41275.2c (~206.38 div)
+     - Exalted Orb Slam (Suffix: of the Meteor / of Eviction) Continuation EV: 41201.7c (~206.01 div)
+   Recommended Action: Exalted Orb Slam (Suffix: of the Meteor / of Eviction)
+   Reason:             Exalted Orb Slam (Suffix: of the Meteor / of Eviction) has continuation EV of 41201.7c vs 41286.8c to reforge.
 
-2. State: Frac 35 + T1 ES + T1 Intelligence
+2. State: Frac 35 + Sanguine + of the Meteor
    Candidate Actions:
-     - Exalted Orb Slam (Suffix) (Premium Suffix) Continuation EV: 0.0c
-     - Orb of Annulment                         Continuation EV: 3577.9c (~17.89 div)
-     - Harvest Reforge Defence again            Continuation EV: 5257.4c (~26.29 div)
-   Recommended Action: PRESERVE; Exalted Orb Slam (Suffix) (Premium Suffix)
-   Reason:             T1 Intelligence secured. Open suffix slam continuation EV is only 0.0c vs 5257.4c restart.
+     - Harvest Reforge Life                     Continuation EV: 41275.2c (~206.38 div)
+     - Exalted Orb Slam (Suffix: of the Meteor / of Eviction) Continuation EV: 39985.7c (~199.93 div)
+   Recommended Action: Exalted Orb Slam (Suffix: of the Meteor / of Eviction)
+   Reason:             Exalted Orb Slam (Suffix: of the Meteor / of Eviction) has continuation EV of 39985.7c vs 41286.8c to reforge.
 
-3. State: Frac 35 + T1 ES + +4 All Attributes
+3. State: Frac 35 + Sanguine + of Eviction
    Candidate Actions:
-     - Exalted Orb Slam (Suffix) (T1 Intelligence) Continuation EV: 5046.1c (~25.23 div)
-     - Harvest Reforge Defence again            Continuation EV: 5257.4c (~26.29 div)
-   Recommended Action: PRESERVE; Exalted Orb Slam (Suffix) (T1 Intelligence)
-   Reason:             +4 All Attributes secured. Suffix slam continuation EV is only 5046.1c vs 5257.4c restart.
+     - Harvest Reforge Life                     Continuation EV: 41275.2c (~206.38 div)
+     - Exalted Orb Slam (Suffix: of the Meteor / of Eviction) Continuation EV: 39985.7c (~199.93 div)
+   Recommended Action: Exalted Orb Slam (Suffix: of the Meteor / of Eviction)
+   Reason:             Exalted Orb Slam (Suffix: of the Meteor / of Eviction) has continuation EV of 39985.7c vs 41286.8c to reforge.
 
-4. State: Frac 35 + T1 ES + 3% Attack Speed
+4. State: Frac 35 + Sanguine + 1 Junk Suffix
    Candidate Actions:
-     - Exalted Orb Slam (Suffix) (T1 Intelligence) Continuation EV: 0.0c
-     - Harvest Reforge Defence again            Continuation EV: 5257.4c (~26.29 div)
-   Recommended Action: PRESERVE; Exalted Orb Slam (Suffix) (T1 Intelligence)
-   Reason:             3% Attack Speed secured. Suffix slam continuation EV is only 0.0c vs 5257.4c restart.
-
-5. State: Frac 35 + T1 ES + +4% All Resistance
-   Candidate Actions:
-     - Exalted Orb Slam (Suffix) (T1 Intelligence) Continuation EV: 5155.4c (~25.78 div)
-     - Harvest Reforge Defence again            Continuation EV: 5257.4c (~26.29 div)
-   Recommended Action: PRESERVE; Exalted Orb Slam (Suffix) (T1 Intelligence)
-   Reason:             +4% All Resistance secured. Suffix slam continuation EV is only 5155.4c vs 5257.4c restart.
-
-6. State: Frac 35 + T1 ES + 1 Junk Suffix
-   Candidate Actions:
-     - Orb of Annulment                         Continuation EV: 5362.4c (~26.81 div)
-     - Harvest Reforge Defence again            Continuation EV: 5257.4c (~26.29 div)
+     - Harvest Reforge Life                     Continuation EV: 41275.2c (~206.38 div)
+     - Orb of Annulment                         Continuation EV: 41242.0c (~206.21 div)
    Recommended Action: Orb of Annulment
-   Reason:             Annul has 50% clean success rate with EV of 5362.4c, beating Harvest restart (5257.4c).
-
-7. State: Frac 35 + T1 ES + T1 Intelligence + 1 Junk Suffix
-   Candidate Actions:
-     - Orb of Annulment                         Continuation EV: 3577.9c (~17.89 div)
-     - Harvest Reforge Defence again            Continuation EV: 5257.4c (~26.29 div)
-   Recommended Action: Orb of Annulment
-   Reason:             Annul has 1/3 chance to isolate T1 Int and 1/3 for clean S0, beating Harvest restart.
-
-8. State: Frac 35 + T1 ES + Premium Suffix + 1 Junk Suffix
-   Candidate Actions:
-     - Orb of Annulment                         Continuation EV: 5260.0c (~26.30 div)
-     - Harvest Reforge Defence again            Continuation EV: 5257.4c (~26.29 div)
-   Recommended Action: Orb of Annulment
-   Reason:             Annul has 1/3 chance to isolate Premium suffix and 1/3 for clean S0, beating Harvest restart.
-
-9. State: Frac 35 + T1 ES + T1 Intelligence + Premium Suffix
-   Candidate Actions:
-     - Goal Satisfied (Terminal)                Continuation EV: 0.0c
-     - Harvest Reforge Defence again            Continuation EV: 5257.4c (~26.29 div)
-   Recommended Action: FINISHED
-   Reason:             Target definition fully satisfied; item complete.
+   Reason:             Orb of Annulment has continuation EV of 41242.0c vs 41286.8c to reforge.
 
 ----------------------------------------------------------------------
-HARVEST SUCCESS STATE CENSUS (Given T1 ES Hit)
+HARVEST SUCCESS STATE CENSUS (Given Sanguine Hit)
 ----------------------------------------------------------------------
-  Total Harvest Crafts:         10,961,210
-  T1 ES Hit Rate:               0.00% (0 hits)
-  Additional Affix Distribution (Given T1 ES Hit):
+  Total Harvest Crafts:         10,338,480
+  Sanguine Hit Rate:         7.33% (758,119 hits)
+  Additional Affix Distribution (Given Sanguine Hit):
     0 additional affixes:       0.00%
-    1 additional affix:         0.00%
-    2 additional affixes:       0.00%
-  Harvest additional-affix model used by optimizer:
-    1 additional suffix:        50.00%
-    2 additional suffixes:      50.00%
-    Source status:              UNVERIFIED / MODEL ASSUMPTION
-  Of T1 ES Successes:
-    T1 ES Only (Clean):         0.00%
-    +1 Junk Suffix:             0.00% (Requires 1-Junk Annul Cleanup)
-    +2 Junk Suffixes:           0.00% (Requires 2-Junk Annul Cleanup)
-    +T1 Intelligence:           0.00% (Preserve; Exalt Final Suffix)
-    +4 All Attributes:          0.00% (Preserve; Exalt T1 Int)
-    3% Attack Speed:            0.00% (Preserve; Exalt T1 Int)
-    +4% All Resistance:         0.00% (Preserve; Exalt T1 Int)
-    +T1 Int + Premium Suffix:   0.00% (Terminal Success)
+    1 additional affix:         49.88%
+    2 additional affixes:       50.12%
+  Of Sanguine Successes:
+    Sanguine Only (Clean):   0.00%
+    +1 Junk Suffix:             47.91% (Requires 1-Junk Annul Cleanup)
+    +2 Junk Suffixes:           46.28% (Requires 2-Junk Annul Cleanup)
+    +of the Meteor:                  2.92% (Preserve; Exalt Final Suffix)
+    +of Eviction:                  2.93% (Preserve; Exalt Final Suffix)
 
 ----------------------------------------------------------------------
 STEP 1 -- Acquire Starting Fracture
 ----------------------------------------------------------------------
 
-Option A: Buy fractured Powerful base:
+Direct market purchase of fractured Powerful base:
   Purchase cost:              1533.4c (~7.67 div)
   Expected preparation cost:     0.0c
   Expected total:             1533.4c (~7.67 div)
+  Model confidence:           High (Deterministic Market Purchase)
 
-Option B: Self-fracture Powerful (Clean 12p base):
+Prepare 4-mod clean base with Powerful via Alt/Aug/Regal/Bench and use Fracturing Orb (25% chance):
   Model Status:               [SELF-FRACTURE ACQUISITION MODEL: APPROXIMATE]
   Clean base per attempt:        10.0c
   Preparation sub-plan:          12.85c per attempt
-    1. Alterations for 35% Eff:  8.33c (~41.7 alts @ 300/12502 magic prefix weight)
-    2. Augmentations:            0.52c (~10.4 augs @ 25% single-suffix roll)
-    3. Regal Orb:                1.00c
-    4. Bench / filler exalts:    4.50c (reach exactly 4 explicit mods)
   Fracturing Orb:               359.0c per attempt
   Success chance:                25.00%
   Expected attempts:              4.00
   Expected total:               1527.4c (~7.64 div)
+  Model confidence:           Approximate (Self-Fracture Model)
 
 RECOMMENDED ACQUISITION (STEP 1):
-  Self-fracture Powerful (Clean 12p base)
+  Prepare 4-mod clean base with Powerful via Alt/Aug/Regal/Bench and use Fracturing Orb (25% chance)
   Estimated acquisition cost: 1527.4c (~7.64 div)
 
 MODEL CONFIDENCE:
   Approximate (Self-Fracture Model)
 
 ALTERNATIVE ACQUISITION (STEP 1):
-  Buy fractured Powerful base
+  Direct market purchase of fractured Powerful base
   Estimated cost:             1533.4c (~7.67 div)
 
 Estimated difference (Full Route):
   0.03 div / 6.0c
 
-HEADLINE CRAFT TOTALS BY STARTING OPTION:
-  Provisional cheapest route (Self-fracture Powerful (Clean 12p base)): 6779.0c (~33.89 div) [Model: Approximate]
-  Deterministic market route (Buy fractured Powerful base):  6785.0c (~33.92 div) [Downstream craft EV 5251.6c (~26.26 div) + 1533.4c (~7.67 div) base]
-
 ----------------------------------------------------------------------
 Base Acquisition
 ----------------------------------------------------------------------
-Action: Option B: Self-fracture Powerful (Clean 12p base)
+Action: Prepare 4-mod clean base with Powerful via Alt/Aug/Regal/Bench and use Fracturing Orb (25% chance)
 Note: Starting fractured base: Powerful
 Raw step cost:                1533.4c (~7.67 div)
 Expected step total:          1533.4c (~7.67 div)
 Expected cumulative cost:     1533.4c (~7.67 div)
 
 ----------------------------------------------------------------------
-Harvest Reforge Life (Guarantee Sanguine)
+Prefix Acquisition: Harvest Reforge Life
 ----------------------------------------------------------------------
 Action: Harvest Reforge Life
 Note: Reforge with guaranteed life modifier until Sanguine hits (7.34% per craft).
-  Expected Harvests:           722.99
-  Harvest tag:                 life
-  Lifeforce:                   wildLifeforce
 Success chance:               7.34%
-Expected attempts:            722.99
-Raw step cost:                4171.1c (~20.86 div)
-Expected step total:          4171.1c (~20.86 div)
-Expected cumulative cost:     5704.5c (~28.52 div)
+Expected attempts:            5657.92
+Raw step cost:                32641.9c (~163.21 div)
+Expected step total:          32641.9c (~163.21 div)
+Expected cumulative cost:     34175.3c (~170.88 div)
 
 ----------------------------------------------------------------------
-Annul Cleanup: Isolate Target Prefixes
+Suffix Cleanup: Orb of Annulment
 ----------------------------------------------------------------------
 Action: Orb of Annulment
-Note: Remove unwanted extra affixes generated during Harvest reforge. If the guaranteed mod is removed, return to Step 2.
-  Expected Annuls:             69.00
-Expected attempts:            69.00
-Raw step cost:                621.0c (~3.10 div)
-Expected step total:          621.0c (~3.10 div)
-Expected cumulative cost:     6325.4c (~31.63 div)
+Note: Annul non-target junk suffixes while preserving Sanguine and any target suffixes generated during Harvest.
+Raw step cost:                4858.5c (~24.29 div)
+Expected step total:          4858.5c (~24.29 div)
+Expected cumulative cost:     39033.7c (~195.17 div)
 
 ----------------------------------------------------------------------
-Suffix Slam & Annul Loop
+Suffix Completion: Sequential Exalted Slams
 ----------------------------------------------------------------------
-Action: Exalted Orb Slam (Suffix Slam)
-Note: Slam open suffix slots for target suffixes. Keep target hits; Annul junk affixes with state-aware Bellman continuation EV.
-  Expected Exalts:             45.41
-  Expected Annuls:             45.01
-Expected attempts:            45.41
-Raw step cost:                54.5c
-Expected recovery cost:       405.1c (~2.03 div)
-Expected step total:          459.6c (~2.30 div)
-Expected cumulative cost:     6785.0c (~33.92 div)
+Action: Exalted Orb Slam (Suffix)
+Note: Slam open suffix slots with Exalted Orbs for target suffixes (of the Meteor, of Eviction). Annul on misses.
+Raw step cost:                445.8c (~2.23 div)
+Expected recovery cost:       3334.9c (~16.67 div)
+Expected step total:          3780.7c (~18.90 div)
+Expected cumulative cost:     42814.4c (~214.07 div)
 
 ======================================================================
 RECOMMENDED CRAFTING PLAN
 ======================================================================
 
-STEP 1 -- Starting base:
-  Fractured 35% Increased Effect Base (Self-Fracture)
-  Expected cost: 1533.4c (~7.67 div)
-
 Base Acquisition:
+  Selected Option:            Fractured 35% Increased Effect Base (Self-Fracture)
   Expected step cost:         1533.4c (~7.67 div)
   Cumulative:                 1533.4c (~7.67 div)
 
-Harvest Reforge Life (Guarantee Sanguine):
+Prefix Acquisition: Harvest Reforge Life:
   Chance per attempt:         7.34%
-  Expected attempts:          722.99
-  Expected step cost:         4171.1c (~20.86 div)
-  Cumulative:                 5704.5c (~28.52 div)
+  Expected attempts:          5657.92
+  Expected step cost:         32641.9c (~163.21 div)
+  Cumulative:                 34175.3c (~170.88 div)
 
-Annul Cleanup: Isolate Target Prefixes:
-  Expected attempts:          69.00
-  Expected step cost:         621.0c (~3.10 div)
-  Cumulative:                 6325.4c (~31.63 div)
+Suffix Cleanup: Orb of Annulment:
+  Expected step cost:         4858.5c (~24.29 div)
+  Cumulative:                 39033.7c (~195.17 div)
 
-Suffix Slam & Annul Loop:
-  Expected attempts:          45.41
-  Raw step cost:              54.5c
-  Expected recovery cost:     405.1c (~2.03 div)
-  Expected step cost:         459.6c (~2.30 div)
-  Cumulative:                 6785.0c (~33.92 div)
+Suffix Completion: Sequential Exalted Slams:
+  Raw step cost:              445.8c (~2.23 div)
+  Expected recovery cost:     3334.9c (~16.67 div)
+  Expected step cost:         3780.7c (~18.90 div)
+  Cumulative:                 42814.4c (~214.07 div)
 
 ----------------------------------------------------------------------
 EXPECTED TOTAL CRAFT COST:
-  6785.0c (~33.92 div)
+  42814.4c (~214.07 div)
 
 FINAL OUTCOME VALUE DISTRIBUTION:
-  100.00%  Target Jewel (All Explicit Requirements Met)  (32000.0c (~160.00 div))
+  100.00%  Target Satisfied                     (0.0c)  [Sim: 100.00%]
 
 EXPECTED SALE VALUE:
   32000.0c (~160.00 div)
 
 EXPECTED PROFIT:
-  25215.0c (~126.08 div)
+  -10814.4c (~-54.07 div)
 
 EXPECTED ROI:
-  371.63%
+  -25.26%
 
 ======================================================================
 MONTE CARLO EMPIRICAL VALIDATION & CROSS-COMPARISON
 ======================================================================
-Status: POLICY COST MODEL: INVESTIGATION REQUIRED (Cost Diff: 464.20%, Harvest Diff: 581.85%, Annul Diff: 668.39%, Exalt Diff: 677.28%)
-Completed trials:       2,000 / 2,055 (97.32%)
-Timed out trials:       55
+Status: POLICY COST MODEL: INVESTIGATION REQUIRED (Cost Diff: 11.85%, Harvest Diff: 14.13%, Annul Diff: 5.30%, Exalt Diff: 6.58%)
+Completed trials:       1,959 / 2,000 (97.95%)
+Timed out trials:       41
 
 STEPWISE COST COMPARISON:
                                   Analytical          Monte Carlo           Difference
 --------------------------------------------------------------------------------------
 Step 1 Acquisition:      1533.4c (~7.67 div)  1533.4c (~7.67 div)                -0.0c
-Step 2 Harvest:         4171.1c (~20.86 div) 28440.3c (~142.20 div) 24269.2c (~121.35 div)
-Step 3 Cleanup:           621.0c (~3.10 div) 4719.2c (~23.60 div) 4098.2c (~20.49 div)
-Step 4 Suffix Slam & An:   459.6c (~2.30 div) 3588.3c (~17.94 div) 3128.7c (~15.64 div)
+Step 2 Harvest:         32641.9c (~163.21 div) 28030.6c (~140.15 div) -4611.3c (~-23.06 div)
+Step 3 Cleanup:         4858.5c (~24.29 div) 4647.4c (~23.24 div) -211.1c (~-1.06 div)
+Step 4 Suffix Slams:    3780.7c (~18.90 div) 3527.9c (~17.64 div) -252.8c (~-1.26 div)
 --------------------------------------------------------------------------------------
-TOTAL COST:             6785.0c (~33.92 div) 38281.2c (~191.41 div)         464.20% diff
+TOTAL COST:             42814.4c (~214.07 div) 37739.3c (~188.70 div)          11.85% diff
 
 ACTION COUNTS (Cumulative Across All Recovery Loops):
                                   Analytical          Monte Carlo           Difference
 --------------------------------------------------------------------------------------
-Harvest Attempts:                     722.99              4929.65        +581.85% diff
-Annulment Orbs:                       114.00               875.99        +668.39% diff
-Exalted Orbs:                          45.41               352.96        +677.28% diff
+Harvest Attempts:                    5657.92              4858.63         -14.13% diff
+Annulment Orbs:                       910.37               862.09          -5.30% diff
+Exalted Orbs:                         371.51               347.05          -6.58% diff
 --------------------------------------------------------------------------------------
 
 TERMINAL OUTCOME BRANCH VALIDATION:
                                   Analytical          Monte Carlo           Difference
 --------------------------------------------------------------------------------------
-Target Jewel (All Explicit Requirements Met)              100.00%                0.00%           -100.00 pp
+Target Satisfied                      100.00%              100.00%             +0.00 pp
 --------------------------------------------------------------------------------------
 
 Percentiles:
-  Median Cost (P50):    28980.0c (~144.90 div)
-  75th Percentile (P75):54977.5c (~274.89 div)
-  90th Percentile (P90):85314.7c (~426.57 div)
-  95th Percentile (P95):105437.4c (~527.19 div)
+  Median Cost (P50):    28722.5c (~143.61 div)
+  75th Percentile (P75):53380.3c (~266.90 div)
+  90th Percentile (P90):84663.9c (~423.32 div)
+  95th Percentile (P95):103913.8c (~519.57 div)
 
 ----------------------------------------------------------------------
-SAMPLE MONTE CARLO CRAFT TRACES (3 TRIALS)
+SAMPLE MONTE CARLO CRAFT TRACES (5 TRIALS)
 ----------------------------------------------------------------------
 
-Trial #1 (1398 steps) -> Total Cost: 9772.4c (~48.86 div)
+Trial #1 (14777 steps) -> Total Cost: 89853.2c (~449.27 div)
   Final Prefixes: [Powerful (t1), Sanguine (t1)]
-  Final Suffixes: [of Eviction (t1), of the Meteor (t1)]
-  Total Actions:  Harvests=1158, Annuls=163, Exalts=76
+  Final Suffixes: [of the Meteor (t1), of Eviction (t1)]
+  Total Actions:  Harvests=11688, Annuls=2203, Exalts=885
   Step Log:
-    [Step 1] Harvest Reforge Life: Reforged item (guaranteed life: Feasting Fiends) (+5.77c) -> P:[Powerful (t1), Feasting Fiends (t1)], S:[of the Fox (t1), of the Flatworm (t1)]
-    [Step 2] Harvest Reforge Life: Reforged item (guaranteed life: Feasting Fiends) (+5.77c) -> P:[Powerful (t1), Feasting Fiends (t1)], S:[of the Brute (t3)]
-    [Step 3] Harvest Reforge Life: Reforged item (guaranteed life: Feasting Fiends) (+5.77c) -> P:[Powerful (t1), Feasting Fiends (t1)], S:[Call to the Slaughter (t1)]
-    [Step 4] Harvest Reforge Life: Reforged item (guaranteed life: of the Newt) (+5.77c) -> P:[Powerful (t1), Beryl (t3)], S:[of the Newt (t3), of the Meteor (t1)]
-    [Step 5] Harvest Reforge Life: Reforged item (guaranteed life: Healthy) (+5.77c) -> P:[Powerful (t1), Healthy (t2)], S:[of the Lizard (t2)]
-    [Step 6] Harvest Reforge Life: Reforged item (guaranteed life: Sanguine) (+5.77c) -> P:[Powerful (t1), Sanguine (t1)], S:[of Eviction (t1)]
-    [Step 7] Exalted Orb Slam (Suffix: +4 All Attributes): Slammed Call to the Slaughter (+1.20c) -> P:[Powerful (t1), Sanguine (t1)], S:[of Eviction (t1), Call to the Slaughter (t1)]
-    [Step 8] Orb of Annulment: Annul removed Sanguine (Prefix) [Step 4 Cleanup] (+9.00c) -> P:[Powerful (t1)], S:[of Eviction (t1), Call to the Slaughter (t1)]
-    [Step 9] Harvest Reforge Life: Reforged item (guaranteed life: of the Newt) (+5.77c) -> P:[Powerful (t1), Renewal (t1)], S:[of the Newt (t3), of Excitement (t3)]
-    [Step 10] Harvest Reforge Life: Reforged item (guaranteed life: Hale) (+5.77c) -> P:[Powerful (t1), Hale (t3)], S:[of the Meteor (t1), of Excitement (t3)]
-    [Step 11] Harvest Reforge Life: Reforged item (guaranteed life: Feasting Fiends) (+5.77c) -> P:[Powerful (t1), Feasting Fiends (t1)], S:[of the Lynx (t2), Added Small Passive Skills also grant: Minions have 2% increased Attack and Cast Speed (t2)]
-    [Step 12] Harvest Reforge Life: Reforged item (guaranteed life: Hale) (+5.77c) -> P:[Powerful (t1), Hale (t3)], S:[Added Small Passive Skills also grant: Minions have 2% increased Attack and Cast Speed (t2), of the Wrestler (t2)]
-    [Step 13] Harvest Reforge Life: Reforged item (guaranteed life: Hale) (+5.77c) -> P:[Powerful (t1), Hale (t3)], S:[of the Cloud (t3)]
-    [Step 14] Harvest Reforge Life: Reforged item (guaranteed life: Sanguine) (+5.77c) -> P:[Powerful (t1), Sanguine (t1)], S:[Added Small Passive Skills also grant: Minions have 1% increased Attack and Cast Speed (t3), of the Pupil (t3)]
-    [Step 15] Orb of Annulment: Annul removed Sanguine (Prefix) [Step 3 Cleanup] (+9.00c) -> P:[Powerful (t1)], S:[Added Small Passive Skills also grant: Minions have 1% increased Attack and Cast Speed (t3), of the Pupil (t3)]
-    [Step 16] Harvest Reforge Life: Reforged item (guaranteed life: of the Flatworm) (+5.77c) -> P:[Powerful (t1), Beryl (t3)], S:[of the Flatworm (t1), of the Brute (t3)]
-    [Step 17] Harvest Reforge Life: Reforged item (guaranteed life: of the Lizard) (+5.77c) -> P:[Powerful (t1), Hale (t3)], S:[of the Lizard (t2), of the Pupil (t3)]
-    [Step 18] Harvest Reforge Life: Reforged item (guaranteed life: Sanguine) (+5.77c) -> P:[Powerful (t1), Sanguine (t1)], S:[of the Fox (t1)]
-    [Step 19] Orb of Annulment: Annul removed of the Fox (Suffix) [Step 3 Cleanup] (+9.00c) -> P:[Powerful (t1), Sanguine (t1)], S:[]
-    [Step 20] Exalted Orb Slam (Suffix: Attributes / Chaos Res): Slammed of the Cloud (+1.20c) -> P:[Powerful (t1), Sanguine (t1)], S:[of the Cloud (t3)]
-    [Step 21] Orb of Annulment: Annul removed Sanguine (Prefix) [Step 4 Cleanup] (+9.00c) -> P:[Powerful (t1)], S:[of the Cloud (t3)]
-    [Step 22] Harvest Reforge Life: Reforged item (guaranteed life: Renewal) (+5.77c) -> P:[Powerful (t1), Renewal (t1)], S:[of Excitement (t3), of the Whelpling (t3)]
-    [Step 23] Harvest Reforge Life: Reforged item (guaranteed life: of the Flatworm) (+5.77c) -> P:[Powerful (t1)], S:[of the Flatworm (t1), of Elation (t1)]
-    [Step 24] Harvest Reforge Life: Reforged item (guaranteed life: Feasting Fiends) (+5.77c) -> P:[Powerful (t1), Feasting Fiends (t1)], S:[of the Penguin (t1), of the Kaleidoscope (t1)]
-    [Step 25] Harvest Reforge Life: Reforged item (guaranteed life: Feasting Fiends) (+5.77c) -> P:[Powerful (t1), Feasting Fiends (t1)], S:[of the Pupil (t3), of Excitement (t3)]
-    [Step 26] Harvest Reforge Life: Reforged item (guaranteed life: Sanguine) (+5.77c) -> P:[Powerful (t1), Sanguine (t1)], S:[of the Drake (t1)]
-    [Step 27] Orb of Annulment: Annul removed Sanguine (Prefix) [Step 3 Cleanup] (+9.00c) -> P:[Powerful (t1)], S:[of the Drake (t1)]
-    [Step 28] Harvest Reforge Life: Reforged item (guaranteed life: of the Lizard) (+5.77c) -> P:[Powerful (t1), Glimmering (t2)], S:[of the Lizard (t2), of the Brute (t3)]
-    [Step 29] Harvest Reforge Life: Reforged item (guaranteed life: of the Lizard) (+5.77c) -> P:[Powerful (t1)], S:[of the Lizard (t2), of the Student (t2)]
-    [Step 30] Harvest Reforge Life: Reforged item (guaranteed life: Feasting Fiends) (+5.77c) -> P:[Powerful (t1), Feasting Fiends (t1)], S:[Call to the Slaughter (t1), of the Bear (t1)]
-    [Step 31] Harvest Reforge Life: Reforged item (guaranteed life: of the Newt) (+5.77c) -> P:[Powerful (t1)], S:[of the Newt (t3), of the Crystal (t3)]
-    [Step 32] Harvest Reforge Life: Reforged item (guaranteed life: Feasting Fiends) (+5.77c) -> P:[Powerful (t1), Feasting Fiends (t1)], S:[Added Small Passive Skills also grant: Minions have 1% increased Attack and Cast Speed (t3)]
-    [Step 33] Harvest Reforge Life: Reforged item (guaranteed life: Renewal) (+5.77c) -> P:[Powerful (t1), Renewal (t1)], S:[of the Kaleidoscope (t1), of the Prodigy (t1)]
-    [Step 34] Harvest Reforge Life: Reforged item (guaranteed life: Feasting Fiends) (+5.77c) -> P:[Powerful (t1), Feasting Fiends (t1)], S:[of the Newt (t3)]
-    [Step 35] Harvest Reforge Life: Reforged item (guaranteed life: Healthy) (+5.77c) -> P:[Powerful (t1), Healthy (t2)], S:[of the Seal (t2), of the Whelpling (t3)]
-    [Step 36] Harvest Reforge Life: Reforged item (guaranteed life: Hale) (+5.77c) -> P:[Powerful (t1), Hale (t3)], S:[of the Flatworm (t1), of the Seal (t2)]
-    [Step 37] Harvest Reforge Life: Reforged item (guaranteed life: of the Newt) (+5.77c) -> P:[Powerful (t1), Harmful (t3)], S:[of the Newt (t3)]
-    [Step 38] Harvest Reforge Life: Reforged item (guaranteed life: Hale) (+5.77c) -> P:[Powerful (t1), Hale (t3)], S:[of the Salamander (t2)]
-    [Step 39] Harvest Reforge Life: Reforged item (guaranteed life: Feasting Fiends) (+5.77c) -> P:[Powerful (t1), Feasting Fiends (t1)], S:[Added Small Passive Skills also grant: Minions have 3% increased Attack and Cast Speed (t1)]
-    [Step 40] Harvest Reforge Life: Reforged item (guaranteed life: Renewal) (+5.77c) -> P:[Powerful (t1), Renewal (t1)], S:[of the Seal (t2), of the Prism (t2)]
+    [Step 1] Harvest Reforge Life: Reforged item (guaranteed life: of the Flatworm) (+5.77c) -> P:[Powerful (t1), Skeletal Atrophy (t1)], S:[of the Flatworm (t1), of the Inuit (t3)]
+    [Step 2] Harvest Reforge Life: Reforged item (guaranteed life: Primordial Bond) (+5.77c) -> P:[Powerful (t1), Harmful (t3)], S:[Primordial Bond (t1)]
+    [Step 3] Harvest Reforge Life: Reforged item (guaranteed life: Hale) (+5.77c) -> P:[Powerful (t1), Hale (t3)], S:[of Joy (t2), of the Squall (t2)]
+    [Step 4] Harvest Reforge Life: Reforged item (guaranteed life: Renewal) (+5.77c) -> P:[Powerful (t1), Renewal (t1)], S:[Added Small Passive Skills also grant: Minions have 3% increased Attack and Cast Speed (t1)]
+    [Step 5] Harvest Reforge Life: Reforged item (guaranteed life: Renewal) (+5.77c) -> P:[Powerful (t1), Renewal (t1)], S:[of the Meteor (t1)]
+    [Step 6] Harvest Reforge Life: Reforged item (guaranteed life: of the Lizard) (+5.77c) -> P:[Powerful (t1), Acrobat's (t1)], S:[of the Lizard (t2)]
+    [Step 7] Harvest Reforge Life: Reforged item (guaranteed life: of the Newt) (+5.77c) -> P:[Powerful (t1)], S:[of the Newt (t3), of the Mongoose (t3)]
+    [Step 8] Harvest Reforge Life: Reforged item (guaranteed life: of the Newt) (+5.77c) -> P:[Powerful (t1), Lacquered (t3)], S:[of the Newt (t3)]
+    [Step 9] Harvest Reforge Life: Reforged item (guaranteed life: Healthy) (+5.77c) -> P:[Powerful (t1), Healthy (t2)], S:[of the Meteor (t1), of the Newt (t3)]
+    [Step 10] Harvest Reforge Life: Reforged item (guaranteed life: Feasting Fiends) (+5.77c) -> P:[Powerful (t1), Feasting Fiends (t1)], S:[of the Prism (t2), of the Newt (t3)]
+    [Step 11] Harvest Reforge Life: Reforged item (guaranteed life: Healthy) (+5.77c) -> P:[Powerful (t1), Healthy (t2)], S:[of the Wrestler (t2)]
+    [Step 12] Harvest Reforge Life: Reforged item (guaranteed life: Hale) (+5.77c) -> P:[Powerful (t1), Hale (t3)], S:[Call to the Slaughter (t1), of the Kaleidoscope (t1)]
+    [Step 13] Harvest Reforge Life: Reforged item (guaranteed life: Feasting Fiends) (+5.77c) -> P:[Powerful (t1), Feasting Fiends (t1)], S:[of the Lizard (t2), of the Inuit (t3)]
+    [Step 14] Harvest Reforge Life: Reforged item (guaranteed life: Feasting Fiends) (+5.77c) -> P:[Powerful (t1), Feasting Fiends (t1)], S:[of the Seal (t2)]
+    [Step 15] Harvest Reforge Life: Reforged item (guaranteed life: Sanguine) (+5.77c) -> P:[Powerful (t1), Sanguine (t1)], S:[of the Seal (t2), of Banishment (t2)]
+    [Step 16] Orb of Annulment: Annul removed of Banishment (Suffix) [Step 3 Cleanup] (+9.00c) -> P:[Powerful (t1), Sanguine (t1)], S:[of the Seal (t2)]
+    [Step 17] Orb of Annulment: Annul removed of the Seal (Suffix) [Step 3 Cleanup] (+9.00c) -> P:[Powerful (t1), Sanguine (t1)], S:[]
+    [Step 18] Exalted Orb Slam (Suffix: of the Meteor / of Eviction): Slammed of the Mongoose (+1.20c) -> P:[Powerful (t1), Sanguine (t1)], S:[of the Mongoose (t3)]
+    [Step 19] Orb of Annulment: Annul removed of the Mongoose (Suffix) [Step 4 Cleanup] (+9.00c) -> P:[Powerful (t1), Sanguine (t1)], S:[]
+    [Step 20] Exalted Orb Slam (Suffix: of the Meteor / of Eviction): Slammed of the Inuit (+1.20c) -> P:[Powerful (t1), Sanguine (t1)], S:[of the Inuit (t3)]
+    [Step 21] Orb of Annulment: Annul removed Sanguine (Prefix) [Step 4 Cleanup] (+9.00c) -> P:[Powerful (t1)], S:[of the Inuit (t3)]
+    [Step 22] Harvest Reforge Life: Reforged item (guaranteed life: Hale) (+5.77c) -> P:[Powerful (t1), Hale (t3)], S:[Call to the Slaughter (t1)]
+    [Step 23] Harvest Reforge Life: Reforged item (guaranteed life: Renewal) (+5.77c) -> P:[Powerful (t1), Renewal (t1)], S:[of Excitement (t3)]
+    [Step 24] Harvest Reforge Life: Reforged item (guaranteed life: Healthy) (+5.77c) -> P:[Powerful (t1), Healthy (t2)], S:[of Banishment (t2), of the Salamander (t2)]
+    [Step 25] Harvest Reforge Life: Reforged item (guaranteed life: of the Lizard) (+5.77c) -> P:[Powerful (t1), Dangerous (t1)], S:[of the Lizard (t2), of the Storm (t1)]
+    [Step 26] Harvest Reforge Life: Reforged item (guaranteed life: Feasting Fiends) (+5.77c) -> P:[Powerful (t1), Feasting Fiends (t1)], S:[of the Kaleidoscope (t1)]
+    [Step 27] Harvest Reforge Life: Reforged item (guaranteed life: Sanguine) (+5.77c) -> P:[Powerful (t1), Sanguine (t1)], S:[of Banishment (t2)]
+    [Step 28] Orb of Annulment: Annul removed of Banishment (Suffix) [Step 3 Cleanup] (+9.00c) -> P:[Powerful (t1), Sanguine (t1)], S:[]
+    [Step 29] Exalted Orb Slam (Suffix: of the Meteor / of Eviction): Slammed of the Cloud (+1.20c) -> P:[Powerful (t1), Sanguine (t1)], S:[of the Cloud (t3)]
+    [Step 30] Orb of Annulment: Annul removed Sanguine (Prefix) [Step 4 Cleanup] (+9.00c) -> P:[Powerful (t1)], S:[of the Cloud (t3)]
+    [Step 31] Harvest Reforge Life: Reforged item (guaranteed life: Healthy) (+5.77c) -> P:[Powerful (t1), Healthy (t2)], S:[of the Lost (t3)]
+    [Step 32] Harvest Reforge Life: Reforged item (guaranteed life: Hale) (+5.77c) -> P:[Powerful (t1), Hale (t3)], S:[of the Pupil (t3), of Excitement (t3)]
+    [Step 33] Harvest Reforge Life: Reforged item (guaranteed life: Feasting Fiends) (+5.77c) -> P:[Powerful (t1), Feasting Fiends (t1)], S:[of the Salamander (t2), of Excitement (t3)]
+    [Step 34] Harvest Reforge Life: Reforged item (guaranteed life: Feasting Fiends) (+5.77c) -> P:[Powerful (t1), Feasting Fiends (t1)], S:[of Joy (t2), of the Squall (t2)]
+    [Step 35] Harvest Reforge Life: Reforged item (guaranteed life: Feasting Fiends) (+5.77c) -> P:[Powerful (t1), Feasting Fiends (t1)], S:[of Joy (t2)]
+    [Step 36] Harvest Reforge Life: Reforged item (guaranteed life: Feasting Fiends) (+5.77c) -> P:[Powerful (t1), Feasting Fiends (t1)], S:[of the Inuit (t3)]
+    [Step 37] Harvest Reforge Life: Reforged item (guaranteed life: of the Lizard) (+5.77c) -> P:[Powerful (t1), Glowing (t1)], S:[of the Lizard (t2), of the Inuit (t3)]
+    [Step 38] Harvest Reforge Life: Reforged item (guaranteed life: of the Newt) (+5.77c) -> P:[Powerful (t1), Harmful (t3)], S:[of the Newt (t3)]
+    [Step 39] Harvest Reforge Life: Reforged item (guaranteed life: Feasting Fiends) (+5.77c) -> P:[Powerful (t1), Feasting Fiends (t1)], S:[of Joy (t2)]
+    [Step 40] Harvest Reforge Life: Reforged item (guaranteed life: Healthy) (+5.77c) -> P:[Powerful (t1), Healthy (t2)], S:[of the Meteor (t1)]
+    [Step 41] Harvest Reforge Life: Reforged item (guaranteed life: Hale) (+5.77c) -> P:[Powerful (t1), Hale (t3)], S:[of the Mongoose (t3), Call to the Slaughter (t1)]
+    [Step 42] Harvest Reforge Life: Reforged item (guaranteed life: Feasting Fiends) (+5.77c) -> P:[Powerful (t1), Feasting Fiends (t1)], S:[of the Pupil (t3), of the Inuit (t3)]
+    [Step 43] Harvest Reforge Life: Reforged item (guaranteed life: of the Flatworm) (+5.77c) -> P:[Powerful (t1), Hazardous (t2)], S:[of the Flatworm (t1), of the Pupil (t3)]
+    [Step 44] Harvest Reforge Life: Reforged item (guaranteed life: Primordial Bond) (+5.77c) -> P:[Powerful (t1), Harmful (t3)], S:[Primordial Bond (t1), of Elation (t1)]
+    [Step 45] Harvest Reforge Life: Reforged item (guaranteed life: Renewal) (+5.77c) -> P:[Powerful (t1), Renewal (t1)], S:[of the Lynx (t2)]
+    [Step 46] Harvest Reforge Life: Reforged item (guaranteed life: of the Newt) (+5.77c) -> P:[Powerful (t1), Hazardous (t2)], S:[of the Newt (t3), of Excitement (t3)]
+    [Step 47] Harvest Reforge Life: Reforged item (guaranteed life: of the Lizard) (+5.77c) -> P:[Powerful (t1), Harmful (t3)], S:[of the Lizard (t2)]
+    [Step 48] Harvest Reforge Life: Reforged item (guaranteed life: Feasting Fiends) (+5.77c) -> P:[Powerful (t1), Feasting Fiends (t1)], S:[of Banishment (t2)]
+    [Step 49] Harvest Reforge Life: Reforged item (guaranteed life: Hale) (+5.77c) -> P:[Powerful (t1), Hale (t3)], S:[of the Prism (t2)]
+    [Step 50] Harvest Reforge Life: Reforged item (guaranteed life: Hale) (+5.77c) -> P:[Powerful (t1), Hale (t3)], S:[of the Fox (t1), of the Cloud (t3)]
+    [Step 51] Harvest Reforge Life: Reforged item (guaranteed life: Sanguine) (+5.77c) -> P:[Powerful (t1), Sanguine (t1)], S:[Added Small Passive Skills also grant: Minions have 3% increased Attack and Cast Speed (t1)]
+    [Step 52] Orb of Annulment: Annul removed Added Small Passive Skills also grant: Minions have 3% increased Attack and Cast Speed (Suffix) [Step 3 Cleanup] (+9.00c) -> P:[Powerful (t1), Sanguine (t1)], S:[]
+    [Step 53] Exalted Orb Slam (Suffix: of the Meteor / of Eviction): Slammed of Elation (+1.20c) -> P:[Powerful (t1), Sanguine (t1)], S:[of Elation (t1)]
+    [Step 54] Orb of Annulment: Annul removed Sanguine (Prefix) [Step 4 Cleanup] (+9.00c) -> P:[Powerful (t1)], S:[of Elation (t1)]
+    [Step 55] Harvest Reforge Life: Reforged item (guaranteed life: of the Lizard) (+5.77c) -> P:[Powerful (t1), Ribbed (t1)], S:[of the Lizard (t2)]
+    [Step 56] Harvest Reforge Life: Reforged item (guaranteed life: of the Flatworm) (+5.77c) -> P:[Powerful (t1), Hazardous (t2)], S:[of the Flatworm (t1), of the Crystal (t3)]
+    [Step 57] Harvest Reforge Life: Reforged item (guaranteed life: Healthy) (+5.77c) -> P:[Powerful (t1), Healthy (t2)], S:[of the Seal (t2), of the Prodigy (t1)]
+    [Step 58] Harvest Reforge Life: Reforged item (guaranteed life: Healthy) (+5.77c) -> P:[Powerful (t1), Healthy (t2)], S:[of Eviction (t1), of Elation (t1)]
+    [Step 59] Harvest Reforge Life: Reforged item (guaranteed life: Healthy) (+5.77c) -> P:[Powerful (t1), Healthy (t2)], S:[of the Lizard (t2)]
+    [Step 60] Harvest Reforge Life: Reforged item (guaranteed life: Renewal) (+5.77c) -> P:[Powerful (t1), Renewal (t1)], S:[of the Salamander (t2), of the Cloud (t3)]
+    [Step 61] Harvest Reforge Life: Reforged item (guaranteed life: Renewal) (+5.77c) -> P:[Powerful (t1), Renewal (t1)], S:[of Eviction (t1)]
+    [Step 62] Harvest Reforge Life: Reforged item (guaranteed life: Feasting Fiends) (+5.77c) -> P:[Powerful (t1), Feasting Fiends (t1)], S:[of Excitement (t3), of the Lost (t3)]
+    [Step 63] Harvest Reforge Life: Reforged item (guaranteed life: of the Newt) (+5.77c) -> P:[Powerful (t1)], S:[of the Newt (t3), of the Fox (t1)]
+    [Step 64] Harvest Reforge Life: Reforged item (guaranteed life: Sanguine) (+5.77c) -> P:[Powerful (t1), Sanguine (t1)], S:[of the Whelpling (t3), of the Brute (t3)]
+    [Step 65] Orb of Annulment: Annul removed of the Whelpling (Suffix) [Step 3 Cleanup] (+9.00c) -> P:[Powerful (t1), Sanguine (t1)], S:[of the Brute (t3)]
+    [Step 66] Orb of Annulment: Annul removed Sanguine (Prefix) [Step 3 Cleanup] (+9.00c) -> P:[Powerful (t1)], S:[of the Brute (t3)]
+    [Step 67] Harvest Reforge Life: Reforged item (guaranteed life: Sanguine) (+5.77c) -> P:[Powerful (t1), Sanguine (t1)], S:[of Elation (t1)]
+    [Step 68] Orb of Annulment: Annul removed of Elation (Suffix) [Step 3 Cleanup] (+9.00c) -> P:[Powerful (t1), Sanguine (t1)], S:[]
+    [Step 69] Exalted Orb Slam (Suffix: of the Meteor / of Eviction): Slammed of the Student (+1.20c) -> P:[Powerful (t1), Sanguine (t1)], S:[of the Student (t2)]
+    [Step 70] Orb of Annulment: Annul removed Sanguine (Prefix) [Step 4 Cleanup] (+9.00c) -> P:[Powerful (t1)], S:[of the Student (t2)]
+    [Step 71] Harvest Reforge Life: Reforged item (guaranteed life: Hale) (+5.77c) -> P:[Powerful (t1), Hale (t3)], S:[of Banishment (t2), of the Crystal (t3)]
+    [Step 72] Harvest Reforge Life: Reforged item (guaranteed life: Feasting Fiends) (+5.77c) -> P:[Powerful (t1), Feasting Fiends (t1)], S:[of the Wrestler (t2), of the Prism (t2)]
+    [Step 73] Harvest Reforge Life: Reforged item (guaranteed life: of the Lizard) (+5.77c) -> P:[Powerful (t1), Skeletal Atrophy (t1)], S:[of the Lizard (t2), Call to the Slaughter (t1)]
+    [Step 74] Harvest Reforge Life: Reforged item (guaranteed life: Feasting Fiends) (+5.77c) -> P:[Powerful (t1), Feasting Fiends (t1)], S:[Added Small Passive Skills also grant: Minions have 2% increased Attack and Cast Speed (t2)]
+    [Step 75] Harvest Reforge Life: Reforged item (guaranteed life: Sanguine) (+5.77c) -> P:[Powerful (t1), Sanguine (t1)], S:[of the Bear (t1), of the Newt (t3)]
+    [Step 76] Orb of Annulment: Annul removed of the Bear (Suffix) [Step 3 Cleanup] (+9.00c) -> P:[Powerful (t1), Sanguine (t1)], S:[of the Newt (t3)]
+    [Step 77] Orb of Annulment: Annul removed Sanguine (Prefix) [Step 3 Cleanup] (+9.00c) -> P:[Powerful (t1)], S:[of the Newt (t3)]
+    [Step 78] Harvest Reforge Life: Reforged item (guaranteed life: Hale) (+5.77c) -> P:[Powerful (t1), Hale (t3)], S:[of the Prodigy (t1)]
+    [Step 79] Harvest Reforge Life: Reforged item (guaranteed life: Healthy) (+5.77c) -> P:[Powerful (t1), Healthy (t2)], S:[of the Inuit (t3)]
+    [Step 80] Harvest Reforge Life: Reforged item (guaranteed life: Hale) (+5.77c) -> P:[Powerful (t1), Hale (t3)], S:[of the Prodigy (t1)]
+    [Step 81] Harvest Reforge Life: Reforged item (guaranteed life: of the Newt) (+5.77c) -> P:[Powerful (t1), Hale (t3)], S:[of the Newt (t3), of the Prodigy (t1)]
+    [Step 82] Harvest Reforge Life: Reforged item (guaranteed life: Feasting Fiends) (+5.77c) -> P:[Powerful (t1), Feasting Fiends (t1)], S:[of the Mongoose (t3), of the Inuit (t3)]
+    [Step 83] Harvest Reforge Life: Reforged item (guaranteed life: Feasting Fiends) (+5.77c) -> P:[Powerful (t1), Feasting Fiends (t1)], S:[of the Prism (t2)]
+    [Step 84] Harvest Reforge Life: Reforged item (guaranteed life: Renewal) (+5.77c) -> P:[Powerful (t1), Renewal (t1)], S:[of Elation (t1)]
+    [Step 85] Harvest Reforge Life: Reforged item (guaranteed life: Hale) (+5.77c) -> P:[Powerful (t1), Hale (t3)], S:[of the Cloud (t3)]
+    [Step 86] Harvest Reforge Life: Reforged item (guaranteed life: Primordial Bond) (+5.77c) -> P:[Powerful (t1), Dangerous (t1)], S:[Primordial Bond (t1)]
+    [Step 87] Harvest Reforge Life: Reforged item (guaranteed life: of the Lizard) (+5.77c) -> P:[Powerful (t1)], S:[of the Lizard (t2), Added Small Passive Skills also grant: Minions have 1% increased Attack and Cast Speed (t3)]
+    [Step 88] Harvest Reforge Life: Reforged item (guaranteed life: Healthy) (+5.77c) -> P:[Powerful (t1), Healthy (t2)], S:[Primordial Bond (t1)]
+    [Step 89] Harvest Reforge Life: Reforged item (guaranteed life: Feasting Fiends) (+5.77c) -> P:[Powerful (t1), Feasting Fiends (t1)], S:[of the Squall (t2)]
+    [Step 90] Harvest Reforge Life: Reforged item (guaranteed life: of the Newt) (+5.77c) -> P:[Powerful (t1)], S:[of the Newt (t3), of the Crystal (t3)]
+    [Step 91] Harvest Reforge Life: Reforged item (guaranteed life: of the Newt) (+5.77c) -> P:[Powerful (t1), Acrobat's (t1)], S:[of the Newt (t3), of Joy (t2)]
+    [Step 92] Harvest Reforge Life: Reforged item (guaranteed life: Healthy) (+5.77c) -> P:[Powerful (t1), Healthy (t2)], S:[of the Meteor (t1), of the Inuit (t3)]
+    [Step 93] Harvest Reforge Life: Reforged item (guaranteed life: Feasting Fiends) (+5.77c) -> P:[Powerful (t1), Feasting Fiends (t1)], S:[of the Fox (t1), of the Inuit (t3)]
+    [Step 94] Harvest Reforge Life: Reforged item (guaranteed life: Healthy) (+5.77c) -> P:[Powerful (t1), Healthy (t2)], S:[Call to the Slaughter (t1)]
+    [Step 95] Harvest Reforge Life: Reforged item (guaranteed life: Hale) (+5.77c) -> P:[Powerful (t1), Hale (t3)], S:[of the Newt (t3)]
+    [Step 96] Harvest Reforge Life: Reforged item (guaranteed life: Sanguine) (+5.77c) -> P:[Powerful (t1), Sanguine (t1)], S:[of Excitement (t3)]
+    [Step 97] Orb of Annulment: Annul removed of Excitement (Suffix) [Step 3 Cleanup] (+9.00c) -> P:[Powerful (t1), Sanguine (t1)], S:[]
+    [Step 98] Exalted Orb Slam (Suffix: of the Meteor / of Eviction): Slammed Call to the Slaughter (+1.20c) -> P:[Powerful (t1), Sanguine (t1)], S:[Call to the Slaughter (t1)]
+    [Step 99] Orb of Annulment: Annul removed Call to the Slaughter (Suffix) [Step 4 Cleanup] (+9.00c) -> P:[Powerful (t1), Sanguine (t1)], S:[]
+    [Step 100] Exalted Orb Slam (Suffix: of the Meteor / of Eviction): Slammed of Eviction (+1.20c) -> P:[Powerful (t1), Sanguine (t1)], S:[of Eviction (t1)]
+    [Step 101] Exalted Orb Slam (Suffix: of the Meteor / of Eviction): Slammed of the Storm (+1.20c) -> P:[Powerful (t1), Sanguine (t1)], S:[of Eviction (t1), of the Storm (t1)]
+    [Step 102] Orb of Annulment: Annul removed of the Storm (Suffix) [Step 4 Cleanup] (+9.00c) -> P:[Powerful (t1), Sanguine (t1)], S:[of Eviction (t1)]
+    [Step 103] Exalted Orb Slam (Suffix: of the Meteor / of Eviction): Slammed of the Inuit (+1.20c) -> P:[Powerful (t1), Sanguine (t1)], S:[of Eviction (t1), of the Inuit (t3)]
+    [Step 104] Orb of Annulment: Annul removed of the Inuit (Suffix) [Step 4 Cleanup] (+9.00c) -> P:[Powerful (t1), Sanguine (t1)], S:[of Eviction (t1)]
+    [Step 105] Exalted Orb Slam (Suffix: of the Meteor / of Eviction): Slammed of the Cloud (+1.20c) -> P:[Powerful (t1), Sanguine (t1)], S:[of Eviction (t1), of the Cloud (t3)]
+    [Step 106] Orb of Annulment: Annul removed of the Cloud (Suffix) [Step 4 Cleanup] (+9.00c) -> P:[Powerful (t1), Sanguine (t1)], S:[of Eviction (t1)]
+    [Step 107] Exalted Orb Slam (Suffix: of the Meteor / of Eviction): Slammed of the Prism (+1.20c) -> P:[Powerful (t1), Sanguine (t1)], S:[of Eviction (t1), of the Prism (t2)]
+    [Step 108] Orb of Annulment: Annul removed Sanguine (Prefix) [Step 4 Cleanup] (+9.00c) -> P:[Powerful (t1)], S:[of Eviction (t1), of the Prism (t2)]
+    [Step 109] Harvest Reforge Life: Reforged item (guaranteed life: Sanguine) (+5.77c) -> P:[Powerful (t1), Sanguine (t1)], S:[of the Student (t2), of Eviction (t1)]
+    [Step 110] Orb of Annulment: Annul removed of the Student (Suffix) [Step 3 Cleanup] (+9.00c) -> P:[Powerful (t1), Sanguine (t1)], S:[of Eviction (t1)]
+    [Step 111] Exalted Orb Slam (Suffix: of the Meteor / of Eviction): Slammed of the Brute (+1.20c) -> P:[Powerful (t1), Sanguine (t1)], S:[of Eviction (t1), of the Brute (t3)]
+    [Step 112] Orb of Annulment: Annul removed Sanguine (Prefix) [Step 4 Cleanup] (+9.00c) -> P:[Powerful (t1)], S:[of Eviction (t1), of the Brute (t3)]
+    [Step 113] Harvest Reforge Life: Reforged item (guaranteed life: Feasting Fiends) (+5.77c) -> P:[Powerful (t1), Feasting Fiends (t1)], S:[of Eviction (t1)]
+    [Step 114] Harvest Reforge Life: Reforged item (guaranteed life: Healthy) (+5.77c) -> P:[Powerful (t1), Healthy (t2)], S:[of the Crystal (t3)]
+    [Step 115] Harvest Reforge Life: Reforged item (guaranteed life: Healthy) (+5.77c) -> P:[Powerful (t1), Healthy (t2)], S:[of the Seal (t2)]
+    [Step 116] Harvest Reforge Life: Reforged item (guaranteed life: of the Lizard) (+5.77c) -> P:[Powerful (t1), Healthy (t2)], S:[of the Lizard (t2)]
+    [Step 117] Harvest Reforge Life: Reforged item (guaranteed life: Renewal) (+5.77c) -> P:[Powerful (t1), Renewal (t1)], S:[of the Cloud (t3), of the Mongoose (t3)]
+    [Step 118] Harvest Reforge Life: Reforged item (guaranteed life: Feasting Fiends) (+5.77c) -> P:[Powerful (t1), Feasting Fiends (t1)], S:[of the Whelpling (t3), of the Meteor (t1)]
+    [Step 119] Harvest Reforge Life: Reforged item (guaranteed life: Renewal) (+5.77c) -> P:[Powerful (t1), Renewal (t1)], S:[of the Salamander (t2)]
+    [Step 120] Harvest Reforge Life: Reforged item (guaranteed life: Feasting Fiends) (+5.77c) -> P:[Powerful (t1), Feasting Fiends (t1)], S:[of the Inuit (t3)]
+    [Step 121] Harvest Reforge Life: Reforged item (guaranteed life: of the Flatworm) (+5.77c) -> P:[Powerful (t1), Hazardous (t2)], S:[of the Flatworm (t1), of the Squall (t2)]
+    [Step 122] Harvest Reforge Life: Reforged item (guaranteed life: Feasting Fiends) (+5.77c) -> P:[Powerful (t1), Feasting Fiends (t1)], S:[of the Fox (t1), Added Small Passive Skills also grant: Minions have 1% increased Attack and Cast Speed (t3)]
+    [Step 123] Harvest Reforge Life: Reforged item (guaranteed life: Feasting Fiends) (+5.77c) -> P:[Powerful (t1), Feasting Fiends (t1)], S:[of the Drake (t1)]
+    [Step 124] Harvest Reforge Life: Reforged item (guaranteed life: of the Flatworm) (+5.77c) -> P:[Powerful (t1), Lacquered (t3)], S:[of the Flatworm (t1), Added Small Passive Skills also grant: Minions have 3% increased Attack and Cast Speed (t1)]
+    [Step 125] Harvest Reforge Life: Reforged item (guaranteed life: of the Flatworm) (+5.77c) -> P:[Powerful (t1), Harmful (t3)], S:[of the Flatworm (t1), of the Storm (t1)]
+    [Step 126] Harvest Reforge Life: Reforged item (guaranteed life: Renewal) (+5.77c) -> P:[Powerful (t1), Renewal (t1)], S:[of the Seal (t2), of the Wrestler (t2)]
+    [Step 127] Harvest Reforge Life: Reforged item (guaranteed life: Feasting Fiends) (+5.77c) -> P:[Powerful (t1), Feasting Fiends (t1)], S:[of the Lizard (t2)]
+    [Step 128] Harvest Reforge Life: Reforged item (guaranteed life: Healthy) (+5.77c) -> P:[Powerful (t1), Healthy (t2)], S:[of the Mongoose (t3), of the Prism (t2)]
+    [Step 129] Harvest Reforge Life: Reforged item (guaranteed life: Feasting Fiends) (+5.77c) -> P:[Powerful (t1), Feasting Fiends (t1)], S:[of the Pupil (t3), of the Mongoose (t3)]
+    [Step 130] Harvest Reforge Life: Reforged item (guaranteed life: of the Newt) (+5.77c) -> P:[Powerful (t1), Dancer's (t2)], S:[of the Newt (t3), Added Small Passive Skills also grant: Minions have 2% increased Attack and Cast Speed (t2)]
+    [Step 131] Harvest Reforge Life: Reforged item (guaranteed life: of the Flatworm) (+5.77c) -> P:[Powerful (t1), Dangerous (t1)], S:[of the Flatworm (t1), Added Small Passive Skills also grant: Minions have 2% increased Attack and Cast Speed (t2)]
+    [Step 132] Harvest Reforge Life: Reforged item (guaranteed life: Feasting Fiends) (+5.77c) -> P:[Powerful (t1), Feasting Fiends (t1)], S:[of the Sky (t2), Call to the Slaughter (t1)]
+    [Step 133] Harvest Reforge Life: Reforged item (guaranteed life: Feasting Fiends) (+5.77c) -> P:[Powerful (t1), Feasting Fiends (t1)], S:[Added Small Passive Skills also grant: Minions have 1% increased Attack and Cast Speed (t3)]
+    [Step 134] Harvest Reforge Life: Reforged item (guaranteed life: Healthy) (+5.77c) -> P:[Powerful (t1), Healthy (t2)], S:[of the Crystal (t3), of the Flatworm (t1)]
+    [Step 135] Harvest Reforge Life: Reforged item (guaranteed life: Feasting Fiends) (+5.77c) -> P:[Powerful (t1), Feasting Fiends (t1)], S:[of the Salamander (t2)]
+    [Step 136] Harvest Reforge Life: Reforged item (guaranteed life: Sanguine) (+5.77c) -> P:[Powerful (t1), Sanguine (t1)], S:[of Excitement (t3), of the Prism (t2)]
+    [Step 137] Orb of Annulment: Annul removed Sanguine (Prefix) [Step 3 Cleanup] (+9.00c) -> P:[Powerful (t1)], S:[of Excitement (t3), of the Prism (t2)]
+    [Step 138] Harvest Reforge Life: Reforged item (guaranteed life: Hale) (+5.77c) -> P:[Powerful (t1), Hale (t3)], S:[of the Fox (t1), Added Small Passive Skills also grant: Minions have 2% increased Attack and Cast Speed (t2)]
+    [Step 139] Harvest Reforge Life: Reforged item (guaranteed life: of the Lizard) (+5.77c) -> P:[Powerful (t1)], S:[of the Lizard (t2), of the Prodigy (t1)]
+    [Step 140] Harvest Reforge Life: Reforged item (guaranteed life: Renewal) (+5.77c) -> P:[Powerful (t1), Renewal (t1)], S:[of the Squall (t2), of the Whelpling (t3)]
+    [Step 141] Harvest Reforge Life: Reforged item (guaranteed life: Primordial Bond) (+5.77c) -> P:[Powerful (t1)], S:[Primordial Bond (t1), of the Prodigy (t1)]
+    [Step 142] Harvest Reforge Life: Reforged item (guaranteed life: of the Flatworm) (+5.77c) -> P:[Powerful (t1)], S:[of the Flatworm (t1), of the Mongoose (t3)]
+    [Step 143] Harvest Reforge Life: Reforged item (guaranteed life: of the Flatworm) (+5.77c) -> P:[Powerful (t1), Feasting Fiends (t1)], S:[of the Flatworm (t1), of the Drake (t1)]
+    [Step 144] Harvest Reforge Life: Reforged item (guaranteed life: Feasting Fiends) (+5.77c) -> P:[Powerful (t1), Feasting Fiends (t1)], S:[of the Sky (t2)]
+    [Step 145] Harvest Reforge Life: Reforged item (guaranteed life: Healthy) (+5.77c) -> P:[Powerful (t1), Healthy (t2)], S:[Call to the Slaughter (t1), of Excitement (t3)]
+    [Step 146] Harvest Reforge Life: Reforged item (guaranteed life: Sanguine) (+5.77c) -> P:[Powerful (t1), Sanguine (t1)], S:[of the Prism (t2), of the Flatworm (t1)]
+    [Step 147] Orb of Annulment: Annul removed of the Prism (Suffix) [Step 3 Cleanup] (+9.00c) -> P:[Powerful (t1), Sanguine (t1)], S:[of the Flatworm (t1)]
+    [Step 148] Orb of Annulment: Annul removed of the Flatworm (Suffix) [Step 3 Cleanup] (+9.00c) -> P:[Powerful (t1), Sanguine (t1)], S:[]
+    [Step 149] Exalted Orb Slam (Suffix: of the Meteor / of Eviction): Slammed of the Wrestler (+1.20c) -> P:[Powerful (t1), Sanguine (t1)], S:[of the Wrestler (t2)]
+    [Step 150] Orb of Annulment: Annul removed Sanguine (Prefix) [Step 4 Cleanup] (+9.00c) -> P:[Powerful (t1)], S:[of the Wrestler (t2)]
+    [Step 151] Harvest Reforge Life: Reforged item (guaranteed life: of the Lizard) (+5.77c) -> P:[Powerful (t1)], S:[of the Lizard (t2), of the Penguin (t1)]
 
 ======================================================================
-REVIEW FILE NOTE: 32619 verbose middle lines omitted from this compact artifact.
+REVIEW FILE NOTE: 35701 verbose middle lines omitted from this compact artifact.
 See the corresponding full output-craft-*.txt file for complete Monte Carlo traces/details.
 ======================================================================
 
-    [Step 17748] Harvest Reforge Life: Reforged item (guaranteed life: Healthy) (+5.77c) -> P:[Powerful (t1), Healthy (t2)], S:[of Elation (t1), of Banishment (t2)]
-    [Step 17749] Harvest Reforge Life: Reforged item (guaranteed life: Healthy) (+5.77c) -> P:[Powerful (t1), Healthy (t2)], S:[of the Newt (t3)]
-    [Step 17750] Harvest Reforge Life: Reforged item (guaranteed life: of the Lizard) (+5.77c) -> P:[Powerful (t1), Renewal (t1)], S:[of the Lizard (t2), of the Cloud (t3)]
-    [Step 17751] Harvest Reforge Life: Reforged item (guaranteed life: Renewal) (+5.77c) -> P:[Powerful (t1), Renewal (t1)], S:[of the Lizard (t2)]
-    [Step 17752] Harvest Reforge Life: Reforged item (guaranteed life: Feasting Fiends) (+5.77c) -> P:[Powerful (t1), Feasting Fiends (t1)], S:[Added Small Passive Skills also grant: Minions have 2% increased Attack and Cast Speed (t2), Primordial Bond (t1)]
-    [Step 17753] Harvest Reforge Life: Reforged item (guaranteed life: Healthy) (+5.77c) -> P:[Powerful (t1), Healthy (t2)], S:[of the Pupil (t3)]
-    [Step 17754] Harvest Reforge Life: Reforged item (guaranteed life: Feasting Fiends) (+5.77c) -> P:[Powerful (t1), Feasting Fiends (t1)], S:[Added Small Passive Skills also grant: Minions have 1% increased Attack and Cast Speed (t3)]
-    [Step 17755] Harvest Reforge Life: Reforged item (guaranteed life: of the Newt) (+5.77c) -> P:[Powerful (t1), Renewal (t1)], S:[of the Newt (t3)]
-    [Step 17756] Harvest Reforge Life: Reforged item (guaranteed life: Sanguine) (+5.77c) -> P:[Powerful (t1), Sanguine (t1)], S:[of Elation (t1), of the Sky (t2)]
-    [Step 17757] Orb of Annulment: Annul removed Sanguine (Prefix) [Step 3 Cleanup] (+9.00c) -> P:[Powerful (t1)], S:[of Elation (t1), of the Sky (t2)]
-    [Step 17758] Harvest Reforge Life: Reforged item (guaranteed life: Primordial Bond) (+5.77c) -> P:[Powerful (t1), Studded (t2)], S:[Primordial Bond (t1), of Eviction (t1)]
-    [Step 17759] Harvest Reforge Life: Reforged item (guaranteed life: Feasting Fiends) (+5.77c) -> P:[Powerful (t1), Feasting Fiends (t1)], S:[of the Penguin (t1)]
-    [Step 17760] Harvest Reforge Life: Reforged item (guaranteed life: Renewal) (+5.77c) -> P:[Powerful (t1), Renewal (t1)], S:[of the Storm (t1), of the Fox (t1)]
-    [Step 17761] Harvest Reforge Life: Reforged item (guaranteed life: Renewal) (+5.77c) -> P:[Powerful (t1), Renewal (t1)], S:[of the Newt (t3)]
-    [Step 17762] Harvest Reforge Life: Reforged item (guaranteed life: Feasting Fiends) (+5.77c) -> P:[Powerful (t1), Feasting Fiends (t1)], S:[of the Meteor (t1), of the Crystal (t3)]
-    [Step 17763] Harvest Reforge Life: Reforged item (guaranteed life: Healthy) (+5.77c) -> P:[Powerful (t1), Healthy (t2)], S:[of the Bear (t1)]
-    [Step 17764] Harvest Reforge Life: Reforged item (guaranteed life: Hale) (+5.77c) -> P:[Powerful (t1), Hale (t3)], S:[of the Squall (t2), of the Meteor (t1)]
-    [Step 17765] Harvest Reforge Life: Reforged item (guaranteed life: Primordial Bond) (+5.77c) -> P:[Powerful (t1)], S:[Primordial Bond (t1), Added Small Passive Skills also grant: Minions have 1% increased Attack and Cast Speed (t3)]
-    [Step 17766] Harvest Reforge Life: Reforged item (guaranteed life: of the Newt) (+5.77c) -> P:[Powerful (t1)], S:[of the Newt (t3), of Joy (t2)]
-    [Step 17767] Harvest Reforge Life: Reforged item (guaranteed life: of the Newt) (+5.77c) -> P:[Powerful (t1), Lacquered (t3)], S:[of the Newt (t3), of the Inuit (t3)]
-    [Step 17768] Harvest Reforge Life: Reforged item (guaranteed life: Feasting Fiends) (+5.77c) -> P:[Powerful (t1), Feasting Fiends (t1)], S:[of the Cloud (t3), Added Small Passive Skills also grant: Minions have 1% increased Attack and Cast Speed (t3)]
-    [Step 17769] Harvest Reforge Life: Reforged item (guaranteed life: Hale) (+5.77c) -> P:[Powerful (t1), Hale (t3)], S:[Vicious Bite (t1)]
-    [Step 17770] Harvest Reforge Life: Reforged item (guaranteed life: Sanguine) (+5.77c) -> P:[Powerful (t1), Sanguine (t1)], S:[of the Newt (t3), of the Cloud (t3)]
-    [Step 17771] Orb of Annulment: Annul removed of the Newt (Suffix) [Step 3 Cleanup] (+9.00c) -> P:[Powerful (t1), Sanguine (t1)], S:[of the Cloud (t3)]
-    [Step 17772] Orb of Annulment: Annul removed of the Cloud (Suffix) [Step 3 Cleanup] (+9.00c) -> P:[Powerful (t1), Sanguine (t1)], S:[]
-    [Step 17773] Exalted Orb Slam (Suffix: Attributes / Chaos Res): Slammed of Joy (+1.20c) -> P:[Powerful (t1), Sanguine (t1)], S:[of Joy (t2)]
-    [Step 17774] Orb of Annulment: Annul removed Sanguine (Prefix) [Step 4 Cleanup] (+9.00c) -> P:[Powerful (t1)], S:[of Joy (t2)]
-    [Step 17775] Harvest Reforge Life: Reforged item (guaranteed life: Hale) (+5.77c) -> P:[Powerful (t1), Hale (t3)], S:[of the Penguin (t1), of Banishment (t2)]
-    [Step 17776] Harvest Reforge Life: Reforged item (guaranteed life: Sanguine) (+5.77c) -> P:[Powerful (t1), Sanguine (t1)], S:[Call to the Slaughter (t1), of the Fox (t1)]
-    [Step 17777] Orb of Annulment: Annul removed Sanguine (Prefix) [Step 3 Cleanup] (+9.00c) -> P:[Powerful (t1)], S:[Call to the Slaughter (t1), of the Fox (t1)]
-    [Step 17778] Harvest Reforge Life: Reforged item (guaranteed life: of the Flatworm) (+5.77c) -> P:[Powerful (t1)], S:[of the Flatworm (t1), of the Lost (t3)]
-    [Step 17779] Harvest Reforge Life: Reforged item (guaranteed life: Feasting Fiends) (+5.77c) -> P:[Powerful (t1), Feasting Fiends (t1)], S:[of the Whelpling (t3)]
-    [Step 17780] Harvest Reforge Life: Reforged item (guaranteed life: of the Lizard) (+5.77c) -> P:[Powerful (t1)], S:[of the Lizard (t2), of the Lynx (t2)]
-    [Step 17781] Harvest Reforge Life: Reforged item (guaranteed life: Feasting Fiends) (+5.77c) -> P:[Powerful (t1), Feasting Fiends (t1)], S:[of Excitement (t3)]
-    [Step 17782] Harvest Reforge Life: Reforged item (guaranteed life: of the Newt) (+5.77c) -> P:[Powerful (t1), Shining (t3)], S:[of the Newt (t3), of the Crystal (t3)]
-    [Step 17783] Harvest Reforge Life: Reforged item (guaranteed life: Feasting Fiends) (+5.77c) -> P:[Powerful (t1), Feasting Fiends (t1)], S:[Added Small Passive Skills also grant: Minions have 3% increased Attack and Cast Speed (t1), of the Storm (t1)]
-    [Step 17784] Harvest Reforge Life: Reforged item (guaranteed life: Healthy) (+5.77c) -> P:[Powerful (t1), Healthy (t2)], S:[of the Newt (t3)]
-    [Step 17785] Harvest Reforge Life: Reforged item (guaranteed life: Renewal) (+5.77c) -> P:[Powerful (t1), Renewal (t1)], S:[of the Squall (t2)]
-    [Step 17786] Harvest Reforge Life: Reforged item (guaranteed life: of the Lizard) (+5.77c) -> P:[Powerful (t1), Feasting Fiends (t1)], S:[of the Lizard (t2), of the Kaleidoscope (t1)]
-    [Step 17787] Harvest Reforge Life: Reforged item (guaranteed life: Feasting Fiends) (+5.77c) -> P:[Powerful (t1), Feasting Fiends (t1)], S:[of Excitement (t3)]
-    [Step 17788] Harvest Reforge Life: Reforged item (guaranteed life: Sanguine) (+5.77c) -> P:[Powerful (t1), Sanguine (t1)], S:[of Elation (t1)]
-    [Step 17789] Orb of Annulment: Annul removed of Elation (Suffix) [Step 3 Cleanup] (+9.00c) -> P:[Powerful (t1), Sanguine (t1)], S:[]
-    [Step 17790] Exalted Orb Slam (Suffix: Attributes / Chaos Res): Slammed of Joy (+1.20c) -> P:[Powerful (t1), Sanguine (t1)], S:[of Joy (t2)]
-    [Step 17791] Orb of Annulment: Annul removed Sanguine (Prefix) [Step 4 Cleanup] (+9.00c) -> P:[Powerful (t1)], S:[of Joy (t2)]
-    [Step 17792] Harvest Reforge Life: Reforged item (guaranteed life: of the Lizard) (+5.77c) -> P:[Powerful (t1), Harmful (t3)], S:[of the Lizard (t2)]
-    [Step 17793] Harvest Reforge Life: Reforged item (guaranteed life: Feasting Fiends) (+5.77c) -> P:[Powerful (t1), Feasting Fiends (t1)], S:[Added Small Passive Skills also grant: Minions have 3% increased Attack and Cast Speed (t1), of Elation (t1)]
-    [Step 17794] Harvest Reforge Life: Reforged item (guaranteed life: Hale) (+5.77c) -> P:[Powerful (t1), Hale (t3)], S:[of Excitement (t3)]
-    [Step 17795] Harvest Reforge Life: Reforged item (guaranteed life: of the Newt) (+5.77c) -> P:[Powerful (t1)], S:[of the Newt (t3), of the Pupil (t3)]
-    [Step 17796] Harvest Reforge Life: Reforged item (guaranteed life: of the Newt) (+5.77c) -> P:[Powerful (t1), Acrobat's (t1)], S:[of the Newt (t3), of the Squall (t2)]
-    [Step 17797] Harvest Reforge Life: Reforged item (guaranteed life: Hale) (+5.77c) -> P:[Powerful (t1), Hale (t3)], S:[of Excitement (t3), of the Squall (t2)]
-    [Step 17798] Harvest Reforge Life: Reforged item (guaranteed life: Feasting Fiends) (+5.77c) -> P:[Powerful (t1), Feasting Fiends (t1)], S:[of the Lost (t3), of the Prodigy (t1)]
-    [Step 17799] Harvest Reforge Life: Reforged item (guaranteed life: of the Newt) (+5.77c) -> P:[Powerful (t1), Glimmering (t2)], S:[of the Newt (t3), of Elation (t1)]
-    [Step 17800] Harvest Reforge Life: Reforged item (guaranteed life: Primordial Bond) (+5.77c) -> P:[Powerful (t1), Glowing (t1)], S:[Primordial Bond (t1), of the Mongoose (t3)]
-    [Step 17801] Harvest Reforge Life: Reforged item (guaranteed life: of the Newt) (+5.77c) -> P:[Powerful (t1)], S:[of the Newt (t3), Call to the Slaughter (t1)]
-    [Step 17802] Harvest Reforge Life: Reforged item (guaranteed life: Renewal) (+5.77c) -> P:[Powerful (t1), Renewal (t1)], S:[Call to the Slaughter (t1)]
-    [Step 17803] Harvest Reforge Life: Reforged item (guaranteed life: of the Newt) (+5.77c) -> P:[Powerful (t1), Hale (t3)], S:[of the Newt (t3), of the Seal (t2)]
-    [Step 17804] Harvest Reforge Life: Reforged item (guaranteed life: of the Newt) (+5.77c) -> P:[Powerful (t1), Harmful (t3)], S:[of the Newt (t3), of the Crystal (t3)]
-    [Step 17805] Harvest Reforge Life: Reforged item (guaranteed life: of the Newt) (+5.77c) -> P:[Powerful (t1), Feasting Fiends (t1)], S:[of the Newt (t3), of Excitement (t3)]
-    [Step 17806] Harvest Reforge Life: Reforged item (guaranteed life: Hale) (+5.77c) -> P:[Powerful (t1), Hale (t3)], S:[of the Squall (t2)]
-    [Step 17807] Harvest Reforge Life: Reforged item (guaranteed life: of the Lizard) (+5.77c) -> P:[Powerful (t1), Glimmering (t2)], S:[of the Lizard (t2), Call to the Slaughter (t1)]
-    [Step 17808] Harvest Reforge Life: Reforged item (guaranteed life: of the Newt) (+5.77c) -> P:[Powerful (t1), Dancer's (t2)], S:[of the Newt (t3), of the Wrestler (t2)]
-    [Step 17809] Harvest Reforge Life: Reforged item (guaranteed life: Sanguine) (+5.77c) -> P:[Powerful (t1), Sanguine (t1)], S:[of the Whelpling (t3)]
-    [Step 17810] Orb of Annulment: Annul removed of the Whelpling (Suffix) [Step 3 Cleanup] (+9.00c) -> P:[Powerful (t1), Sanguine (t1)], S:[]
-    [Step 17811] Exalted Orb Slam (Suffix: Attributes / Chaos Res): Slammed Call to the Slaughter (+1.20c) -> P:[Powerful (t1), Sanguine (t1)], S:[Call to the Slaughter (t1)]
-    [Step 17812] Orb of Annulment: Annul removed Call to the Slaughter (Suffix) [Step 4 Cleanup] (+9.00c) -> P:[Powerful (t1), Sanguine (t1)], S:[]
-    [Step 17813] Exalted Orb Slam (Suffix: Attributes / Chaos Res): Slammed of the Whelpling (+1.20c) -> P:[Powerful (t1), Sanguine (t1)], S:[of the Whelpling (t3)]
-    [Step 17814] Orb of Annulment: Annul removed of the Whelpling (Suffix) [Step 4 Cleanup] (+9.00c) -> P:[Powerful (t1), Sanguine (t1)], S:[]
-    [Step 17815] Exalted Orb Slam (Suffix: Attributes / Chaos Res): Slammed of the Prism (+1.20c) -> P:[Powerful (t1), Sanguine (t1)], S:[of the Prism (t2)]
-    [Step 17816] Orb of Annulment: Annul removed of the Prism (Suffix) [Step 4 Cleanup] (+9.00c) -> P:[Powerful (t1), Sanguine (t1)], S:[]
-    [Step 17817] Exalted Orb Slam (Suffix: Attributes / Chaos Res): Slammed of the Brute (+1.20c) -> P:[Powerful (t1), Sanguine (t1)], S:[of the Brute (t3)]
-    [Step 17818] Orb of Annulment: Annul removed of the Brute (Suffix) [Step 4 Cleanup] (+9.00c) -> P:[Powerful (t1), Sanguine (t1)], S:[]
-    [Step 17819] Exalted Orb Slam (Suffix: Attributes / Chaos Res): Slammed of the Fox (+1.20c) -> P:[Powerful (t1), Sanguine (t1)], S:[of the Fox (t1)]
-    [Step 17820] Orb of Annulment: Annul removed of the Fox (Suffix) [Step 4 Cleanup] (+9.00c) -> P:[Powerful (t1), Sanguine (t1)], S:[]
-    [Step 17821] Exalted Orb Slam (Suffix: Attributes / Chaos Res): Slammed of the Cloud (+1.20c) -> P:[Powerful (t1), Sanguine (t1)], S:[of the Cloud (t3)]
-    [Step 17822] Orb of Annulment: Annul removed of the Cloud (Suffix) [Step 4 Cleanup] (+9.00c) -> P:[Powerful (t1), Sanguine (t1)], S:[]
-    [Step 17823] Exalted Orb Slam (Suffix: Attributes / Chaos Res): Slammed of the Mongoose (+1.20c) -> P:[Powerful (t1), Sanguine (t1)], S:[of the Mongoose (t3)]
-    [Step 17824] Orb of Annulment: Annul removed of the Mongoose (Suffix) [Step 4 Cleanup] (+9.00c) -> P:[Powerful (t1), Sanguine (t1)], S:[]
-    [Step 17825] Exalted Orb Slam (Suffix: Attributes / Chaos Res): Slammed of the Meteor (+1.20c) -> P:[Powerful (t1), Sanguine (t1)], S:[of the Meteor (t1)]
-    [Step 17826] Exalted Orb Slam (Suffix: +5% Chaos Resistance): Slammed of the Wrestler (+1.20c) -> P:[Powerful (t1), Sanguine (t1)], S:[of the Meteor (t1), of the Wrestler (t2)]
-    [Step 17827] Orb of Annulment: Annul removed Sanguine (Prefix) [Step 4 Cleanup] (+9.00c) -> P:[Powerful (t1)], S:[of the Meteor (t1), of the Wrestler (t2)]
-    [Step 17828] Harvest Reforge Life: Reforged item (guaranteed life: Feasting Fiends) (+5.77c) -> P:[Powerful (t1), Feasting Fiends (t1)], S:[Call to the Slaughter (t1), of the Penguin (t1)]
-    [Step 17829] Harvest Reforge Life: Reforged item (guaranteed life: Renewal) (+5.77c) -> P:[Powerful (t1), Renewal (t1)], S:[of the Brute (t3), of the Kaleidoscope (t1)]
-    [Step 17830] Harvest Reforge Life: Reforged item (guaranteed life: of the Newt) (+5.77c) -> P:[Powerful (t1)], S:[of the Newt (t3), of Eviction (t1)]
-    [Step 17831] Harvest Reforge Life: Reforged item (guaranteed life: of the Flatworm) (+5.77c) -> P:[Powerful (t1), Rotten Claws (t1)], S:[of the Flatworm (t1), of the Brute (t3)]
-    [Step 17832] Harvest Reforge Life: Reforged item (guaranteed life: Hale) (+5.77c) -> P:[Powerful (t1), Hale (t3)], S:[of the Brute (t3)]
-    [Step 17833] Harvest Reforge Life: Reforged item (guaranteed life: of the Flatworm) (+5.77c) -> P:[Powerful (t1), Shining (t3)], S:[of the Flatworm (t1), of the Storm (t1)]
-    [Step 17834] Harvest Reforge Life: Reforged item (guaranteed life: Feasting Fiends) (+5.77c) -> P:[Powerful (t1), Feasting Fiends (t1)], S:[of the Inuit (t3), of Joy (t2)]
-    [Step 17835] Harvest Reforge Life: Reforged item (guaranteed life: of the Flatworm) (+5.77c) -> P:[Powerful (t1)], S:[of the Flatworm (t1), of Joy (t2)]
-    [Step 17836] Harvest Reforge Life: Reforged item (guaranteed life: Feasting Fiends) (+5.77c) -> P:[Powerful (t1), Feasting Fiends (t1)], S:[of the Fox (t1)]
-    [Step 17837] Harvest Reforge Life: Reforged item (guaranteed life: Feasting Fiends) (+5.77c) -> P:[Powerful (t1), Feasting Fiends (t1)], S:[of the Pupil (t3)]
-    [Step 17838] Harvest Reforge Life: Reforged item (guaranteed life: of the Newt) (+5.77c) -> P:[Powerful (t1)], S:[of the Newt (t3), Call to the Slaughter (t1)]
-    [Step 17839] Harvest Reforge Life: Reforged item (guaranteed life: Feasting Fiends) (+5.77c) -> P:[Powerful (t1), Feasting Fiends (t1)], S:[of the Lost (t3)]
-    [Step 17840] Harvest Reforge Life: Reforged item (guaranteed life: Hale) (+5.77c) -> P:[Powerful (t1), Hale (t3)], S:[of the Mongoose (t3)]
-    [Step 17841] Harvest Reforge Life: Reforged item (guaranteed life: of the Flatworm) (+5.77c) -> P:[Powerful (t1)], S:[of the Flatworm (t1), of the Drake (t1)]
-    [Step 17842] Harvest Reforge Life: Reforged item (guaranteed life: Healthy) (+5.77c) -> P:[Powerful (t1), Healthy (t2)], S:[of the Lost (t3), of the Flatworm (t1)]
-    [Step 17843] Harvest Reforge Life: Reforged item (guaranteed life: Feasting Fiends) (+5.77c) -> P:[Powerful (t1), Feasting Fiends (t1)], S:[of the Seal (t2)]
-    [Step 17844] Harvest Reforge Life: Reforged item (guaranteed life: Feasting Fiends) (+5.77c) -> P:[Powerful (t1), Feasting Fiends (t1)], S:[of Joy (t2), of the Seal (t2)]
-    [Step 17845] Harvest Reforge Life: Reforged item (guaranteed life: of the Newt) (+5.77c) -> P:[Powerful (t1), Hale (t3)], S:[of the Newt (t3), Call to the Slaughter (t1)]
-    [Step 17846] Harvest Reforge Life: Reforged item (guaranteed life: Hale) (+5.77c) -> P:[Powerful (t1), Hale (t3)], S:[Call to the Slaughter (t1)]
-    [Step 17847] Harvest Reforge Life: Reforged item (guaranteed life: Renewal) (+5.77c) -> P:[Powerful (t1), Renewal (t1)], S:[of the Lost (t3)]
-    [Step 17848] Harvest Reforge Life: Reforged item (guaranteed life: Renewal) (+5.77c) -> P:[Powerful (t1), Renewal (t1)], S:[of the Lizard (t2)]
-    [Step 17849] Harvest Reforge Life: Reforged item (guaranteed life: Healthy) (+5.77c) -> P:[Powerful (t1), Healthy (t2)], S:[of the Pupil (t3), Call to the Slaughter (t1)]
-    [Step 17850] Harvest Reforge Life: Reforged item (guaranteed life: Feasting Fiends) (+5.77c) -> P:[Powerful (t1), Feasting Fiends (t1)], S:[of the Lizard (t2), of the Penguin (t1)]
-    [Step 17851] Harvest Reforge Life: Reforged item (guaranteed life: Feasting Fiends) (+5.77c) -> P:[Powerful (t1), Feasting Fiends (t1)], S:[of the Mongoose (t3)]
-    [Step 17852] Harvest Reforge Life: Reforged item (guaranteed life: of the Lizard) (+5.77c) -> P:[Powerful (t1)], S:[of the Lizard (t2), of the Pupil (t3)]
-    [Step 17853] Harvest Reforge Life: Reforged item (guaranteed life: of the Lizard) (+5.77c) -> P:[Powerful (t1), Renewal (t1)], S:[of the Lizard (t2)]
-    [Step 17854] Harvest Reforge Life: Reforged item (guaranteed life: Healthy) (+5.77c) -> P:[Powerful (t1), Healthy (t2)], S:[of the Seal (t2)]
-    [Step 17855] Harvest Reforge Life: Reforged item (guaranteed life: Feasting Fiends) (+5.77c) -> P:[Powerful (t1), Feasting Fiends (t1)], S:[of the Whelpling (t3), of the Sky (t2)]
-    [Step 17856] Harvest Reforge Life: Reforged item (guaranteed life: Sanguine) (+5.77c) -> P:[Powerful (t1), Sanguine (t1)], S:[Call to the Slaughter (t1), Added Small Passive Skills also grant: Minions have 3% increased Attack and Cast Speed (t1)]
-    [Step 17857] Orb of Annulment: Annul removed Call to the Slaughter (Suffix) [Step 3 Cleanup] (+9.00c) -> P:[Powerful (t1), Sanguine (t1)], S:[Added Small Passive Skills also grant: Minions have 3% increased Attack and Cast Speed (t1)]
-    [Step 17858] Orb of Annulment: Annul removed Added Small Passive Skills also grant: Minions have 3% increased Attack and Cast Speed (Suffix) [Step 3 Cleanup] (+9.00c) -> P:[Powerful (t1), Sanguine (t1)], S:[]
-    [Step 17859] Exalted Orb Slam (Suffix: Attributes / Chaos Res): Slammed Added Small Passive Skills also grant: Minions have 2% increased Attack and Cast Speed (+1.20c) -> P:[Powerful (t1), Sanguine (t1)], S:[Added Small Passive Skills also grant: Minions have 2% increased Attack and Cast Speed (t2)]
-    [Step 17860] Orb of Annulment: Annul removed Added Small Passive Skills also grant: Minions have 2% increased Attack and Cast Speed (Suffix) [Step 4 Cleanup] (+9.00c) -> P:[Powerful (t1), Sanguine (t1)], S:[]
-    [Step 17861] Exalted Orb Slam (Suffix: Attributes / Chaos Res): Slammed of the Prism (+1.20c) -> P:[Powerful (t1), Sanguine (t1)], S:[of the Prism (t2)]
-    [Step 17862] Orb of Annulment: Annul removed Sanguine (Prefix) [Step 4 Cleanup] (+9.00c) -> P:[Powerful (t1)], S:[of the Prism (t2)]
-    [Step 17863] Harvest Reforge Life: Reforged item (guaranteed life: Healthy) (+5.77c) -> P:[Powerful (t1), Healthy (t2)], S:[of Eviction (t1), of the Salamander (t2)]
-    [Step 17864] Harvest Reforge Life: Reforged item (guaranteed life: of the Lizard) (+5.77c) -> P:[Powerful (t1), Rotten Claws (t1)], S:[of the Lizard (t2), of the Penguin (t1)]
-    [Step 17865] Harvest Reforge Life: Reforged item (guaranteed life: Feasting Fiends) (+5.77c) -> P:[Powerful (t1), Feasting Fiends (t1)], S:[of the Pupil (t3)]
-    [Step 17866] Harvest Reforge Life: Reforged item (guaranteed life: Hale) (+5.77c) -> P:[Powerful (t1), Hale (t3)], S:[of the Lost (t3)]
-    [Step 17867] Harvest Reforge Life: Reforged item (guaranteed life: of the Newt) (+5.77c) -> P:[Powerful (t1), Rotten Claws (t1)], S:[of the Newt (t3), of the Bear (t1)]
-    [Step 17868] Harvest Reforge Life: Reforged item (guaranteed life: Feasting Fiends) (+5.77c) -> P:[Powerful (t1), Feasting Fiends (t1)], S:[of the Inuit (t3), Call to the Slaughter (t1)]
-    [Step 17869] Harvest Reforge Life: Reforged item (guaranteed life: Feasting Fiends) (+5.77c) -> P:[Powerful (t1), Feasting Fiends (t1)], S:[of the Prism (t2)]
-    [Step 17870] Harvest Reforge Life: Reforged item (guaranteed life: Primordial Bond) (+5.77c) -> P:[Powerful (t1)], S:[Primordial Bond (t1), of the Lizard (t2)]
-    [Step 17871] Harvest Reforge Life: Reforged item (guaranteed life: Healthy) (+5.77c) -> P:[Powerful (t1), Healthy (t2)], S:[Primordial Bond (t1), of the Prism (t2)]
-    [Step 17872] Harvest Reforge Life: Reforged item (guaranteed life: Renewal) (+5.77c) -> P:[Powerful (t1), Renewal (t1)], S:[of the Flatworm (t1)]
-    [Step 17873] Harvest Reforge Life: Reforged item (guaranteed life: Hale) (+5.77c) -> P:[Powerful (t1), Hale (t3)], S:[of Elation (t1), of the Newt (t3)]
-    [Step 17874] Harvest Reforge Life: Reforged item (guaranteed life: of the Flatworm) (+5.77c) -> P:[Powerful (t1), Hale (t3)], S:[of the Flatworm (t1), Call to the Slaughter (t1)]
-    [Step 17875] Harvest Reforge Life: Reforged item (guaranteed life: Healthy) (+5.77c) -> P:[Powerful (t1), Healthy (t2)], S:[of the Kaleidoscope (t1)]
-    [Step 17876] Harvest Reforge Life: Reforged item (guaranteed life: Sanguine) (+5.77c) -> P:[Powerful (t1), Sanguine (t1)], S:[of the Sky (t2)]
-    [Step 17877] Orb of Annulment: Annul removed of the Sky (Suffix) [Step 3 Cleanup] (+9.00c) -> P:[Powerful (t1), Sanguine (t1)], S:[]
-    [Step 17878] Exalted Orb Slam (Suffix: Attributes / Chaos Res): Slammed of the Penguin (+1.20c) -> P:[Powerful (t1), Sanguine (t1)], S:[of the Penguin (t1)]
-    [Step 17879] Orb of Annulment: Annul removed of the Penguin (Suffix) [Step 4 Cleanup] (+9.00c) -> P:[Powerful (t1), Sanguine (t1)], S:[]
-    [Step 17880] Exalted Orb Slam (Suffix: Attributes / Chaos Res): Slammed of the Drake (+1.20c) -> P:[Powerful (t1), Sanguine (t1)], S:[of the Drake (t1)]
-    [Step 17881] Orb of Annulment: Annul removed Sanguine (Prefix) [Step 4 Cleanup] (+9.00c) -> P:[Powerful (t1)], S:[of the Drake (t1)]
-    [Step 17882] Harvest Reforge Life: Reforged item (guaranteed life: of the Newt) (+5.77c) -> P:[Powerful (t1), Lacquered (t3)], S:[of the Newt (t3)]
-    [Step 17883] Harvest Reforge Life: Reforged item (guaranteed life: Primordial Bond) (+5.77c) -> P:[Powerful (t1)], S:[Primordial Bond (t1), Call to the Slaughter (t1)]
-    [Step 17884] Harvest Reforge Life: Reforged item (guaranteed life: of the Newt) (+5.77c) -> P:[Powerful (t1)], S:[of the Newt (t3), of the Cloud (t3)]
-    [Step 17885] Harvest Reforge Life: Reforged item (guaranteed life: of the Newt) (+5.77c) -> P:[Powerful (t1)], S:[of the Newt (t3), of Banishment (t2)]
-    [Step 17886] Harvest Reforge Life: Reforged item (guaranteed life: Feasting Fiends) (+5.77c) -> P:[Powerful (t1), Feasting Fiends (t1)], S:[of the Cloud (t3), of the Squall (t2)]
-    [Step 17887] Harvest Reforge Life: Reforged item (guaranteed life: Feasting Fiends) (+5.77c) -> P:[Powerful (t1), Feasting Fiends (t1)], S:[of the Prism (t2)]
-    [Step 17888] Harvest Reforge Life: Reforged item (guaranteed life: Healthy) (+5.77c) -> P:[Powerful (t1), Healthy (t2)], S:[of the Whelpling (t3), of the Penguin (t1)]
-    [Step 17889] Harvest Reforge Life: Reforged item (guaranteed life: Hale) (+5.77c) -> P:[Powerful (t1), Hale (t3)], S:[of the Crystal (t3)]
-    [Step 17890] Harvest Reforge Life: Reforged item (guaranteed life: Hale) (+5.77c) -> P:[Powerful (t1), Hale (t3)], S:[of the Fox (t1), of Elation (t1)]
-    [Step 17891] Harvest Reforge Life: Reforged item (guaranteed life: of the Lizard) (+5.77c) -> P:[Powerful (t1), Feasting Fiends (t1)], S:[of the Lizard (t2), of the Penguin (t1)]
-    [Step 17892] Harvest Reforge Life: Reforged item (guaranteed life: Primordial Bond) (+5.77c) -> P:[Powerful (t1)], S:[Primordial Bond (t1), of the Lynx (t2)]
-    [Step 17893] Harvest Reforge Life: Reforged item (guaranteed life: Renewal) (+5.77c) -> P:[Powerful (t1), Renewal (t1)], S:[Primordial Bond (t1)]
-    [Step 17894] Harvest Reforge Life: Reforged item (guaranteed life: Feasting Fiends) (+5.77c) -> P:[Powerful (t1), Feasting Fiends (t1)], S:[of the Flatworm (t1), of the Seal (t2)]
-    [Step 17895] Harvest Reforge Life: Reforged item (guaranteed life: Feasting Fiends) (+5.77c) -> P:[Powerful (t1), Feasting Fiends (t1)], S:[of the Crystal (t3)]
-    [Step 17896] Harvest Reforge Life: Reforged item (guaranteed life: Feasting Fiends) (+5.77c) -> P:[Powerful (t1), Feasting Fiends (t1)], S:[of the Newt (t3)]
-    [Step 17897] Harvest Reforge Life: Reforged item (guaranteed life: of the Lizard) (+5.77c) -> P:[Powerful (t1)], S:[of the Lizard (t2), of Joy (t2)]
-    [Step 17898] Harvest Reforge Life: Reforged item (guaranteed life: Feasting Fiends) (+5.77c) -> P:[Powerful (t1), Feasting Fiends (t1)], S:[of the Flatworm (t1)]
-    [Step 17899] Harvest Reforge Life: Reforged item (guaranteed life: Feasting Fiends) (+5.77c) -> P:[Powerful (t1), Feasting Fiends (t1)], S:[of Banishment (t2), of the Salamander (t2)]
-    [Step 17900] Harvest Reforge Life: Reforged item (guaranteed life: Hale) (+5.77c) -> P:[Powerful (t1), Hale (t3)], S:[of Joy (t2)]
-    [Step 17901] Harvest Reforge Life: Reforged item (guaranteed life: Feasting Fiends) (+5.77c) -> P:[Powerful (t1), Feasting Fiends (t1)], S:[of Excitement (t3), of the Pupil (t3)]
-    [Step 17902] Harvest Reforge Life: Reforged item (guaranteed life: Renewal) (+5.77c) -> P:[Powerful (t1), Renewal (t1)], S:[of the Storm (t1)]
-    [Step 17903] Harvest Reforge Life: Reforged item (guaranteed life: Feasting Fiends) (+5.77c) -> P:[Powerful (t1), Feasting Fiends (t1)], S:[of the Bear (t1), Added Small Passive Skills also grant: Minions have 1% increased Attack and Cast Speed (t3)]
-    [Step 17904] Harvest Reforge Life: Reforged item (guaranteed life: Sanguine) (+5.77c) -> P:[Powerful (t1), Sanguine (t1)], S:[of the Storm (t1), of the Wrestler (t2)]
-    [Step 17905] Orb of Annulment: Annul removed of the Wrestler (Suffix) [Step 3 Cleanup] (+9.00c) -> P:[Powerful (t1), Sanguine (t1)], S:[of the Storm (t1)]
-    [Step 17906] Orb of Annulment: Annul removed of the Storm (Suffix) [Step 3 Cleanup] (+9.00c) -> P:[Powerful (t1), Sanguine (t1)], S:[]
-    [Step 17907] Exalted Orb Slam (Suffix: Attributes / Chaos Res): Slammed of Eviction (+1.20c) -> P:[Powerful (t1), Sanguine (t1)], S:[of Eviction (t1)]
-    [Step 17908] Exalted Orb Slam (Suffix: +4 All Attributes): Slammed of the Mongoose (+1.20c) -> P:[Powerful (t1), Sanguine (t1)], S:[of Eviction (t1), of the Mongoose (t3)]
-    [Step 17909] Orb of Annulment: Annul removed of the Mongoose (Suffix) [Step 4 Cleanup] (+9.00c) -> P:[Powerful (t1), Sanguine (t1)], S:[of Eviction (t1)]
-    [Step 17910] Exalted Orb Slam (Suffix: +4 All Attributes): Slammed of the Flatworm (+1.20c) -> P:[Powerful (t1), Sanguine (t1)], S:[of Eviction (t1), of the Flatworm (t1)]
-    [Step 17911] Orb of Annulment: Annul removed of Eviction (Suffix) [Step 4 Cleanup] (+9.00c) -> P:[Powerful (t1), Sanguine (t1)], S:[of the Flatworm (t1)]
-    [Step 17912] Orb of Annulment: Annul removed of the Flatworm (Suffix) [Step 4 Cleanup] (+9.00c) -> P:[Powerful (t1), Sanguine (t1)], S:[]
-    [Step 17913] Exalted Orb Slam (Suffix: Attributes / Chaos Res): Slammed of the Sky (+1.20c) -> P:[Powerful (t1), Sanguine (t1)], S:[of the Sky (t2)]
-    [Step 17914] Orb of Annulment: Annul removed Sanguine (Prefix) [Step 4 Cleanup] (+9.00c) -> P:[Powerful (t1)], S:[of the Sky (t2)]
-    [Step 17915] Harvest Reforge Life: Reforged item (guaranteed life: Hale) (+5.77c) -> P:[Powerful (t1), Hale (t3)], S:[of the Student (t2)]
-    [Step 17916] Harvest Reforge Life: Reforged item (guaranteed life: Feasting Fiends) (+5.77c) -> P:[Powerful (t1), Feasting Fiends (t1)], S:[of the Student (t2), of Elation (t1)]
-    [Step 17917] Harvest Reforge Life: Reforged item (guaranteed life: Healthy) (+5.77c) -> P:[Powerful (t1), Healthy (t2)], S:[Call to the Slaughter (t1), of the Crystal (t3)]
-    [Step 17918] Harvest Reforge Life: Reforged item (guaranteed life: Feasting Fiends) (+5.77c) -> P:[Powerful (t1), Feasting Fiends (t1)], S:[of the Squall (t2)]
-    [Step 17919] Harvest Reforge Life: Reforged item (guaranteed life: Renewal) (+5.77c) -> P:[Powerful (t1), Renewal (t1)], S:[of the Prism (t2)]
-    [Step 17920] Harvest Reforge Life: Reforged item (guaranteed life: Sanguine) (+5.77c) -> P:[Powerful (t1), Sanguine (t1)], S:[Call to the Slaughter (t1), of the Bear (t1)]
-    [Step 17921] Orb of Annulment: Annul removed Call to the Slaughter (Suffix) [Step 3 Cleanup] (+9.00c) -> P:[Powerful (t1), Sanguine (t1)], S:[of the Bear (t1)]
-    [Step 17922] Orb of Annulment: Annul removed of the Bear (Suffix) [Step 3 Cleanup] (+9.00c) -> P:[Powerful (t1), Sanguine (t1)], S:[]
-    [Step 17923] Exalted Orb Slam (Suffix: Attributes / Chaos Res): Slammed Added Small Passive Skills also grant: Minions have 2% increased Attack and Cast Speed (+1.20c) -> P:[Powerful (t1), Sanguine (t1)], S:[Added Small Passive Skills also grant: Minions have 2% increased Attack and Cast Speed (t2)]
-    [Step 17924] Orb of Annulment: Annul removed Sanguine (Prefix) [Step 4 Cleanup] (+9.00c) -> P:[Powerful (t1)], S:[Added Small Passive Skills also grant: Minions have 2% increased Attack and Cast Speed (t2)]
-    [Step 17925] Harvest Reforge Life: Reforged item (guaranteed life: Hale) (+5.77c) -> P:[Powerful (t1), Hale (t3)], S:[of Joy (t2), of the Whelpling (t3)]
-    [Step 17926] Harvest Reforge Life: Reforged item (guaranteed life: of the Lizard) (+5.77c) -> P:[Powerful (t1)], S:[of the Lizard (t2), of the Cloud (t3)]
-    [Step 17927] Harvest Reforge Life: Reforged item (guaranteed life: Feasting Fiends) (+5.77c) -> P:[Powerful (t1), Feasting Fiends (t1)], S:[of the Student (t2), Added Small Passive Skills also grant: Minions have 3% increased Attack and Cast Speed (t1)]
-    [Step 17928] Harvest Reforge Life: Reforged item (guaranteed life: Renewal) (+5.77c) -> P:[Powerful (t1), Renewal (t1)], S:[Added Small Passive Skills also grant: Minions have 1% increased Attack and Cast Speed (t3)]
-    [Step 17929] Harvest Reforge Life: Reforged item (guaranteed life: Hale) (+5.77c) -> P:[Powerful (t1), Hale (t3)], S:[of the Pupil (t3), of the Newt (t3)]
-    [Step 17930] Harvest Reforge Life: Reforged item (guaranteed life: Feasting Fiends) (+5.77c) -> P:[Powerful (t1), Feasting Fiends (t1)], S:[of the Crystal (t3)]
-    [Step 17931] Harvest Reforge Life: Reforged item (guaranteed life: of the Lizard) (+5.77c) -> P:[Powerful (t1), Healthy (t2)], S:[of the Lizard (t2)]
-    [Step 17932] Harvest Reforge Life: Reforged item (guaranteed life: of the Newt) (+5.77c) -> P:[Powerful (t1), Ribbed (t1)], S:[of the Newt (t3), of the Lost (t3)]
-    [Step 17933] Harvest Reforge Life: Reforged item (guaranteed life: of the Newt) (+5.77c) -> P:[Powerful (t1)], S:[of the Newt (t3), of Eviction (t1)]
-    [Step 17934] Harvest Reforge Life: Reforged item (guaranteed life: Healthy) (+5.77c) -> P:[Powerful (t1), Healthy (t2)], S:[of the Meteor (t1)]
-    [Step 17935] Harvest Reforge Life: Reforged item (guaranteed life: Feasting Fiends) (+5.77c) -> P:[Powerful (t1), Feasting Fiends (t1)], S:[of Excitement (t3), of the Student (t2)]
-    [Step 17936] Harvest Reforge Life: Reforged item (guaranteed life: Hale) (+5.77c) -> P:[Powerful (t1), Hale (t3)], S:[of the Mongoose (t3)]
-    [Step 17937] Harvest Reforge Life: Reforged item (guaranteed life: Hale) (+5.77c) -> P:[Powerful (t1), Hale (t3)], S:[Call to the Slaughter (t1)]
-    [Step 17938] Harvest Reforge Life: Reforged item (guaranteed life: Feasting Fiends) (+5.77c) -> P:[Powerful (t1), Feasting Fiends (t1)], S:[of the Cloud (t3)]
-    [Step 17939] Harvest Reforge Life: Reforged item (guaranteed life: of the Newt) (+5.77c) -> P:[Powerful (t1)], S:[of the Newt (t3), Added Small Passive Skills also grant: Minions have 3% increased Attack and Cast Speed (t1)]
-    [Step 17940] Harvest Reforge Life: Reforged item (guaranteed life: Feasting Fiends) (+5.77c) -> P:[Powerful (t1), Feasting Fiends (t1)], S:[of the Brute (t3)]
-    [Step 17941] Harvest Reforge Life: Reforged item (guaranteed life: Hale) (+5.77c) -> P:[Powerful (t1), Hale (t3)], S:[of the Cloud (t3)]
-    [Step 17942] Harvest Reforge Life: Reforged item (guaranteed life: Renewal) (+5.77c) -> P:[Powerful (t1), Renewal (t1)], S:[Call to the Slaughter (t1), of the Whelpling (t3)]
-    [Step 17943] Harvest Reforge Life: Reforged item (guaranteed life: of the Newt) (+5.77c) -> P:[Powerful (t1)], S:[of the Newt (t3), of the Brute (t3)]
-    [Step 17944] Harvest Reforge Life: Reforged item (guaranteed life: of the Flatworm) (+5.77c) -> P:[Powerful (t1), Rotten Claws (t1)], S:[of the Flatworm (t1), of Elation (t1)]
-    [Step 17945] Harvest Reforge Life: Reforged item (guaranteed life: of the Flatworm) (+5.77c) -> P:[Powerful (t1), Beryl (t3)], S:[of the Flatworm (t1), of the Inuit (t3)]
-    [Step 17946] Harvest Reforge Life: Reforged item (guaranteed life: of the Newt) (+5.77c) -> P:[Powerful (t1), Azure (t1)], S:[of the Newt (t3), Call to the Slaughter (t1)]
-    [Step 17947] Harvest Reforge Life: Reforged item (guaranteed life: Healthy) (+5.77c) -> P:[Powerful (t1), Healthy (t2)], S:[of the Cloud (t3)]
-    [Step 17948] Harvest Reforge Life: Reforged item (guaranteed life: Hale) (+5.77c) -> P:[Powerful (t1), Hale (t3)], S:[of the Student (t2), of the Lost (t3)]
-    [Step 17949] Harvest Reforge Life: Reforged item (guaranteed life: Hale) (+5.77c) -> P:[Powerful (t1), Hale (t3)], S:[Call to the Slaughter (t1)]
-    [Step 17950] Harvest Reforge Life: Reforged item (guaranteed life: Hale) (+5.77c) -> P:[Powerful (t1), Hale (t3)], S:[of the Wrestler (t2), of the Mongoose (t3)]
-    [Step 17951] Harvest Reforge Life: Reforged item (guaranteed life: Renewal) (+5.77c) -> P:[Powerful (t1), Renewal (t1)], S:[of the Student (t2), of Banishment (t2)]
-    [Step 17952] Harvest Reforge Life: Reforged item (guaranteed life: Hale) (+5.77c) -> P:[Powerful (t1), Hale (t3)], S:[of the Lost (t3)]
-    [Step 17953] Harvest Reforge Life: Reforged item (guaranteed life: of the Newt) (+5.77c) -> P:[Powerful (t1)], S:[of the Newt (t3), of Eviction (t1)]
-    [Step 17954] Harvest Reforge Life: Reforged item (guaranteed life: Feasting Fiends) (+5.77c) -> P:[Powerful (t1), Feasting Fiends (t1)], S:[Call to the Slaughter (t1), Added Small Passive Skills also grant: Minions have 1% increased Attack and Cast Speed (t3)]
-    [Step 17955] Harvest Reforge Life: Reforged item (guaranteed life: Renewal) (+5.77c) -> P:[Powerful (t1), Renewal (t1)], S:[of the Lost (t3)]
-    [Step 17956] Harvest Reforge Life: Reforged item (guaranteed life: Feasting Fiends) (+5.77c) -> P:[Powerful (t1), Feasting Fiends (t1)], S:[of the Cloud (t3)]
-    [Step 17957] Harvest Reforge Life: Reforged item (guaranteed life: of the Newt) (+5.77c) -> P:[Powerful (t1), Renewal (t1)], S:[of the Newt (t3)]
-    [Step 17958] Harvest Reforge Life: Reforged item (guaranteed life: Feasting Fiends) (+5.77c) -> P:[Powerful (t1), Feasting Fiends (t1)], S:[of the Sky (t2), of the Lizard (t2)]
-    [Step 17959] Harvest Reforge Life: Reforged item (guaranteed life: of the Lizard) (+5.77c) -> P:[Powerful (t1), Dangerous (t1)], S:[of the Lizard (t2), of the Student (t2)]
-    [Step 17960] Harvest Reforge Life: Reforged item (guaranteed life: Feasting Fiends) (+5.77c) -> P:[Powerful (t1), Feasting Fiends (t1)], S:[of the Newt (t3), Call to the Slaughter (t1)]
-    [Step 17961] Harvest Reforge Life: Reforged item (guaranteed life: Feasting Fiends) (+5.77c) -> P:[Powerful (t1), Feasting Fiends (t1)], S:[of the Fox (t1)]
-    [Step 17962] Harvest Reforge Life: Reforged item (guaranteed life: Renewal) (+5.77c) -> P:[Powerful (t1), Renewal (t1)], S:[of Excitement (t3), of the Mongoose (t3)]
-    [Step 17963] Harvest Reforge Life: Reforged item (guaranteed life: Healthy) (+5.77c) -> P:[Powerful (t1), Healthy (t2)], S:[of the Inuit (t3)]
-    [Step 17964] Harvest Reforge Life: Reforged item (guaranteed life: Sanguine) (+5.77c) -> P:[Powerful (t1), Sanguine (t1)], S:[of the Lizard (t2)]
-    [Step 17965] Orb of Annulment: Annul removed Sanguine (Prefix) [Step 3 Cleanup] (+9.00c) -> P:[Powerful (t1)], S:[of the Lizard (t2)]
-    [Step 17966] Harvest Reforge Life: Reforged item (guaranteed life: Renewal) (+5.77c) -> P:[Powerful (t1), Renewal (t1)], S:[of the Brute (t3)]
-    [Step 17967] Harvest Reforge Life: Reforged item (guaranteed life: Renewal) (+5.77c) -> P:[Powerful (t1), Renewal (t1)], S:[Added Small Passive Skills also grant: Minions have 2% increased Attack and Cast Speed (t2), Call to the Slaughter (t1)]
-    [Step 17968] Harvest Reforge Life: Reforged item (guaranteed life: Sanguine) (+5.77c) -> P:[Powerful (t1), Sanguine (t1)], S:[of the Whelpling (t3)]
-    [Step 17969] Orb of Annulment: Annul removed Sanguine (Prefix) [Step 3 Cleanup] (+9.00c) -> P:[Powerful (t1)], S:[of the Whelpling (t3)]
-    [Step 17970] Harvest Reforge Life: Reforged item (guaranteed life: of the Flatworm) (+5.77c) -> P:[Powerful (t1), Harmful (t3)], S:[of the Flatworm (t1), of the Student (t2)]
-    [Step 17971] Harvest Reforge Life: Reforged item (guaranteed life: of the Lizard) (+5.77c) -> P:[Powerful (t1), Feasting Fiends (t1)], S:[of the Lizard (t2), of the Bear (t1)]
-    [Step 17972] Harvest Reforge Life: Reforged item (guaranteed life: Healthy) (+5.77c) -> P:[Powerful (t1), Healthy (t2)], S:[of the Whelpling (t3), Call to the Slaughter (t1)]
-    [Step 17973] Harvest Reforge Life: Reforged item (guaranteed life: Primordial Bond) (+5.77c) -> P:[Powerful (t1)], S:[Primordial Bond (t1), of the Penguin (t1)]
-    [Step 17974] Harvest Reforge Life: Reforged item (guaranteed life: Renewal) (+5.77c) -> P:[Powerful (t1), Renewal (t1)], S:[of the Kaleidoscope (t1), of the Newt (t3)]
-    [Step 17975] Harvest Reforge Life: Reforged item (guaranteed life: Primordial Bond) (+5.77c) -> P:[Powerful (t1)], S:[Primordial Bond (t1), of the Kaleidoscope (t1)]
-    [Step 17976] Harvest Reforge Life: Reforged item (guaranteed life: of the Flatworm) (+5.77c) -> P:[Powerful (t1), Lacquered (t3)], S:[of the Flatworm (t1), of the Brute (t3)]
-    [Step 17977] Harvest Reforge Life: Reforged item (guaranteed life: Primordial Bond) (+5.77c) -> P:[Powerful (t1), Agile (t3)], S:[Primordial Bond (t1), Added Small Passive Skills also grant: Minions have 1% increased Attack and Cast Speed (t3)]
-    [Step 17978] Harvest Reforge Life: Reforged item (guaranteed life: Feasting Fiends) (+5.77c) -> P:[Powerful (t1), Feasting Fiends (t1)], S:[of Joy (t2)]
-    [Step 17979] Harvest Reforge Life: Reforged item (guaranteed life: of the Newt) (+5.77c) -> P:[Powerful (t1), Healthy (t2)], S:[of the Newt (t3), of the Storm (t1)]
-    [Step 17980] Harvest Reforge Life: Reforged item (guaranteed life: Primordial Bond) (+5.77c) -> P:[Powerful (t1), Feasting Fiends (t1)], S:[Primordial Bond (t1), of the Salamander (t2)]
-    [Step 17981] Harvest Reforge Life: Reforged item (guaranteed life: Healthy) (+5.77c) -> P:[Powerful (t1), Healthy (t2)], S:[Call to the Slaughter (t1)]
-    [Step 17982] Harvest Reforge Life: Reforged item (guaranteed life: Sanguine) (+5.77c) -> P:[Powerful (t1), Sanguine (t1)], S:[of the Sky (t2)]
-    [Step 17983] Orb of Annulment: Annul removed of the Sky (Suffix) [Step 3 Cleanup] (+9.00c) -> P:[Powerful (t1), Sanguine (t1)], S:[]
-    [Step 17984] Exalted Orb Slam (Suffix: Attributes / Chaos Res): Slammed of the Meteor (+1.20c) -> P:[Powerful (t1), Sanguine (t1)], S:[of the Meteor (t1)]
-    [Step 17985] Exalted Orb Slam (Suffix: +5% Chaos Resistance): Slammed of Eviction (+1.20c) -> P:[Powerful (t1), Sanguine (t1)], S:[of the Meteor (t1), of Eviction (t1)]
+    [Step 263] Harvest Reforge Life: Reforged item (guaranteed life: Feasting Fiends) (+5.77c) -> P:[Powerful (t1), Feasting Fiends (t1)], S:[of the Newt (t3), of the Penguin (t1)]
+    [Step 264] Harvest Reforge Life: Reforged item (guaranteed life: Hale) (+5.77c) -> P:[Powerful (t1), Hale (t3)], S:[of the Brute (t3)]
+    [Step 265] Harvest Reforge Life: Reforged item (guaranteed life: Renewal) (+5.77c) -> P:[Powerful (t1), Renewal (t1)], S:[Call to the Slaughter (t1), of Eviction (t1)]
+    [Step 266] Harvest Reforge Life: Reforged item (guaranteed life: Feasting Fiends) (+5.77c) -> P:[Powerful (t1), Feasting Fiends (t1)], S:[of the Pupil (t3), of the Kaleidoscope (t1)]
+    [Step 267] Harvest Reforge Life: Reforged item (guaranteed life: Hale) (+5.77c) -> P:[Powerful (t1), Hale (t3)], S:[of the Fox (t1), of the Crystal (t3)]
+    [Step 268] Harvest Reforge Life: Reforged item (guaranteed life: Hale) (+5.77c) -> P:[Powerful (t1), Hale (t3)], S:[of the Lizard (t2)]
+    [Step 269] Harvest Reforge Life: Reforged item (guaranteed life: Renewal) (+5.77c) -> P:[Powerful (t1), Renewal (t1)], S:[of the Cloud (t3), of Joy (t2)]
+    [Step 270] Harvest Reforge Life: Reforged item (guaranteed life: of the Flatworm) (+5.77c) -> P:[Powerful (t1), Rotten Claws (t1)], S:[of the Flatworm (t1), of Joy (t2)]
+    [Step 271] Harvest Reforge Life: Reforged item (guaranteed life: Feasting Fiends) (+5.77c) -> P:[Powerful (t1), Feasting Fiends (t1)], S:[of the Sky (t2), of the Inuit (t3)]
+    [Step 272] Harvest Reforge Life: Reforged item (guaranteed life: of the Lizard) (+5.77c) -> P:[Powerful (t1), Cobalt (t2)], S:[of the Lizard (t2), of the Lynx (t2)]
+    [Step 273] Harvest Reforge Life: Reforged item (guaranteed life: Renewal) (+5.77c) -> P:[Powerful (t1), Renewal (t1)], S:[of the Kaleidoscope (t1)]
+    [Step 274] Harvest Reforge Life: Reforged item (guaranteed life: Healthy) (+5.77c) -> P:[Powerful (t1), Healthy (t2)], S:[of Joy (t2), of the Whelpling (t3)]
+    [Step 275] Harvest Reforge Life: Reforged item (guaranteed life: Feasting Fiends) (+5.77c) -> P:[Powerful (t1), Feasting Fiends (t1)], S:[of the Whelpling (t3), of Excitement (t3)]
+    [Step 276] Harvest Reforge Life: Reforged item (guaranteed life: Sanguine) (+5.77c) -> P:[Powerful (t1), Sanguine (t1)], S:[of Joy (t2), Added Small Passive Skills also grant: Minions have 1% increased Attack and Cast Speed (t3)]
+    [Step 277] Orb of Annulment: Annul removed Sanguine (Prefix) [Step 3 Cleanup] (+9.00c) -> P:[Powerful (t1)], S:[of Joy (t2), Added Small Passive Skills also grant: Minions have 1% increased Attack and Cast Speed (t3)]
+    [Step 278] Harvest Reforge Life: Reforged item (guaranteed life: Feasting Fiends) (+5.77c) -> P:[Powerful (t1), Feasting Fiends (t1)], S:[of the Student (t2), of the Lost (t3)]
+    [Step 279] Harvest Reforge Life: Reforged item (guaranteed life: Healthy) (+5.77c) -> P:[Powerful (t1), Healthy (t2)], S:[Call to the Slaughter (t1), of the Mongoose (t3)]
+    [Step 280] Harvest Reforge Life: Reforged item (guaranteed life: Hale) (+5.77c) -> P:[Powerful (t1), Hale (t3)], S:[of Banishment (t2)]
+    [Step 281] Harvest Reforge Life: Reforged item (guaranteed life: Hale) (+5.77c) -> P:[Powerful (t1), Hale (t3)], S:[Call to the Slaughter (t1)]
+    [Step 282] Harvest Reforge Life: Reforged item (guaranteed life: Healthy) (+5.77c) -> P:[Powerful (t1), Healthy (t2)], S:[of the Inuit (t3), of the Bear (t1)]
+    [Step 283] Harvest Reforge Life: Reforged item (guaranteed life: Renewal) (+5.77c) -> P:[Powerful (t1), Renewal (t1)], S:[of the Wrestler (t2)]
+    [Step 284] Harvest Reforge Life: Reforged item (guaranteed life: Primordial Bond) (+5.77c) -> P:[Powerful (t1), Rotten Claws (t1)], S:[Primordial Bond (t1)]
+    [Step 285] Harvest Reforge Life: Reforged item (guaranteed life: Primordial Bond) (+5.77c) -> P:[Powerful (t1), Harmful (t3)], S:[Primordial Bond (t1), of the Newt (t3)]
+    [Step 286] Harvest Reforge Life: Reforged item (guaranteed life: of the Lizard) (+5.77c) -> P:[Powerful (t1), Hale (t3)], S:[of the Lizard (t2), of the Whelpling (t3)]
+    [Step 287] Harvest Reforge Life: Reforged item (guaranteed life: of the Newt) (+5.77c) -> P:[Powerful (t1), Dancer's (t2)], S:[of the Newt (t3), of the Whelpling (t3)]
+    [Step 288] Harvest Reforge Life: Reforged item (guaranteed life: Hale) (+5.77c) -> P:[Powerful (t1), Hale (t3)], S:[Call to the Slaughter (t1)]
+    [Step 289] Harvest Reforge Life: Reforged item (guaranteed life: Renewal) (+5.77c) -> P:[Powerful (t1), Renewal (t1)], S:[of Banishment (t2), of the Mongoose (t3)]
+    [Step 290] Harvest Reforge Life: Reforged item (guaranteed life: Feasting Fiends) (+5.77c) -> P:[Powerful (t1), Feasting Fiends (t1)], S:[Call to the Slaughter (t1)]
+    [Step 291] Harvest Reforge Life: Reforged item (guaranteed life: Renewal) (+5.77c) -> P:[Powerful (t1), Renewal (t1)], S:[Added Small Passive Skills also grant: Minions have 3% increased Attack and Cast Speed (t1)]
+    [Step 292] Harvest Reforge Life: Reforged item (guaranteed life: of the Lizard) (+5.77c) -> P:[Powerful (t1), Acrobat's (t1)], S:[of the Lizard (t2), of the Drake (t1)]
+    [Step 293] Harvest Reforge Life: Reforged item (guaranteed life: Hale) (+5.77c) -> P:[Powerful (t1), Hale (t3)], S:[of the Crystal (t3)]
+    [Step 294] Harvest Reforge Life: Reforged item (guaranteed life: of the Lizard) (+5.77c) -> P:[Powerful (t1)], S:[of the Lizard (t2), of the Wrestler (t2)]
+    [Step 295] Harvest Reforge Life: Reforged item (guaranteed life: Primordial Bond) (+5.77c) -> P:[Powerful (t1), Hale (t3)], S:[Primordial Bond (t1), of Banishment (t2)]
+    [Step 296] Harvest Reforge Life: Reforged item (guaranteed life: Primordial Bond) (+5.77c) -> P:[Powerful (t1), Cobalt (t2)], S:[Primordial Bond (t1), of the Mongoose (t3)]
+    [Step 297] Harvest Reforge Life: Reforged item (guaranteed life: Feasting Fiends) (+5.77c) -> P:[Powerful (t1), Feasting Fiends (t1)], S:[of Eviction (t1)]
+    [Step 298] Harvest Reforge Life: Reforged item (guaranteed life: of the Lizard) (+5.77c) -> P:[Powerful (t1), Agile (t3)], S:[of the Lizard (t2), of the Crystal (t3)]
+    [Step 299] Harvest Reforge Life: Reforged item (guaranteed life: Feasting Fiends) (+5.77c) -> P:[Powerful (t1), Feasting Fiends (t1)], S:[of the Mongoose (t3), of the Meteor (t1)]
+    [Step 300] Harvest Reforge Life: Reforged item (guaranteed life: of the Newt) (+5.77c) -> P:[Powerful (t1)], S:[of the Newt (t3), of the Seal (t2)]
+    [Step 301] Harvest Reforge Life: Reforged item (guaranteed life: Hale) (+5.77c) -> P:[Powerful (t1), Hale (t3)], S:[of the Cloud (t3)]
+    [Step 302] Harvest Reforge Life: Reforged item (guaranteed life: Feasting Fiends) (+5.77c) -> P:[Powerful (t1), Feasting Fiends (t1)], S:[of Eviction (t1), of the Pupil (t3)]
+    [Step 303] Harvest Reforge Life: Reforged item (guaranteed life: Feasting Fiends) (+5.77c) -> P:[Powerful (t1), Feasting Fiends (t1)], S:[of the Inuit (t3)]
+    [Step 304] Harvest Reforge Life: Reforged item (guaranteed life: Feasting Fiends) (+5.77c) -> P:[Powerful (t1), Feasting Fiends (t1)], S:[of the Bear (t1)]
+    [Step 305] Harvest Reforge Life: Reforged item (guaranteed life: Hale) (+5.77c) -> P:[Powerful (t1), Hale (t3)], S:[of Excitement (t3), of the Salamander (t2)]
+    [Step 306] Harvest Reforge Life: Reforged item (guaranteed life: of the Flatworm) (+5.77c) -> P:[Powerful (t1)], S:[of the Flatworm (t1), of Eviction (t1)]
+    [Step 307] Harvest Reforge Life: Reforged item (guaranteed life: of the Newt) (+5.77c) -> P:[Powerful (t1), Hazardous (t2)], S:[of the Newt (t3), of the Meteor (t1)]
+    [Step 308] Harvest Reforge Life: Reforged item (guaranteed life: of the Flatworm) (+5.77c) -> P:[Powerful (t1)], S:[of the Flatworm (t1), Added Small Passive Skills also grant: Minions have 1% increased Attack and Cast Speed (t3)]
+    [Step 309] Harvest Reforge Life: Reforged item (guaranteed life: Healthy) (+5.77c) -> P:[Powerful (t1), Healthy (t2)], S:[of the Lizard (t2)]
+    [Step 310] Harvest Reforge Life: Reforged item (guaranteed life: Feasting Fiends) (+5.77c) -> P:[Powerful (t1), Feasting Fiends (t1)], S:[of the Cloud (t3), of the Pupil (t3)]
+    [Step 311] Harvest Reforge Life: Reforged item (guaranteed life: Feasting Fiends) (+5.77c) -> P:[Powerful (t1), Feasting Fiends (t1)], S:[of the Inuit (t3)]
+    [Step 312] Harvest Reforge Life: Reforged item (guaranteed life: Renewal) (+5.77c) -> P:[Powerful (t1), Renewal (t1)], S:[Vicious Bite (t1), Call to the Slaughter (t1)]
+    [Step 313] Harvest Reforge Life: Reforged item (guaranteed life: Feasting Fiends) (+5.77c) -> P:[Powerful (t1), Feasting Fiends (t1)], S:[of Joy (t2)]
+    [Step 314] Harvest Reforge Life: Reforged item (guaranteed life: Sanguine) (+5.77c) -> P:[Powerful (t1), Sanguine (t1)], S:[of Eviction (t1)]
+    [Step 315] Exalted Orb Slam (Suffix: of the Meteor / of Eviction): Slammed of the Whelpling (+1.20c) -> P:[Powerful (t1), Sanguine (t1)], S:[of Eviction (t1), of the Whelpling (t3)]
+    [Step 316] Orb of Annulment: Annul removed of the Whelpling (Suffix) [Step 4 Cleanup] (+9.00c) -> P:[Powerful (t1), Sanguine (t1)], S:[of Eviction (t1)]
+    [Step 317] Exalted Orb Slam (Suffix: of the Meteor / of Eviction): Slammed of the Crystal (+1.20c) -> P:[Powerful (t1), Sanguine (t1)], S:[of Eviction (t1), of the Crystal (t3)]
+    [Step 318] Orb of Annulment: Annul removed of Eviction (Suffix) [Step 4 Cleanup] (+9.00c) -> P:[Powerful (t1), Sanguine (t1)], S:[of the Crystal (t3)]
+    [Step 319] Orb of Annulment: Annul removed of the Crystal (Suffix) [Step 4 Cleanup] (+9.00c) -> P:[Powerful (t1), Sanguine (t1)], S:[]
+    [Step 320] Exalted Orb Slam (Suffix: of the Meteor / of Eviction): Slammed of the Pupil (+1.20c) -> P:[Powerful (t1), Sanguine (t1)], S:[of the Pupil (t3)]
+    [Step 321] Orb of Annulment: Annul removed Sanguine (Prefix) [Step 4 Cleanup] (+9.00c) -> P:[Powerful (t1)], S:[of the Pupil (t3)]
+    [Step 322] Harvest Reforge Life: Reforged item (guaranteed life: Sanguine) (+5.77c) -> P:[Powerful (t1), Sanguine (t1)], S:[of the Pupil (t3)]
+    [Step 323] Orb of Annulment: Annul removed Sanguine (Prefix) [Step 3 Cleanup] (+9.00c) -> P:[Powerful (t1)], S:[of the Pupil (t3)]
+    [Step 324] Harvest Reforge Life: Reforged item (guaranteed life: of the Newt) (+5.77c) -> P:[Powerful (t1), Shining (t3)], S:[of the Newt (t3), of the Lost (t3)]
+    [Step 325] Harvest Reforge Life: Reforged item (guaranteed life: Renewal) (+5.77c) -> P:[Powerful (t1), Renewal (t1)], S:[of the Squall (t2), of the Wrestler (t2)]
+    [Step 326] Harvest Reforge Life: Reforged item (guaranteed life: Feasting Fiends) (+5.77c) -> P:[Powerful (t1), Feasting Fiends (t1)], S:[of the Sky (t2), Call to the Slaughter (t1)]
+    [Step 327] Harvest Reforge Life: Reforged item (guaranteed life: Healthy) (+5.77c) -> P:[Powerful (t1), Healthy (t2)], S:[of the Prodigy (t1)]
+    [Step 328] Harvest Reforge Life: Reforged item (guaranteed life: Sanguine) (+5.77c) -> P:[Powerful (t1), Sanguine (t1)], S:[of the Crystal (t3), of the Lynx (t2)]
+    [Step 329] Orb of Annulment: Annul removed of the Lynx (Suffix) [Step 3 Cleanup] (+9.00c) -> P:[Powerful (t1), Sanguine (t1)], S:[of the Crystal (t3)]
+    [Step 330] Orb of Annulment: Annul removed of the Crystal (Suffix) [Step 3 Cleanup] (+9.00c) -> P:[Powerful (t1), Sanguine (t1)], S:[]
+    [Step 331] Exalted Orb Slam (Suffix: of the Meteor / of Eviction): Slammed of Eviction (+1.20c) -> P:[Powerful (t1), Sanguine (t1)], S:[of Eviction (t1)]
+    [Step 332] Exalted Orb Slam (Suffix: of the Meteor / of Eviction): Slammed of the Cloud (+1.20c) -> P:[Powerful (t1), Sanguine (t1)], S:[of Eviction (t1), of the Cloud (t3)]
+    [Step 333] Orb of Annulment: Annul removed of the Cloud (Suffix) [Step 4 Cleanup] (+9.00c) -> P:[Powerful (t1), Sanguine (t1)], S:[of Eviction (t1)]
+    [Step 334] Exalted Orb Slam (Suffix: of the Meteor / of Eviction): Slammed of the Seal (+1.20c) -> P:[Powerful (t1), Sanguine (t1)], S:[of Eviction (t1), of the Seal (t2)]
+    [Step 335] Orb of Annulment: Annul removed of Eviction (Suffix) [Step 4 Cleanup] (+9.00c) -> P:[Powerful (t1), Sanguine (t1)], S:[of the Seal (t2)]
+    [Step 336] Orb of Annulment: Annul removed of the Seal (Suffix) [Step 4 Cleanup] (+9.00c) -> P:[Powerful (t1), Sanguine (t1)], S:[]
+    [Step 337] Exalted Orb Slam (Suffix: of the Meteor / of Eviction): Slammed of the Pupil (+1.20c) -> P:[Powerful (t1), Sanguine (t1)], S:[of the Pupil (t3)]
+    [Step 338] Orb of Annulment: Annul removed of the Pupil (Suffix) [Step 4 Cleanup] (+9.00c) -> P:[Powerful (t1), Sanguine (t1)], S:[]
+    [Step 339] Exalted Orb Slam (Suffix: of the Meteor / of Eviction): Slammed of Eviction (+1.20c) -> P:[Powerful (t1), Sanguine (t1)], S:[of Eviction (t1)]
+    [Step 340] Exalted Orb Slam (Suffix: of the Meteor / of Eviction): Slammed of the Meteor (+1.20c) -> P:[Powerful (t1), Sanguine (t1)], S:[of Eviction (t1), of the Meteor (t1)]
 
 ======================================================================
 ALTERNATE STARTING ROUTES
 ======================================================================
 
 1. Fractured 35% Increased Effect Base (Self-Fracture)
-   Expected total craft cost:  6785.0c (~33.92 div)
+   Expected total craft cost:  42814.4c (~214.07 div)
    Difference from best:        BEST
 
 2. Fractured T1 Maximum Life Base (Self-Fracture)
-   Expected total craft cost:  79565.3c (~397.83 div)
-   Difference from best:       +72780.3c (~363.90 div)
+   Expected total craft cost:  101527.4c (~507.64 div)
+   Difference from best:       +58713.0c (~293.57 div)
 
 3. Fractured +4 to All Attributes Base (Self-Fracture)
-   Expected total craft cost:  117516.2c (~587.58 div)
-   Difference from best:       +110731.2c (~553.66 div)
+   Expected total craft cost:  118542.3c (~592.71 div)
+   Difference from best:       +75727.9c (~378.64 div)
 
 4. Fractured +5% to Chaos Resistance Base (Self-Fracture)
-   Expected total craft cost:  117516.2c (~587.58 div)
-   Difference from best:       +110731.2c (~553.66 div)
+   Expected total craft cost:  118542.3c (~592.71 div)
+   Difference from best:       +75727.9c (~378.64 div)
 
 ======================================================================

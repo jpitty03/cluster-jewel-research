@@ -5,7 +5,7 @@ import type { ModPool } from '../domain/ModPool.ts';
 import {
   ExpectedCostSolver,
   type CraftPlanStep,
-  type StartingOptionAnalysis,
+  type AcquisitionOption,
   type FinalOutcomeDistribution,
 } from './expectedCost.ts';
 import { ExaltAction } from '../actions/exalt.ts';
@@ -16,6 +16,7 @@ import type {
   CraftingPolicyEngine,
   HarvestStrategyComparison,
   RepresentativeStateAudit,
+  SuffixPoolAuditState,
 } from './policyEngine.ts';
 
 export interface StartingStrategyResult {
@@ -29,11 +30,12 @@ export interface StartingStrategyResult {
   expectedSaleValueChaos?: number;
   outcomeDistribution?: FinalOutcomeDistribution[];
   steps?: CraftPlanStep[];
-  step1Options?: StartingOptionAnalysis[];
+  step1Options?: AcquisitionOption[];
   isValidated: boolean;
   policyEngine?: CraftingPolicyEngine;
   harvestComparison?: HarvestStrategyComparison[];
   representativeDecisions?: RepresentativeStateAudit[];
+  suffixPoolAudits?: SuffixPoolAuditState[];
   pool?: ModPool;
 }
 
@@ -82,21 +84,22 @@ export class CraftEvaluator {
     const solver = new ExpectedCostSolver(this.context, this.target, actions);
     const result = solver.solve(startState, baseCostChaos);
 
-    const totalExpectedCostChaos = result.expectedCostChaos;
-    const expectedCraftingCostChaos = Math.max(0, result.expectedCostChaos - baseCostChaos);
+    const effectiveAcquisitionCost = baseCostChaos > 0 ? baseCostChaos : (result.step1Options?.[0]?.costChaos ?? 0);
+    const totalExpectedCostChaos = effectiveAcquisitionCost + result.expectedCostChaos;
+    const expectedCraftingCostChaos = result.expectedCostChaos;
 
     const effectiveSaleValue = saleValueChaos ?? result.expectedSaleValueChaos;
     let expectedProfitChaos: number | undefined;
     let roi: number | undefined;
 
-    if (effectiveSaleValue !== undefined) {
+    if (effectiveSaleValue !== undefined && effectiveSaleValue > 0) {
       expectedProfitChaos = effectiveSaleValue - totalExpectedCostChaos;
       roi = totalExpectedCostChaos > 0 ? (expectedProfitChaos / totalExpectedCostChaos) * 100 : 0;
     }
 
     return {
       strategyName,
-      baseCostChaos,
+      baseCostChaos: effectiveAcquisitionCost,
       expectedCraftingCostChaos,
       totalExpectedCostChaos,
       expectedCurrencies: result.expectedCurrencies,
@@ -106,10 +109,11 @@ export class CraftEvaluator {
       outcomeDistribution: result.outcomeDistribution,
       steps: result.steps,
       step1Options: result.step1Options,
-      isValidated: false, // will be set dynamically based on simulation
+      isValidated: false,
       policyEngine: result.policyEngine,
       harvestComparison: result.harvestComparison,
       representativeDecisions: result.representativeDecisions,
+      suffixPoolAudits: result.suffixPoolAudits,
       pool: result.pool ?? this.context.pool,
     };
   }

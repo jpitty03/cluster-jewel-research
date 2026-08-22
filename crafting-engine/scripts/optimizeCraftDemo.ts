@@ -1,6 +1,6 @@
 import { writeFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
-import { CraftingOptimizer } from '../src/index.ts';
+import { CraftingOptimizer, type OptimizeCraftResponse } from '../src/index.ts';
 import { ClusterModRepository } from '../src/data/loadClusterMods.ts';
 import { ModPool } from '../src/domain/ModPool.ts';
 import { toRolledMod } from '../src/domain/Mod.ts';
@@ -20,17 +20,10 @@ function writeCraftOutput(fileName: string, explanation: string): void {
   console.log(`\n[output] Wrote ${fileName}`);
 }
 
-/**
- * Keep a compact, connector-friendly review artifact alongside the full output.
- * The explanation can become very large because Monte Carlo traces and detailed
- * diagnostics are intentionally verbose. For review purposes, retain the head
- * (policy/route/diagnostic summary) and tail (validation/final results) while
- * omitting the verbose middle when necessary.
- */
 function buildReviewOutput(explanation: string): string {
   const lines = explanation.replace(/\r\n/g, '\n').split('\n');
-  const headLines = 420;
-  const tailLines = 260;
+  const headLines = 450;
+  const tailLines = 100;
 
   if (lines.length <= headLines + tailLines) {
     return explanation.trimEnd();
@@ -53,6 +46,26 @@ function writeCraftReview(fileName: string, explanation: string): void {
   const review = buildReviewOutput(explanation);
   writeFileSync(outputPath(fileName), `${review}\n`, 'utf8');
   console.log(`[output] Wrote ${fileName}`);
+}
+
+function verifyRepresentativeMinEv(craftName: string, response: OptimizeCraftResponse): void {
+  const decs = response.recommendedStrategy.representativeDecisions;
+  if (!decs || decs.length === 0) return;
+
+  let allPassed = true;
+  for (const d of decs) {
+    if (!d.isMinEvVerified) {
+      allPassed = false;
+      console.error(
+        `[DIAGNOSTIC FAILURE in ${craftName}] State: "${d.stateDescription}" recommended action "${d.recommendedAction}" does not match minimum candidate EV!`
+      );
+    }
+  }
+  if (allPassed) {
+    console.log(
+      `[DIAGNOSTIC PASS in ${craftName}] All ${decs.length} representative states verified: recommended EV == min(candidate EVs).`
+    );
+  }
 }
 
 console.log('='.repeat(80));
@@ -150,6 +163,7 @@ const craftAResponse = optimizer.optimizeCraft({
 });
 
 console.log(craftAResponse.explanation);
+verifyRepresentativeMinEv('Craft A', craftAResponse);
 writeCraftOutput('output-craft-a.txt', craftAResponse.explanation);
 writeCraftReview('output-craft-a-review.txt', craftAResponse.explanation);
 
@@ -190,6 +204,7 @@ const craftBResponse = optimizer.optimizeCraft({
 });
 
 console.log(craftBResponse.explanation);
+verifyRepresentativeMinEv('Craft B', craftBResponse);
 writeCraftOutput('output-craft-b.txt', craftBResponse.explanation);
 writeCraftReview('output-craft-b-review.txt', craftBResponse.explanation);
 
@@ -265,14 +280,14 @@ const craftCResponse = optimizer.optimizeCraft({
   },
   startingStates: [
     {
-      name: 'Fractured T1 Maximum Life Base (Self-Fracture)',
-      state: fracLifeState,
-      baseCostChaos: 1527.4, // 4 * (10c base + 12.85c prep + 359c fracture)
-    },
-    {
       name: 'Fractured 35% Increased Effect Base (Self-Fracture)',
       state: fracEffMinionState,
       baseCostChaos: 1533.4, // 4 * (10c base + 14.35c prep + 359c fracture)
+    },
+    {
+      name: 'Fractured T1 Maximum Life Base (Self-Fracture)',
+      state: fracLifeState,
+      baseCostChaos: 1527.4, // 4 * (10c base + 12.85c prep + 359c fracture)
     },
     {
       name: 'Fractured +4 to All Attributes Base (Self-Fracture)',
@@ -293,6 +308,7 @@ const craftCResponse = optimizer.optimizeCraft({
 });
 
 console.log(craftCResponse.explanation);
+verifyRepresentativeMinEv('Craft C', craftCResponse);
 writeCraftOutput('output-craft-c.txt', craftCResponse.explanation);
 writeCraftReview('output-craft-c-review.txt', craftCResponse.explanation);
 console.log('='.repeat(80));
