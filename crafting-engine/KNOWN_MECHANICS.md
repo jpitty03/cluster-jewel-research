@@ -44,7 +44,7 @@ This document establishes the game mechanics, domain rules, and mathematical mod
    - Annulment of modifiers does NOT alter or downgrade the item's rarity.
 
 8. **Fracturing Orb**:
-   - Requires an item with exactly 4 explicit modifiers (a full Rare Cluster Jewel).
+   - Requires an item with exactly 4 or more explicit modifiers (a full Rare Cluster Jewel).
    - Selects uniformly at random 1 modifier among all eligible explicit modifiers to become permanently fractured.
    - For 4 eligible candidates, $P(\text{fracture target}) = \frac{1}{4} = 25\%$.
    - An item can have at most one fractured modifier.
