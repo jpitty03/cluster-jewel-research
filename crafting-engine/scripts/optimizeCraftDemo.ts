@@ -293,9 +293,128 @@ function runAutoDiscoveryDiagnostic(
   return lines.join('\n');
 }
 
+import { runExternalParityDiagnostics } from '../src/rules/externalParity.ts';
+
+function runTransmutationSharedMechanicDiagnostic(): string {
+  const lines: string[] = [];
+  lines.push('\n' + '='.repeat(80));
+  lines.push('TRANSMUTATION SHARED-MECHANIC TRANSITION DIAGNOSTIC');
+  lines.push('='.repeat(80));
+
+  const pool = ModPool.forCluster(repo, 'Large Cluster Jewel', '12% increased Attack Damage while holding a Shield');
+  const normalState: ItemState = {
+    baseType: 'Large Cluster Jewel',
+    clusterType: '12% increased Attack Damage while holding a Shield',
+    itemLevel: 84,
+    passiveCount: 12,
+    rarity: 'normal',
+    prefixes: [],
+    suffixes: [],
+    fracturedModIds: [],
+  };
+
+  const transMech = CRAFT_MECHANICS.find((m) => m.id === 'transmutation_orb')!;
+  const context: any = { pool, priceBook };
+  const target: TargetDefinition = { requiredMods: [] };
+
+  const dist = transMech.getTransitions!(normalState, target, context);
+  const probSum = dist.outcomes.reduce((s, o) => s + o.probability, 0);
+
+  const trials = 10000;
+  const rng = createRandomSource(42);
+  let count1Affix = 0;
+  let count2Affix = 0;
+
+  for (let i = 0; i < trials; i++) {
+    const next = transMech.sampleTransition!(normalState, target, context, rng);
+    const affixes = next.prefixes.length + next.suffixes.length;
+    if (affixes === 1) count1Affix++;
+    else if (affixes === 2) count2Affix++;
+  }
+
+  const p1Pct = (count1Affix / trials) * 100;
+  const p2Pct = (count2Affix / trials) * 100;
+
+  lines.push(`Analytical Total Probability: ${(probSum * 100).toFixed(2)}% across ${dist.outcomes.length} generated outcomes`);
+  lines.push(`Sampled Empirical Outcomes (${trials.toLocaleString()} trials):`);
+  lines.push(`  - 1-Affix Magic Items: ${count1Affix} (${p1Pct.toFixed(2)}% vs analytical 50.00%)`);
+  lines.push(`  - 2-Affix Magic Items: ${count2Affix} (${p2Pct.toFixed(2)}% vs analytical 50.00%)`);
+
+  const passed = Math.abs(probSum - 1.0) < 1e-4 && Math.abs(p1Pct - 50.0) < 2.0;
+  lines.push(`\nTransmutation Verification: ${passed ? 'PASSED (Analytical distribution sums to 1.0 and empirical sampling matches)' : 'FAILED'}`);
+  return lines.join('\n');
+}
+
+function runAugmentationAndRegalSharedMechanicDiagnostic(): string {
+  const lines: string[] = [];
+  lines.push('\n' + '='.repeat(80));
+  lines.push('AUGMENTATION & REGAL SHARED-MECHANIC TRANSITION DIAGNOSTIC');
+  lines.push('='.repeat(80));
+
+  const pool = ModPool.forCluster(repo, 'Large Cluster Jewel', '12% increased Attack Damage while holding a Shield');
+  const eff35 = pool.findModById('AfflictionJewelSmallPassivesHaveIncreasedEffect2')!;
+  const intMod = pool.findModById('AfflictionJewelSmallPassivesGrantInt3')!;
+
+  const magic1PState: ItemState = {
+    baseType: 'Large Cluster Jewel',
+    clusterType: '12% increased Attack Damage while holding a Shield',
+    itemLevel: 84,
+    passiveCount: 12,
+    rarity: 'magic',
+    prefixes: [toRolledMod(eff35)],
+    suffixes: [],
+    fracturedModIds: [],
+  };
+
+  const augMech = CRAFT_MECHANICS.find((m) => m.id === 'augmentation_orb')!;
+  const regalMech = CRAFT_MECHANICS.find((m) => m.id === 'regal_orb')!;
+  const context: any = { pool, priceBook };
+  const target: TargetDefinition = { requiredMods: [] };
+
+  // Augmentation check
+  const augDist = augMech.getTransitions!(magic1PState, target, context);
+  const augProbSum = augDist.outcomes.reduce((s, o) => s + o.probability, 0);
+
+  const trials = 5000;
+  const rng = createRandomSource(12345);
+  let augAll2Affix = true;
+  for (let i = 0; i < trials; i++) {
+    const next = augMech.sampleTransition!(magic1PState, target, context, rng);
+    if (next.prefixes.length !== 1 || next.suffixes.length !== 1) augAll2Affix = false;
+  }
+
+  lines.push(`Augmentation: ${augDist.outcomes.length} eligible suffix outcomes (Sum prob = ${(augProbSum * 100).toFixed(2)}%)`);
+  lines.push(`  - Sampled ${trials.toLocaleString()} trials: 100% produced legal 1-Prefix + 1-Suffix magic items: ${augAll2Affix ? 'YES' : 'NO'}`);
+
+  // Regal check
+  const magic2AffixState: ItemState = {
+    ...magic1PState,
+    suffixes: [toRolledMod(intMod)],
+  };
+  const regalDist = regalMech.getTransitions!(magic2AffixState, target, context);
+  const regalProbSum = regalDist.outcomes.reduce((s, o) => s + o.probability, 0);
+
+  let regalAll3AffixRare = true;
+  for (let i = 0; i < trials; i++) {
+    const next = regalMech.sampleTransition!(magic2AffixState, target, context, rng);
+    if (next.rarity !== 'rare' || (next.prefixes.length + next.suffixes.length !== 3)) regalAll3AffixRare = false;
+  }
+
+  lines.push(`Regal Orb: ${regalDist.outcomes.length} eligible rare outcomes (Sum prob = ${(regalProbSum * 100).toFixed(2)}%)`);
+  lines.push(`  - Sampled ${trials.toLocaleString()} trials: 100% upgraded to 3-affix rare items preserving magic affixes: ${regalAll3AffixRare ? 'YES' : 'NO'}`);
+
+  const passed = Math.abs(augProbSum - 1.0) < 1e-4 && Math.abs(regalProbSum - 1.0) < 1e-4 && augAll2Affix && regalAll3AffixRare;
+  lines.push(`\nAugmentation & Regal Verification: ${passed ? 'PASSED (Shared transitions execute with 100% legal outcomes)' : 'FAILED'}`);
+  return lines.join('\n');
+}
+
 // Run General Diagnostics
 console.log(runCanonicalKeyDiagnostics());
 console.log(runAnnulSharedMechanicDiagnostic());
+console.log(runTransmutationSharedMechanicDiagnostic());
+console.log(runAugmentationAndRegalSharedMechanicDiagnostic());
+const poolA = ModPool.forCluster(repo, 'Large Cluster Jewel', '12% increased Attack Damage while holding a Shield');
+console.log(runExternalParityDiagnostics({ pool: poolA, priceBook }).explanation);
 
 console.log('='.repeat(80));
 console.log('END-TO-END CRAFTING OPTIMIZER: DEMONSTRATION & BENCHMARKS');

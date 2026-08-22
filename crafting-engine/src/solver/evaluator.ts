@@ -21,8 +21,9 @@ import type {
   SuffixPoolAuditState,
 } from './policyEngine.ts';
 
-export interface StartingStrategyResult {
+export interface ResolvedCraftSolution {
   strategyName: string;
+  startingState: ItemState;
   state?: ItemState;
   acquisition?: AcquisitionOption;
   baseCostChaos: number;
@@ -36,6 +37,8 @@ export interface StartingStrategyResult {
   steps?: CraftPlanStep[];
   step1Options?: AcquisitionOption[];
   isValidated: boolean;
+  target?: TargetDefinition;
+  solverContext?: SolverContext;
   policyEngine?: CraftingPolicyEngine;
   harvestComparison?: HarvestStrategyComparison[];
   representativeDecisions?: RepresentativeStateAudit[];
@@ -43,7 +46,8 @@ export interface StartingStrategyResult {
   pool?: ModPool;
 }
 
-export type ResolvedCraftPolicy = StartingStrategyResult;
+export type StartingStrategyResult = ResolvedCraftSolution;
+export type ResolvedCraftPolicy = ResolvedCraftSolution;
 
 export class CraftEvaluator {
   private context: SolverContext;
@@ -137,6 +141,7 @@ export class CraftEvaluator {
 
     return {
       strategyName,
+      startingState: startState,
       state: startState,
       acquisition,
       baseCostChaos: effectiveAcquisitionCost,
@@ -150,6 +155,8 @@ export class CraftEvaluator {
       steps: result.steps,
       step1Options: result.step1Options,
       isValidated: false,
+      target: this.target,
+      solverContext: this.context,
       policyEngine: result.policyEngine,
       harvestComparison: result.harvestComparison,
       representativeDecisions: result.representativeDecisions,

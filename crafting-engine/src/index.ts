@@ -3,11 +3,13 @@ import { ModPool } from './domain/ModPool.ts';
 import { PriceBook } from './domain/PriceBook.ts';
 import type { ItemState, BaseType } from './domain/ItemState.ts';
 import type { TargetDefinition } from './domain/TargetDefinition.ts';
-import { CraftEvaluator, type StartingStrategyResult } from './solver/evaluator.ts';
+import { CraftEvaluator, type StartingStrategyResult, type ResolvedCraftSolution, type ResolvedCraftPolicy } from './solver/evaluator.ts';
 import type { AcquisitionOption } from './solver/expectedCost.ts';
 import { generateCraftExplanation } from './reporting/explainPath.ts';
 import { MonteCarloSimulator, type SimulationResult } from './probability/monteCarlo.ts';
 import { generateStartingStrategies } from './solver/strategyDiscovery.ts';
+
+export type { ResolvedCraftSolution, ResolvedCraftPolicy };
 
 export interface StartingCraftOption {
   name: string;
