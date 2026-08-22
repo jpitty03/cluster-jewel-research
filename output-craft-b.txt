@@ -96,6 +96,14 @@ REPRESENTATIVE STATE DECISIONS & CONTINUATION VALUES
    Reason:             Harvest Reforge Defences has continuation EV of 0.0c vs 0.0c to reforge.
 
 ----------------------------------------------------------------------
+STEP 1 -- Acquire Starting Fracture
+----------------------------------------------------------------------
+Target Starting Base: Clean Base
+
+FULL-ROUTE ACQUISITION EVALUATION (Clean Base):
+  Downstream Crafting EV:     0.0c
+
+----------------------------------------------------------------------
 Base Acquisition
 ----------------------------------------------------------------------
 Action: Buy Fractured Base
@@ -145,7 +153,7 @@ EXPECTED ROI:
 ======================================================================
 LABELED GAME MECHANICS ASSUMPTIONS
 ======================================================================
-1. Harvest Additional Affixes: Modeled as 50% chance of 1 additional affix / 50% chance of 2 additional affixes.
+1. Harvest Additional Affixes: Modeled as 50% chance of 1 additional affix / 50% chance of 2 additional affixes (PoE 4-mod rare cluster jewel affix distribution).
 2. Base Self-Fracture Model: Approximate Alteration/Augmentation/Regal/Bench preparation + Fracturing Orb (25% hit rate).
 3. Market Purchase Prices: Any unsupplied market price is reported as not supplied / unavailable rather than inferred.
 4. Allflame Crafting: Stateful Intangibility stacking remains deferred and disabled.

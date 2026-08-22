@@ -55,6 +55,17 @@ export interface TimeoutDiagnostics {
   timeoutRatePercentage: number;
 }
 
+export interface EconomicRiskMetrics {
+  saleValueChaos: number;
+  profitableTrialsCount: number;
+  profitProbabilityPercentage: number;
+  medianRealizedProfitChaos: number;
+  p75CostChaos: number;
+  p90CostChaos: number;
+  p95CostChaos: number;
+  cvar95CostChaos: number;
+}
+
 export interface SimulationResult {
   totalTrials: number;
   completedTrials: number;
@@ -83,6 +94,7 @@ export interface SimulationResult {
   harvestCensus?: HarvestCensusData;
   outcomeBranchDistribution?: Record<string, number>;
   timeoutDiagnostics?: TimeoutDiagnostics;
+  riskMetrics?: EconomicRiskMetrics;
   sampleTraces?: SampleCraftTrace[];
   status: 'SUCCESS' | 'PARTIAL' | 'FAILED';
   message?: string;
@@ -160,6 +172,7 @@ export class MonteCarloSimulator {
     };
 
     const completedCosts: number[] = [];
+    const completedProfits: number[] = [];
     const outcomeBranchCounts: Record<string, number> = {};
     const sampleTraces: SampleCraftTrace[] = [];
 
@@ -436,6 +449,15 @@ export class MonteCarloSimulator {
         }
 
         completedCosts.push(trialCostChaos);
+        const matchedBranch = getMatchingOutcomeBranch(state, this.target);
+        const branchName = matchedBranch?.name ?? 'Target Satisfied';
+        outcomeBranchCounts[branchName] = (outcomeBranchCounts[branchName] ?? 0) + 1;
+
+        const trialSaleValue = matchedBranch?.saleValueChaos ?? this.target.saleValueChaos ?? 0;
+        if (trialSaleValue > 0) {
+          completedProfits.push(trialSaleValue - trialCostChaos);
+        }
+
         totalCompletedSteps += steps;
         if (steps > maxCompletedSteps) maxCompletedSteps = steps;
         if (steps > 5000) trialsOver5k++;
@@ -451,10 +473,6 @@ export class MonteCarloSimulator {
         stepwiseTotals.step4 += trialStepCosts.step4;
         stepwiseTotals.step5 += trialStepCosts.step5;
         stepwiseTotals.step6 += trialStepCosts.step6;
-
-        const matchedBranch = getMatchingOutcomeBranch(state, this.target);
-        const branchName = matchedBranch?.name ?? 'Target Satisfied';
-        outcomeBranchCounts[branchName] = (outcomeBranchCounts[branchName] ?? 0) + 1;
 
         if (captureTrace) {
           sampleTraces.push({
@@ -552,6 +570,31 @@ export class MonteCarloSimulator {
       outcomeBranchDistribution[name] = (count / completedCount) * 100;
     }
 
+    let riskMetrics: EconomicRiskMetrics | undefined;
+    const configuredSale = this.target.saleValueChaos ?? (this.target.outcomeBranches && this.target.outcomeBranches.length > 0 ? (this.target.outcomeBranches[0].saleValueChaos ?? 0) : 0);
+
+    if (completedProfits.length > 0) {
+      completedProfits.sort((a, b) => a - b);
+      const profitableTrials = completedProfits.filter((p) => p >= 0).length;
+      const profitProb = (profitableTrials / completedProfits.length) * 100;
+      const medianProfit = completedProfits[Math.floor(completedProfits.length * 0.5)];
+
+      const worst5PctIdx = Math.floor(completedCount * 0.95);
+      const worst5PctSlice = completedCosts.slice(worst5PctIdx);
+      const cvar95 = worst5PctSlice.reduce((s, c) => s + c, 0) / Math.max(1, worst5PctSlice.length);
+
+      riskMetrics = {
+        saleValueChaos: configuredSale,
+        profitableTrialsCount: profitableTrials,
+        profitProbabilityPercentage: profitProb,
+        medianRealizedProfitChaos: medianProfit,
+        p75CostChaos,
+        p90CostChaos,
+        p95CostChaos,
+        cvar95CostChaos: cvar95,
+      };
+    }
+
     const status = completionRate >= 95 ? 'SUCCESS' : 'PARTIAL';
 
     return {
@@ -575,6 +618,7 @@ export class MonteCarloSimulator {
       harvestCensus,
       outcomeBranchDistribution,
       timeoutDiagnostics,
+      riskMetrics,
       sampleTraces,
       status,
       message:

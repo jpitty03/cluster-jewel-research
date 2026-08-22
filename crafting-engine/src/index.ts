@@ -4,17 +4,14 @@ import { PriceBook } from './domain/PriceBook.ts';
 import type { ItemState, BaseType } from './domain/ItemState.ts';
 import type { TargetDefinition } from './domain/TargetDefinition.ts';
 import { CraftEvaluator, type StartingStrategyResult } from './solver/evaluator.ts';
+import type { AcquisitionOption } from './solver/expectedCost.ts';
 import { generateCraftExplanation } from './reporting/explainPath.ts';
 import { MonteCarloSimulator, type SimulationResult } from './probability/monteCarlo.ts';
 
 export interface StartingCraftOption {
   name: string;
   state: ItemState;
-  acquisition?: {
-    type: 'market' | 'self-fracture' | 'clean-base';
-    costChaos: number;
-    confidence: 'deterministic' | 'approximate';
-  };
+  acquisition?: AcquisitionOption;
   baseCostChaos?: number;
 }
 

@@ -205,7 +205,7 @@ export class CraftingPolicyEngine {
             harvestTag = 'life';
             harvestLifeforce = 'wildLifeforce';
             harvestModGroup = found.modGroup;
-            harvestModName = found.name;
+            harvestModName = found.modGroup === 'AfflictionJewelSmallPassivesGrantLife' ? 'T1 Maximum Life [Sanguine]' : found.name;
             const tagged = getTaggedModsForCluster(pool, 'life', ilvl);
             const totalW = calculateTotalWeight(tagged) || 4088;
             pT1 = found.weight / totalW;
@@ -214,7 +214,7 @@ export class CraftingPolicyEngine {
             harvestTag = 'defences';
             harvestLifeforce = 'primalLifeforce';
             harvestModGroup = found.modGroup;
-            harvestModName = found.name;
+            harvestModName = found.modGroup === 'AfflictionJewelSmallPassivesGrantES' ? 'T1 Maximum Energy Shield [Glowing]' : found.name;
             const tagged = getTaggedModsForCluster(pool, 'defences', ilvl);
             const totalW = calculateTotalWeight(tagged) || 3976;
             pT1 = found.weight / totalW;
@@ -262,9 +262,15 @@ export class CraftingPolicyEngine {
       if (found && found.genType === 'Suffix') {
         const groupMods = allSuffixes.filter((m) => m.modGroup === found.modGroup);
         const groupTotalWeight = calculateTotalWeight(groupMods) || 1200;
+        let suffixDisplayName = found.name;
+        if (found.modGroup === 'AfflictionJewelSmallPassivesGrantInt') suffixDisplayName = 'T1 Intelligence [of the Prodigy]';
+        else if (found.modGroup === 'AfflictionJewelSmallPassivesGrantAttributes') suffixDisplayName = '+4 to all Attributes [of the Meteor]';
+        else if (found.modGroup === 'AfflictionJewelSmallPassivesGrantChaosRes') suffixDisplayName = '+5% to Chaos Resistance [of Eviction]';
+        else if (found.modGroup === 'AfflictionJewelSmallPassivesGrantElementalRes') suffixDisplayName = '+4% to all Elemental Resistance [of the Kaleidoscope]';
+
         const targetGroup: SuffixTargetGroup = {
           id: req.modGroup ?? found.modGroup,
-          name: found.name,
+          name: suffixDisplayName,
           modGroup: found.modGroup,
           modId: req.modId ?? found.modId,
           tier: req.maxTierNumber ?? found.tier,

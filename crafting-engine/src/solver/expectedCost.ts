@@ -13,18 +13,27 @@ import {
   type SuffixPoolAuditState,
 } from './policyEngine.ts';
 
+export interface AcquisitionBreakdown {
+  cleanBaseCostChaos: number;
+  prepCostChaos: number;
+  fracturingOrbCostChaos: number;
+  successChance: number;
+  expectedAttempts: number;
+}
+
 export interface AcquisitionOption {
   type: 'market' | 'self-fracture' | 'clean-base';
   costChaos: number;
   confidence: 'deterministic' | 'approximate';
-  description: string;
+  description?: string;
   cleanBaseCostChaos?: number;
   prepCostChaos?: number;
   fracturingOrbCostChaos?: number;
   successChance?: number;
   expectedAttempts?: number;
-  isRecommended: boolean;
-  reason: string;
+  breakdown?: AcquisitionBreakdown;
+  isRecommended?: boolean;
+  reason?: string;
   downstreamCostChaos?: number;
   fullRouteTotalCostChaos?: number;
 }
@@ -171,6 +180,14 @@ export class ExpectedCostSolver {
       const selfFracCost = 4 * (cleanBaseCost + prepCost + fracOrbRate);
       const fullSelfFrac = selfFracCost + downstreamCraftCost;
 
+      const breakdown: AcquisitionBreakdown = acquisition?.breakdown ?? {
+        cleanBaseCostChaos: cleanBaseCost,
+        prepCostChaos: prepCost,
+        fracturingOrbCostChaos: fracOrbRate,
+        successChance: 25.0,
+        expectedAttempts: 4.0,
+      };
+
       if (acquisition && acquisition.type === 'market') {
         const fullBuy = acquisition.costChaos + downstreamCraftCost;
         step1Options.push({
@@ -196,11 +213,12 @@ export class ExpectedCostSolver {
         costChaos: selfFracActualCost,
         confidence: 'approximate',
         description: `Prepare 4-mod clean base with ${fracMod.name} via Alt/Aug/Regal/Bench and use Fracturing Orb (25% chance)`,
-        cleanBaseCostChaos: cleanBaseCost,
-        prepCostChaos: prepCost,
-        fracturingOrbCostChaos: fracOrbRate,
-        successChance: 25.0,
-        expectedAttempts: 4.0,
+        cleanBaseCostChaos: breakdown.cleanBaseCostChaos,
+        prepCostChaos: breakdown.prepCostChaos,
+        fracturingOrbCostChaos: breakdown.fracturingOrbCostChaos,
+        successChance: breakdown.successChance,
+        expectedAttempts: breakdown.expectedAttempts,
+        breakdown,
         isRecommended: !acquisition || acquisition.type === 'self-fracture' || fullActualSelfFrac < (baseCostChaos + downstreamCraftCost),
         downstreamCostChaos: downstreamCraftCost,
         fullRouteTotalCostChaos: fullActualSelfFrac,

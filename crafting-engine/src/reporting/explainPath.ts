@@ -3,6 +3,53 @@ import type { StartingStrategyResult } from '../solver/evaluator.ts';
 import type { AcquisitionOption } from '../solver/expectedCost.ts';
 import type { PriceBook } from '../domain/PriceBook.ts';
 import type { SimulationResult } from '../probability/monteCarlo.ts';
+import type { ItemState } from '../domain/ItemState.ts';
+
+export function formatModDisplayName(mod: any): string {
+  if (!mod) return 'Unknown Mod';
+  const name: string = typeof mod === 'string' ? mod : mod.name;
+  const group: string | undefined = typeof mod === 'object' ? mod.modGroup : undefined;
+  const tier: number | undefined = typeof mod === 'object' ? mod.tier : undefined;
+
+  if (name.includes('35% increased Effect') || group === 'AfflictionJewelSmallPassivesHaveIncreasedEffect' || name === 'Powerful') {
+    return '35% Increased Effect [Powerful]';
+  }
+  if (name.includes('Maximum Energy Shield') || group === 'AfflictionJewelSmallPassivesGrantES' || name === 'Glowing') {
+    return 'T1 Maximum Energy Shield [Glowing]';
+  }
+  if (name.includes('Maximum Life') || group === 'AfflictionJewelSmallPassivesGrantLife' || name === 'Sanguine') {
+    return 'T1 Maximum Life [Sanguine]';
+  }
+  if (name.includes('Intelligence') || group === 'AfflictionJewelSmallPassivesGrantInt' || name === 'of the Prodigy') {
+    return 'T1 Intelligence [of the Prodigy]';
+  }
+  if (name.includes('All Attributes') || group === 'AfflictionJewelSmallPassivesGrantAttributes' || name === 'of the Meteor') {
+    return '+4 to all Attributes [of the Meteor]';
+  }
+  if (name.includes('Chaos Resistance') || group === 'AfflictionJewelSmallPassivesGrantChaosRes' || name === 'of Eviction') {
+    return '+5% to Chaos Resistance [of Eviction]';
+  }
+  if (name.includes('All Elemental Resistance') || group === 'AfflictionJewelSmallPassivesGrantElementalRes' || name === 'of the Kaleidoscope') {
+    return '+4% to all Elemental Resistance [of the Kaleidoscope]';
+  }
+  if (name.includes('Attack Speed') || group?.includes('Attack Speed')) {
+    if (name.includes('3%') || tier === 1) return '3% increased Attack Speed [T1]';
+    if (name.includes('2%') || tier === 2) return '2% increased Attack Speed [T2]';
+    return '1% increased Attack Speed [T3]';
+  }
+
+  const tierSuffix = tier ? ` (t${tier})` : '';
+  return `${name}${tierSuffix}`;
+}
+
+export function getStartingFractureBaseLabel(state?: ItemState): string {
+  if (!state) return 'Clean Base';
+  const fracP = state.prefixes.find((p) => p.isFractured);
+  const fracS = state.suffixes.find((s) => s.isFractured);
+  const frac = fracP ?? fracS;
+  if (!frac) return 'Clean Base';
+  return formatModDisplayName(frac);
+}
 
 export function generateCraftExplanation(
   recommended: StartingStrategyResult,
@@ -175,54 +222,75 @@ export function generateCraftExplanation(
   }
 
   // ------------------------------------------------------------- STEP 1: Starting Fracture Acquisition
-  if (recommended.step1Options && recommended.step1Options.length > 0) {
-    lines.push('\n' + '-'.repeat(70));
-    lines.push('STEP 1 -- Acquire Starting Fracture');
-    lines.push('-'.repeat(70));
+  const allStartingRoutes = [recommended, ...alternates];
+  const startBaseLabel = getStartingFractureBaseLabel(recommended.state);
+  const matchingBaseStrategies = allStartingRoutes.filter(
+    (s) => getStartingFractureBaseLabel(s.state) === startBaseLabel
+  );
 
-    for (const opt of recommended.step1Options) {
-      lines.push(`\n${opt.description}:`);
-      if (opt.type === 'market') {
-        lines.push(`  Purchase cost:              ${formatChaos(opt.costChaos, divineRate)}`);
-        lines.push(`  Expected preparation cost:     0.0c`);
-        lines.push(`  Expected total:             ${formatChaos(opt.costChaos, divineRate)}`);
-        lines.push(`  Model confidence:           High (Deterministic Market Purchase)`);
-      } else {
-        lines.push(`  Model Status:               [SELF-FRACTURE ACQUISITION MODEL: APPROXIMATE]`);
-        lines.push(`  Clean base per attempt:        ${opt.cleanBaseCostChaos?.toFixed(1)}c`);
-        lines.push(`  Preparation sub-plan:          ${opt.prepCostChaos?.toFixed(2)}c per attempt`);
-        lines.push(`  Fracturing Orb:               ${opt.fracturingOrbCostChaos?.toFixed(1)}c per attempt`);
-        lines.push(`  Success chance:                ${opt.successChance?.toFixed(2)}%`);
-        lines.push(`  Expected attempts:              ${opt.expectedAttempts?.toFixed(2)}`);
-        lines.push(`  Expected total:               ${formatChaos(opt.costChaos, divineRate)}`);
-        lines.push(`  Model confidence:           Approximate (Self-Fracture Model)`);
-      }
+  const selfFracStrat = matchingBaseStrategies.find((s) => s.acquisition?.type === 'self-fracture');
+  const marketStrat = matchingBaseStrategies.find((s) => s.acquisition?.type === 'market');
+
+  lines.push('\n' + '-'.repeat(70));
+  lines.push('STEP 1 -- Acquire Starting Fracture');
+  lines.push('-'.repeat(70));
+  lines.push(`Target Starting Base: ${startBaseLabel}`);
+
+  if (selfFracStrat) {
+    const bd = selfFracStrat.acquisition?.breakdown ?? selfFracStrat.step1Options?.find((o) => o.type === 'self-fracture')?.breakdown;
+    lines.push(`\nSelf-Fracture Route (${startBaseLabel}):`);
+    lines.push(`  Model Status:               [SELF-FRACTURE ACQUISITION MODEL: APPROXIMATE]`);
+    if (bd) {
+      lines.push(`  Clean base per attempt:        ${bd.cleanBaseCostChaos.toFixed(1)}c`);
+      lines.push(`  Preparation sub-plan:          ${bd.prepCostChaos.toFixed(2)}c per attempt`);
+      lines.push(`  Fracturing Orb:               ${bd.fracturingOrbCostChaos.toFixed(1)}c per attempt`);
+      lines.push(`  Success chance:                ${bd.successChance.toFixed(2)}%`);
+      lines.push(`  Expected attempts:              ${bd.expectedAttempts.toFixed(2)}`);
     }
+    lines.push(`  Expected total acquisition:   ${formatChaos(selfFracStrat.baseCostChaos, divineRate)}`);
+    lines.push(`  Model confidence:           Approximate (Self-Fracture Model)`);
+  }
 
-    const buyOpt = recommended.step1Options.find((o: AcquisitionOption) => o.type === 'market');
-    const selfFracOpt = recommended.step1Options.find((o: AcquisitionOption) => o.type === 'self-fracture') ?? recommended.step1Options[0];
+  if (marketStrat) {
+    lines.push(`\nDirect Market Purchase Route (${startBaseLabel}):`);
+    lines.push(`  Purchase cost:              ${formatChaos(marketStrat.baseCostChaos, divineRate)}`);
+    lines.push(`  Expected preparation cost:     0.0c`);
+    lines.push(`  Expected total acquisition:   ${formatChaos(marketStrat.baseCostChaos, divineRate)}`);
+    lines.push(`  Model confidence:           High (Deterministic Market Purchase)`);
+  }
 
-    const downstreamDefault = recommended.totalExpectedCostChaos - recommended.baseCostChaos;
-    const buyTotal = buyOpt ? buyOpt.costChaos + downstreamDefault : undefined;
-    const selfFracTotal = selfFracOpt.costChaos + downstreamDefault;
+  const downstreamEv = recommended.expectedCraftingCostChaos;
+  const selfFracTotal = selfFracStrat ? selfFracStrat.totalExpectedCostChaos : undefined;
+  const marketTotal = marketStrat ? marketStrat.totalExpectedCostChaos : undefined;
 
-    const bestOpt = (buyOpt && buyTotal !== undefined && buyTotal < selfFracTotal) ? buyOpt : selfFracOpt;
+  lines.push(`\nFULL-ROUTE ACQUISITION EVALUATION (${startBaseLabel}):`);
+  lines.push(`  Downstream Crafting EV:     ${formatChaos(downstreamEv, divineRate)}`);
+  if (selfFracTotal !== undefined) {
+    lines.push(`  Full Self-Fracture Route:   ${formatChaos(selfFracTotal, divineRate)}`);
+  }
+  if (marketTotal !== undefined) {
+    lines.push(`  Full Market Purchase Route: ${formatChaos(marketTotal, divineRate)}`);
+  }
+
+  if (selfFracTotal !== undefined && marketTotal !== undefined) {
+    const diff = Math.abs(marketTotal - selfFracTotal);
+    const recIsMarket = marketTotal < selfFracTotal;
     lines.push(`\nRECOMMENDED ACQUISITION (STEP 1):`);
-    lines.push(`  ${bestOpt.description}`);
-    lines.push(`  Estimated acquisition cost: ${formatChaos(bestOpt.costChaos, divineRate)}`);
-    lines.push(`\nMODEL CONFIDENCE:`);
-    lines.push(`  ${bestOpt.confidence === 'deterministic' ? 'High (Deterministic Market Purchase)' : 'Approximate (Self-Fracture Model)'}`);
-
-    if (buyOpt && buyTotal !== undefined) {
-      const diff = Math.abs(buyTotal - selfFracTotal);
-      lines.push(`\nALTERNATIVE ACQUISITION (STEP 1):`);
-      lines.push(`  ${bestOpt === buyOpt ? selfFracOpt.description : buyOpt.description}`);
-      lines.push(`  Estimated cost:             ${formatChaos(bestOpt === buyOpt ? selfFracOpt.costChaos : buyOpt.costChaos, divineRate)}`);
-      lines.push(`\nEstimated difference (Full Route):`);
-      lines.push(`  ${(diff / divineRate).toFixed(2)} div / ${diff.toFixed(1)}c`);
-    } else {
-      lines.push(`\nMarket purchase: unavailable / not supplied (Self-fracture evaluated from pool weights).`);
-    }
+    lines.push(`  ${recIsMarket ? 'Direct Market Purchase' : 'Self-Fracture'}`);
+    lines.push(`  Estimated acquisition cost: ${formatChaos(recIsMarket ? marketStrat!.baseCostChaos : selfFracStrat!.baseCostChaos, divineRate)}`);
+    lines.push(`  Full route difference:      ${(diff / divineRate).toFixed(2)} div / ${diff.toFixed(1)}c savings vs ${recIsMarket ? 'Self-Fracture' : 'Market Purchase'}`);
+    lines.push(`  Model confidence:           ${recIsMarket ? 'High (Deterministic Market Purchase)' : 'Approximate (Self-Fracture Model)'}`);
+  } else if (selfFracStrat) {
+    lines.push(`\nRECOMMENDED ACQUISITION (STEP 1):`);
+    lines.push(`  Self-Fracture (Clean Base prep + Fracturing Orb)`);
+    lines.push(`  Estimated acquisition cost: ${formatChaos(selfFracStrat.baseCostChaos, divineRate)}`);
+    lines.push(`  Market purchase:            not supplied / unavailable (Self-fracture evaluated from pool weights).`);
+    lines.push(`  Model confidence:           Approximate (Self-Fracture Model)`);
+  } else if (marketStrat) {
+    lines.push(`\nRECOMMENDED ACQUISITION (STEP 1):`);
+    lines.push(`  Direct Market Purchase`);
+    lines.push(`  Estimated acquisition cost: ${formatChaos(marketStrat.baseCostChaos, divineRate)}`);
+    lines.push(`  Model confidence:           High (Deterministic Market Purchase)`);
   }
 
   // ------------------------------------------------------------- DETAILED STEPS 2 to N
@@ -328,48 +396,43 @@ export function generateCraftExplanation(
         const fmtCol = (chaos: number) => formatChaos(chaos, divineRate).padStart(20);
         const fmtDiff = (chaos: number) => formatChaos(chaos, divineRate).padStart(20);
 
-        const s1A = recommended.baseCostChaos;
-        const s1M = simulation.stepwiseCostAverages.step1AcquisitionChaos;
-        lines.push(`Step 1 Acquisition:     ${fmtCol(s1A)} ${fmtCol(s1M)} ${fmtDiff(s1M - s1A)}`);
+        for (const s of recommended.steps) {
+          let simStepCost = 0;
+          if (s.stepNumber === 1) simStepCost = simulation.stepwiseCostAverages.step1AcquisitionChaos;
+          else if (s.stepNumber === 2) simStepCost = simulation.stepwiseCostAverages.step2HarvestChaos;
+          else if (s.stepNumber === 3) simStepCost = simulation.stepwiseCostAverages.step3CleanupChaos;
+          else if (s.stepNumber === 4) simStepCost = simulation.stepwiseCostAverages.step4ExaltChaos;
+          else if (s.stepNumber === 5) simStepCost = simulation.stepwiseCostAverages.step5ExaltChaos;
+          else if (s.stepNumber === 6) simStepCost = simulation.stepwiseCostAverages.step6DivineChaos;
 
-        const step2Obj = recommended.steps.find((s) => s.stepNumber === 2);
-        const s2A = step2Obj?.stepTotalCostChaos ?? 0;
-        const s2M = simulation.stepwiseCostAverages.step2HarvestChaos;
-        lines.push(`Step 2 Harvest:         ${fmtCol(s2A)} ${fmtCol(s2M)} ${fmtDiff(s2M - s2A)}`);
-
-        const step3Obj = recommended.steps.find((s) => s.stepNumber === 3);
-        const s3A = step3Obj?.stepTotalCostChaos ?? 0;
-        const s3M = simulation.stepwiseCostAverages.step3CleanupChaos;
-        lines.push(`Step 3 Cleanup:         ${fmtCol(s3A)} ${fmtCol(s3M)} ${fmtDiff(s3M - s3A)}`);
-
-        const step4Obj = recommended.steps.find((s) => s.stepNumber === 4);
-        if (step4Obj) {
-          const s4A = step4Obj.stepTotalCostChaos;
-          const s4M = simulation.stepwiseCostAverages.step4ExaltChaos;
-          lines.push(`Step 4 Suffix Slams:    ${fmtCol(s4A)} ${fmtCol(s4M)} ${fmtDiff(s4M - s4A)}`);
+          const diffVal = simStepCost - s.stepTotalCostChaos;
+          lines.push(
+            `${s.title.padEnd(24)} ${fmtCol(s.stepTotalCostChaos)} ${fmtCol(simStepCost)} ${fmtDiff(diffVal)}`
+          );
         }
-
-        const step5Obj = recommended.steps.find((s) => s.stepNumber === 5);
-        if (step5Obj) {
-          const s5A = step5Obj.stepTotalCostChaos;
-          const s5M = simulation.stepwiseCostAverages.step5ExaltChaos;
-          lines.push(`Step 5 Divine Finishing:${fmtCol(s5A)} ${fmtCol(s5M)} ${fmtDiff(s5M - s5A)}`);
-        }
-
         lines.push(`-`.repeat(86));
-        lines.push(`TOTAL COST:             ${fmtCol(recommended.totalExpectedCostChaos)} ${fmtCol(simulation.meanCostChaos)} ${`${diffPercent.toFixed(2)}% diff`.padStart(20)}`);
+        const totalDiffVal = (Math.abs(simulation.meanCostChaos - recommended.totalExpectedCostChaos) / recommended.totalExpectedCostChaos) * 100;
+        lines.push(
+          `${'TOTAL COST:'.padEnd(24)} ${fmtCol(recommended.totalExpectedCostChaos)} ${fmtCol(simulation.meanCostChaos)} ${`${totalDiffVal.toFixed(2)}% diff`.padStart(20)}`
+        );
       }
 
-      // Action counts table
+      // Action counts comparison table
       lines.push(`\nACTION COUNTS (Cumulative Across All Recovery Loops):`);
       lines.push(`                                  Analytical          Monte Carlo           Difference`);
       lines.push(`-`.repeat(86));
-      const fmtCount = (n: number) => n.toFixed(2).padStart(20);
-      const fmtPctDiff = (d: number) => `${d >= 0 ? '+' : ''}${d.toFixed(2)}% diff`.padStart(20);
+      const fmtCount = (c: number) => c.toFixed(2).padStart(20);
+      const fmtPctDiff = (diff: number) => `${diff >= 0 ? '+' : ''}${diff.toFixed(2)}% diff`.padStart(20);
 
-      const expHarvests = ((recommended.expectedCurrencies?.primalLifeforce ?? 0) + (recommended.expectedCurrencies?.wildLifeforce ?? 0) + (recommended.expectedCurrencies?.vividLifeforce ?? 0)) / 75;
-      const simHarvests = ((simulation.currencyAverages?.primalLifeforce ?? 0) + (simulation.currencyAverages?.wildLifeforce ?? 0) + (simulation.currencyAverages?.vividLifeforce ?? 0)) / 75;
-      const hDiff = expHarvests > 0 ? ((simHarvests - expHarvests) / expHarvests) * 100 : (simHarvests === 0 ? 0 : 100);
+      const expPrimalH = recommended.expectedCurrencies?.primalLifeforce ? recommended.expectedCurrencies.primalLifeforce / 75 : 0;
+      const simPrimalH = simulation.currencyAverages?.primalLifeforce ? simulation.currencyAverages.primalLifeforce / 75 : 0;
+      const expWildH = recommended.expectedCurrencies?.wildLifeforce ? recommended.expectedCurrencies.wildLifeforce / 75 : 0;
+      const simWildH = simulation.currencyAverages?.wildLifeforce ? simulation.currencyAverages.wildLifeforce / 75 : 0;
+      const expVividH = recommended.expectedCurrencies?.vividLifeforce ? recommended.expectedCurrencies.vividLifeforce / 75 : 0;
+      const simVividH = simulation.currencyAverages?.vividLifeforce ? simulation.currencyAverages.vividLifeforce / 75 : 0;
+      const expHarvests = expPrimalH + expWildH + expVividH;
+      const simHarvests = simPrimalH + simWildH + simVividH;
+      const hDiff = expHarvests > 0 ? ((simHarvests - expHarvests) / expHarvests) * 100 : 0;
       lines.push(`Harvest Attempts:       ${fmtCount(expHarvests)} ${fmtCount(simHarvests)} ${fmtPctDiff(hDiff)}`);
 
       const expAnnuls = recommended.expectedCurrencies?.annul ?? 0;
@@ -429,6 +492,23 @@ export function generateCraftExplanation(
       lines.push(`  75th Percentile (P75):${formatChaos(simulation.p75CostChaos ?? 0, divineRate)}`);
       lines.push(`  90th Percentile (P90):${formatChaos(simulation.p90CostChaos ?? 0, divineRate)}`);
       lines.push(`  95th Percentile (P95):${formatChaos(simulation.p95CostChaos ?? 0, divineRate)}`);
+
+      // Profit & Risk Distribution Metrics
+      if (simulation.riskMetrics && simulation.riskMetrics.saleValueChaos > 0) {
+        const rm = simulation.riskMetrics;
+        const p75Loss = rm.saleValueChaos - rm.p75CostChaos;
+        const p90Loss = rm.saleValueChaos - rm.p90CostChaos;
+        const p95Loss = rm.saleValueChaos - rm.p95CostChaos;
+
+        lines.push(`\nPROFIT & RISK DISTRIBUTION METRICS (SALE VALUE: ${formatChaos(rm.saleValueChaos, divineRate)}):`);
+        lines.push(`  Probability Craft < Sale:    ${rm.profitProbabilityPercentage.toFixed(2)}% (${rm.profitableTrialsCount.toLocaleString()} / ${simulation.completedTrials.toLocaleString()} trials profitable)`);
+        lines.push(`  Realized Median Profit (P50):${rm.medianRealizedProfitChaos >= 0 ? '+' : ''}${formatChaos(rm.medianRealizedProfitChaos, divineRate)}`);
+        lines.push(`  75th Percentile Cost (P75):  ${formatChaos(rm.p75CostChaos, divineRate)} (Realized: ${p75Loss >= 0 ? '+' : ''}${formatChaos(p75Loss, divineRate)})`);
+        lines.push(`  90th Percentile Cost (P90):  ${formatChaos(rm.p90CostChaos, divineRate)} (Realized: ${p90Loss >= 0 ? '+' : ''}${formatChaos(p90Loss, divineRate)})`);
+        lines.push(`  95th Percentile Cost (P95):  ${formatChaos(rm.p95CostChaos, divineRate)} (Realized: ${p95Loss >= 0 ? '+' : ''}${formatChaos(p95Loss, divineRate)})`);
+        lines.push(`  Expected Shortfall (CVaR 95):${formatChaos(rm.cvar95CostChaos, divineRate)} (Average cost in worst 5% tail)`);
+        lines.push(`  Economic Risk Assessment:    ${rm.medianRealizedProfitChaos > 0 && (recommended.expectedProfitChaos ?? 0) < 0 ? 'Heavy Right-Tail Risk (Median craft is profitable, but long recovery chains drag Expected Value negative)' : ((recommended.expectedProfitChaos ?? 0) > 0 ? 'Favorable Risk-Neutral EV (Positive Expected Value and robust median profit)' : 'Unfavorable EV under current ordinary currency action set')}`);
+      }
     }
 
     // Detailed Step-by-Step Sample Traces
@@ -452,28 +532,43 @@ export function generateCraftExplanation(
   }
 
   // ------------------------------------------------------------- STARTING FRACTURE ROUTE COMPARISON TABLE
-  const allStartingRoutes = [recommended, ...alternates];
   if (allStartingRoutes.length > 1) {
+    // Group strategies by unique target base label
+    const baseGroups = new Map<string, StartingStrategyResult[]>();
+    for (const strat of allStartingRoutes) {
+      const lbl = getStartingFractureBaseLabel(strat.state);
+      if (!baseGroups.has(lbl)) {
+        baseGroups.set(lbl, []);
+      }
+      baseGroups.get(lbl)!.push(strat);
+    }
+
     lines.push('\n' + '='.repeat(70));
     lines.push('STARTING FRACTURE ROUTE COMPARISON');
     lines.push('='.repeat(70));
     lines.push(
-      `${'Starting Base / Route'.padEnd(36)} ${'Acquisition'.padEnd(20)} ${'Downstream EV'.padEnd(20)} ${'Total EV'.padEnd(20)} Status`
+      `${'Starting Base / Target'.padEnd(38)} ${'Acquisition Mode'.padEnd(20)} ${'Acquisition Cost'.padEnd(20)} ${'Downstream EV'.padEnd(20)} ${'Full Route EV'.padEnd(20)} Status`
     );
-    lines.push('-'.repeat(110));
+    lines.push('-'.repeat(128));
 
-    for (let i = 0; i < allStartingRoutes.length; i++) {
-      const r = allStartingRoutes[i];
-      const acqStr = formatChaos(r.baseCostChaos, divineRate);
-      const downStr = formatChaos(r.expectedCraftingCostChaos, divineRate);
-      const totStr = formatChaos(r.totalExpectedCostChaos, divineRate);
-      const diff = r.totalExpectedCostChaos - recommended.totalExpectedCostChaos;
-      const statusStr = i === 0 ? 'BEST' : `+${formatChaos(diff, divineRate)}`;
-      lines.push(
-        `${r.strategyName.padEnd(36)} ${acqStr.padEnd(20)} ${downStr.padEnd(20)} ${totStr.padEnd(20)} ${statusStr}`
-      );
+    for (const [baseLabel, strats] of baseGroups.entries()) {
+      for (let i = 0; i < strats.length; i++) {
+        const r = strats[i];
+        const isBest = r === recommended;
+        const acqTypeStr = r.acquisition?.type === 'market' ? 'Market Purchase' : 'Self-Fracture' + (isBest ? ' (Rec)' : '');
+        const acqCostStr = formatChaos(r.baseCostChaos, divineRate);
+        const downStr = formatChaos(r.expectedCraftingCostChaos, divineRate);
+        const totStr = formatChaos(r.totalExpectedCostChaos, divineRate);
+        const diff = r.totalExpectedCostChaos - recommended.totalExpectedCostChaos;
+        const statusStr = isBest ? 'BEST' : `+${formatChaos(diff, divineRate)}`;
+
+        const baseCol = i === 0 ? baseLabel.padEnd(38) : ''.padEnd(38);
+        lines.push(
+          `${baseCol} ${acqTypeStr.padEnd(20)} ${acqCostStr.padEnd(20)} ${downStr.padEnd(20)} ${totStr.padEnd(20)} ${statusStr}`
+        );
+      }
     }
-    lines.push('-'.repeat(110));
+    lines.push('-'.repeat(128));
   }
 
   // ------------------------------------------------------------- ALTERNATE ROUTES COMPARISON
@@ -500,7 +595,7 @@ export function generateCraftExplanation(
   lines.push('\n' + '='.repeat(70));
   lines.push('LABELED GAME MECHANICS ASSUMPTIONS');
   lines.push('='.repeat(70));
-  lines.push('1. Harvest Additional Affixes: Modeled as 50% chance of 1 additional affix / 50% chance of 2 additional affixes.');
+  lines.push('1. Harvest Additional Affixes: Modeled as 50% chance of 1 additional affix / 50% chance of 2 additional affixes (PoE 4-mod rare cluster jewel affix distribution).');
   lines.push('2. Base Self-Fracture Model: Approximate Alteration/Augmentation/Regal/Bench preparation + Fracturing Orb (25% hit rate).');
   lines.push('3. Market Purchase Prices: Any unsupplied market price is reported as not supplied / unavailable rather than inferred.');
   lines.push('4. Allflame Crafting: Stateful Intangibility stacking remains deferred and disabled.');

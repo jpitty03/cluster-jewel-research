@@ -142,6 +142,13 @@ const craftAResponse = optimizer.optimizeCraft({
         type: 'self-fracture',
         costChaos: 1533.4, // 4 * (10c base + 14.35c prep + 359c fracture)
         confidence: 'approximate',
+        breakdown: {
+          cleanBaseCostChaos: 10,
+          prepCostChaos: 14.35,
+          fracturingOrbCostChaos: 359,
+          successChance: 25.0,
+          expectedAttempts: 4.0,
+        },
       },
     },
     {
@@ -160,6 +167,13 @@ const craftAResponse = optimizer.optimizeCraft({
         type: 'self-fracture',
         costChaos: 1542.3, // 4 * (10c base + 16.58c prep + 359c fracture)
         confidence: 'approximate',
+        breakdown: {
+          cleanBaseCostChaos: 10,
+          prepCostChaos: 16.58,
+          fracturingOrbCostChaos: 359,
+          successChance: 25.0,
+          expectedAttempts: 4.0,
+        },
       },
     },
     {
@@ -307,6 +321,13 @@ const craftCResponse = optimizer.optimizeCraft({
         type: 'self-fracture',
         costChaos: 1533.4, // 4 * (10c base + 14.35c prep + 359c fracture)
         confidence: 'approximate',
+        breakdown: {
+          cleanBaseCostChaos: 10,
+          prepCostChaos: 14.35,
+          fracturingOrbCostChaos: 359,
+          successChance: 25.0,
+          expectedAttempts: 4.0,
+        },
       },
     },
     {
@@ -316,6 +337,13 @@ const craftCResponse = optimizer.optimizeCraft({
         type: 'self-fracture',
         costChaos: 1527.4, // 4 * (10c base + 12.85c prep + 359c fracture)
         confidence: 'approximate',
+        breakdown: {
+          cleanBaseCostChaos: 10,
+          prepCostChaos: 12.85,
+          fracturingOrbCostChaos: 359,
+          successChance: 25.0,
+          expectedAttempts: 4.0,
+        },
       },
     },
     {
@@ -325,6 +353,13 @@ const craftCResponse = optimizer.optimizeCraft({
         type: 'self-fracture',
         costChaos: 1542.3, // 4 * (10c base + 16.58c prep + 359c fracture)
         confidence: 'approximate',
+        breakdown: {
+          cleanBaseCostChaos: 10,
+          prepCostChaos: 16.58,
+          fracturingOrbCostChaos: 359,
+          successChance: 25.0,
+          expectedAttempts: 4.0,
+        },
       },
     },
     {
@@ -334,6 +369,13 @@ const craftCResponse = optimizer.optimizeCraft({
         type: 'self-fracture',
         costChaos: 1542.3, // 4 * (10c base + 16.58c prep + 359c fracture)
         confidence: 'approximate',
+        breakdown: {
+          cleanBaseCostChaos: 10,
+          prepCostChaos: 16.58,
+          fracturingOrbCostChaos: 359,
+          successChance: 25.0,
+          expectedAttempts: 4.0,
+        },
       },
     },
   ],

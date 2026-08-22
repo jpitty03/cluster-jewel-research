@@ -22,11 +22,7 @@ import type {
 export interface StartingStrategyResult {
   strategyName: string;
   state?: ItemState;
-  acquisition?: {
-    type: 'market' | 'self-fracture' | 'clean-base';
-    costChaos: number;
-    confidence: 'deterministic' | 'approximate';
-  };
+  acquisition?: AcquisitionOption;
   baseCostChaos: number;
   expectedCraftingCostChaos: number;
   totalExpectedCostChaos: number;
@@ -114,13 +110,19 @@ export class CraftEvaluator {
       roi = totalExpectedCostChaos > 0 ? (expectedProfitChaos / totalExpectedCostChaos) * 100 : 0;
     }
 
-    const acquisition =
+    const computedStep1 = result.step1Options?.find((o) => (typeof acquisitionInput === 'object' ? o.type === acquisitionInput.type : true)) ?? result.step1Options?.[0];
+
+    const acquisition: AcquisitionOption =
       typeof acquisitionInput === 'object'
-        ? acquisitionInput
+        ? {
+            ...acquisitionInput,
+            breakdown: acquisitionInput.breakdown ?? computedStep1?.breakdown,
+          }
         : {
             type: (baseCost > 0 ? 'market' : 'self-fracture') as 'market' | 'self-fracture',
             costChaos: effectiveAcquisitionCost,
             confidence: (baseCost > 0 ? 'deterministic' : 'approximate') as 'deterministic' | 'approximate',
+            breakdown: computedStep1?.breakdown,
           };
 
     return {
