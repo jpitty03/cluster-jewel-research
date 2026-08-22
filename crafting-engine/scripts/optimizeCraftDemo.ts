@@ -11,10 +11,48 @@ const priceBook = new PriceBook();
 const optimizer = new CraftingOptimizer(undefined, priceBook);
 const repo = new ClusterModRepository();
 
+function outputPath(fileName: string): string {
+  return fileURLToPath(new URL(`../../${fileName}`, import.meta.url));
+}
+
 function writeCraftOutput(fileName: string, explanation: string): void {
-  const outputPath = fileURLToPath(new URL(`../../${fileName}`, import.meta.url));
-  writeFileSync(outputPath, `${explanation.trimEnd()}\n`, 'utf8');
+  writeFileSync(outputPath(fileName), `${explanation.trimEnd()}\n`, 'utf8');
   console.log(`\n[output] Wrote ${fileName}`);
+}
+
+/**
+ * Keep a compact, connector-friendly review artifact alongside the full output.
+ * The explanation can become very large because Monte Carlo traces and detailed
+ * diagnostics are intentionally verbose. For review purposes, retain the head
+ * (policy/route/diagnostic summary) and tail (validation/final results) while
+ * omitting the verbose middle when necessary.
+ */
+function buildReviewOutput(explanation: string): string {
+  const lines = explanation.replace(/\r\n/g, '\n').split('\n');
+  const headLines = 420;
+  const tailLines = 260;
+
+  if (lines.length <= headLines + tailLines) {
+    return explanation.trimEnd();
+  }
+
+  const omitted = lines.length - headLines - tailLines;
+  return [
+    ...lines.slice(0, headLines),
+    '',
+    '='.repeat(70),
+    `REVIEW FILE NOTE: ${omitted} verbose middle lines omitted from this compact artifact.`,
+    'See the corresponding full output-craft-*.txt file for complete Monte Carlo traces/details.',
+    '='.repeat(70),
+    '',
+    ...lines.slice(-tailLines),
+  ].join('\n').trimEnd();
+}
+
+function writeCraftReview(fileName: string, explanation: string): void {
+  const review = buildReviewOutput(explanation);
+  writeFileSync(outputPath(fileName), `${review}\n`, 'utf8');
+  console.log(`[output] Wrote ${fileName}`);
 }
 
 console.log('='.repeat(80));
@@ -113,6 +151,7 @@ const craftAResponse = optimizer.optimizeCraft({
 
 console.log(craftAResponse.explanation);
 writeCraftOutput('output-craft-a.txt', craftAResponse.explanation);
+writeCraftReview('output-craft-a-review.txt', craftAResponse.explanation);
 
 // ------------------------------------------------------------- DEMO 2: Reference Craft B
 console.log('\n>>> OPTIMIZING REFERENCE CRAFT B: 8-Passive Cold Cluster (ilvl 83)');
@@ -152,6 +191,7 @@ const craftBResponse = optimizer.optimizeCraft({
 
 console.log(craftBResponse.explanation);
 writeCraftOutput('output-craft-b.txt', craftBResponse.explanation);
+writeCraftReview('output-craft-b-review.txt', craftBResponse.explanation);
 
 // ------------------------------------------------------------- DEMO 3: Reference Craft C (Minion Cluster)
 console.log('\n>>> OPTIMIZING REFERENCE CRAFT C: 12-Passive Minion Cluster (ilvl 84)');
@@ -254,4 +294,5 @@ const craftCResponse = optimizer.optimizeCraft({
 
 console.log(craftCResponse.explanation);
 writeCraftOutput('output-craft-c.txt', craftCResponse.explanation);
+writeCraftReview('output-craft-c-review.txt', craftCResponse.explanation);
 console.log('='.repeat(80));
