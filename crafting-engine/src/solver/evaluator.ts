@@ -1,6 +1,7 @@
 import type { ItemState } from '../domain/ItemState.ts';
 import type { TargetDefinition } from '../domain/TargetDefinition.ts';
 import type { SolverContext, CraftAction } from '../domain/CraftAction.ts';
+import type { ModPool } from '../domain/ModPool.ts';
 import {
   ExpectedCostSolver,
   type CraftPlanStep,
@@ -33,6 +34,7 @@ export interface StartingStrategyResult {
   policyEngine?: CraftingPolicyEngine;
   harvestComparison?: HarvestStrategyComparison[];
   representativeDecisions?: RepresentativeStateAudit[];
+  pool?: ModPool;
 }
 
 export class CraftEvaluator {
@@ -95,6 +97,7 @@ export class CraftEvaluator {
       policyEngine: result.policyEngine,
       harvestComparison: result.harvestComparison,
       representativeDecisions: result.representativeDecisions,
+      pool: result.pool ?? this.context.pool,
     };
   }
 }

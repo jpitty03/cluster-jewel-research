@@ -104,9 +104,24 @@ export class CraftingOptimizer {
         );
 
         if (simulationValidation && simulationValidation.meanCostChaos !== undefined) {
-          const diffPct = (Math.abs(simulationValidation.meanCostChaos - recommended.totalExpectedCostChaos) / recommended.totalExpectedCostChaos) * 100;
+          const costDiffPct = (Math.abs(simulationValidation.meanCostChaos - recommended.totalExpectedCostChaos) / recommended.totalExpectedCostChaos) * 100;
+
+          const expH = recommended.expectedCurrencies?.primalLifeforce ? recommended.expectedCurrencies.primalLifeforce / 75 : 0;
+          const simH = simulationValidation.currencyAverages?.primalLifeforce ? simulationValidation.currencyAverages.primalLifeforce / 75 : 0;
+          const harvestDiffPct = expH > 0 ? (Math.abs(simH - expH) / expH) * 100 : 0;
+
+          const expA = recommended.expectedCurrencies?.annul ?? 0;
+          const simA = simulationValidation.currencyAverages?.annul ?? 0;
+          const annulDiffPct = expA > 0 ? (Math.abs(simA - expA) / expA) * 100 : 0;
+
+          const expE = recommended.expectedCurrencies?.exalt ?? 0;
+          const simE = simulationValidation.currencyAverages?.exalt ?? 0;
+          const exaltDiffPct = expE > 0 ? (Math.abs(simE - expE) / expE) * 100 : 0;
+
           const zeroFallback = simulationValidation.policyStats.fallbackActionsUsed === 0 && simulationValidation.policyStats.missingPolicyStates === 0;
-          recommended.isValidated = diffPct <= 2.0 && simulationValidation.completionRate >= 98.0 && zeroFallback;
+          const allCountsPass = (expH === 0 || harvestDiffPct <= 10.0) && (expA === 0 || annulDiffPct <= 10.0) && (expE === 0 || exaltDiffPct <= 10.0);
+
+          recommended.isValidated = costDiffPct <= 2.0 && allCountsPass && simulationValidation.completionRate >= 98.0 && zeroFallback;
         }
       }
     }

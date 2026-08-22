@@ -1,5 +1,6 @@
 import type { ItemState } from '../domain/ItemState.ts';
 import type { CraftAction, SolverContext } from '../domain/CraftAction.ts';
+import type { ModPool } from '../domain/ModPool.ts';
 import { generateStateKey } from './stateKey.ts';
 import { satisfiesTarget, type TargetDefinition } from '../domain/TargetDefinition.ts';
 import { DivineAction } from '../actions/divine.ts';
@@ -62,6 +63,7 @@ export interface StateValueNode {
   policyEngine?: CraftingPolicyEngine;
   harvestComparison?: HarvestStrategyComparison[];
   representativeDecisions?: RepresentativeStateAudit[];
+  pool?: ModPool;
 }
 
 export class ExpectedCostSolver {
@@ -236,17 +238,28 @@ export class ExpectedCostSolver {
 
     // If starting with fractured 35% Effect, downstream crafting slams target suffixes
     if (!hasFracturedInt && hasFracturedEff) {
-      const step2Cost = this.policyEngine.vStep2; // 56.14c (Harvest T1 ES + cleanup)
       const targetRequiresInt = this.policyEngine.targetRequiresInt;
-      const suffixCost = targetRequiresInt ? this.policyEngine.vCleanFrac35 : this.policyEngine.v5StepFullPool;
-      const downstreamCost = step2Cost + suffixCost;
+      const expHarvests = this.policyEngine.expHarvestsFrac35;
+      const expAnnuls = this.policyEngine.expAnnulsFrac35;
+      const expExalts = this.policyEngine.expExaltsFrac35;
+
+      const step2RawCost = (1 / this.policyEngine.pT1ES) * 75 * primalLifeforceRate;
+      const step2TotalCost = expHarvests * 75 * primalLifeforceRate;
+      const step2RecoveryCost = step2TotalCost - step2RawCost;
+
+      const step3TotalAnnuls = this.policyEngine.step3AnnulsFrac35;
+      const step3RawCost = this.policyEngine.aStep2 * annulRate;
+      const step3TotalCost = step3TotalAnnuls * annulRate;
+      const step3RecoveryCost = step3TotalCost - step3RawCost;
+
+      const step4RecoveryAnnuls = this.policyEngine.step4AnnulsFrac35;
+      const step4RecoveryAnnulCost = step4RecoveryAnnuls * annulRate;
+
+      const step4RawCost = expExalts * exaltRate;
+      const step4TotalCost = step4RawCost + step4RecoveryAnnulCost;
+
+      const downstreamCost = step2TotalCost + step3TotalCost + step4TotalCost;
       const totalCost = effectiveBaseCost + downstreamCost;
-      const expHarvests = targetRequiresInt ? this.policyEngine.expHarvestsFrac35 : 14.0;
-      const expAnnuls = targetRequiresInt ? this.policyEngine.expAnnulsFrac35 : (1 / 0.55) + (1 - this.policyEngine.p5FullPool) / this.policyEngine.p5FullPool;
-      const expExalts = targetRequiresInt ? this.policyEngine.expExaltsFrac35 : 1 / this.policyEngine.p5FullPool;
-      const unionChance = (targetRequiresInt
-        ? (isAllflame ? 1 - Math.pow(1 - (300 + 850) / 14750, 4) : (300 + 850) / 14750)
-        : this.policyEngine.p5FullPool) * 100;
 
       return {
         stateKey: key,
@@ -274,31 +287,67 @@ export class ExpectedCostSolver {
             stepNumber: 2,
             title: 'STEP 2 -- Harvest Reforge Defence for T1 Maximum ES',
             actionName: 'Harvest Reforge Defence (75 Red Lifeforce)',
-            description: 'Preserves fractured 35% Effect prefix and rolls until T1 Maximum Energy Shield is hit.',
+            description: 'Preserves fractured 35% Effect prefix and rolls until T1 Maximum Energy Shield is hit (7.14% rate).',
             successChance: this.policyEngine.pT1ES * 100,
-            expectedAttempts: 1 / this.policyEngine.pT1ES,
-            rawCostChaos: (1 / this.policyEngine.pT1ES) * 75 * primalLifeforceRate,
-            stepTotalCostChaos: step2Cost,
-            cumulativeCostChaos: effectiveBaseCost + step2Cost,
-            currencies: { primalLifeforce: (1 / this.policyEngine.pT1ES) * 75 },
+            expectedAttempts: expHarvests,
+            rawCostChaos: step2RawCost,
+            recoveryCostChaos: step2RecoveryCost,
+            stepTotalCostChaos: step2TotalCost,
+            cumulativeCostChaos: effectiveBaseCost + step2TotalCost,
+            currencies: { primalLifeforce: expHarvests * 75 },
+            details: {
+              t1ESProbability: this.policyEngine.pT1ES,
+              initialAttempts: 1 / this.policyEngine.pT1ES,
+              initialRawCost: step2RawCost,
+              recoveryAttempts: expHarvests - 1 / this.policyEngine.pT1ES,
+              recoveryCost: step2RecoveryCost,
+              totalHarvestUsage: expHarvests,
+              totalHarvestCost: step2TotalCost,
+            },
           },
           {
             stepNumber: 3,
-            title: targetRequiresInt ? 'STEP 3 -- Slam Target Suffixes (T1 Intelligence & Premium Suffix)' : 'STEP 3 -- Slam Target Premium Suffix',
+            title: 'STEP 3 -- Annul Cleanup of Unwanted Harvest Mods',
+            actionName: 'Orb of Annulment',
+            description: 'Annul non-target affixes to isolate clean [Frac 35, T1 ES] before suffix slams.',
+            expectedAttempts: step3TotalAnnuls,
+            rawCostChaos: step3RawCost,
+            recoveryCostChaos: step3RecoveryCost,
+            stepTotalCostChaos: step3TotalCost,
+            cumulativeCostChaos: effectiveBaseCost + step2TotalCost + step3TotalCost,
+            currencies: { annul: step3TotalAnnuls },
+            details: {
+              initialCleanupAnnuls: this.policyEngine.aStep2,
+              initialCleanupCost: step3RawCost,
+              totalAnnulUsage: step3TotalAnnuls,
+              totalAnnulCost: step3TotalCost,
+            },
+          },
+          {
+            stepNumber: 4,
+            title: targetRequiresInt ? 'STEP 4 -- Slam Target Suffixes (T1 Intelligence & Premium Suffix)' : 'STEP 4 -- Slam Target Premium Suffix',
             actionName: isAllflame ? 'Allflame Exalted Orb (Suffix)' : 'Exalted Orb Slam',
             description: targetRequiresInt ? 'Slam open suffix slots for T1 Intelligence (+6 to +8) and Premium Suffix (+4 Attributes / 3% AS / +4% All Res).' : 'Slam open suffix for Premium Suffix (+4 Attributes / 3% AS / +4% All Res).',
-            successChance: unionChance,
-            expectedAttempts: 100 / unionChance,
-            rawCostChaos: (100 / unionChance) * exaltRate,
-            stepTotalCostChaos: suffixCost,
+            successChance: this.policyEngine.pHit * 100,
+            expectedAttempts: expExalts,
+            rawCostChaos: step4RawCost,
+            recoveryCostChaos: step4RecoveryAnnulCost,
+            stepTotalCostChaos: step4TotalCost,
             cumulativeCostChaos: totalCost,
-            currencies: { exalt: expExalts },
+            currencies: { exalt: expExalts, annul: step4RecoveryAnnuls },
           },
         ],
         step1Options,
         outcomeDistribution: outcomeDist,
         expectedSaleValueChaos: expectedSaleValue,
         policyEngine: this.policyEngine,
+        pool: this.context.pool,
+        harvestComparison: this.policyEngine.getHarvestStrategyComparisons(
+          effectiveBaseCost,
+          expectedSaleValue,
+          0
+        ),
+        representativeDecisions: this.policyEngine.getRepresentativeStateAudits(),
       };
     }
 
@@ -652,6 +701,7 @@ export class ExpectedCostSolver {
       isRestart: false,
       steps,
       policyEngine: this.policyEngine,
+      pool: this.context.pool,
     };
   }
 }

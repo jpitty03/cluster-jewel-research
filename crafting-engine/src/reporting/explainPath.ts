@@ -22,22 +22,35 @@ export function generateCraftExplanation(
   lines.push(reportTitle);
   lines.push('='.repeat(70));
 
-  // Determine Monte Carlo Validation Status
   let diffPercent = 0;
   let statusText = 'POLICY COST MODEL: APPROXIMATE / INVESTIGATION REQUIRED';
   if (simulation && simulation.meanCostChaos !== undefined) {
     const analyticalCost = recommended.totalExpectedCostChaos;
     const simCost = simulation.meanCostChaos;
     diffPercent = (Math.abs(simCost - analyticalCost) / analyticalCost) * 100;
+    const costDiffPct = diffPercent;
+
+    const expH = recommended.expectedCurrencies?.primalLifeforce ? recommended.expectedCurrencies.primalLifeforce / 75 : 0;
+    const simH = simulation.currencyAverages?.primalLifeforce ? simulation.currencyAverages.primalLifeforce / 75 : 0;
+    const harvestDiffPct = expH > 0 ? (Math.abs(simH - expH) / expH) * 100 : 0;
+
+    const expA = recommended.expectedCurrencies?.annul ?? 0;
+    const simA = simulation.currencyAverages?.annul ?? 0;
+    const annulDiffPct = expA > 0 ? (Math.abs(simA - expA) / expA) * 100 : 0;
+
+    const expE = recommended.expectedCurrencies?.exalt ?? 0;
+    const simE = simulation.currencyAverages?.exalt ?? 0;
+    const exaltDiffPct = expE > 0 ? (Math.abs(simE - expE) / expE) * 100 : 0;
 
     const zeroFallback = simulation.policyStats?.fallbackActionsUsed === 0 && simulation.policyStats?.missingPolicyStates === 0;
+    const allCountsPass = (expH === 0 || harvestDiffPct <= 10.0) && (expA === 0 || annulDiffPct <= 10.0) && (expE === 0 || exaltDiffPct <= 10.0);
 
-    if (diffPercent <= 2.0 && simulation.completionRate >= 98.0 && zeroFallback) {
-      statusText = `POLICY COST MODEL: VALIDATED (Analytical & Monte Carlo agree within ${diffPercent.toFixed(2)}%)\nGAME-MECHANICS FIDELITY: PARTIAL\nBEST OF EVALUATED POLICIES: PROVEN\nGLOBAL OPTIMALITY: NOT YET PROVEN`;
-    } else if (diffPercent <= 5.0 && simulation.completionRate >= 95.0 && zeroFallback) {
-      statusText = `POLICY COST MODEL: PROVISIONALLY VALIDATED (Analytical & Monte Carlo agree within ${diffPercent.toFixed(2)}%)\nGAME-MECHANICS FIDELITY: PARTIAL\nBEST OF EVALUATED POLICIES: PROVEN\nGLOBAL OPTIMALITY: NOT YET PROVEN`;
+    if (costDiffPct <= 2.0 && allCountsPass && simulation.completionRate >= 98.0 && zeroFallback) {
+      statusText = `POLICY COST MODEL: VALIDATED (Analytical & Monte Carlo agree within ${costDiffPct.toFixed(2)}%)\nGAME-MECHANICS FIDELITY: PARTIAL\nBEST OF EVALUATED POLICIES: PROVEN\nGLOBAL OPTIMALITY: NOT YET PROVEN`;
+    } else if (costDiffPct <= 5.0 && allCountsPass && simulation.completionRate >= 95.0 && zeroFallback) {
+      statusText = `POLICY COST MODEL: PROVISIONALLY VALIDATED (Analytical & Monte Carlo agree within ${costDiffPct.toFixed(2)}%)\nGAME-MECHANICS FIDELITY: PARTIAL\nBEST OF EVALUATED POLICIES: PROVEN\nGLOBAL OPTIMALITY: NOT YET PROVEN`;
     } else {
-      statusText = `POLICY COST MODEL: INVESTIGATION REQUIRED (Difference: ${diffPercent.toFixed(2)}%)`;
+      statusText = `POLICY COST MODEL: INVESTIGATION REQUIRED (Cost Diff: ${costDiffPct.toFixed(2)}%, Harvest Diff: ${harvestDiffPct.toFixed(2)}%, Annul Diff: ${annulDiffPct.toFixed(2)}%, Exalt Diff: ${exaltDiffPct.toFixed(2)}%)`;
     }
   }
 
@@ -84,6 +97,36 @@ export function generateCraftExplanation(
     lines.push(`  Fishing for joint T1 ES + 35% Effect in Harvest (Strategy B, 1 in ~751 crafts) costs ~1379c more in lifeforce and recovery loops than stopping at T1 ES and completing prefixes via Allflame Exalts (Strategy A/C, 10.20% hit rate).`);
   }
 
+  // ------------------------------------------------------------- SUFFIX POOL DIAGNOSTIC AUDIT
+  const isFractured35Route =
+    recommended.strategyName?.toLowerCase().includes('35%') ||
+    recommended.steps?.some((s) => s.title.includes('35% Effect'));
+
+  if (isFractured35Route && recommended.policyEngine && typeof recommended.policyEngine.getSuffixPoolAudit === 'function' && recommended.pool) {
+    const auditStates = recommended.policyEngine.getSuffixPoolAudit(recommended.pool, 84);
+    lines.push('\n' + '-'.repeat(70));
+    lines.push('SUFFIX POOL DIAGNOSTIC AUDIT (FRACTURED 35% ROUTE)');
+    lines.push('-'.repeat(70));
+    for (const st of auditStates) {
+      lines.push(`\n${st.stateLabel}:`);
+      lines.push(`  Description:            ${st.description}`);
+      lines.push(`  Eligible Suffix Count:  ${st.eligibleSuffixCount}`);
+      lines.push(`  Total Suffix Weight:    ${st.eligibleSuffixWeight.toLocaleString()}`);
+      if (st.t1IntWeight !== undefined) {
+        lines.push(`  T1 Int Weight:          ${st.t1IntWeight} (Hit chance: ${st.t1IntChance?.toFixed(2)}%)`);
+      }
+      if (st.premiumTargetWeight !== undefined) {
+        lines.push(`  Premium Target Weight:  ${st.premiumTargetWeight} (Hit chance: ${st.premiumTargetChance?.toFixed(2)}%)`);
+      }
+      if (st.allTargetWeight !== undefined) {
+        lines.push(`  Total Target Weight:    ${st.allTargetWeight} (Hit chance: ${st.allTargetChance?.toFixed(2)}%)`);
+      }
+      if (st.blockedGroups && st.blockedGroups.length > 0) {
+        lines.push(`  Blocked Mod Groups:     ${st.blockedGroups.join(', ')}`);
+      }
+    }
+  }
+
   // ------------------------------------------------------------- REPRESENTATIVE STATE DECISIONS
   if (recommended.representativeDecisions && recommended.representativeDecisions.length > 0) {
     lines.push('\n' + '-'.repeat(70));
@@ -113,9 +156,11 @@ export function generateCraftExplanation(
     lines.push(`  Of T1 ES Successes:`);
     lines.push(`    T1 ES Only (Clean):         ${hc.t1ESOnlyPct.toFixed(2)}%`);
     lines.push(`    +35% Effect:                ${hc.t1ESPlus35EffPct.toFixed(2)}% (Bypasses Step 4)`);
+    lines.push(`    +T1 Intelligence:           ${(hc.t1ESPlusIntPct ?? 0).toFixed(2)}% (Bypasses Suffix Step 1)`);
     lines.push(`    +4 All Attributes:          ${hc.t1ESPlusAttributesPct.toFixed(2)}% (Bypasses Step 5)`);
     lines.push(`    3% Attack Speed:            ${hc.t1ESPlusAttackSpeedPct.toFixed(2)}% (Bypasses Step 5)`);
     lines.push(`    +4% All Resistance:         ${hc.t1ESPlusAllResPct.toFixed(2)}% (Bypasses Step 5)`);
+    lines.push(`    +T1 Int + Premium Suffix:   ${(hc.t1ESPlusIntAndPremiumPct ?? 0).toFixed(2)}% (Bypasses Suffix Steps)`);
     lines.push(`    +35% + Premium Suffix:      ${hc.t1ESPlus35AndPremiumPct.toFixed(2)}% (Bypasses Step 4 & 5)`);
     lines.push(`    junk-only extras:           ${hc.t1ESPlusJunkOnlyPct.toFixed(2)}% (Requires Step 3 Annul)`);
   }
@@ -313,7 +358,9 @@ export function generateCraftExplanation(
   if (recommended.outcomeDistribution && recommended.outcomeDistribution.length > 0) {
     lines.push(`\nFINAL OUTCOME VALUE DISTRIBUTION:`);
     for (const od of recommended.outcomeDistribution) {
-      lines.push(`  ${(od.probability * 100).toFixed(2)}%  ${od.name.padEnd(35)}  (${formatChaos(od.saleValueChaos, divineRate)})`);
+      const simPct = simulation?.outcomeBranchDistribution?.[od.name];
+      const simText = simPct !== undefined ? `  [Sim: ${simPct.toFixed(2)}%]` : '';
+      lines.push(`  ${(od.probability * 100).toFixed(2)}%  ${od.name.padEnd(35)}  (${formatChaos(od.saleValueChaos, divineRate)})${simText}`);
     }
   }
 
@@ -356,21 +403,31 @@ export function generateCraftExplanation(
         const s1M = simulation.stepwiseCostAverages.step1AcquisitionChaos;
         lines.push(`Step 1 Acquisition:     ${formatChaos(s1A, divineRate).padStart(12)}     ${formatChaos(s1M, divineRate).padStart(12)}     ${formatChaos(s1M - s1A, divineRate).padStart(10)}`);
 
-        const s2A = recommended.steps[0]?.stepTotalCostChaos ?? 21.9;
+        const step2Obj = recommended.steps.find((s) => s.stepNumber === 2);
+        const s2A = step2Obj?.stepTotalCostChaos ?? 0;
         const s2M = simulation.stepwiseCostAverages.step2HarvestChaos;
         lines.push(`Step 2 Harvest:         ${formatChaos(s2A, divineRate).padStart(12)}     ${formatChaos(s2M, divineRate).padStart(12)}     ${formatChaos(s2M - s2A, divineRate).padStart(10)}`);
 
-        const s3A = recommended.steps[1]?.stepTotalCostChaos ?? 34.3;
+        const step3Obj = recommended.steps.find((s) => s.stepNumber === 3);
+        const s3A = step3Obj?.stepTotalCostChaos ?? 0;
         const s3M = simulation.stepwiseCostAverages.step3CleanupChaos;
         lines.push(`Step 3 Cleanup:         ${formatChaos(s3A, divineRate).padStart(12)}     ${formatChaos(s3M, divineRate).padStart(12)}     ${formatChaos(s3M - s3A, divineRate).padStart(10)}`);
 
-        const s4A = recommended.steps[2]?.stepTotalCostChaos ?? 337.95;
-        const s4M = simulation.stepwiseCostAverages.step4ExaltChaos;
-        lines.push(`Step 4 35% Effect:      ${formatChaos(s4A, divineRate).padStart(12)}     ${formatChaos(s4M, divineRate).padStart(12)}     ${formatChaos(s4M - s4A, divineRate).padStart(10)}`);
+        const step4Obj = recommended.steps.find((s) => s.stepNumber === 4);
+        if (step4Obj) {
+          const s4A = step4Obj.stepTotalCostChaos;
+          const s4M = simulation.stepwiseCostAverages.step4ExaltChaos;
+          const label = (step4Obj.title.replace(/^STEP 4 --\s*/i, '').replace(/Step 4:\s*/i, '').split('(')[0].trim()).padEnd(16).slice(0, 16);
+          lines.push(`Step 4 ${label}: ${formatChaos(s4A, divineRate).padStart(12)}     ${formatChaos(s4M, divineRate).padStart(12)}     ${formatChaos(s4M - s4A, divineRate).padStart(10)}`);
+        }
 
-        const s5A = recommended.steps[3]?.stepTotalCostChaos ?? 927.50;
-        const s5M = simulation.stepwiseCostAverages.step5ExaltChaos;
-        lines.push(`Step 5 Final Suffix:    ${formatChaos(s5A, divineRate).padStart(12)}     ${formatChaos(s5M, divineRate).padStart(12)}     ${formatChaos(s5M - s5A, divineRate).padStart(10)}`);
+        const step5Obj = recommended.steps.find((s) => s.stepNumber === 5);
+        if (step5Obj) {
+          const s5A = step5Obj.stepTotalCostChaos;
+          const s5M = simulation.stepwiseCostAverages.step5ExaltChaos;
+          const label = (step5Obj.title.replace(/^STEP 5 --\s*/i, '').replace(/Step 5:\s*/i, '').split('(')[0].trim()).padEnd(16).slice(0, 16);
+          lines.push(`Step 5 ${label}: ${formatChaos(s5A, divineRate).padStart(12)}     ${formatChaos(s5M, divineRate).padStart(12)}     ${formatChaos(s5M - s5A, divineRate).padStart(10)}`);
+        }
 
         const hasStep6 = recommended.steps.some((s) => s.stepNumber === 6);
         if (hasStep6) {

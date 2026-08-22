@@ -17,9 +17,11 @@ export interface HarvestCensusData {
   t1ESSuccessRate: number;
   t1ESOnlyPct: number;
   t1ESPlus35EffPct: number;
+  t1ESPlusIntPct: number;
   t1ESPlusAttributesPct: number;
   t1ESPlusAttackSpeedPct: number;
   t1ESPlusAllResPct: number;
+  t1ESPlusIntAndPremiumPct: number;
   t1ESPlus35AndPremiumPct: number;
   t1ESPlusJunkOnlyPct: number;
 }
@@ -71,6 +73,7 @@ export interface SimulationResult {
     fallbackActionsUsed: number;
   };
   harvestCensus?: HarvestCensusData;
+  outcomeBranchDistribution?: Record<string, number>;
   sampleTraces?: SampleCraftTrace[];
   status: 'SUCCESS' | 'PARTIAL' | 'FAILED';
   message?: string;
@@ -128,9 +131,11 @@ export class MonteCarloSimulator {
     let t1ESSuccesses = 0;
     let countT1ESOnly = 0;
     let countT1ESPlus35 = 0;
+    let countT1ESPlusInt = 0;
     let countT1ESPlusAttr = 0;
     let countT1ESPlusAS = 0;
     let countT1ESPlusAllRes = 0;
+    let countT1ESPlusIntAndPremium = 0;
     let countT1ESPlus35AndPremium = 0;
     let countT1ESPlusJunkOnly = 0;
 
@@ -139,6 +144,8 @@ export class MonteCarloSimulator {
 
     let totalAttempts = 0;
     const maxTotalAttempts = numTrials * 3;
+
+    const outcomeBranchCounts: Record<string, number> = {};
 
     while (completedCosts.length < numTrials && totalAttempts < maxTotalAttempts) {
       totalAttempts++;
@@ -154,6 +161,7 @@ export class MonteCarloSimulator {
       let trialHarvests = 0;
       let trialAnnuls = 0;
       let trialExalts = 0;
+      let trialSlamAttempted = false;
 
       while (steps < maxStepsPerTrial) {
         steps++;
@@ -179,6 +187,7 @@ export class MonteCarloSimulator {
         if (decision.actionType === 'HARVEST_DEFENCE') {
           totalHarvests++;
           trialHarvests++;
+          trialSlamAttempted = false;
           const costChaos = priceBook.toChaos(75, 'primalLifeforce');
           trialCostChaos += costChaos;
           trialCurrencies.primalLifeforce = (trialCurrencies.primalLifeforce ?? 0) + 75;
@@ -216,14 +225,19 @@ export class MonteCarloSimulator {
           if (isT1ES) {
             t1ESSuccesses++;
             const has35 = extraMods.some((m) => m.modGroup === 'AfflictionJewelSmallPassivesHaveIncreasedEffect' && m.tier === 1);
+            const hasInt = extraMods.some((m) => m.modGroup === 'AfflictionJewelSmallPassivesGrantInt' && m.tier === 1);
             const hasAttr = extraMods.some((m) => m.modGroup === 'AfflictionJewelSmallPassivesGrantAttributes' && m.tier === 1);
             const hasAS = extraMods.some((m) => m.name.includes('3% increased Attack Speed') && m.tier === 1);
             const hasAllRes = extraMods.some((m) => m.modGroup === 'AfflictionJewelSmallPassivesGrantElementalRes' && m.tier === 1);
             const hasAnyPremium = hasAttr || hasAS || hasAllRes;
 
             if (extraMods.length === 0) countT1ESOnly++;
+            else if (has35 && hasInt && hasAnyPremium) countT1ESPlusIntAndPremium++;
+            else if (has35 && hasInt) countT1ESPlusInt++;
             else if (has35 && hasAnyPremium) countT1ESPlus35AndPremium++;
+            else if (hasInt && hasAnyPremium) countT1ESPlusIntAndPremium++;
             else if (has35) countT1ESPlus35++;
+            else if (hasInt) countT1ESPlusInt++;
             else if (hasAttr) countT1ESPlusAttr++;
             else if (hasAS) countT1ESPlusAS++;
             else if (hasAllRes) countT1ESPlusAllRes++;
@@ -256,8 +270,16 @@ export class MonteCarloSimulator {
           trialCostChaos += costChaos;
           trialCurrencies.annul = (trialCurrencies.annul ?? 0) + 1;
 
-          if (decision.stepAttribution === 4) trialStepCosts.step4 += costChaos;
-          else if (decision.stepAttribution === 5) trialStepCosts.step5 += costChaos;
+          const hasFrac35 = state.prefixes.some(
+            (p) => p.modGroup === 'AfflictionJewelSmallPassivesHaveIncreasedEffect' && p.isFractured
+          );
+          let attributedStep = decision.stepAttribution ?? 3;
+          if (hasFrac35) {
+            attributedStep = trialSlamAttempted ? 4 : 3;
+          }
+
+          if (attributedStep === 4) trialStepCosts.step4 += costChaos;
+          else if (attributedStep === 5) trialStepCosts.step5 += costChaos;
           else trialStepCosts.step3 += costChaos;
 
           const targetIndex = Math.floor(Math.random() * removable.length);
@@ -275,7 +297,7 @@ export class MonteCarloSimulator {
             trialStepLogs.push({
               step: steps,
               actionTaken: 'Orb of Annulment',
-              details: `Annul removed ${removedMod.name} (${removedMod.genType}) [Step ${decision.stepAttribution} Cleanup]`,
+              details: `Annul removed ${removedMod.name} (${removedMod.genType}) [Step ${attributedStep} Cleanup]`,
               costChaos,
               resultStatePrefixes: state.prefixes.map((p) => `${p.name} (t${p.tier})`),
               resultStateSuffixes: state.suffixes.map((s) => `${s.name} (t${s.tier})`),
@@ -342,6 +364,7 @@ export class MonteCarloSimulator {
           }
 
           trialExalts++;
+          trialSlamAttempted = true;
           const costChaos = priceBook.toChaos(1, 'exalt');
           trialCostChaos += costChaos;
           trialCurrencies.exalt = (trialCurrencies.exalt ?? 0) + 1;
@@ -397,6 +420,12 @@ export class MonteCarloSimulator {
       }
 
       if (isCompleted || satisfiesTarget(state, this.target) || getMatchingOutcomeBranch(state, this.target)) {
+        // Track outcome branch
+        const matchingBranch = getMatchingOutcomeBranch(state, this.target);
+        if (matchingBranch) {
+          outcomeBranchCounts[matchingBranch.name] = (outcomeBranchCounts[matchingBranch.name] || 0) + 1;
+        }
+
         // Optional Step 6: Finishing Divines
         const finishingDivines = this.divineAction.calculateExpectedFinishingCost(state, this.target);
         if (finishingDivines > 0) {
@@ -482,12 +511,19 @@ export class MonteCarloSimulator {
       t1ESSuccessRate: totalHarvests > 0 ? (t1ESSuccesses / totalHarvests) * 100 : 0,
       t1ESOnlyPct: t1ESSuccesses > 0 ? (countT1ESOnly / t1ESSuccesses) * 100 : 0,
       t1ESPlus35EffPct: t1ESSuccesses > 0 ? (countT1ESPlus35 / t1ESSuccesses) * 100 : 0,
+      t1ESPlusIntPct: t1ESSuccesses > 0 ? (countT1ESPlusInt / t1ESSuccesses) * 100 : 0,
       t1ESPlusAttributesPct: t1ESSuccesses > 0 ? (countT1ESPlusAttr / t1ESSuccesses) * 100 : 0,
       t1ESPlusAttackSpeedPct: t1ESSuccesses > 0 ? (countT1ESPlusAS / t1ESSuccesses) * 100 : 0,
       t1ESPlusAllResPct: t1ESSuccesses > 0 ? (countT1ESPlusAllRes / t1ESSuccesses) * 100 : 0,
+      t1ESPlusIntAndPremiumPct: t1ESSuccesses > 0 ? (countT1ESPlusIntAndPremium / t1ESSuccesses) * 100 : 0,
       t1ESPlus35AndPremiumPct: t1ESSuccesses > 0 ? (countT1ESPlus35AndPremium / t1ESSuccesses) * 100 : 0,
       t1ESPlusJunkOnlyPct: t1ESSuccesses > 0 ? (countT1ESPlusJunkOnly / t1ESSuccesses) * 100 : 0,
     };
+
+    const outcomeBranchDistribution: Record<string, number> = {};
+    for (const [name, count] of Object.entries(outcomeBranchCounts)) {
+      outcomeBranchDistribution[name] = (count / completedCount) * 100;
+    }
 
     const status = completionRate >= 95 ? 'SUCCESS' : 'PARTIAL';
 
@@ -510,6 +546,7 @@ export class MonteCarloSimulator {
         fallbackActionsUsed,
       },
       harvestCensus,
+      outcomeBranchDistribution,
       sampleTraces,
       status,
       message:

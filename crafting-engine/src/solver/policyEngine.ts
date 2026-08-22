@@ -57,6 +57,20 @@ export interface HarvestStrategyComparison {
   isRecommended: boolean;
 }
 
+export interface SuffixPoolAuditState {
+  stateLabel: string;
+  description: string;
+  eligibleSuffixCount: number;
+  eligibleSuffixWeight: number;
+  t1IntWeight?: number;
+  t1IntChance?: number;
+  premiumTargetWeight?: number;
+  premiumTargetChance?: number;
+  allTargetWeight?: number;
+  allTargetChance?: number;
+  blockedGroups: string[];
+}
+
 export class CraftingPolicyEngine {
   private target: TargetDefinition;
   public readonly priceBook: PriceBook;
@@ -74,9 +88,34 @@ export class CraftingPolicyEngine {
   public readonly v5StepFullPool: number;
   public readonly vCleanFrac35: number;
 
+  // Branch-specific continuation values for fractured 35% route
+  public readonly vInt: number;
+  public readonly vAttr: number;
+  public readonly vAS: number;
+  public readonly vRes: number;
+
+  public readonly hStep2: number;
+  public readonly aStep2: number;
+  public readonly pCleanPass: number;
+
+  public readonly W_A: number;
+  public readonly W_B: number;
+  public readonly W_C: number;
+  public readonly W_D: number;
+  public readonly W_E: number;
+
+  public readonly pHit: number;
+  public readonly pPremGivenInt: number;
+  public readonly pIntGivenAttr: number;
+  public readonly pIntGivenAS: number;
+  public readonly pIntGivenRes: number;
+
   public readonly expHarvestsFrac35: number;
   public readonly expAnnulsFrac35: number;
   public readonly expExaltsFrac35: number;
+  public readonly step3AnnulsFrac35: number;
+  public readonly step4AnnulsFrac35: number;
+  public readonly vEnter: number;
   public readonly targetRequiresInt: boolean;
   public readonly enableAllflame: boolean;
 
@@ -113,89 +152,320 @@ export class CraftingPolicyEngine {
       return enableAllflame ? 1 - Math.pow(1 - q, 4) : q;
     };
 
-    // Compute probabilities dynamically if pool provided, else accurate defaults
+    const ilvl = 84;
+    let totalSuffixWeight = 15650;
+    let intGroupWeight = 1200;
+    let attrGroupWeight = 1200;
+    let asGroupWeight = 950;
+    let resGroupWeight = 1200;
+
+    let wInt = 300;
+    let wAttr = 300;
+    let wAS = 250;
+    let wRes = 300;
+
     if (pool) {
-      const defMods = getDefenceModsForCluster(pool, 84);
+      const defMods = getDefenceModsForCluster(pool, ilvl);
       const t1ES = defMods.find((m) => m.modGroup === 'AfflictionJewelSmallPassivesGrantES' && m.tier === 1);
       const totDefWeight = calculateTotalWeight(defMods) || 4200;
       this.pT1ES = (t1ES?.weight ?? 300) / totDefWeight;
 
-      this.p4 = sampleRate(300, 11302);
-      this.pInt = sampleRate(300, 14750);
-      this.p5 = sampleRate(850, 14450);
-      this.p5FullPool = sampleRate(850, 14750);
+      const allMods = pool.getAllMods();
+      const allPrefixes = allMods.filter((m) => m.genType === 'Prefix' && m.ilvl <= ilvl);
+      const allSuffixes = allMods.filter((m) => m.genType === 'Suffix' && m.ilvl <= ilvl);
+      totalSuffixWeight = calculateTotalWeight(allSuffixes) || 15650;
+
+      const eff35Mod = allPrefixes.find((m) => m.modGroup === 'AfflictionJewelSmallPassivesHaveIncreasedEffect' && m.tier === 1);
+      const totPrefWeight = calculateTotalWeight(allPrefixes) || 11302;
+      this.p4 = sampleRate(eff35Mod?.weight ?? 300, totPrefWeight);
+
+      const intMod = allSuffixes.find((m) => m.modGroup === 'AfflictionJewelSmallPassivesGrantInt' && m.tier === 1);
+      const attrMod = allSuffixes.find((m) => m.modGroup === 'AfflictionJewelSmallPassivesGrantAttributes' && m.tier === 1);
+      const asMod = allSuffixes.find((m) => m.name.includes('3% increased Attack Speed') && m.tier === 1);
+      const resMod = allSuffixes.find((m) => m.modGroup === 'AfflictionJewelSmallPassivesGrantElementalRes' && m.tier === 1);
+
+      wInt = intMod?.weight ?? 300;
+      wAttr = attrMod?.weight ?? 300;
+      wAS = asMod?.weight ?? 250;
+      wRes = resMod?.weight ?? 300;
+
+      intGroupWeight = calculateTotalWeight(allSuffixes.filter((m) => m.modGroup === 'AfflictionJewelSmallPassivesGrantInt'));
+      attrGroupWeight = calculateTotalWeight(allSuffixes.filter((m) => m.modGroup === 'AfflictionJewelSmallPassivesGrantAttributes'));
+      asGroupWeight = asMod ? calculateTotalWeight(allSuffixes.filter((m) => m.modGroup === asMod.modGroup)) : 0;
+      resGroupWeight = calculateTotalWeight(allSuffixes.filter((m) => m.modGroup === 'AfflictionJewelSmallPassivesGrantElementalRes'));
     } else {
       this.pT1ES = 300 / 4200; // 0.07142857 (7.14%)
       this.p4 = sampleRate(300, 11302);
-      this.pInt = sampleRate(300, 14750);
-      this.p5 = sampleRate(850, 14450);
-      this.p5FullPool = sampleRate(850, 14750);
     }
 
-    // Step 2 & Step 3 Markov values:
-    const rawHarvest = this.cH / this.pT1ES; // 21.875c
-    const E_step3 = (this.cA + 0.45 * rawHarvest) / 0.55; // 34.26c
-    this.vStep2 = rawHarvest + E_step3; // 56.135c
+    this.W_A = totalSuffixWeight;
+    this.W_B = totalSuffixWeight - intGroupWeight;
+    this.W_C = totalSuffixWeight - attrGroupWeight;
+    this.W_D = totalSuffixWeight - asGroupWeight;
+    this.W_E = totalSuffixWeight - resGroupWeight;
 
-    this.vClean1 = this.cA + 0.5 * this.vStep2; // 37.07c
-    this.vClean2 = (5 / 3) * this.cA + (2 / 3) * this.vStep2; // 52.42c
+    const wTarget = wInt + wAttr + wAS + wRes;
+    const wPrem = wAttr + wAS + wRes;
 
-    // Step 4: Slam 35% Effect (Prefix on fractured Int base)
-    this.v4Step = (this.cE + (1 - this.p4) * (this.cA + 0.5 * this.vStep2)) / this.p4; // 337.95c
+    this.pInt = sampleRate(wInt, this.W_A);
+    this.p5 = sampleRate(wPrem, this.W_B);
+    this.p5FullPool = sampleRate(wPrem, this.W_A);
 
-    // Step 5: Slam Final Premium Suffix (on fractured Int base)
-    this.v5Step = (this.cE + (1 - this.p5) * (this.cA + (2 / 3) * this.v4Step + (1 / 3) * this.vStep2)) / this.p5; // 927.50c
+    this.pHit = sampleRate(wTarget, this.W_A);
+    this.pPremGivenInt = sampleRate(wPrem, this.W_B);
+    this.pIntGivenAttr = sampleRate(wInt, this.W_C);
+    this.pIntGivenAS = sampleRate(wInt, this.W_D);
+    this.pIntGivenRes = sampleRate(wInt, this.W_E);
+
+    // -------------------------------------------------------------
+    // INTEGRATED HARVEST + SUFFIX SLAM MARKOV SYSTEM (FRACTURED 35% ROUTE)
+    // -------------------------------------------------------------
+    // Note: On rare cluster jewels, max prefixes = 2. With Fractured 35% Effect (Prefix 1)
+    // and guaranteed Defence mod (Prefix 2), prefix capacity is saturated. Thus, all 1-2
+    // extra affixes generated during Harvest are drawn strictly from eligible suffixes (W_A).
+    // Model exact 1-draw and 2-draw Harvest additional affix probabilities:
+    const activeTargetWeight = this.targetRequiresInt ? (wInt + wPrem) : wPrem;
+    const qInt = wInt / this.W_A;
+    const qPrem = wPrem / this.W_A;
+    const qTarget = activeTargetWeight / this.W_A;
+    const qJunk = 1 - qTarget;
+    const p1_target = qTarget;
+    const p1_junk = qJunk;
+
+    const p2_int_prem = this.targetRequiresInt
+      ? (qInt * (wPrem / this.W_B)) +
+        ((wAttr / this.W_A) * (wInt / this.W_C)) +
+        ((wAS / this.W_A) * (wInt / this.W_D)) +
+        ((wRes / this.W_A) * (wInt / this.W_E))
+      : 0;
+
+    const p2_target_then_junk = this.targetRequiresInt
+      ? qInt * ((this.W_B - wPrem) / this.W_B) +
+        (wAttr / this.W_A) * ((this.W_C - wInt) / this.W_C) +
+        (wAS / this.W_A) * ((this.W_D - wInt) / this.W_D) +
+        (wRes / this.W_A) * ((this.W_E - wInt) / this.W_E)
+      : (wPrem / this.W_A) * ((this.W_B - wPrem) / this.W_B);
+
+    let p2_junk_then_target = 0;
+    if (pool) {
+      const allMods = pool.getAllMods();
+      const allSuffixes = allMods.filter((m) => m.genType === 'Suffix' && m.ilvl <= ilvl);
+      const targetGroupSet = new Set<string>();
+      if (this.targetRequiresInt) targetGroupSet.add('AfflictionJewelSmallPassivesGrantInt');
+      targetGroupSet.add('AfflictionJewelSmallPassivesGrantAttributes');
+      targetGroupSet.add('AfflictionJewelSmallPassivesGrantElementalRes');
+
+      const junkSuffixes = allSuffixes.filter(
+        (m) => !targetGroupSet.has(m.modGroup) && !m.name.includes('3% increased Attack Speed')
+      );
+      const junkGroupWeights = new Map<string, number>();
+      for (const m of junkSuffixes) {
+        const g = m.modGroup || m.name;
+        junkGroupWeights.set(g, (junkGroupWeights.get(g) || 0) + m.weight);
+      }
+      for (const [, groupW] of junkGroupWeights.entries()) {
+        p2_junk_then_target += (groupW / this.W_A) * (activeTargetWeight / (this.W_A - groupW));
+      }
+    } else {
+      const defaultJunkGroups = [1200, 1200, 1200, 1200, 1200, 1200, 1200, 1200, 600, 600, 300, 700];
+      for (const groupW of defaultJunkGroups) {
+        p2_junk_then_target += (groupW / this.W_A) * (activeTargetWeight / (this.W_A - groupW));
+      }
+    }
+
+    const p2_target_junk = p2_target_then_junk + p2_junk_then_target;
+    const p2_junk_junk = Math.max(0, 1 - p2_int_prem - p2_target_junk);
+
+    // Direct clean pass from Harvest includes junk cleanups and direct single-mod / double-mod target hits:
+    this.pCleanPass = 0.5 * (p1_target * 1.0 + p1_junk * 0.5) + 0.5 * (p2_int_prem * 1.0 + p2_target_junk * 0.5 + p2_junk_junk * (1 / 3));
+    const aSpend = 0.5 * (p1_target * 0.0 + p1_junk * 1.0) + 0.5 * (p2_int_prem * 0.0 + p2_target_junk * (4 / 3) + p2_junk_junk * (5 / 3));
+
+    const hCycle = 1 / this.pT1ES;
+    const H_Harvest = hCycle / this.pCleanPass;
+    const A_Harvest = aSpend / this.pCleanPass;
+    const v_Harvest = H_Harvest * this.cH + A_Harvest * this.cA;
+
+    const pTerminalFromHarvest = (0.5 * p2_int_prem * 1.0) / this.pCleanPass;
+    const pDirectTarget = (0.5 * p1_target * 1.0 + 0.5 * p2_target_junk * (1 / 3)) / this.pCleanPass;
+    const pDirectS0 = 1 - pTerminalFromHarvest - pDirectTarget;
+
+    const piH_Int = this.targetRequiresInt ? (wInt / activeTargetWeight) : 0;
+    const piH_Attr = wAttr / activeTargetWeight;
+    const piH_AS = wAS / activeTargetWeight;
+    const piH_Res = wRes / activeTargetWeight;
+
+    // 4-choice Allflame branch probabilities from S0:
+    const pAllJunk = enableAllflame ? Math.pow(qJunk, 4) : qJunk;
+    this.pHit = 1 - pAllJunk;
+    const pIntBranch = this.targetRequiresInt ? (enableAllflame ? 1 - Math.pow(1 - qInt, 4) : qInt) : 0;
+    const pPremBranch = this.targetRequiresInt ? (enableAllflame ? Math.pow(1 - qInt, 4) - pAllJunk : qPrem) : this.pHit;
+
+    const piInt = this.targetRequiresInt ? (pIntBranch / this.pHit) : 0;
+    const piAttr = (pPremBranch * (wAttr / wPrem)) / this.pHit;
+    const piAS = (pPremBranch * (wAS / wPrem)) / this.pHit;
+    const piRes = (pPremBranch * (wRes / wPrem)) / this.pHit;
+
+    // Value iteration to exact convergence (10,000 iterations):
+    let V = [0, 0, 0, 0, 0]; // [S0, S_Int, S_Attr, S_AS, S_Res]
+    let H_vec = [0, 0, 0, 0, 0];
+    let A_vec = [0, 0, 0, 0, 0];
+    let E_vec = [0, 0, 0, 0, 0];
+
+    for (let iter = 0; iter < 10000; iter++) {
+      const [v0, vInt, vAttr, vAS, vRes] = V;
+      const vExit = pDirectS0 * v0 + pDirectTarget * (piH_Int * vInt + piH_Attr * vAttr + piH_AS * vAS + piH_Res * vRes);
+      const vEnter = v_Harvest + vExit;
+
+      const next_v0 = this.cE + this.pHit * (piInt * vInt + piAttr * vAttr + piAS * vAS + piRes * vRes) + (1 - this.pHit) * (this.cA + 0.5 * v0 + 0.5 * vEnter);
+      const next_vInt = (this.cE + (1 - this.pPremGivenInt) * ((4 / 3) * this.cA + (1 / 6) * v0 + 0.5 * vEnter)) / (1 - (1 / 3) * (1 - this.pPremGivenInt));
+      const next_vAttr = (this.cE + (1 - this.pIntGivenAttr) * ((4 / 3) * this.cA + (1 / 6) * v0 + 0.5 * vEnter)) / (1 - (1 / 3) * (1 - this.pIntGivenAttr));
+      const next_vAS = (this.cE + (1 - this.pIntGivenAS) * ((4 / 3) * this.cA + (1 / 6) * v0 + 0.5 * vEnter)) / (1 - (1 / 3) * (1 - this.pIntGivenAS));
+      const next_vRes = (this.cE + (1 - this.pIntGivenRes) * ((4 / 3) * this.cA + (1 / 6) * v0 + 0.5 * vEnter)) / (1 - (1 / 3) * (1 - this.pIntGivenRes));
+      V = [next_v0, next_vInt, next_vAttr, next_vAS, next_vRes];
+
+      const hExit = pDirectS0 * H_vec[0] + pDirectTarget * (piH_Int * H_vec[1] + piH_Attr * H_vec[2] + piH_AS * H_vec[3] + piH_Res * H_vec[4]);
+      const hEnter = H_Harvest + hExit;
+      const next_h0 = this.pHit * (piInt * H_vec[1] + piAttr * H_vec[2] + piAS * H_vec[3] + piRes * H_vec[4]) + (1 - this.pHit) * (0.5 * H_vec[0] + 0.5 * hEnter);
+      const next_hInt = ((1 - this.pPremGivenInt) * ((1 / 6) * H_vec[0] + 0.5 * hEnter)) / (1 - (1 / 3) * (1 - this.pPremGivenInt));
+      const next_hAttr = ((1 - this.pIntGivenAttr) * ((1 / 6) * H_vec[0] + 0.5 * hEnter)) / (1 - (1 / 3) * (1 - this.pIntGivenAttr));
+      const next_hAS = ((1 - this.pIntGivenAS) * ((1 / 6) * H_vec[0] + 0.5 * hEnter)) / (1 - (1 / 3) * (1 - this.pIntGivenAS));
+      const next_hRes = ((1 - this.pIntGivenRes) * ((1 / 6) * H_vec[0] + 0.5 * hEnter)) / (1 - (1 / 3) * (1 - this.pIntGivenRes));
+      H_vec = [next_h0, next_hInt, next_hAttr, next_hAS, next_hRes];
+
+      const aExit = pDirectS0 * A_vec[0] + pDirectTarget * (piH_Int * A_vec[1] + piH_Attr * A_vec[2] + piH_AS * A_vec[3] + piH_Res * A_vec[4]);
+      const aEnter = A_Harvest + aExit;
+      const next_a0 = this.pHit * (piInt * A_vec[1] + piAttr * A_vec[2] + piAS * A_vec[3] + piRes * A_vec[4]) + (1 - this.pHit) * (1 + 0.5 * A_vec[0] + 0.5 * aEnter);
+      const next_aInt = ((1 - this.pPremGivenInt) * ((4 / 3) + (1 / 6) * A_vec[0] + 0.5 * aEnter)) / (1 - (1 / 3) * (1 - this.pPremGivenInt));
+      const next_aAttr = ((1 - this.pIntGivenAttr) * ((4 / 3) + (1 / 6) * A_vec[0] + 0.5 * aEnter)) / (1 - (1 / 3) * (1 - this.pIntGivenAttr));
+      const next_aAS = ((1 - this.pIntGivenAS) * ((4 / 3) + (1 / 6) * A_vec[0] + 0.5 * aEnter)) / (1 - (1 / 3) * (1 - this.pIntGivenAS));
+      const next_aRes = ((1 - this.pIntGivenRes) * ((4 / 3) + (1 / 6) * A_vec[0] + 0.5 * aEnter)) / (1 - (1 / 3) * (1 - this.pIntGivenRes));
+      A_vec = [next_a0, next_aInt, next_aAttr, next_aAS, next_aRes];
+
+      const eExit = pDirectS0 * E_vec[0] + pDirectTarget * (piH_Int * E_vec[1] + piH_Attr * E_vec[2] + piH_AS * E_vec[3] + piH_Res * E_vec[4]);
+      const eEnter = eExit;
+      const next_e0 = 1 + this.pHit * (piInt * E_vec[1] + piAttr * E_vec[2] + piAS * E_vec[3] + piRes * E_vec[4]) + (1 - this.pHit) * (0.5 * E_vec[0] + 0.5 * eEnter);
+      const next_eInt = (1 + (1 - this.pPremGivenInt) * ((1 / 6) * E_vec[0] + 0.5 * eEnter)) / (1 - (1 / 3) * (1 - this.pPremGivenInt));
+      const next_eAttr = (1 + (1 - this.pIntGivenAttr) * ((1 / 6) * E_vec[0] + 0.5 * eEnter)) / (1 - (1 / 3) * (1 - this.pIntGivenAttr));
+      const next_eAS = (1 + (1 - this.pIntGivenAS) * ((1 / 6) * E_vec[0] + 0.5 * eEnter)) / (1 - (1 / 3) * (1 - this.pIntGivenAS));
+      const next_eRes = (1 + (1 - this.pIntGivenRes) * ((1 / 6) * E_vec[0] + 0.5 * eEnter)) / (1 - (1 / 3) * (1 - this.pIntGivenRes));
+      E_vec = [next_e0, next_eInt, next_eAttr, next_eAS, next_eRes];
+    }
+
+    this.hStep2 = H_Harvest;
+    this.aStep2 = A_Harvest;
+    this.vStep2 = v_Harvest;
+
+    this.vClean1 = this.cA + 0.5 * this.vStep2;
+    this.vClean2 = (5 / 3) * this.cA + (2 / 3) * this.vStep2;
+    this.v4Step = (this.cE + (1 - this.p4) * (this.cA + 0.5 * this.vStep2)) / this.p4;
+    this.v5Step = (this.cE + (1 - this.p5) * (this.cA + (2 / 3) * this.v4Step + (1 / 3) * this.vStep2)) / this.p5;
     this.v5StepFullPool = (this.cE + (1 - this.p5FullPool) * (this.cA + 0.5 * this.vStep2)) / this.p5FullPool;
 
-    // Exact decoupled Markov system for fractured 35% base:
-    // S0 = [Frac 35, T1 ES]
-    // S_Int = [Frac 35, T1 ES, T1 Int] (continuation cost v5StepEff)
-    // S_Prem = [Frac 35, T1 ES, Premium Suffix] (continuation cost v4Int)
-    const pHit = sampleRate(300 + 850, 14750);
-    const v0 = (this.cE + (1 - pHit) * (this.cA + 0.5 * this.vStep2)) / pHit;
+    this.vCleanFrac35 = V[0];
+    this.vInt = V[1];
+    this.vAttr = V[2];
+    this.vAS = V[3];
+    this.vRes = V[4];
 
-    // In S_Prem, a premium suffix is locked, removing its mod group weight from the suffix pool (~285.3 weight removed):
-    const pIntGivenPrem = sampleRate(300, 14464.7);
+    this.v5StepEff = this.vInt;
+    this.v4Int = (wAttr / wPrem) * this.vAttr + (wAS / wPrem) * this.vAS + (wRes / wPrem) * this.vRes;
 
-    const denom1 = 1 - (1 / 3) * (1 - this.p5);
-    const k1 = (this.cE + (1 - this.p5) * (this.cA + (1 / 3) * this.vStep2)) / denom1;
-    const m1 = ((2 / 3) * (1 - this.p5)) / denom1;
+    this.expHarvestsFrac35 = H_Harvest + (pDirectS0 * H_vec[0] + pDirectTarget * (piH_Int * H_vec[1] + piH_Attr * H_vec[2] + piH_AS * H_vec[3] + piH_Res * H_vec[4]));
+    this.expAnnulsFrac35 = A_Harvest + (pDirectS0 * A_vec[0] + pDirectTarget * (piH_Int * A_vec[1] + piH_Attr * A_vec[2] + piH_AS * A_vec[3] + piH_Res * A_vec[4]));
+    this.expExaltsFrac35 = pDirectS0 * E_vec[0] + pDirectTarget * (piH_Int * E_vec[1] + piH_Attr * E_vec[2] + piH_AS * E_vec[3] + piH_Res * E_vec[4]);
 
-    const denom2 = 1 - (1 / 3) * (1 - pIntGivenPrem);
-    const k2 = (this.cE + (1 - pIntGivenPrem) * (this.cA + (1 / 3) * this.vStep2)) / denom2;
-    const m2 = ((2 / 3) * (1 - pIntGivenPrem)) / denom2;
+    this.vEnter = v_Harvest + (pDirectS0 * V[0] + pDirectTarget * (piH_Int * V[1] + piH_Attr * V[2] + piH_AS * V[3] + piH_Res * V[4]));
+    this.step3AnnulsFrac35 = (this.expHarvestsFrac35 / H_Harvest) * A_Harvest;
+    this.step4AnnulsFrac35 = this.expAnnulsFrac35 - this.step3AnnulsFrac35;
 
-    const wInt = this.pInt / pHit;
-    const wPrem = (pHit - this.pInt) / pHit;
-
-    const weightedM = wInt * m1 + wPrem * m2;
-    const weightedK = wInt * k1 + wPrem * k2;
-
-    this.vCleanFrac35 = (v0 + weightedK) / (1 - weightedM);
-    this.v5StepEff = k1 + m1 * this.vCleanFrac35; // having T1 Int locked
-    this.v4Int = k2 + m2 * this.vCleanFrac35; // having Premium Suffix locked
-
-    // Exact currency requirements on fractured 35% route:
-    const e0 = 1 / pHit;
-    const kE1 = 1 / denom1;
-    const kE2 = 1 / denom2;
-    const E0 = (e0 + wInt * kE1 + wPrem * kE2) / (1 - weightedM);
-    this.expExaltsFrac35 = E0;
-
-    const a0 = (1 - pHit) / pHit;
-    const kA1 = (1 - this.p5) / denom1;
-    const kA2 = (1 - pIntGivenPrem) / denom2;
-    const A0 = (a0 + wInt * kA1 + wPrem * kA2) / (1 - weightedM);
-
-    const h0 = (0.5 * (1 - pHit) * 14.0) / pHit;
-    const kH1 = ((1 / 3) * (1 - this.p5) * 14.0) / denom1;
-    const kH2 = ((1 / 3) * (1 - pIntGivenPrem) * 14.0) / denom2;
-    const H0 = (h0 + wInt * kH1 + wPrem * kH2) / (1 - weightedM);
-    this.expHarvestsFrac35 = 14.0 + H0;
-    this.expAnnulsFrac35 = ((14.0 + H0) / 14.0) * (1 / 0.55) + A0;
+    if (!this.targetRequiresInt) {
+      const p = this.p5FullPool;
+      const e = 1 / p;
+      const a = ((1 - p) / p) * (1 + 0.5 * this.aStep2);
+      const h = ((1 - p) / p) * (0.5 * this.hStep2);
+      this.expHarvestsFrac35 = this.hStep2 + h;
+      this.expAnnulsFrac35 = this.aStep2 + a;
+      this.expExaltsFrac35 = e;
+      this.step3AnnulsFrac35 = (this.expHarvestsFrac35 / H_Harvest) * A_Harvest;
+      this.step4AnnulsFrac35 = this.expAnnulsFrac35 - this.step3AnnulsFrac35;
+      this.vCleanFrac35 = this.v5StepFullPool;
+    }
 
     this.vStep5 = this.v5Step;
     this.vStep4 = this.v4Step + this.vStep5;
+  }
+
+  public getSuffixPoolAudit(pool: ModPool, ilvl = 84): SuffixPoolAuditState[] {
+    const allMods = pool.getAllMods();
+    const suffixes = allMods.filter((m) => m.genType === 'Suffix' && m.ilvl <= ilvl);
+    const tInt = suffixes.find((m) => m.modGroup === 'AfflictionJewelSmallPassivesGrantInt' && m.tier === 1);
+    const tAttr = suffixes.find((m) => m.modGroup === 'AfflictionJewelSmallPassivesGrantAttributes' && m.tier === 1);
+    const tAS = suffixes.find((m) => m.name.includes('3% increased Attack Speed') && m.tier === 1);
+    const tRes = suffixes.find((m) => m.modGroup === 'AfflictionJewelSmallPassivesGrantElementalRes' && m.tier === 1);
+
+    const wInt = tInt?.weight ?? 300;
+    const wAttr = tAttr?.weight ?? 300;
+    const wAS = tAS?.weight ?? 250;
+    const wRes = tRes?.weight ?? 300;
+    const wPrem = wAttr + wAS + wRes;
+    const wTotalTarget = wInt + wPrem;
+
+    const sample = (w: number, W: number) => {
+      const q = w / W;
+      return (this.enableAllflame ? 1 - Math.pow(1 - q, 4) : q) * 100;
+    };
+
+    return [
+      {
+        stateLabel: 'State A — Frac 35 + T1 ES, no suffixes',
+        description: 'Initial clean prefix state before suffix slams',
+        eligibleSuffixCount: suffixes.length,
+        eligibleSuffixWeight: this.W_A,
+        t1IntWeight: wInt,
+        t1IntChance: sample(wInt, this.W_A),
+        premiumTargetWeight: wPrem,
+        premiumTargetChance: sample(wPrem, this.W_A),
+        allTargetWeight: wTotalTarget,
+        allTargetChance: this.pHit * 100,
+        blockedGroups: ['None (Full suffix pool)'],
+      },
+      {
+        stateLabel: 'State B — Frac 35 + T1 ES + T1 Intelligence',
+        description: 'T1 Intelligence locked, rolling for final premium suffix',
+        eligibleSuffixCount: suffixes.filter((m) => m.modGroup !== 'AfflictionJewelSmallPassivesGrantInt').length,
+        eligibleSuffixWeight: this.W_B,
+        premiumTargetWeight: wPrem,
+        premiumTargetChance: this.pPremGivenInt * 100,
+        blockedGroups: ['AfflictionJewelSmallPassivesGrantInt (1,200 weight blocked)'],
+      },
+      {
+        stateLabel: 'State C — Frac 35 + T1 ES + +4 All Attributes',
+        description: '+4 All Attributes locked, rolling for T1 Intelligence',
+        eligibleSuffixCount: suffixes.filter((m) => m.modGroup !== 'AfflictionJewelSmallPassivesGrantAttributes').length,
+        eligibleSuffixWeight: this.W_C,
+        t1IntWeight: wInt,
+        t1IntChance: this.pIntGivenAttr * 100,
+        blockedGroups: ['AfflictionJewelSmallPassivesGrantAttributes (1,200 weight blocked)'],
+      },
+      {
+        stateLabel: 'State D — Frac 35 + T1 ES + 3% Attack Speed',
+        description: '3% Attack Speed locked, rolling for T1 Intelligence',
+        eligibleSuffixCount: suffixes.filter((m) => m.modGroup !== (tAS?.modGroup ?? 'Added Small Passive Skills also grant: #% increased Attack Speed')).length,
+        eligibleSuffixWeight: this.W_D,
+        t1IntWeight: wInt,
+        t1IntChance: this.pIntGivenAS * 100,
+        blockedGroups: ['3% Attack Speed Family (950 weight blocked)'],
+      },
+      {
+        stateLabel: 'State E — Frac 35 + T1 ES + +4% All Resistance',
+        description: '+4% All Resistance locked, rolling for T1 Intelligence',
+        eligibleSuffixCount: suffixes.filter((m) => m.modGroup !== 'AfflictionJewelSmallPassivesGrantElementalRes').length,
+        eligibleSuffixWeight: this.W_E,
+        t1IntWeight: wInt,
+        t1IntChance: this.pIntGivenRes * 100,
+        blockedGroups: ['AfflictionJewelSmallPassivesGrantElementalRes (1,200 weight blocked)'],
+      },
+    ];
   }
 
   public evaluateStateValue(state: ItemState): number {
@@ -208,7 +478,7 @@ export class CraftingPolicyEngine {
     );
     const hasT1ES = state.prefixes.some((p: RolledMod) => p.modGroup === 'AfflictionJewelSmallPassivesGrantES' && p.tier === 1);
     if (!hasT1ES) {
-      return this.vStep2 + (hasFrac35 ? this.vCleanFrac35 : this.vStep4);
+      return hasFrac35 ? this.vEnter : (this.vStep2 + this.vStep4);
     }
 
     const has35Eff = state.prefixes.some((p: RolledMod) => p.modGroup === 'AfflictionJewelSmallPassivesHaveIncreasedEffect' && p.tier === 1);
@@ -229,7 +499,7 @@ export class CraftingPolicyEngine {
       const nRem = removable.length;
       for (const m of removable) {
         if (m.modGroup === 'AfflictionJewelSmallPassivesGrantES') {
-          expectedAfterAnnul += (1 / nRem) * (this.vStep2 + (hasFrac35 ? this.vCleanFrac35 : this.vStep4));
+          expectedAfterAnnul += (1 / nRem) * (hasFrac35 ? this.vEnter : (this.vStep2 + this.vStep4));
         } else if (m.modGroup === 'AfflictionJewelSmallPassivesHaveIncreasedEffect') {
           expectedAfterAnnul += (1 / nRem) * (this.v4Step + this.vStep5);
         } else if (m.modGroup === 'AfflictionJewelSmallPassivesGrantInt') {
@@ -260,8 +530,16 @@ export class CraftingPolicyEngine {
         return 0;
       }
       if (!hasT1Int && !hasTargetSuffix) return this.vCleanFrac35;
-      if (hasT1Int && !hasTargetSuffix) return this.v5StepEff;
-      if (!hasT1Int && hasTargetSuffix) return this.v4Int;
+      if (hasT1Int && !hasTargetSuffix) return this.vInt;
+      if (!hasT1Int && hasTargetSuffix) {
+        const hasAttr = state.suffixes.some((s) => s.modGroup === 'AfflictionJewelSmallPassivesGrantAttributes' && s.tier === 1);
+        const hasAS = state.suffixes.some((s) => s.name.includes('3% increased Attack Speed') && s.tier === 1);
+        const hasRes = state.suffixes.some((s) => s.modGroup === 'AfflictionJewelSmallPassivesGrantElementalRes' && s.tier === 1);
+        if (hasAttr) return this.vAttr;
+        if (hasAS) return this.vAS;
+        if (hasRes) return this.vRes;
+        return this.v4Int;
+      }
       return 0;
     }
 
@@ -373,8 +651,16 @@ export class CraftingPolicyEngine {
     const junkMods = this.getJunkMods(state);
     if (junkMods.length > 0) {
       let stepAttr: 3 | 4 | 5 = 3;
-      if (has35Eff && !hasTargetSuffix) stepAttr = 5;
-      else if (!has35Eff && state.prefixes.length > 1) stepAttr = 4;
+      if (hasFrac35) {
+        if (hasT1Int || hasTargetSuffix) {
+          stepAttr = 4;
+        } else {
+          stepAttr = 3;
+        }
+      } else {
+        if (has35Eff && !hasTargetSuffix) stepAttr = 5;
+        else if (!has35Eff && state.prefixes.length > 1) stepAttr = 4;
+      }
 
       return {
         actionType: 'ANNUL',
@@ -414,7 +700,7 @@ export class CraftingPolicyEngine {
         actionName: this.enableAllflame ? 'Allflame Exalted Orb (Suffix)' : 'Exalted Orb Slam (Suffix)',
         expectedContinuationCostChaos: hasFrac35 ? (this.targetRequiresInt ? this.v5StepEff : this.v5StepFullPool) : this.vStep5,
         reason: 'Suffix open. Slam premium suffix (+4 Attributes, 3% Attack Speed, or +4% All Res).',
-        stepAttribution: 5,
+        stepAttribution: hasFrac35 ? 4 : 5,
       };
     }
 
@@ -448,6 +734,7 @@ export class CraftingPolicyEngine {
     const evaluations: CandidateEvaluation[] = [];
     let bestMod = candidates[0];
     let bestValue = Infinity;
+    let bestSaleValue = -Infinity;
 
     for (const mod of candidates) {
       const clonedState: ItemState = {
@@ -463,10 +750,13 @@ export class CraftingPolicyEngine {
       }
 
       const cost = this.evaluateStateValue(clonedState);
+      const branch = getMatchingOutcomeBranch(clonedState, this.target);
+      const saleValue = branch?.saleValueChaos ?? 0;
       evaluations.push({ mod, resultingStateValue: cost });
 
-      if (cost < bestValue) {
+      if (cost < bestValue || (cost === bestValue && saleValue > bestSaleValue)) {
         bestValue = cost;
+        bestSaleValue = saleValue;
         bestMod = mod;
       }
     }
