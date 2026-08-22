@@ -1,3 +1,5 @@
+import { writeFileSync } from 'node:fs';
+import { fileURLToPath } from 'node:url';
 import { CraftingOptimizer } from '../src/index.ts';
 import { ClusterModRepository } from '../src/data/loadClusterMods.ts';
 import { ModPool } from '../src/domain/ModPool.ts';
@@ -8,6 +10,12 @@ import { PriceBook } from '../src/domain/PriceBook.ts';
 const priceBook = new PriceBook();
 const optimizer = new CraftingOptimizer(undefined, priceBook);
 const repo = new ClusterModRepository();
+
+function writeCraftOutput(fileName: string, explanation: string): void {
+  const outputPath = fileURLToPath(new URL(`../../${fileName}`, import.meta.url));
+  writeFileSync(outputPath, `${explanation.trimEnd()}\n`, 'utf8');
+  console.log(`\n[output] Wrote ${fileName}`);
+}
 
 console.log('='.repeat(80));
 console.log('END-TO-END CRAFTING OPTIMIZER: DEMONSTRATION & BENCHMARKS');
@@ -104,6 +112,7 @@ const craftAResponse = optimizer.optimizeCraft({
 });
 
 console.log(craftAResponse.explanation);
+writeCraftOutput('output-craft-a.txt', craftAResponse.explanation);
 
 // ------------------------------------------------------------- DEMO 2: Reference Craft B
 console.log('\n>>> OPTIMIZING REFERENCE CRAFT B: 8-Passive Cold Cluster (ilvl 83)');
@@ -142,6 +151,7 @@ const craftBResponse = optimizer.optimizeCraft({
 });
 
 console.log(craftBResponse.explanation);
+writeCraftOutput('output-craft-b.txt', craftBResponse.explanation);
 
 // ------------------------------------------------------------- DEMO 3: Reference Craft C (Minion Cluster)
 console.log('\n>>> OPTIMIZING REFERENCE CRAFT C: 12-Passive Minion Cluster (ilvl 84)');
@@ -243,4 +253,5 @@ const craftCResponse = optimizer.optimizeCraft({
 });
 
 console.log(craftCResponse.explanation);
+writeCraftOutput('output-craft-c.txt', craftCResponse.explanation);
 console.log('='.repeat(80));
