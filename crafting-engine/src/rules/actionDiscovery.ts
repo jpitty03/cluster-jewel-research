@@ -12,21 +12,8 @@ import { CRAFT_MECHANICS, getHarvestMechanicsForState } from './actionRegistry.t
 export interface ActionDiscoveryContext extends SolverContext {
   availableHarvestTags?: string[];
   enableAllflame?: boolean;
+  allowResearchFallbackPrices?: boolean;
 }
-
-export type DiscoveredActionType =
-  | 'TRANSFORMATION_ORB'
-  | 'AUGMENTATION_ORB'
-  | 'ALTERATION_ORB'
-  | 'REGAL_ORB'
-  | 'SCOURING_ORB'
-  | 'CHAOS_ORB'
-  | 'EXALTED_ORB'
-  | 'ANNULMENT_ORB'
-  | 'DIVINE_ORB'
-  | 'FRACTURING_ORB'
-  | 'HARVEST_REFORGE'
-  | 'TERMINAL';
 
 export interface LegalCraftAction {
   actionType: DiscoveredActionType;
@@ -47,22 +34,17 @@ export function getLegalActions(
   context: ActionDiscoveryContext
 ): LegalCraftAction[] {
   const actions: LegalCraftAction[] = [];
+  const allowFallbacks = context.allowResearchFallbackPrices ?? true;
 
   // 1. Standard currency mechanics from registry
   for (const mechanic of CRAFT_MECHANICS) {
     if (mechanic.isLegal(state, target, context)) {
       const price = mechanic.getCost(context);
-      let actionType: DiscoveredActionType = 'CHAOS_ORB';
-      if (mechanic.id === 'augmentation_orb') actionType = 'AUGMENTATION_ORB';
-      else if (mechanic.id === 'alteration_orb') actionType = 'ALTERATION_ORB';
-      else if (mechanic.id === 'regal_orb') actionType = 'REGAL_ORB';
-      else if (mechanic.id === 'scouring_orb') actionType = 'SCOURING_ORB';
-      else if (mechanic.id === 'annulment_orb') actionType = 'ANNULMENT_ORB';
-      else if (mechanic.id === 'exalted_orb') actionType = 'EXALTED_ORB';
-      else if (mechanic.id === 'fracturing_orb') actionType = 'FRACTURING_ORB';
-
+      if (!allowFallbacks && price.confidence !== 'known') {
+        continue;
+      }
       actions.push({
-        actionType,
+        actionType: mechanic.actionType,
         name: mechanic.name,
         category: mechanic.category,
         costChaos: price.costChaos,
@@ -76,8 +58,11 @@ export function getLegalActions(
   const harvestMechanics = getHarvestMechanicsForState(state, target, context);
   for (const hMech of harvestMechanics) {
     const price = hMech.getCost(context);
+    if (!allowFallbacks && price.confidence !== 'known') {
+      continue;
+    }
     actions.push({
-      actionType: 'HARVEST_REFORGE',
+      actionType: hMech.actionType,
       name: hMech.name,
       category: hMech.category,
       costChaos: price.costChaos,
@@ -122,7 +107,9 @@ export function getCanonicalStateKey(
     if (isTarget && target?.finalRollRequirements) {
       for (const [statKey, minVal] of Object.entries(target.finalRollRequirements)) {
         if (m.stats?.[statKey] !== undefined) {
-          rollSuffix += `:roll(${statKey}>=${minVal})`;
+          const actualVal = m.stats[statKey];
+          const passStatus = actualVal >= minVal ? 'PASS' : 'FAIL';
+          rollSuffix += `:roll(${statKey}:${passStatus}:${actualVal})`;
         }
       }
     }

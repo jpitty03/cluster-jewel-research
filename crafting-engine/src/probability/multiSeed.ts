@@ -81,17 +81,43 @@ export function runMultiSeedValidation(
   const expAnnul = recommended.expectedCurrencies?.annul ?? 0;
   const expExalt = recommended.expectedCurrencies?.exalt ?? 0;
 
-  // 2. Validate the resolved policy across multiple deterministic seeds
-  for (const seed of seeds) {
-    const simReq: OptimizeCraftRequest = {
-      ...baseRequest,
-      seed,
-      runMonteCarloValidation: true,
-      monteCarloTrials: trialsPerSeed,
-    };
+  // Determine starting state and acquisition cost from recommended strategy
+  const startingStates = baseRequest.startingStates ?? [];
+  const bestStart = startingStates.find((s) => s.name === recommended.strategyName) ?? startingStates[0];
+  const startState = bestStart?.state ?? {
+    baseType: baseRequest.baseType as any,
+    clusterType: baseRequest.clusterType,
+    itemLevel: baseRequest.itemLevel,
+    passiveCount: baseRequest.passiveCount,
+    rarity: 'rare',
+    prefixes: [],
+    suffixes: [],
+    fracturedModIds: [],
+  };
+  const startCost = bestStart?.acquisition?.costChaos ?? bestStart?.baseCostChaos ?? recommended.baseCostChaos ?? 0;
 
-    const simResponse = optimizer.optimizeCraft(simReq);
-    const sim = simResponse.simulationValidation;
+  const priceBook = baseRequest.priceBook ?? (optimizer as any).defaultPriceBook;
+  const pool = recommended.pool ?? (optimizer as any).repo;
+  const context = { pool, priceBook };
+
+  // 2. Validate the already-resolved policy directly across multiple deterministic seeds
+  for (const seed of seeds) {
+    const mc = new MonteCarloSimulator(
+      context,
+      baseRequest.target,
+      baseRequest.enableAllflame ?? false,
+      recommended.policyEngine,
+      seed
+    );
+
+    const sim = mc.runSimulation(
+      startState,
+      trialsPerSeed,
+      startCost,
+      75000,
+      undefined,
+      analyticalCostChaos
+    );
 
     if (sim && sim.meanCostChaos !== undefined) {
       const totalCostDiffPct =

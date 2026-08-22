@@ -7,6 +7,7 @@ import { toRolledMod } from '../src/domain/Mod.ts';
 import type { ItemState } from '../src/domain/ItemState.ts';
 import { PriceBook } from '../src/domain/PriceBook.ts';
 import { runMultiSeedValidation } from '../src/probability/multiSeed.ts';
+import { formatChaos } from '../src/reporting/formatCosts.ts';
 
 const priceBook = new PriceBook();
 const optimizer = new CraftingOptimizer(undefined, priceBook);
@@ -67,6 +68,56 @@ function verifyRepresentativeMinEv(craftName: string, response: OptimizeCraftRes
       `[DIAGNOSTIC PASS in ${craftName}] All ${decs.length} representative states verified: recommended EV == min(candidate EVs).`
     );
   }
+}
+
+function runAutoDiscoveryDiagnostic(
+  craftName: string,
+  optimizer: CraftingOptimizer,
+  baseRequest: any,
+  manualResponse: OptimizeCraftResponse
+): string {
+  const autoRequest = {
+    ...baseRequest,
+    startingStates: undefined, // omitted to trigger automatic candidate discovery
+    runMonteCarloValidation: false,
+  };
+
+  const autoResponse = optimizer.optimizeCraft(autoRequest);
+  const divineRate = baseRequest.priceBook?.getRate('divine') ?? 200;
+
+  const lines: string[] = [];
+  lines.push('\n' + '='.repeat(80));
+  lines.push(`AUTOMATIC STARTING-STATE DISCOVERY DIAGNOSTIC: ${craftName}`);
+  lines.push('='.repeat(80));
+  lines.push(`Target Definition: ${autoRequest.target.requiredMods.length} base required mods (${autoRequest.target.outcomeBranches?.length ?? 0} outcome branches)`);
+
+  const allAutoOptions = [autoResponse.recommendedStrategy, ...autoResponse.alternateStrategies];
+  const uniquePhysicalStates = new Set(allAutoOptions.map((s) => s.state?.fracturedModIds?.join(',') ?? 'clean'));
+
+  lines.push(`\nGENERATED STARTING CANDIDATES (${allAutoOptions.length} routes from ${uniquePhysicalStates.size} physical states):`);
+  lines.push(`Route Name                                Acquisition Mode     Acq Cost        Downstream EV   Full Route EV`);
+  lines.push('-'.repeat(105));
+
+  for (const opt of allAutoOptions) {
+    const nameCol = opt.strategyName.padEnd(41);
+    const acqMode = (opt.acquisition?.type ?? 'clean-base').padEnd(20);
+    const acqCost = formatChaos(opt.baseCostChaos, divineRate).padEnd(15);
+    const downEv = formatChaos(opt.expectedCraftingCostChaos, divineRate).padEnd(15);
+    const fullEv = formatChaos(opt.totalExpectedCostChaos, divineRate);
+    lines.push(`${nameCol} ${acqMode} ${acqCost} ${downEv} ${fullEv}`);
+  }
+
+  lines.push('-'.repeat(105));
+  const diffChaos = Math.abs(autoResponse.recommendedStrategy.totalExpectedCostChaos - manualResponse.recommendedStrategy.totalExpectedCostChaos);
+  const diffPct = (diffChaos / manualResponse.recommendedStrategy.totalExpectedCostChaos) * 100;
+  const isMatch = diffPct < 1.0;
+
+  lines.push(`\nAUTOMATIC DISCOVERY VERIFICATION:`);
+  lines.push(`  Selected Auto Route:   ${autoResponse.recommendedStrategy.strategyName} (${formatChaos(autoResponse.recommendedStrategy.totalExpectedCostChaos, divineRate)})`);
+  lines.push(`  Manual Fixture Route:  ${manualResponse.recommendedStrategy.strategyName} (${formatChaos(manualResponse.recommendedStrategy.totalExpectedCostChaos, divineRate)})`);
+  lines.push(`  Discovery Consistency: ${isMatch ? 'PASSED (Auto-discovered candidate matches manual reference fixture)' : 'DIFFERENCE DETECTED'}`);
+
+  return lines.join('\n');
 }
 
 console.log('='.repeat(80));
@@ -196,12 +247,14 @@ const craftARequest = {
 
 const craftAResponse = optimizer.optimizeCraft(craftARequest);
 const multiSeedSummaryA = runMultiSeedValidation('Craft A (Shield Cluster)', optimizer, craftARequest, [42, 1337, 2026, 9001, 123456]);
+const autoDiscoveryDiagA = runAutoDiscoveryDiagnostic('Craft A (Shield Cluster)', optimizer, craftARequest, craftAResponse);
 
 console.log(craftAResponse.explanation);
 console.log(multiSeedSummaryA.explanation);
+console.log(autoDiscoveryDiagA);
 verifyRepresentativeMinEv('Craft A', craftAResponse);
-writeCraftOutput('output-craft-a.txt', craftAResponse.explanation + '\n' + multiSeedSummaryA.explanation);
-writeCraftReview('output-craft-a-review.txt', craftAResponse.explanation + '\n' + multiSeedSummaryA.explanation);
+writeCraftOutput('output-craft-a.txt', craftAResponse.explanation + '\n' + multiSeedSummaryA.explanation + '\n' + autoDiscoveryDiagA);
+writeCraftReview('output-craft-a-review.txt', craftAResponse.explanation + '\n' + multiSeedSummaryA.explanation + '\n' + autoDiscoveryDiagA);
 
 // ------------------------------------------------------------- DEMO 2: Reference Craft B
 console.log('\n>>> OPTIMIZING REFERENCE CRAFT B: 8-Passive Cold Cluster (ilvl 83)');
@@ -394,10 +447,12 @@ const craftCRequest = {
 
 const craftCResponse = optimizer.optimizeCraft(craftCRequest);
 const multiSeedSummaryC = runMultiSeedValidation('Craft C (Minion Cluster)', optimizer, craftCRequest, [42, 1337, 2026, 9001, 123456]);
+const autoDiscoveryDiagC = runAutoDiscoveryDiagnostic('Craft C (Minion Cluster)', optimizer, craftCRequest, craftCResponse);
 
 console.log(craftCResponse.explanation);
 console.log(multiSeedSummaryC.explanation);
+console.log(autoDiscoveryDiagC);
 verifyRepresentativeMinEv('Craft C', craftCResponse);
-writeCraftOutput('output-craft-c.txt', craftCResponse.explanation + '\n' + multiSeedSummaryC.explanation);
-writeCraftReview('output-craft-c-review.txt', craftCResponse.explanation + '\n' + multiSeedSummaryC.explanation);
+writeCraftOutput('output-craft-c.txt', craftCResponse.explanation + '\n' + multiSeedSummaryC.explanation + '\n' + autoDiscoveryDiagC);
+writeCraftReview('output-craft-c-review.txt', craftCResponse.explanation + '\n' + multiSeedSummaryC.explanation + '\n' + autoDiscoveryDiagC);
 console.log('='.repeat(80));

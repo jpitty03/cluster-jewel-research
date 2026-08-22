@@ -2,8 +2,10 @@ import type { ItemState } from '../domain/ItemState.ts';
 import type { TargetDefinition } from '../domain/TargetDefinition.ts';
 import type { SolverContext, CraftAction } from '../domain/CraftAction.ts';
 import type { ModPool } from '../domain/ModPool.ts';
+import { getCanonicalStateKey } from '../rules/actionDiscovery.ts';
 import {
   ExpectedCostSolver,
+  type StateValueNode,
   type CraftPlanStep,
   type AcquisitionOption,
   type FinalOutcomeDistribution,
@@ -45,6 +47,7 @@ export class CraftEvaluator {
   private context: SolverContext;
   private target: TargetDefinition;
   private allflameEnabled: boolean;
+  private downstreamCache = new Map<string, StateValueNode>();
 
   constructor(context: SolverContext, target: TargetDefinition, allflameEnabled = false) {
     this.context = context;
@@ -89,8 +92,13 @@ export class CraftEvaluator {
       actions = plugin.transformActions(actions, this.context);
     }
 
-    const solver = new ExpectedCostSolver(this.context, this.target, actions);
-    const result = solver.solve(startState, acquisitionInput);
+    const stateKey = getCanonicalStateKey(startState, this.target);
+    let result = this.downstreamCache.get(stateKey);
+    if (!result) {
+      const solver = new ExpectedCostSolver(this.context, this.target, actions);
+      result = solver.solve(startState, acquisitionInput);
+      this.downstreamCache.set(stateKey, result);
+    }
 
     const baseCost =
       typeof acquisitionInput === 'number'

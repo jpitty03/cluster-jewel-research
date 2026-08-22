@@ -40,15 +40,15 @@ export function generateStartingStateCandidates(
   const cleanBaseCost = context.cleanBaseCostChaos ?? 10;
   const priceBook = context.priceBook;
   const pool = context.pool;
-  const fractureCost = priceBook.toChaos(1, 'fracture') || 359;
+  const fractureCost = priceBook.getRate('fracturing') || 359;
 
   // 1. Clean Base Physical State
   const cleanState: ItemState = {
-    baseType,
+    baseType: baseType as any,
     clusterType,
     itemLevel,
     passiveCount,
-    rarity: 'rare',
+    rarity: 'normal',
     prefixes: [],
     suffixes: [],
     fracturedModIds: [],

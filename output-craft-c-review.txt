@@ -450,30 +450,10 @@ Trial #1 (5317 steps) -> Total Cost: 33219.5c (~166.10 div)
     [Step 126] Orb of Annulment: Annul removed of the Mongoose (Suffix) [Step 4 Cleanup] (+9.00c) -> P:[Powerful (t1), Sanguine (t1)], S:[]
 
 ======================================================================
-REVIEW FILE NOTE: 34307 verbose middle lines omitted from this compact artifact.
+REVIEW FILE NOTE: 34327 verbose middle lines omitted from this compact artifact.
 See the corresponding full output-craft-*.txt file for complete Monte Carlo traces/details.
 ======================================================================
 
-    [Step 6604] Harvest Reforge Life: Reforged item (guaranteed life: Healthy) (+5.77c) -> P:[Powerful (t1), Healthy (t2)], S:[of the Seal (t2), of the Newt (t3)]
-    [Step 6605] Harvest Reforge Life: Reforged item (guaranteed life: of the Lizard) (+5.77c) -> P:[Powerful (t1), Dancer's (t2)], S:[of the Lizard (t2), of the Whelpling (t3)]
-    [Step 6606] Harvest Reforge Life: Reforged item (guaranteed life: of the Flatworm) (+5.77c) -> P:[Powerful (t1), Studded (t2)], S:[of the Flatworm (t1), of the Cloud (t3)]
-    [Step 6607] Harvest Reforge Life: Reforged item (guaranteed life: Primordial Bond) (+5.77c) -> P:[Powerful (t1), Lacquered (t3)], S:[Primordial Bond (t1), Call to the Slaughter (t1)]
-    [Step 6608] Harvest Reforge Life: Reforged item (guaranteed life: Primordial Bond) (+5.77c) -> P:[Powerful (t1)], S:[Primordial Bond (t1), Added Small Passive Skills also grant: Minions have 1% increased Attack and Cast Speed (t3)]
-    [Step 6609] Harvest Reforge Life: Reforged item (guaranteed life: Healthy) (+5.77c) -> P:[Powerful (t1), Healthy (t2)], S:[of the Crystal (t3)]
-    [Step 6610] Harvest Reforge Life: Reforged item (guaranteed life: of the Newt) (+5.77c) -> P:[Powerful (t1), Agile (t3)], S:[of the Newt (t3), of the Prodigy (t1)]
-    [Step 6611] Harvest Reforge Life: Reforged item (guaranteed life: Feasting Fiends) (+5.77c) -> P:[Powerful (t1), Feasting Fiends (t1)], S:[of the Inuit (t3)]
-    [Step 6612] Harvest Reforge Life: Reforged item (guaranteed life: Renewal) (+5.77c) -> P:[Powerful (t1), Renewal (t1)], S:[of the Lynx (t2)]
-    [Step 6613] Harvest Reforge Life: Reforged item (guaranteed life: Hale) (+5.77c) -> P:[Powerful (t1), Hale (t3)], S:[of Excitement (t3)]
-    [Step 6614] Harvest Reforge Life: Reforged item (guaranteed life: Feasting Fiends) (+5.77c) -> P:[Powerful (t1), Feasting Fiends (t1)], S:[of Elation (t1)]
-    [Step 6615] Harvest Reforge Life: Reforged item (guaranteed life: Sanguine) (+5.77c) -> P:[Powerful (t1), Sanguine (t1)], S:[of the Inuit (t3), of the Mongoose (t3)]
-    [Step 6616] Orb of Annulment: Annul removed Sanguine (Prefix) [Step 3 Cleanup] (+9.00c) -> P:[Powerful (t1)], S:[of the Inuit (t3), of the Mongoose (t3)]
-    [Step 6617] Harvest Reforge Life: Reforged item (guaranteed life: Healthy) (+5.77c) -> P:[Powerful (t1), Healthy (t2)], S:[Added Small Passive Skills also grant: Minions have 2% increased Attack and Cast Speed (t2)]
-    [Step 6618] Harvest Reforge Life: Reforged item (guaranteed life: of the Newt) (+5.77c) -> P:[Powerful (t1), Agile (t3)], S:[of the Newt (t3), of the Brute (t3)]
-    [Step 6619] Harvest Reforge Life: Reforged item (guaranteed life: Renewal) (+5.77c) -> P:[Powerful (t1), Renewal (t1)], S:[of the Mongoose (t3), of the Cloud (t3)]
-    [Step 6620] Harvest Reforge Life: Reforged item (guaranteed life: of the Lizard) (+5.77c) -> P:[Powerful (t1), Skeletal Atrophy (t1)], S:[of the Lizard (t2), Call to the Slaughter (t1)]
-    [Step 6621] Harvest Reforge Life: Reforged item (guaranteed life: of the Newt) (+5.77c) -> P:[Powerful (t1)], S:[of the Newt (t3), of Excitement (t3)]
-    [Step 6622] Harvest Reforge Life: Reforged item (guaranteed life: Renewal) (+5.77c) -> P:[Powerful (t1), Renewal (t1)], S:[Call to the Slaughter (t1)]
-    [Step 6623] Harvest Reforge Life: Reforged item (guaranteed life: Sanguine) (+5.77c) -> P:[Powerful (t1), Sanguine (t1)], S:[of the Salamander (t2), of the Flatworm (t1)]
     [Step 6624] Orb of Annulment: Annul removed of the Salamander (Suffix) [Step 3 Cleanup] (+9.00c) -> P:[Powerful (t1), Sanguine (t1)], S:[of the Flatworm (t1)]
     [Step 6625] Orb of Annulment: Annul removed of the Flatworm (Suffix) [Step 3 Cleanup] (+9.00c) -> P:[Powerful (t1), Sanguine (t1)], S:[]
     [Step 6626] Exalted Orb Slam (Suffix: +4 to all Attributes [of the Meteor] / +5% to Chaos Resistance [of Eviction]): Slammed of the Storm (+1.20c) -> P:[Powerful (t1), Sanguine (t1)], S:[of the Storm (t1)]
@@ -554,3 +534,23 @@ Exalted Orb Slam                371.51             392.80            5.73%      
 STABILITY CONCLUSION:
   Status:                MULTI-SEED STABLE
   Assessment:            Pooled action counts <=10% and completion >=99% across all deterministic seeds.
+
+================================================================================
+AUTOMATIC STARTING-STATE DISCOVERY DIAGNOSTIC: Craft C (Minion Cluster)
+================================================================================
+Target Definition: 4 base required mods (0 outcome branches)
+
+GENERATED STARTING CANDIDATES (5 routes from 5 physical states):
+Route Name                                Acquisition Mode     Acq Cost        Downstream EV   Full Route EV
+---------------------------------------------------------------------------------------------------------
+Self-Fracture 35% Increased Effect [Powerful] self-fracture        1531.2c (~7.66 div) 41281.0c (~206.40 div) 42812.2c (~214.06 div)
+Self-Fracture T1 Maximum Life [Sanguine]  self-fracture        1531.2c (~7.66 div) 100000.0c (~500.00 div) 101531.2c (~507.66 div)
+Self-Fracture +4 to all Attributes [of the Meteor] self-fracture        1538.6c (~7.69 div) 117000.0c (~585.00 div) 118538.6c (~592.69 div)
+Self-Fracture +5% to Chaos Resistance [of Eviction] self-fracture        1538.6c (~7.69 div) 117000.0c (~585.00 div) 118538.6c (~592.69 div)
+Start Clean Base Clean Base               clean-base           10.0c           150000.0c (~750.00 div) 150010.0c (~750.05 div)
+---------------------------------------------------------------------------------------------------------
+
+AUTOMATIC DISCOVERY VERIFICATION:
+  Selected Auto Route:   Self-Fracture 35% Increased Effect [Powerful] (42812.2c (~214.06 div))
+  Manual Fixture Route:  Fractured 35% Increased Effect Base (Self-Fracture) (42814.4c (~214.07 div))
+  Discovery Consistency: PASSED (Auto-discovered candidate matches manual reference fixture)

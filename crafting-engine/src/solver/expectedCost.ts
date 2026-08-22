@@ -159,6 +159,9 @@ export class ExpectedCostSolver {
         downstreamCraftCost = 100000;
       } else if (hasFracSuffix) {
         downstreamCraftCost = 117000;
+      } else {
+        // Clean/normal base without fractured 35 requires full Alt/Aug/Regal base preparation
+        downstreamCraftCost = 150000;
       }
     }
 

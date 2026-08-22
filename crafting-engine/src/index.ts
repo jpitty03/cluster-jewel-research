@@ -7,6 +7,7 @@ import { CraftEvaluator, type StartingStrategyResult } from './solver/evaluator.
 import type { AcquisitionOption } from './solver/expectedCost.ts';
 import { generateCraftExplanation } from './reporting/explainPath.ts';
 import { MonteCarloSimulator, type SimulationResult } from './probability/monteCarlo.ts';
+import { generateStartingStrategies } from './solver/strategyDiscovery.ts';
 
 export interface StartingCraftOption {
   name: string;
