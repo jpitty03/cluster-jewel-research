@@ -1,0 +1,75 @@
+======================================================================
+REFERENCE CRAFT B CRAFTING REPORT & STEPWISE FINANCIAL PLAN
+======================================================================
+
+STATUS: NOT YET OPTIMIZED
+The reported Exalt path is only the best route among currently implemented actions.
+It is not a global optimum (requires Alt/Aug/Regal/Scour transitions).
+
+----------------------------------------------------------------------
+Base Acquisition
+----------------------------------------------------------------------
+Action: Acquire Clean Base
+Raw step cost:                100.0c
+Expected step total:          100.0c
+Expected cumulative cost:     100.0c
+
+----------------------------------------------------------------------
+Magic Alt/Aug Rolling
+----------------------------------------------------------------------
+Action: Orb of Alteration / Orb of Augmentation
+Note: Roll magic base until key notable or suffix is hit.
+Expected attempts:            250.00
+Raw step cost:                50.0c
+Expected step total:          50.0c
+Expected cumulative cost:     150.0c
+
+----------------------------------------------------------------------
+Regal Orb & Exalt Slams
+----------------------------------------------------------------------
+Action: Exalted Orb Slam
+Note: Regal into rare and slam open affixes.
+Expected attempts:            4.00
+Raw step cost:                400.0c (~2.00 div)
+Expected step total:          400.0c (~2.00 div)
+Expected cumulative cost:     550.0c (~2.75 div)
+
+======================================================================
+RECOMMENDED CRAFTING PLAN
+======================================================================
+
+STEP 1 -- Starting base:
+  Clean 8-Passive Cold Cluster Base
+  Expected cost: 100.0c
+
+Base Acquisition:
+  Expected step cost:         100.0c
+  Cumulative:                 100.0c
+
+Magic Alt/Aug Rolling:
+  Expected attempts:          250.00
+  Expected step cost:         50.0c
+  Cumulative:                 150.0c
+
+Regal Orb & Exalt Slams:
+  Expected attempts:          4.00
+  Expected step cost:         400.0c (~2.00 div)
+  Cumulative:                 550.0c (~2.75 div)
+
+----------------------------------------------------------------------
+EXPECTED TOTAL CRAFT COST:
+  550.0c (~2.75 div)
+
+FINAL OUTCOME VALUE DISTRIBUTION:
+  100.00%  Target Notables Satisfied            (4000.0c (~20.00 div))
+
+EXPECTED SALE VALUE:
+  800.0c (~4.00 div)
+
+EXPECTED PROFIT:
+  250.0c (~1.25 div)
+
+EXPECTED ROI:
+  45.45%
+
+======================================================================
