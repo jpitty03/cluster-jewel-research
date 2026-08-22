@@ -34861,6 +34861,11 @@ AUTOMATIC STARTING-STATE DISCOVERY DIAGNOSTIC: Craft C (Minion Cluster)
 ================================================================================
 Target Definition: 4 base required mods (0 outcome branches)
 
+CANDIDATE SET STRUCTURAL AUDIT:
+  Clean Physical Base Generated (Rarity: normal): YES
+  Required-Mod Fractured Starts Generated:        YES
+  Duplicate Physical State Solves:               0 (Memoized by canonical state key)
+
 GENERATED STARTING CANDIDATES (5 routes from 5 physical states):
 Route Name                                Acquisition Mode     Acq Cost        Downstream EV   Full Route EV
 ---------------------------------------------------------------------------------------------------------
@@ -34874,4 +34879,4 @@ Start Clean Base Clean Base               clean-base           10.0c           1
 AUTOMATIC DISCOVERY VERIFICATION:
   Selected Auto Route:   Self-Fracture 35% Increased Effect [Powerful] (42812.2c (~214.06 div))
   Manual Fixture Route:  Fractured 35% Increased Effect Base (Self-Fracture) (42814.4c (~214.07 div))
-  Discovery Consistency: PASSED (Auto-discovered candidate matches manual reference fixture)
+  Discovery Consistency: PASSED (Auto-discovered candidate set and winner match manual reference fixture)

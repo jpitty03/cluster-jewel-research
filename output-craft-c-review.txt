@@ -450,15 +450,10 @@ Trial #1 (5317 steps) -> Total Cost: 33219.5c (~166.10 div)
     [Step 126] Orb of Annulment: Annul removed of the Mongoose (Suffix) [Step 4 Cleanup] (+9.00c) -> P:[Powerful (t1), Sanguine (t1)], S:[]
 
 ======================================================================
-REVIEW FILE NOTE: 34327 verbose middle lines omitted from this compact artifact.
+REVIEW FILE NOTE: 34332 verbose middle lines omitted from this compact artifact.
 See the corresponding full output-craft-*.txt file for complete Monte Carlo traces/details.
 ======================================================================
 
-    [Step 6624] Orb of Annulment: Annul removed of the Salamander (Suffix) [Step 3 Cleanup] (+9.00c) -> P:[Powerful (t1), Sanguine (t1)], S:[of the Flatworm (t1)]
-    [Step 6625] Orb of Annulment: Annul removed of the Flatworm (Suffix) [Step 3 Cleanup] (+9.00c) -> P:[Powerful (t1), Sanguine (t1)], S:[]
-    [Step 6626] Exalted Orb Slam (Suffix: +4 to all Attributes [of the Meteor] / +5% to Chaos Resistance [of Eviction]): Slammed of the Storm (+1.20c) -> P:[Powerful (t1), Sanguine (t1)], S:[of the Storm (t1)]
-    [Step 6627] Orb of Annulment: Annul removed of the Storm (Suffix) [Step 4 Cleanup] (+9.00c) -> P:[Powerful (t1), Sanguine (t1)], S:[]
-    [Step 6628] Exalted Orb Slam (Suffix: +4 to all Attributes [of the Meteor] / +5% to Chaos Resistance [of Eviction]): Slammed of Eviction (+1.20c) -> P:[Powerful (t1), Sanguine (t1)], S:[of Eviction (t1)]
     [Step 6629] Exalted Orb Slam (Suffix: +4 to all Attributes [of the Meteor] / +5% to Chaos Resistance [of Eviction]): Slammed of the Meteor (+1.20c) -> P:[Powerful (t1), Sanguine (t1)], S:[of Eviction (t1), of the Meteor (t1)]
 
 ======================================================================
@@ -540,6 +535,11 @@ AUTOMATIC STARTING-STATE DISCOVERY DIAGNOSTIC: Craft C (Minion Cluster)
 ================================================================================
 Target Definition: 4 base required mods (0 outcome branches)
 
+CANDIDATE SET STRUCTURAL AUDIT:
+  Clean Physical Base Generated (Rarity: normal): YES
+  Required-Mod Fractured Starts Generated:        YES
+  Duplicate Physical State Solves:               0 (Memoized by canonical state key)
+
 GENERATED STARTING CANDIDATES (5 routes from 5 physical states):
 Route Name                                Acquisition Mode     Acq Cost        Downstream EV   Full Route EV
 ---------------------------------------------------------------------------------------------------------
@@ -553,4 +553,4 @@ Start Clean Base Clean Base               clean-base           10.0c           1
 AUTOMATIC DISCOVERY VERIFICATION:
   Selected Auto Route:   Self-Fracture 35% Increased Effect [Powerful] (42812.2c (~214.06 div))
   Manual Fixture Route:  Fractured 35% Increased Effect Base (Self-Fracture) (42814.4c (~214.07 div))
-  Discovery Consistency: PASSED (Auto-discovered candidate matches manual reference fixture)
+  Discovery Consistency: PASSED (Auto-discovered candidate set and winner match manual reference fixture)

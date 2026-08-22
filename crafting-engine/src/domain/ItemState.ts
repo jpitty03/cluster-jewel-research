@@ -19,6 +19,7 @@ export function cloneItemState(state: ItemState): ItemState {
   const cloneMod = (m: RolledMod): RolledMod => ({
     ...m,
     modGroups: [...m.modGroups],
+    craftTags: m.craftTags ? [...m.craftTags] : undefined,
     statValues: m.statValues.map((s) => ({ ...s })),
     currentRoll: m.currentRoll ? [...m.currentRoll] : undefined,
   });

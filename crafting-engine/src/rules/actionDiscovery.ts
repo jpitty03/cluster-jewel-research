@@ -5,7 +5,7 @@ import type { RolledMod } from '../domain/Mod.ts';
 import { canAcceptPrefix, canAcceptSuffix } from './affixRules.ts';
 import { getRemovableAffixes } from '../domain/ItemState.ts';
 import { getTaggedModsForCluster } from './clusterPoolHelpers.ts';
-import { matchesModRequirement } from '../domain/TargetDefinition.ts';
+import { matchesModRequirement, evaluateRollRequirement } from '../domain/TargetDefinition.ts';
 
 import { CRAFT_MECHANICS, getHarvestMechanicsForState } from './actionRegistry.ts';
 
@@ -101,22 +101,25 @@ export function getCanonicalStateKey(
     const isTarget = reqs.some((r) => matchesModRequirement(m, r));
     const isFrac = m.isFractured ? 'FRAC:' : '';
     const craftTags = (m.craftTags ?? []).slice().sort().join(',');
+    const tagsSuffix = craftTags.length > 0 ? `:tags(${craftTags})` : '';
 
     // Check if target definition has specific roll requirements for this mod
     let rollSuffix = '';
     if (isTarget && target?.finalRollRequirements) {
-      for (const [statKey, minVal] of Object.entries(target.finalRollRequirements)) {
-        if (m.stats?.[statKey] !== undefined) {
-          const actualVal = m.stats[statKey];
-          const passStatus = actualVal >= minVal ? 'PASS' : 'FAIL';
-          rollSuffix += `:roll(${statKey}:${passStatus}:${actualVal})`;
+      for (const rollReq of target.finalRollRequirements) {
+        const evalRes = evaluateRollRequirement(m, rollReq);
+        if (evalRes.matchesMod) {
+          const reqKey = rollReq.modGroup ?? rollReq.modId ?? rollReq.name ?? `stat${rollReq.statIndex ?? 0}`;
+          const passStatus = evalRes.passes ? 'PASS' : 'FAIL';
+          const valStr = evalRes.actualValue !== undefined ? `:${evalRes.actualValue}` : '';
+          rollSuffix += `:roll(${reqKey}:${passStatus}${valStr})`;
         }
       }
     }
 
-    // Always preserve modGroup to ensure mod-group blocking and eligibility are preserved
-    const groupOrId = m.modGroup ?? m.modId;
-    return `${isFrac}${groupOrId}:t${m.tier}:tags(${craftTags})${rollSuffix}`;
+    // Always preserve full sorted modGroups exclusion set to ensure mod-group blocking and eligibility are preserved
+    const allGroups = (m.modGroups && m.modGroups.length > 0 ? m.modGroups : [m.modGroup ?? m.modId]).slice().sort().join('+');
+    return `${isFrac}groups(${allGroups}):t${m.tier}${tagsSuffix}${rollSuffix}`;
   };
 
   const pKeys = state.prefixes.map(formatMod).sort().join('|');

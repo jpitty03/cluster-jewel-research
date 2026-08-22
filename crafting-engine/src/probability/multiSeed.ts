@@ -81,20 +81,18 @@ export function runMultiSeedValidation(
   const expAnnul = recommended.expectedCurrencies?.annul ?? 0;
   const expExalt = recommended.expectedCurrencies?.exalt ?? 0;
 
-  // Determine starting state and acquisition cost from recommended strategy
-  const startingStates = baseRequest.startingStates ?? [];
-  const bestStart = startingStates.find((s) => s.name === recommended.strategyName) ?? startingStates[0];
-  const startState = bestStart?.state ?? {
+  // Determine starting state and acquisition cost directly from resolved policy artifact
+  const startState = recommended.state ?? {
     baseType: baseRequest.baseType as any,
     clusterType: baseRequest.clusterType,
     itemLevel: baseRequest.itemLevel,
     passiveCount: baseRequest.passiveCount,
-    rarity: 'rare',
+    rarity: 'normal',
     prefixes: [],
     suffixes: [],
     fracturedModIds: [],
   };
-  const startCost = bestStart?.acquisition?.costChaos ?? bestStart?.baseCostChaos ?? recommended.baseCostChaos ?? 0;
+  const startCost = recommended.baseCostChaos ?? 0;
 
   const priceBook = baseRequest.priceBook ?? (optimizer as any).defaultPriceBook;
   const pool = recommended.pool ?? (optimizer as any).repo;

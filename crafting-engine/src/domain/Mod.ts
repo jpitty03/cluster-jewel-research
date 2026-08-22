@@ -30,6 +30,7 @@ export interface RolledMod {
   genType: GenType;
   modGroup: string;
   modGroups: string[];
+  craftTags?: string[];
   tier: number;
   statText: string;
   statValues: StatValueRange[];
@@ -51,6 +52,7 @@ export function toRolledMod(
     genType: mod.genType,
     modGroup: mod.modGroup,
     modGroups: mod.modGroups && mod.modGroups.length > 0 ? [...mod.modGroups] : [mod.modGroup],
+    craftTags: mod.craftTags ? [...mod.craftTags] : [],
     tier: mod.tier,
     statText: mod.statText,
     statValues: mod.statValues.map((s) => ({ ...s })),

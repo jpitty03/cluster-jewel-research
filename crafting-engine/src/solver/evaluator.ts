@@ -43,6 +43,8 @@ export interface StartingStrategyResult {
   pool?: ModPool;
 }
 
+export type ResolvedCraftPolicy = StartingStrategyResult;
+
 export class CraftEvaluator {
   private context: SolverContext;
   private target: TargetDefinition;

@@ -42,6 +42,38 @@ export function matchesModRequirement(mod: RolledMod | Mod, req: ModRequirement)
   return true;
 }
 
+export interface RollEvaluationResult {
+  matchesMod: boolean;
+  passes: boolean;
+  actualValue?: number;
+}
+
+export function evaluateRollRequirement(
+  mod: RolledMod,
+  req: RollRequirement
+): RollEvaluationResult {
+  const matchesMod =
+    (req.modGroup ? mod.modGroup === req.modGroup || mod.modGroups?.includes(req.modGroup) : true) &&
+    (req.modId ? mod.modId === req.modId : true) &&
+    (req.name ? mod.name === req.name : true);
+
+  if (!matchesMod) {
+    return { matchesMod: false, passes: false };
+  }
+
+  const statIndex = req.statIndex ?? 0;
+  const actualValue = mod.currentRoll?.[statIndex];
+  if (actualValue === undefined) {
+    return { matchesMod: true, passes: true };
+  }
+
+  let passes = true;
+  if (req.minValue !== undefined && actualValue < req.minValue) passes = false;
+  if (req.maxValue !== undefined && actualValue > req.maxValue) passes = false;
+
+  return { matchesMod: true, passes, actualValue };
+}
+
 export function satisfiesTarget(state: ItemState, target: TargetDefinition): boolean {
   const affixes = [...state.prefixes, ...state.suffixes];
 
@@ -54,16 +86,10 @@ export function satisfiesTarget(state: ItemState, target: TargetDefinition): boo
   // 2. Check final roll requirements if specified
   if (target.finalRollRequirements) {
     for (const rollReq of target.finalRollRequirements) {
-      const match = affixes.find((m) =>
-        (rollReq.modGroup ? m.modGroup === rollReq.modGroup : true) &&
-        (rollReq.modId ? m.modId === rollReq.modId : true) &&
-        (rollReq.name ? m.name === rollReq.name : true)
-      );
+      const match = affixes.find((m) => evaluateRollRequirement(m, rollReq).matchesMod);
       if (!match) return false;
-      const currentVal = match.currentRoll?.[rollReq.statIndex ?? 0];
-      if (currentVal !== undefined && rollReq.minValue !== undefined && currentVal < rollReq.minValue) {
-        return false;
-      }
+      const res = evaluateRollRequirement(match, rollReq);
+      if (!res.passes) return false;
     }
   }
 
