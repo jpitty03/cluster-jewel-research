@@ -99,15 +99,22 @@ export class CraftingOptimizer {
           () => structuredClone(bestStart.state),
           bestStart.baseCostChaos,
           request.monteCarloTrials ?? 2000,
-          3000,
+          25000,
           request.traceTrialsCount ?? 3
         );
 
         if (simulationValidation && simulationValidation.meanCostChaos !== undefined) {
           const costDiffPct = (Math.abs(simulationValidation.meanCostChaos - recommended.totalExpectedCostChaos) / recommended.totalExpectedCostChaos) * 100;
 
-          const expH = recommended.expectedCurrencies?.primalLifeforce ? recommended.expectedCurrencies.primalLifeforce / 75 : 0;
-          const simH = simulationValidation.currencyAverages?.primalLifeforce ? simulationValidation.currencyAverages.primalLifeforce / 75 : 0;
+          const expPrimal = recommended.expectedCurrencies?.primalLifeforce ? recommended.expectedCurrencies.primalLifeforce / 75 : 0;
+          const expWild = recommended.expectedCurrencies?.wildLifeforce ? recommended.expectedCurrencies.wildLifeforce / 75 : 0;
+          const expVivid = recommended.expectedCurrencies?.vividLifeforce ? recommended.expectedCurrencies.vividLifeforce / 75 : 0;
+          const expH = expPrimal + expWild + expVivid;
+
+          const simPrimal = simulationValidation.currencyAverages?.primalLifeforce ? simulationValidation.currencyAverages.primalLifeforce / 75 : 0;
+          const simWild = simulationValidation.currencyAverages?.wildLifeforce ? simulationValidation.currencyAverages.wildLifeforce / 75 : 0;
+          const simVivid = simulationValidation.currencyAverages?.vividLifeforce ? simulationValidation.currencyAverages.vividLifeforce / 75 : 0;
+          const simH = simPrimal + simWild + simVivid;
           const harvestDiffPct = expH > 0 ? (Math.abs(simH - expH) / expH) * 100 : 0;
 
           const expA = recommended.expectedCurrencies?.annul ?? 0;

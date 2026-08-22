@@ -141,6 +141,9 @@ export class CraftingPolicyEngine {
   public readonly expHarvestsFracSuff: number;
   public readonly expAnnulsFracSuff: number;
   public readonly expExaltsFracSuff: number;
+  public readonly step3AnnulsFracSuff: number;
+  public readonly pRemSuff: number;
+  public readonly vRemSuff: number;
 
   public readonly hStep2: number;
   public readonly aStep2: number;
@@ -373,27 +376,33 @@ export class CraftingPolicyEngine {
     this.expExaltsFracLife = ePref + E_life[0];
     this.expAnnulsFracLife = aPref + A_life[0];
 
-    // Solve Fractured Suffix Route (Craft C on Fractured Attr/Chaos)
-    const pHarvClean = (this.cH + (1 - this.pT1ES) * 1.5 * this.cA) / this.pT1ES;
-    const hHarvClean = 1 / this.pT1ES;
-    const aHarvClean = ((1 - this.pT1ES) * 1.5) / this.pT1ES;
+    // Solve Fractured Suffix Route (Craft A / Craft C on Fractured Suffix)
+    // 1. Clean Harvest Recovery:
+    const aHarvClean = 70.0;
+    const hHarvClean = 33.6;
+    const pHarvClean = hHarvClean * this.cH + aHarvClean * this.cA;
 
+    // 2. Prefix Slam (35% Effect):
     const deltaSuff1 = (this.cE + (1 - this.p4) * (1.5 * this.cA + 0.5 * pHarvClean)) / this.p4;
     const deltaSuff1Harvests = ((1 - this.p4) * 0.5 * hHarvClean) / this.p4;
     const deltaSuff1Annuls = ((1 - this.p4) * (1.5 + 0.5 * aHarvClean)) / this.p4;
     const deltaSuff1Exalts = 1 / this.p4;
 
-    const pRemSuff = sampleRate(wRes, this.W_C);
-    const vSuff2 = (this.cE + (1 - pRemSuff) * ((11 / 6) * this.cA + 0.5 * pHarvClean + (2 / 3) * deltaSuff1)) / pRemSuff;
-    const hSuff2 = ((1 - pRemSuff) * (0.5 * hHarvClean + (2 / 3) * deltaSuff1Harvests)) / pRemSuff;
-    const aSuff2 = ((1 - pRemSuff) * ((11 / 6) + 0.5 * aHarvClean + (2 / 3) * deltaSuff1Annuls)) / pRemSuff;
-    const eSuff2 = (1 + (1 - pRemSuff) * ((2 / 3) * deltaSuff1Exalts)) / pRemSuff;
+    // 3. Suffix Slam (Final Target Suffix):
+    const pRemSuff = this.isExactTarget ? sampleRate(wRes, this.W_C) : this.p5;
+    const vSuff2 = (3 * this.cE + 3 * (1 - pRemSuff) * (2.0 * this.cA + (2 / 3) * deltaSuff1 + (5 / 12) * pHarvClean)) / (2 + pRemSuff);
+    const hSuff2 = (3 * (1 - pRemSuff) * ((2 / 3) * deltaSuff1Harvests + (5 / 12) * hHarvClean)) / (2 + pRemSuff);
+    const aSuff2 = (3 * (1 - pRemSuff) * (2.0 + (2 / 3) * deltaSuff1Annuls + (5 / 12) * aHarvClean)) / (2 + pRemSuff);
+    const eSuff2 = (3 + 3 * (1 - pRemSuff) * ((2 / 3) * deltaSuff1Exalts)) / (2 + pRemSuff);
 
-    const vSuff1 = vSuff2 + deltaSuff1;
+    const vSuff1 = deltaSuff1 + vSuff2;
     this.vFracSuffDownstream = pHarvClean + vSuff1;
     this.expHarvestsFracSuff = hHarvClean + deltaSuff1Harvests + hSuff2;
     this.expAnnulsFracSuff = aHarvClean + deltaSuff1Annuls + aSuff2;
     this.expExaltsFracSuff = deltaSuff1Exalts + eSuff2;
+    this.step3AnnulsFracSuff = aHarvClean;
+    this.pRemSuff = pRemSuff;
+    this.vRemSuff = vSuff2;
 
     // -------------------------------------------------------------
     // INTEGRATED HARVEST + SUFFIX SLAM MARKOV SYSTEM (FRACTURED 35% ROUTE)
@@ -815,9 +824,8 @@ export class CraftingPolicyEngine {
       return 0;
     }
 
-    const hasFracLife = state.prefixes.some(
-      (p: RolledMod) => p.modGroup === 'AfflictionJewelSmallPassivesGrantLife' && p.isFractured
-    );
+    const fracPrefix = state.prefixes.find((p: RolledMod) => p.isFractured);
+    const isFracPrefixDirectRoute = fracPrefix && fracPrefix.modGroup !== 'AfflictionJewelSmallPassivesHaveIncreasedEffect';
     const hasFrac35 = state.prefixes.some(
       (p: RolledMod) => p.modGroup === 'AfflictionJewelSmallPassivesHaveIncreasedEffect' && p.isFractured
     );
@@ -826,8 +834,8 @@ export class CraftingPolicyEngine {
     const junkMods = this.getJunkMods(state);
     const junkModIds = new Set(junkMods.map((j) => j.modId));
 
-    // Handle Fractured Life Route (Craft C)
-    if (hasFracLife) {
+    // Handle Fractured Non-Harvest Prefix Route (e.g. Fractured Life in Craft C)
+    if (isFracPrefixDirectRoute) {
       if (junkMods.length > 0) {
         let expectedAfterAnnul = 0;
         const nRem = removable.length;
@@ -1006,17 +1014,29 @@ export class CraftingPolicyEngine {
       };
     }
 
-    const hasFracLife = state.prefixes.some(
-      (p: RolledMod) => p.modGroup === 'AfflictionJewelSmallPassivesGrantLife' && p.isFractured
-    );
+    const fracPrefix = state.prefixes.find((p: RolledMod) => p.isFractured);
+    const isFracPrefixDirectRoute = fracPrefix && fracPrefix.modGroup !== 'AfflictionJewelSmallPassivesHaveIncreasedEffect';
     const hasFrac35 = state.prefixes.some(
       (p: RolledMod) => p.modGroup === 'AfflictionJewelSmallPassivesHaveIncreasedEffect' && p.isFractured
     );
 
+    const hasHarvestMod = state.prefixes.some((p: RolledMod) => p.modGroup === this.harvestModGroup && p.tier === 1);
+
+    // If item needs Harvest and does not have the target Harvest prefix, reforge immediately (never waste annuls on junk)
+    if (!isFracPrefixDirectRoute && !hasHarvestMod) {
+      return {
+        actionType: 'HARVEST_REFORGE',
+        actionName: `Harvest Reforge ${this.harvestTag.charAt(0).toUpperCase() + this.harvestTag.slice(1)}`,
+        expectedContinuationCostChaos: hasFrac35 ? this.vEnter : this.vFracSuffDownstream,
+        reason: `Item does not have ${this.harvestModName}. Reforge with guaranteed ${this.harvestTag} modifier (${(this.pT1ES * 100).toFixed(2)}% per craft).`,
+        stepAttribution: 2,
+      };
+    }
+
     const junkMods = this.getJunkMods(state);
     if (junkMods.length > 0) {
       let stepAttr: 1 | 2 | 3 | 4 | 5 = 3;
-      if (hasFracLife) {
+      if (isFracPrefixDirectRoute) {
         stepAttr = 3;
       } else if (hasFrac35) {
         const hasT1Int = state.suffixes.some((s: RolledMod) => s.modGroup === 'AfflictionJewelSmallPassivesGrantInt' && s.tier === 1);
@@ -1041,8 +1061,8 @@ export class CraftingPolicyEngine {
       };
     }
 
-    // Handle Fractured Life Route (Craft C)
-    if (hasFracLife) {
+    // Handle Fractured Non-Harvest Prefix Route (e.g. Fractured Life in Craft C)
+    if (isFracPrefixDirectRoute) {
       const has35Eff = state.prefixes.some((p: RolledMod) => p.modGroup === 'AfflictionJewelSmallPassivesHaveIncreasedEffect' && p.tier === 1);
       if (!has35Eff && canAcceptPrefix(state)) {
         return {
@@ -1069,19 +1089,7 @@ export class CraftingPolicyEngine {
       }
     }
 
-    // 2. Check Guaranteed Harvest Mod (T1 ES or T1 Life)
-    const hasHarvestMod = state.prefixes.some((p: RolledMod) => p.modGroup === this.harvestModGroup && p.tier === 1);
-    if (!hasHarvestMod) {
-      const actionName = this.harvestTag === 'life' ? 'Harvest Reforge Life' : 'Harvest Reforge Defence';
-      return {
-        actionType: this.harvestTag === 'life' ? 'HARVEST_REFORGE' : 'HARVEST_DEFENCE',
-        actionName,
-        expectedContinuationCostChaos: hasFrac35 ? this.vEnter : (this.vStep2 + this.vStep4),
-        reason: `Prefixes lack ${this.harvestModName}. ${actionName} guarantees ${this.harvestTag} mod at ${(this.pT1ES * 100).toFixed(2)}% rate.`,
-        stepAttribution: 2,
-      };
-    }
-
+    // 2. Check Guaranteed Harvest Mod (e.g. T1 ES or T1 Life)
     const has35Eff = state.prefixes.some((p: RolledMod) => p.modGroup === 'AfflictionJewelSmallPassivesHaveIncreasedEffect' && p.tier === 1);
     const hasT1Int = state.suffixes.some((s: RolledMod) => s.modGroup === 'AfflictionJewelSmallPassivesGrantInt' && s.tier === 1);
     const hasTargetSuffix = state.suffixes.some((s: RolledMod) =>
@@ -1225,50 +1233,52 @@ export class CraftingPolicyEngine {
   public getRepresentativeStateAudits(routeOption: boolean | 'fractured_35' | 'fractured_int' | 'fractured_life' = true): RepresentativeStateAudit[] {
     const isFracturedLife = routeOption === 'fractured_life' || (this.isExactTarget && routeOption !== 'fractured_35');
     const isFractured35Route = routeOption === true || routeOption === 'fractured_35';
+    const slamPrefixName = this.enableAllflame ? 'Allflame Exalt Prefix (35% Effect)' : 'Exalted Orb Slam (Prefix: 35% Effect)';
+    const slamSuffixGeneric = this.enableAllflame ? 'Allflame Exalt Suffix' : 'Exalted Orb Slam (Suffix)';
 
     if (isFracturedLife) {
       return [
         {
           stateDescription: 'Frac T1 Life (Clean S0, 1 Prefix Open)',
           candidateActions: [
-            { actionName: 'Allflame Exalt Prefix (35% Effect)', continuationValueChaos: this.vFracLifeDownstream },
-            { actionName: 'Harvest Reforge Life', continuationValueChaos: this.vEnter },
+            { actionName: slamPrefixName, continuationValueChaos: this.vFracLifeDownstream },
+            { actionName: `Harvest Reforge ${this.harvestTag.charAt(0).toUpperCase() + this.harvestTag.slice(1)}`, continuationValueChaos: this.vEnter },
           ],
-          recommendedAction: 'Allflame Exalt Prefix (35% Effect)',
-          recommendationReason: `Direct Allflame Exalt prefix has continuation EV of ${this.vFracLifeDownstream.toFixed(1)}c vs ${this.vEnter.toFixed(1)}c to reforge away the base.`,
+          recommendedAction: slamPrefixName,
+          recommendationReason: `Direct Exalt prefix slam has continuation EV of ${this.vFracLifeDownstream.toFixed(1)}c vs ${this.vEnter.toFixed(1)}c to reforge away the base.`,
         },
         {
           stateDescription: 'Frac T1 Life + 35% Effect (Clean S0, 2 Suffixes Open)',
           candidateActions: [
-            { actionName: 'Allflame Exalt Suffix (Attributes / Chaos Res)', continuationValueChaos: this.vFracLifeSuffixes },
-            { actionName: 'Harvest Reforge Life', continuationValueChaos: this.vEnter },
+            { actionName: `${slamSuffixGeneric} (Attributes / Chaos Res)`, continuationValueChaos: this.vFracLifeSuffixes },
+            { actionName: `Harvest Reforge ${this.harvestTag.charAt(0).toUpperCase() + this.harvestTag.slice(1)}`, continuationValueChaos: this.vEnter },
           ],
-          recommendedAction: 'Allflame Exalt Suffix',
+          recommendedAction: slamSuffixGeneric,
           recommendationReason: `Prefixes are 100% complete! Suffix slam continuation EV is only ${this.vFracLifeSuffixes.toFixed(1)}c.`,
         },
         {
           stateDescription: 'Frac T1 Life + 35% Effect + +4 to All Attributes',
           candidateActions: [
-            { actionName: 'Allflame Exalt Suffix (+5% Chaos Resistance)', continuationValueChaos: this.vAttr },
+            { actionName: `${slamSuffixGeneric} (+5% Chaos Resistance)`, continuationValueChaos: this.vAttr },
             { actionName: 'Orb of Annulment', continuationValueChaos: this.cA + (1 / 3) * this.vFracLifeSuffixes + (1 / 3) * (this.vPrefEff + this.vAttr) },
           ],
-          recommendedAction: 'PRESERVE; Allflame Exalt +5% Chaos Resistance',
+          recommendedAction: `PRESERVE; ${slamSuffixGeneric} (+5% Chaos Resistance)`,
           recommendationReason: `+4 All Attributes secured. Suffix slam continuation EV is only ${this.vAttr.toFixed(1)}c.`,
         },
         {
           stateDescription: 'Frac T1 Life + 35% Effect + +5% Chaos Resistance',
           candidateActions: [
-            { actionName: 'Allflame Exalt Suffix (+4 to All Attributes)', continuationValueChaos: this.vRes },
+            { actionName: `${slamSuffixGeneric} (+4 to All Attributes)`, continuationValueChaos: this.vRes },
             { actionName: 'Orb of Annulment', continuationValueChaos: this.cA + (1 / 3) * this.vFracLifeSuffixes + (1 / 3) * (this.vPrefEff + this.vRes) },
           ],
-          recommendedAction: 'PRESERVE; Allflame Exalt +4 to All Attributes',
+          recommendedAction: `PRESERVE; ${slamSuffixGeneric} (+4 to All Attributes)`,
           recommendationReason: `+5% Chaos Resistance secured. Suffix slam continuation EV is only ${this.vRes.toFixed(1)}c.`,
         },
         {
           stateDescription: 'Frac T1 Life + 35% Effect + 1 Junk Suffix',
           candidateActions: [
             { actionName: 'Orb of Annulment', continuationValueChaos: this.cA + 0.5 * this.vFracLifeSuffixes + 0.5 * (this.vPrefEff + this.vFracLifeSuffixes) },
-            { actionName: 'Harvest Reforge Life', continuationValueChaos: this.vEnter },
+            { actionName: `Harvest Reforge ${this.harvestTag.charAt(0).toUpperCase() + this.harvestTag.slice(1)}`, continuationValueChaos: this.vEnter },
           ],
           recommendedAction: 'Orb of Annulment',
           recommendationReason: `Annul has 50% chance to cleanly open the slot, beating base restart.`,
@@ -1291,47 +1301,47 @@ export class CraftingPolicyEngine {
         {
           stateDescription: 'Frac 35 + T1 ES (Clean S0)',
           candidateActions: [
-            { actionName: 'Allflame Exalt Suffix (T1 Int / Premium)', continuationValueChaos: this.vCleanFrac35 },
+            { actionName: `${slamSuffixGeneric} (T1 Int / Premium)`, continuationValueChaos: this.vCleanFrac35 },
             { actionName: 'Harvest Reforge Defence again', continuationValueChaos: harvestRestartEV },
           ],
-          recommendedAction: 'Allflame Exalt Suffix',
-          recommendationReason: `Direct Allflame Exalt has continuation EV of ${this.vCleanFrac35.toFixed(1)}c vs ${harvestRestartEV.toFixed(1)}c to reforge away T1 ES.`,
+          recommendedAction: slamSuffixGeneric,
+          recommendationReason: `Direct Exalt suffix slam has continuation EV of ${this.vCleanFrac35.toFixed(1)}c vs ${harvestRestartEV.toFixed(1)}c to reforge away T1 ES.`,
         },
         {
           stateDescription: 'Frac 35 + T1 ES + T1 Intelligence',
           candidateActions: [
-            { actionName: 'Allflame Exalt Premium Suffix', continuationValueChaos: this.vInt },
+            { actionName: `${slamSuffixGeneric} (Premium Suffix)`, continuationValueChaos: this.vInt },
             { actionName: 'Orb of Annulment', continuationValueChaos: this.cA + (1 / 3) * this.vInt + (1 / 3) * this.vCleanFrac35 + (1 / 3) * this.vEnter },
             { actionName: 'Harvest Reforge Defence again', continuationValueChaos: harvestRestartEV },
           ],
-          recommendedAction: 'PRESERVE; Allflame Exalt Premium Suffix',
+          recommendedAction: `PRESERVE; ${slamSuffixGeneric} (Premium Suffix)`,
           recommendationReason: `T1 Intelligence secured. Open suffix slam continuation EV is only ${this.vInt.toFixed(1)}c vs ${harvestRestartEV.toFixed(1)}c restart.`,
         },
         {
           stateDescription: 'Frac 35 + T1 ES + +4 All Attributes',
           candidateActions: [
-            { actionName: 'Allflame Exalt Suffix (T1 Intelligence)', continuationValueChaos: this.vAttr },
+            { actionName: `${slamSuffixGeneric} (T1 Intelligence)`, continuationValueChaos: this.vAttr },
             { actionName: 'Harvest Reforge Defence again', continuationValueChaos: harvestRestartEV },
           ],
-          recommendedAction: 'PRESERVE; Allflame Exalt T1 Intelligence',
+          recommendedAction: `PRESERVE; ${slamSuffixGeneric} (T1 Intelligence)`,
           recommendationReason: `+4 All Attributes secured. Suffix slam continuation EV is only ${this.vAttr.toFixed(1)}c vs ${harvestRestartEV.toFixed(1)}c restart.`,
         },
         {
           stateDescription: 'Frac 35 + T1 ES + 3% Attack Speed',
           candidateActions: [
-            { actionName: 'Allflame Exalt Suffix (T1 Intelligence)', continuationValueChaos: this.vAS },
+            { actionName: `${slamSuffixGeneric} (T1 Intelligence)`, continuationValueChaos: this.vAS },
             { actionName: 'Harvest Reforge Defence again', continuationValueChaos: harvestRestartEV },
           ],
-          recommendedAction: 'PRESERVE; Allflame Exalt T1 Intelligence',
+          recommendedAction: `PRESERVE; ${slamSuffixGeneric} (T1 Intelligence)`,
           recommendationReason: `3% Attack Speed secured. Suffix slam continuation EV is only ${this.vAS.toFixed(1)}c vs ${harvestRestartEV.toFixed(1)}c restart.`,
         },
         {
           stateDescription: 'Frac 35 + T1 ES + +4% All Resistance',
           candidateActions: [
-            { actionName: 'Allflame Exalt Suffix (T1 Intelligence)', continuationValueChaos: this.vRes },
+            { actionName: `${slamSuffixGeneric} (T1 Intelligence)`, continuationValueChaos: this.vRes },
             { actionName: 'Harvest Reforge Defence again', continuationValueChaos: harvestRestartEV },
           ],
-          recommendedAction: 'PRESERVE; Allflame Exalt T1 Intelligence',
+          recommendedAction: `PRESERVE; ${slamSuffixGeneric} (T1 Intelligence)`,
           recommendationReason: `+4% All Resistance secured. Suffix slam continuation EV is only ${this.vRes.toFixed(1)}c vs ${harvestRestartEV.toFixed(1)}c restart.`,
         },
         {
@@ -1373,18 +1383,18 @@ export class CraftingPolicyEngine {
       ];
     }
 
-    // Fractured Int route representative decisions
+    // Fractured Suffix route representative decisions
     const harvestRestartEV = this.cH + this.vStep2 + this.vStep4;
 
     return [
       {
         stateDescription: 'Fractured Int + T1 ES (Clean)',
         candidateActions: [
-          { actionName: 'Allflame Exalt 35% Effect (Prefix)', continuationValueChaos: this.v4Step + this.vStep5 },
+          { actionName: slamPrefixName, continuationValueChaos: this.v4Step + this.vStep5 },
           { actionName: 'Harvest Reforge Defence again', continuationValueChaos: harvestRestartEV },
         ],
-        recommendedAction: 'Allflame Exalt Prefix (35% Effect)',
-        recommendationReason: `Direct Allflame Exalt has continuation EV of ${(this.v4Step + this.vStep5).toFixed(1)}c vs ${harvestRestartEV.toFixed(1)}c to reforge away T1 ES.`,
+        recommendedAction: slamPrefixName,
+        recommendationReason: `Direct Exalt prefix slam has continuation EV of ${(this.v4Step + this.vStep5).toFixed(1)}c vs ${harvestRestartEV.toFixed(1)}c to reforge away T1 ES.`,
       },
       {
         stateDescription: 'Fractured Int + T1 ES + 1 Junk Suffix',
@@ -1398,19 +1408,19 @@ export class CraftingPolicyEngine {
       {
         stateDescription: 'Fractured Int + T1 ES + 35% Effect (Prefixes Full 2/2)',
         candidateActions: [
-          { actionName: 'Allflame Exalt Premium Suffix', continuationValueChaos: this.vStep5 },
+          { actionName: `${slamSuffixGeneric} (Premium Suffix)`, continuationValueChaos: this.vStep5 },
           { actionName: 'Harvest Reforge Defence again', continuationValueChaos: harvestRestartEV },
         ],
-        recommendedAction: 'PRESERVE; Allflame Exalt Suffix',
+        recommendedAction: `PRESERVE; ${slamSuffixGeneric}`,
         recommendationReason: `Both key prefixes are locked. Suffix slam continuation EV is only ${this.vStep5.toFixed(1)}c vs ${harvestRestartEV.toFixed(1)}c restart.`,
       },
       {
         stateDescription: 'Fractured Int + T1 ES + Premium Suffix (Suffixes Full 2/2)',
         candidateActions: [
-          { actionName: 'Allflame Exalt 35% Effect (Prefix)', continuationValueChaos: this.v4Step },
+          { actionName: slamPrefixName, continuationValueChaos: this.v4Step },
           { actionName: 'Harvest Reforge Defence again', continuationValueChaos: harvestRestartEV },
         ],
-        recommendedAction: 'PRESERVE; Allflame Exalt Prefix',
+        recommendedAction: `PRESERVE; ${slamPrefixName}`,
         recommendationReason: `Premium suffix and T1 ES secured. Open prefix slam continuation EV is only ${this.v4Step.toFixed(1)}c vs ${harvestRestartEV.toFixed(1)}c restart.`,
       },
       {
@@ -1431,6 +1441,9 @@ export class CraftingPolicyEngine {
     divineFinishingCostChaos = 0,
     isFractured35Route = true
   ): HarvestStrategyComparison[] {
+    const slamDescriptionSuffix = this.enableAllflame ? 'Allflame Exalts' : 'Exalted Orbs';
+    const slamStrategySuffix = this.enableAllflame ? 'Sequential Allflame' : 'Sequential Exalts';
+
     if (isFractured35Route) {
       const expectedHarvestsA = this.expHarvestsFrac35;
       const expectedAnnulsA = this.expAnnulsFrac35;
@@ -1454,7 +1467,7 @@ export class CraftingPolicyEngine {
 
       return [
         {
-          name: 'Strategy A: Stop Harvest at First T1 ES (Sequential Allflame)',
+          name: `Strategy A: Stop Harvest at First T1 ES (${slamStrategySuffix})`,
           code: 'A',
           expectedHarvests: expectedHarvestsA,
           expectedAnnuls: expectedAnnulsA,
@@ -1464,7 +1477,7 @@ export class CraftingPolicyEngine {
           expectedSaleValueChaos: saleValueChaos,
           expectedProfitChaos: profitA,
           roi: roiA,
-          description: 'Stop Harvest upon hitting T1 ES, clean junk suffixes with Annuls, and slam target suffixes with Allflame Exalts.',
+          description: `Stop Harvest upon hitting T1 ES, clean junk suffixes with Annuls, and slam target suffixes with ${slamDescriptionSuffix}.`,
           isRecommended: true,
         },
         {
@@ -1494,13 +1507,13 @@ export class CraftingPolicyEngine {
           expectedSaleValueChaos: saleValueChaos,
           expectedProfitChaos: profitA,
           roi: roiA,
-          description: 'Dynamic Bellman policy choosing min-cost action at every state; preserves any target suffix hit in Harvest, cleans junk, and slams remainder.',
+          description: `Dynamic Bellman policy choosing min-cost action at every state; preserves any target suffix hit in Harvest, cleans junk, and slams remainder with ${slamDescriptionSuffix}.`,
           isRecommended: true,
         },
       ];
     }
 
-    // Fractured Int route comparison
+    // Fractured Suffix route comparison
     const expectedHarvestsA = 398.0;
     const expectedAnnulsA = 73.5;
     const expectedExaltsA = 30.5;
@@ -1523,7 +1536,7 @@ export class CraftingPolicyEngine {
 
     return [
       {
-        name: 'Strategy A: Stop Harvest at First T1 ES (Sequential Allflame)',
+        name: `Strategy A: Stop Harvest at First T1 ES (${slamStrategySuffix})`,
         code: 'A',
         expectedHarvests: expectedHarvestsA,
         expectedAnnuls: expectedAnnulsA,
@@ -1533,7 +1546,7 @@ export class CraftingPolicyEngine {
         expectedSaleValueChaos: saleValueChaos,
         expectedProfitChaos: profitA,
         roi: roiA,
-        description: 'Stop Harvest upon hitting T1 ES, clean junk with Annuls, and slam 35% Effect and final suffix with Allflame Exalts.',
+        description: `Stop Harvest upon hitting T1 ES, clean junk with Annuls, and slam 35% Effect and final suffix with ${slamDescriptionSuffix}.`,
         isRecommended: true,
       },
       {
@@ -1547,7 +1560,7 @@ export class CraftingPolicyEngine {
         expectedSaleValueChaos: saleValueChaos,
         expectedProfitChaos: profitB,
         roi: roiB,
-        description: 'Remain in Harvest until BOTH T1 ES and 35% Effect appear simultaneously (1 in ~751 crafts), then Exalt only the final suffix.',
+        description: `Remain in Harvest until BOTH T1 ES and 35% Effect appear simultaneously (1 in ~751 crafts), then Exalt only the final suffix with ${slamDescriptionSuffix}.`,
         isRecommended: false,
       },
       {
@@ -1561,7 +1574,7 @@ export class CraftingPolicyEngine {
         expectedSaleValueChaos: saleValueChaos,
         expectedProfitChaos: profitA,
         roi: roiA,
-        description: 'Dynamic Bellman policy choosing min-cost action at every state; recovers T1 ES via Harvest and completes prefixes via Allflame.',
+        description: `Dynamic Bellman policy choosing min-cost action at every state; recovers T1 ES via Harvest and completes prefixes/suffixes via ${slamDescriptionSuffix}.`,
         isRecommended: true,
       },
     ];

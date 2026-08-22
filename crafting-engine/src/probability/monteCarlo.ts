@@ -106,7 +106,7 @@ export class MonteCarloSimulator {
     startStateFactory: () => ItemState,
     baseCostChaos: number,
     numTrials = 2000,
-    maxStepsPerTrial = 3000,
+    maxStepsPerTrial = 25000,
     traceTrialsCount = 0
   ): SimulationResult {
     const allMods = this.context.pool.getAllMods();

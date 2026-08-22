@@ -82,8 +82,8 @@ export class CraftEvaluator {
     const solver = new ExpectedCostSolver(this.context, this.target, actions);
     const result = solver.solve(startState, baseCostChaos);
 
-    const expectedCraftingCostChaos = result.expectedCostChaos;
-    const totalExpectedCostChaos = baseCostChaos + expectedCraftingCostChaos;
+    const totalExpectedCostChaos = result.expectedCostChaos;
+    const expectedCraftingCostChaos = Math.max(0, result.expectedCostChaos - baseCostChaos);
 
     const effectiveSaleValue = saleValueChaos ?? result.expectedSaleValueChaos;
     let expectedProfitChaos: number | undefined;

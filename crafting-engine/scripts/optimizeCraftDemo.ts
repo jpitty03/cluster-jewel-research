@@ -77,16 +77,6 @@ const craftAResponse = optimizer.optimizeCraft({
   },
   startingStates: [
     {
-      name: 'Buy Fractured T1 Intelligence Base',
-      state: fracIntState,
-      baseCostChaos: 1600, // 8 divines
-    },
-    {
-      name: 'Self-Fracture T1 Intelligence (Clean 12p Base)',
-      state: fracIntState,
-      baseCostChaos: 1542.3, // 4 * (10c base + 16.58c prep + 359c fracture)
-    },
-    {
       name: 'Self-Fracture 35% Effect (Clean 12p Base)',
       state: fracEffState,
       baseCostChaos: 1533.4, // 4 * (10c base + 14.35c prep + 359c fracture)
@@ -96,8 +86,18 @@ const craftAResponse = optimizer.optimizeCraft({
       state: fracEffState,
       baseCostChaos: 2600, // 13 divines
     },
+    {
+      name: 'Self-Fracture T1 Intelligence (Clean 12p Base)',
+      state: fracIntState,
+      baseCostChaos: 1542.3, // 4 * (10c base + 16.58c prep + 359c fracture)
+    },
+    {
+      name: 'Buy Fractured T1 Intelligence Base',
+      state: fracIntState,
+      baseCostChaos: 1600, // 8 divines
+    },
   ],
-  enableAllflame: true,
+  enableAllflame: false,
   priceBook,
   runMonteCarloValidation: true,
   monteCarloTrials: 2000,
@@ -215,28 +215,28 @@ const craftCResponse = optimizer.optimizeCraft({
   },
   startingStates: [
     {
-      name: 'Fractured T1 Maximum Life Base',
+      name: 'Fractured T1 Maximum Life Base (Self-Fracture)',
       state: fracLifeState,
-      baseCostChaos: 1542.3, // 4 * (10c base + 16.58c prep + 359c fracture)
+      baseCostChaos: 1527.4, // 4 * (10c base + 12.85c prep + 359c fracture)
     },
     {
-      name: 'Fractured 35% Increased Effect Base',
+      name: 'Fractured 35% Increased Effect Base (Self-Fracture)',
       state: fracEffMinionState,
       baseCostChaos: 1533.4, // 4 * (10c base + 14.35c prep + 359c fracture)
     },
     {
-      name: 'Fractured +4 to All Attributes Base',
+      name: 'Fractured +4 to All Attributes Base (Self-Fracture)',
       state: fracAttrState,
       baseCostChaos: 1542.3, // 4 * (10c base + 16.58c prep + 359c fracture)
     },
     {
-      name: 'Fractured +5% to Chaos Resistance Base',
+      name: 'Fractured +5% to Chaos Resistance Base (Self-Fracture)',
       state: fracChaosState,
       baseCostChaos: 1542.3, // 4 * (10c base + 16.58c prep + 359c fracture)
     },
   ],
   saleValueChaos: 160 * 200, // 160 divines = 32,000c
-  enableAllflame: true,
+  enableAllflame: false,
   priceBook,
   runMonteCarloValidation: true,
   monteCarloTrials: 2000,

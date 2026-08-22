@@ -37,8 +37,10 @@ export function generateCraftExplanation(
     const simPrimalH = simulation.currencyAverages?.primalLifeforce ? simulation.currencyAverages.primalLifeforce / 75 : 0;
     const expWildH = recommended.expectedCurrencies?.wildLifeforce ? recommended.expectedCurrencies.wildLifeforce / 75 : 0;
     const simWildH = simulation.currencyAverages?.wildLifeforce ? simulation.currencyAverages.wildLifeforce / 75 : 0;
-    const expH = expPrimalH + expWildH;
-    const simH = simPrimalH + simWildH;
+    const expVividH = recommended.expectedCurrencies?.vividLifeforce ? recommended.expectedCurrencies.vividLifeforce / 75 : 0;
+    const simVividH = simulation.currencyAverages?.vividLifeforce ? simulation.currencyAverages.vividLifeforce / 75 : 0;
+    const expH = expPrimalH + expWildH + expVividH;
+    const simH = simPrimalH + simWildH + simVividH;
     const harvestDiffPct = expH > 0 ? (Math.abs(simH - expH) / expH) * 100 : 0;
 
     const expA = recommended.expectedCurrencies?.annul ?? 0;
@@ -303,99 +305,37 @@ export function generateCraftExplanation(
         lines.push(`Note: ${step.description}`);
       }
 
-      if (step.stepNumber === 2 && step.details) {
+      if (step.details) {
         const d = step.details;
-        lines.push(`\nInitial acquisition:`);
-        lines.push(`  Chance per Harvest:          ${((d.t1ESProbability ?? 0.071429) * 100).toFixed(4)}% (300 / 4200 Defence weight)`);
-        lines.push(`  Expected Harvests:           ${(d.initialAttempts ?? 14).toFixed(2)}`);
-        lines.push(`  Initial acquisition cost:    ${formatChaos(d.initialRawCost ?? 21.875, divineRate)}`);
-        lines.push(`\nRecovery contribution:`);
-        lines.push(`  Expected additional Harvests caused by later failures: ${(d.recoveryAttempts ?? 384).toFixed(2)}`);
-        lines.push(`  Expected rebuild Harvest cost: ${formatChaos(d.recoveryCost ?? 600, divineRate)}`);
-        lines.push(`\nFull-craft Harvest usage:`);
-        lines.push(`  Expected total Harvests:     ${(d.totalHarvestUsage ?? 398).toFixed(2)}`);
-        lines.push(`  Expected total Harvest cost:  ${formatChaos(d.totalHarvestCost ?? 621.875, divineRate)}`);
-      } else if (step.stepNumber === 3 && step.details) {
-        const d = step.details;
-        const totalAnnuls = d.totalAnnulUsage ?? 73.5;
-        const totalAnnulCost = d.totalAnnulCost ?? (totalAnnuls * (priceBook?.getRate('annul') ?? 9.0));
-        const initAnnuls = d.initialCleanupAnnuls ?? 3.81;
-        const initCost = d.initialCleanupCost ?? (initAnnuls * (priceBook?.getRate('annul') ?? 9.0));
-        const rebuildAnnuls = totalAnnuls - initAnnuls;
-        const rebuildCost = totalAnnulCost - initCost;
-
-        lines.push(`\nInitial cleanup:`);
-        lines.push(`  Expected Annuls:             ${initAnnuls.toFixed(2)}`);
-        lines.push(`  Initial cleanup cost:        ${formatChaos(initCost, divineRate)}`);
-        lines.push(`\nRecovery contribution:`);
-        lines.push(`  Expected additional Annuls from later rebuilds: ${rebuildAnnuls.toFixed(2)}`);
-        lines.push(`  Expected rebuild Annul cost: ${formatChaos(rebuildCost, divineRate)}`);
-        lines.push(`\nFull-craft Annul usage:`);
-        lines.push(`  Expected total Annuls:       ${totalAnnuls.toFixed(2)}`);
-        lines.push(`  Expected total Annul cost:   ${formatChaos(totalAnnulCost, divineRate)}`);
+        if (d.targetMod !== undefined) lines.push(`  Target modifier:             ${d.targetMod}`);
+        if (d.hitRatePct !== undefined) lines.push(`  Hit rate:                    ${d.hitRatePct.toFixed(2)}%`);
+        if (d.eligiblePrefixWeight !== undefined) lines.push(`  Eligible prefix weight:      ${d.eligiblePrefixWeight}`);
+        if (d.eligibleSuffixWeight !== undefined) lines.push(`  Eligible suffix weight:      ${d.eligibleSuffixWeight}`);
+        if (d.normalExaltChance !== undefined) lines.push(`  Normal Exalt chance:         ${d.normalExaltChance.toFixed(4)}%`);
+        if (d.allflameChance !== undefined) lines.push(`  Allflame 4-choice chance:    ${d.allflameChance.toFixed(4)}%`);
+        if (d.expectedExalts !== undefined) lines.push(`  Expected Exalts:             ${d.expectedExalts.toFixed(2)}`);
+        if (d.expectedAnnuls !== undefined) lines.push(`  Expected Annuls:             ${d.expectedAnnuls.toFixed(2)}`);
+        if (d.expectedHarvests !== undefined) lines.push(`  Expected Harvests:           ${d.expectedHarvests.toFixed(2)}`);
+        if (d.harvestTag !== undefined) lines.push(`  Harvest tag:                 ${d.harvestTag}`);
+        if (d.lifeforceType !== undefined) lines.push(`  Lifeforce:                   ${d.lifeforceType}`);
         if (d.policy) {
-          lines.push(`\nRecommended cleanup policy:`);
-          lines.push(`  State with 1 junk mod:       ${d.policy.oneJunkMod}`);
-          lines.push(`  State with 2 junk mods:      ${d.policy.twoJunkMods}`);
+          lines.push(`  Cleanup policy (1 junk):     ${d.policy.oneJunkMod}`);
+          lines.push(`  Cleanup policy (2 junk):     ${d.policy.twoJunkMods}`);
         }
-      } else if (step.stepNumber === 4 && step.details) {
-        const d = step.details;
-        lines.push(`\nInitial acquisition:`);
-        lines.push(`  Eligible prefix weight:      ${d.eligiblePrefixWeight}`);
-        lines.push(`  35% Effect weight:           ${d.eff35Weight}`);
-        lines.push(`  Normal Exalt chance:         ${d.normalExaltChance.toFixed(4)}%`);
-        lines.push(`  Allflame 4-choice chance:    ${d.allflameChance.toFixed(4)}%`);
-        lines.push(`  Expected slams:              ${(d.rawSlams ?? 9.80).toFixed(2)}`);
-        lines.push(`  Raw exalt cost:              ${formatChaos(d.rawExaltCost ?? 11.76, divineRate)}`);
-        lines.push(`\nRecovery contribution:`);
-        lines.push(`  Expected rebuild loops from missed slams: ${formatChaos(step.recoveryCostChaos ?? 326.19, divineRate)}`);
-        lines.push(`\nFull-craft Step 4 contribution:`);
-        lines.push(`  Expected step total:         ${formatChaos(step.stepTotalCostChaos, divineRate)}`);
-        lines.push(`  Expected cumulative cost:    ${formatChaos(step.cumulativeCostChaos, divineRate)}`);
-      } else if (step.stepNumber === 5 && step.details) {
-        const d = step.details;
-        lines.push(`\nInitial acquisition:`);
-        lines.push(`  Eligible suffix weight:      ${d.eligibleSuffixWeight}`);
-        if (d.outcomeProbabilitiesPerExalt) {
-          lines.push(`  Outcome probabilities per normal Exalt:`);
-          lines.push(`    +4 All Attributes (T1):    ${d.outcomeProbabilitiesPerExalt.attributes.toFixed(4)}% (300 weight)`);
-          lines.push(`    3% Attack Speed (T1):      ${d.outcomeProbabilitiesPerExalt.attackSpeed.toFixed(4)}% (250 weight)`);
-          lines.push(`    +4% All Resistance (T1):   ${d.outcomeProbabilitiesPerExalt.allRes.toFixed(4)}% (300 weight)`);
-          lines.push(`    Other suffixes:            ${d.outcomeProbabilitiesPerExalt.other.toFixed(4)}%`);
-        }
-        if (d.allflameResultProbabilities) {
-          lines.push(`\nSTEP 5 PER-ATTEMPT ALLFLAME OUTCOMES:`);
-          lines.push(`  best result = Attributes:   ${d.allflameResultProbabilities.bestAttributes.toFixed(2)}%`);
-          lines.push(`  best result = Attack Speed: ${d.allflameResultProbabilities.bestAttackSpeed.toFixed(2)}%`);
-          lines.push(`  best result = All Res:      ${d.allflameResultProbabilities.bestAllRes.toFixed(2)}%`);
-          lines.push(`  no acceptable result:       ${d.allflameResultProbabilities.noAcceptableResult.toFixed(2)}%`);
-        }
-        if (d.allflameOutcomeDistribution) {
-          lines.push(`\nFINAL ACCEPTED OUTCOME DISTRIBUTION (Conditional on Success):`);
-          lines.push(`  Attributes (85 div):        ${d.allflameOutcomeDistribution.attributes.toFixed(2)}%`);
-          lines.push(`  Attack Speed (39 div):      ${d.allflameOutcomeDistribution.attackSpeed.toFixed(2)}%`);
-          lines.push(`  All Res (7 div):            ${d.allflameOutcomeDistribution.allRes.toFixed(2)}%`);
-        }
-        if (d.recommendedPolicyOnAllRes) {
-          lines.push(`\nContinuation Value Analysis on All Resistance Result:`);
-          lines.push(`  ${d.recommendedPolicyOnAllRes}`);
-        }
-        lines.push(`\nRecovery contribution:`);
-        lines.push(`  Expected rebuild loops from missed slams: ${formatChaos(step.recoveryCostChaos ?? 922.14, divineRate)}`);
-        lines.push(`\nFull-craft Step 5 contribution:`);
-        lines.push(`  Expected step total:         ${formatChaos(step.stepTotalCostChaos, divineRate)}`);
-        lines.push(`  Expected cumulative cost:    ${formatChaos(step.cumulativeCostChaos, divineRate)}`);
-      } else {
-        if (step.expectedAttempts !== undefined && step.expectedAttempts > 0) {
-          lines.push(`Expected attempts:            ${step.expectedAttempts.toFixed(2)}`);
-        }
-        lines.push(`Raw step cost:                ${formatChaos(step.rawCostChaos, divineRate)}`);
-        if (step.recoveryCostChaos && step.recoveryCostChaos > 0) {
-          lines.push(`Expected recovery cost:       ${formatChaos(step.recoveryCostChaos, divineRate)}`);
-        }
-        lines.push(`Expected step total:          ${formatChaos(step.stepTotalCostChaos, divineRate)}`);
-        lines.push(`Expected cumulative cost:     ${formatChaos(step.cumulativeCostChaos, divineRate)}`);
       }
+
+      if (step.successChance !== undefined && step.successChance > 0) {
+        lines.push(`Success chance:               ${step.successChance.toFixed(2)}%`);
+      }
+      if (step.expectedAttempts !== undefined && step.expectedAttempts > 0) {
+        lines.push(`Expected attempts:            ${step.expectedAttempts.toFixed(2)}`);
+      }
+      lines.push(`Raw step cost:                ${formatChaos(step.rawCostChaos, divineRate)}`);
+      if (step.recoveryCostChaos && step.recoveryCostChaos > 0) {
+        lines.push(`Expected recovery cost:       ${formatChaos(step.recoveryCostChaos, divineRate)}`);
+      }
+      lines.push(`Expected step total:          ${formatChaos(step.stepTotalCostChaos, divineRate)}`);
+      lines.push(`Expected cumulative cost:     ${formatChaos(step.cumulativeCostChaos, divineRate)}`);
     }
   }
 
