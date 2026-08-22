@@ -142,4 +142,105 @@ const craftBResponse = optimizer.optimizeCraft({
 });
 
 console.log(craftBResponse.explanation);
+
+// ------------------------------------------------------------- DEMO 3: Reference Craft C (Minion Cluster)
+console.log('\n>>> OPTIMIZING REFERENCE CRAFT C: 12-Passive Minion Cluster (ilvl 84)');
+const minionPool = ModPool.forCluster(
+  repo,
+  'Large Cluster Jewel',
+  'Minions deal 10% increased Damage'
+);
+
+const t1Life = minionPool.findModById('AfflictionJewelSmallPassivesGrantLife3')!;
+const eff35Minion = minionPool.findModById('AfflictionJewelSmallPassivesHaveIncreasedEffect2')!;
+const t1Attr = minionPool.findModById('AfflictionJewelSmallPassivesGrantAttributes3')!;
+const t1Chaos = minionPool.findModById('AfflictionJewelSmallPassivesGrantChaosRes3')!;
+
+const fracLifeState: ItemState = {
+  baseType: 'Large Cluster Jewel',
+  clusterType: 'Minions deal 10% increased Damage',
+  itemLevel: 84,
+  passiveCount: 12,
+  rarity: 'rare',
+  prefixes: [toRolledMod(t1Life, { isFractured: true })],
+  suffixes: [],
+  fracturedModIds: [t1Life.modId],
+};
+
+const fracEffMinionState: ItemState = {
+  baseType: 'Large Cluster Jewel',
+  clusterType: 'Minions deal 10% increased Damage',
+  itemLevel: 84,
+  passiveCount: 12,
+  rarity: 'rare',
+  prefixes: [toRolledMod(eff35Minion, { isFractured: true })],
+  suffixes: [],
+  fracturedModIds: [eff35Minion.modId],
+};
+
+const fracAttrState: ItemState = {
+  baseType: 'Large Cluster Jewel',
+  clusterType: 'Minions deal 10% increased Damage',
+  itemLevel: 84,
+  passiveCount: 12,
+  rarity: 'rare',
+  prefixes: [],
+  suffixes: [toRolledMod(t1Attr, { isFractured: true })],
+  fracturedModIds: [t1Attr.modId],
+};
+
+const fracChaosState: ItemState = {
+  baseType: 'Large Cluster Jewel',
+  clusterType: 'Minions deal 10% increased Damage',
+  itemLevel: 84,
+  passiveCount: 12,
+  rarity: 'rare',
+  prefixes: [],
+  suffixes: [toRolledMod(t1Chaos, { isFractured: true })],
+  fracturedModIds: [t1Chaos.modId],
+};
+
+const craftCResponse = optimizer.optimizeCraft({
+  baseType: 'Large Cluster Jewel',
+  clusterType: 'Minions deal 10% increased Damage',
+  itemLevel: 84,
+  passiveCount: 12,
+  target: {
+    requiredMods: [
+      { modGroup: 'AfflictionJewelSmallPassivesGrantLife', maxTierNumber: 1 },
+      { modGroup: 'AfflictionJewelSmallPassivesHaveIncreasedEffect', maxTierNumber: 1 },
+      { modGroup: 'AfflictionJewelSmallPassivesGrantAttributes', maxTierNumber: 1 },
+      { modGroup: 'AfflictionJewelSmallPassivesGrantChaosRes', maxTierNumber: 1 },
+    ],
+  },
+  startingStates: [
+    {
+      name: 'Fractured T1 Maximum Life Base',
+      state: fracLifeState,
+      baseCostChaos: 1542.3, // 4 * (10c base + 16.58c prep + 359c fracture)
+    },
+    {
+      name: 'Fractured 35% Increased Effect Base',
+      state: fracEffMinionState,
+      baseCostChaos: 1533.4, // 4 * (10c base + 14.35c prep + 359c fracture)
+    },
+    {
+      name: 'Fractured +4 to All Attributes Base',
+      state: fracAttrState,
+      baseCostChaos: 1542.3, // 4 * (10c base + 16.58c prep + 359c fracture)
+    },
+    {
+      name: 'Fractured +5% to Chaos Resistance Base',
+      state: fracChaosState,
+      baseCostChaos: 1542.3, // 4 * (10c base + 16.58c prep + 359c fracture)
+    },
+  ],
+  saleValueChaos: 160 * 200, // 160 divines = 32,000c
+  enableAllflame: true,
+  priceBook,
+  runMonteCarloValidation: true,
+  monteCarloTrials: 2000,
+});
+
+console.log(craftCResponse.explanation);
 console.log('='.repeat(80));

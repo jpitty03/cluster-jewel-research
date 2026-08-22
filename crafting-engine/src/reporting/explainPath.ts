@@ -14,9 +14,12 @@ export function generateCraftExplanation(
   const lines: string[] = [];
 
   const isCraftB = recommended.strategyName.includes('Cold') || recommended.steps?.some((s) => s.title.includes('Blanketed Snow'));
+  const isCraftC = recommended.strategyName.includes('Minion') || recommended.strategyName.includes('Life') || recommended.steps?.some((s) => s.title.includes('Life') || s.title.includes('Chaos'));
   const reportTitle = isCraftB
     ? 'REFERENCE CRAFT B CRAFTING REPORT & STEPWISE FINANCIAL PLAN'
-    : 'REFERENCE CRAFT A VALIDATION REPORT & STEPWISE FINANCIAL PLAN';
+    : (isCraftC
+      ? 'REFERENCE CRAFT C VALIDATION REPORT & STEPWISE FINANCIAL PLAN (MINION CLUSTER)'
+      : 'REFERENCE CRAFT A VALIDATION REPORT & STEPWISE FINANCIAL PLAN');
 
   lines.push('='.repeat(70));
   lines.push(reportTitle);
@@ -30,8 +33,12 @@ export function generateCraftExplanation(
     diffPercent = (Math.abs(simCost - analyticalCost) / analyticalCost) * 100;
     const costDiffPct = diffPercent;
 
-    const expH = recommended.expectedCurrencies?.primalLifeforce ? recommended.expectedCurrencies.primalLifeforce / 75 : 0;
-    const simH = simulation.currencyAverages?.primalLifeforce ? simulation.currencyAverages.primalLifeforce / 75 : 0;
+    const expPrimalH = recommended.expectedCurrencies?.primalLifeforce ? recommended.expectedCurrencies.primalLifeforce / 75 : 0;
+    const simPrimalH = simulation.currencyAverages?.primalLifeforce ? simulation.currencyAverages.primalLifeforce / 75 : 0;
+    const expWildH = recommended.expectedCurrencies?.wildLifeforce ? recommended.expectedCurrencies.wildLifeforce / 75 : 0;
+    const simWildH = simulation.currencyAverages?.wildLifeforce ? simulation.currencyAverages.wildLifeforce / 75 : 0;
+    const expH = expPrimalH + expWildH;
+    const simH = simPrimalH + simWildH;
     const harvestDiffPct = expH > 0 ? (Math.abs(simH - expH) / expH) * 100 : 0;
 
     const expA = recommended.expectedCurrencies?.annul ?? 0;
@@ -532,9 +539,9 @@ export function generateCraftExplanation(
       const fmtCount = (n: number) => n.toFixed(2).padStart(20);
       const fmtPctDiff = (d: number) => `${d >= 0 ? '+' : ''}${d.toFixed(2)}% diff`.padStart(20);
 
-      const expHarvests = (recommended.expectedCurrencies?.primalLifeforce ?? 1050) / 75;
-      const simHarvests = (simulation.currencyAverages?.primalLifeforce ?? 0) / 75;
-      const hDiff = expHarvests > 0 ? ((simHarvests - expHarvests) / expHarvests) * 100 : 0;
+      const expHarvests = ((recommended.expectedCurrencies?.primalLifeforce ?? 0) + (recommended.expectedCurrencies?.wildLifeforce ?? 0)) / 75;
+      const simHarvests = ((simulation.currencyAverages?.primalLifeforce ?? 0) + (simulation.currencyAverages?.wildLifeforce ?? 0)) / 75;
+      const hDiff = expHarvests > 0 ? ((simHarvests - expHarvests) / expHarvests) * 100 : (simHarvests === 0 ? 0 : 100);
       lines.push(`Harvest Attempts:       ${fmtCount(expHarvests)} ${fmtCount(simHarvests)} ${fmtPctDiff(hDiff)}`);
 
       const expAnnuls = recommended.expectedCurrencies?.annul ?? 0;

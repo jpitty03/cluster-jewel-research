@@ -9,7 +9,7 @@ import { getRemovableAffixes } from '../domain/ItemState.ts';
 import { getEligibleMods, calculateTotalWeight } from '../rules/modEligibility.ts';
 import { canAcceptPrefix, canAcceptSuffix } from '../rules/affixRules.ts';
 import { CraftingPolicyEngine } from '../solver/policyEngine.ts';
-import { getDefenceModsForCluster } from '../rules/clusterPoolHelpers.ts';
+import { getDefenceModsForCluster, getTaggedModsForCluster } from '../rules/clusterPoolHelpers.ts';
 
 export interface HarvestCensusData {
   totalHarvests: number;
@@ -191,24 +191,31 @@ export class MonteCarloSimulator {
           break;
         }
 
-        // ------------------------------------------------------------- 1. HARVEST_DEFENCE
-        if (decision.actionType === 'HARVEST_DEFENCE') {
+        // ------------------------------------------------------------- 1. HARVEST_DEFENCE / HARVEST_REFORGE
+        if (decision.actionType === 'HARVEST_DEFENCE' || decision.actionType === 'HARVEST_REFORGE') {
           totalHarvests++;
           trialHarvests++;
           trialSlamAttempted = false;
-          const costChaos = priceBook.toChaos(75, 'primalLifeforce');
+          const harvestLifeforce = this.policyEngine.harvestLifeforce ?? 'primalLifeforce';
+          const harvestTag = this.policyEngine.harvestTag ?? 'defences';
+          const costChaos = priceBook.toChaos(75, harvestLifeforce as any);
           trialCostChaos += costChaos;
-          trialCurrencies.primalLifeforce = (trialCurrencies.primalLifeforce ?? 0) + 75;
+          trialCurrencies[harvestLifeforce] = (trialCurrencies[harvestLifeforce] ?? 0) + 75;
           trialStepCosts.step2 += costChaos;
 
           // Preserve fractured mods
           state.prefixes = state.prefixes.filter((m) => m.isFractured);
           state.suffixes = state.suffixes.filter((m) => m.isFractured);
 
-          // Guarantee 1 defence mod
-          const chosenDefence = this.sampleWeightedMod(defenceMods);
-          if (chosenDefence) {
-            state.prefixes.push(toRolledMod(chosenDefence));
+          // Guarantee 1 tagged mod
+          const taggedMods = this.context.pool ? getTaggedModsForCluster(this.context.pool, harvestTag, 84) : [];
+          const chosenTagged = this.sampleWeightedMod(taggedMods.length > 0 ? taggedMods : defenceMods);
+          if (chosenTagged) {
+            if (chosenTagged.genType === 'Prefix') {
+              state.prefixes.push(toRolledMod(chosenTagged));
+            } else {
+              state.suffixes.push(toRolledMod(chosenTagged));
+            }
           }
 
           // Random additional affixes (50% 1 extra, 50% 2 extra)
@@ -229,7 +236,7 @@ export class MonteCarloSimulator {
           }
 
           // Comprehensive census tracking
-          const isT1ES = chosenDefence?.modGroup === 'AfflictionJewelSmallPassivesGrantES' && chosenDefence?.tier === 1;
+          const isT1ES = chosenTagged?.modGroup === 'AfflictionJewelSmallPassivesGrantES' && chosenTagged?.tier === 1;
           if (isT1ES) {
             t1ESSuccesses++;
             if (extraMods.length === 0) countT1ESAdditional0++;
@@ -268,8 +275,8 @@ export class MonteCarloSimulator {
           if (captureTrace) {
             trialStepLogs.push({
               step: steps,
-              actionTaken: 'Harvest Reforge Defence',
-              details: `Reforged item (guaranteed Defence: ${chosenDefence?.name ?? 'none'})`,
+              actionTaken: decision.actionName,
+              details: `Reforged item (guaranteed ${harvestTag}: ${chosenTagged?.name ?? 'none'})`,
               costChaos,
               resultStatePrefixes: state.prefixes.map((p) => `${p.name} (t${p.tier})`),
               resultStateSuffixes: state.suffixes.map((s) => `${s.name} (t${s.tier})`),
@@ -307,10 +314,10 @@ export class MonteCarloSimulator {
           const removedMod = removable[targetIndex];
 
           if (removedMod.genType === 'Prefix') {
-            const idx = state.prefixes.findIndex((m) => m.modId === removedMod.modId && !m.isFractured);
+            const idx = state.prefixes.indexOf(removedMod);
             if (idx !== -1) state.prefixes.splice(idx, 1);
           } else {
-            const idx = state.suffixes.findIndex((m) => m.modId === removedMod.modId && !m.isFractured);
+            const idx = state.suffixes.indexOf(removedMod);
             if (idx !== -1) state.suffixes.splice(idx, 1);
           }
 

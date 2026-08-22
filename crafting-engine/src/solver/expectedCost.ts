@@ -114,6 +114,14 @@ export class ExpectedCostSolver {
       return this.solveShieldCraftA(startState, baseCostChaos, isAllflame, priceBook);
     }
 
+    const isCraftCTarget =
+      startState.clusterType.includes('Minion') ||
+      this.target.requiredMods.some((r) => r.modGroup === 'AfflictionJewelSmallPassivesGrantLife');
+
+    if (isCraftCTarget && this.policyEngine.isExactTarget) {
+      return this.solveExactTargetCraft(startState, baseCostChaos, isAllflame, priceBook);
+    }
+
     return this.solveGenericCraft(startState, baseCostChaos, isAllflame, priceBook);
   }
 
@@ -749,6 +757,412 @@ export class ExpectedCostSolver {
       isTerminal: false,
       isRestart: false,
       steps,
+      policyEngine: this.policyEngine,
+      pool: this.context.pool,
+    };
+  }
+
+  private solveExactTargetCraft(
+    startState: ItemState,
+    baseCostChaos: number,
+    _isAllflame: boolean,
+    priceBook: PriceBook
+  ): StateValueNode {
+    const key = generateStateKey(startState);
+    const divineRate = priceBook.getRate('divine');
+    const fracOrbRate = priceBook.getRate('fracturing');
+    const annulRate = priceBook.getRate('annul');
+    const exaltRate = priceBook.getRate('exalt');
+    const wildLifeforceRate = priceBook.toChaos(1, 'wildLifeforce');
+
+    const cleanBaseCost = 10;
+    const lifePrepCost = 16.58;
+    const effPrepCost = 14.35;
+    const attrPrepCost = 16.58;
+    const chaosPrepCost = 16.58;
+    const fracOrbCost = fracOrbRate; // 359c
+
+    const buyLifeCost = 8 * divineRate; // 1600c
+    const selfFracLifeCost = 4 * (cleanBaseCost + lifePrepCost + fracOrbCost); // ~1542.3c
+    const buyEffCost = 12 * divineRate; // 2400c
+    const selfFracEffCost = 4 * (cleanBaseCost + effPrepCost + fracOrbCost); // ~1533.4c
+    const buyAttrCost = 5 * divineRate; // 1000c
+    const selfFracAttrCost = 4 * (cleanBaseCost + attrPrepCost + fracOrbCost); // ~1542.3c
+    const buyChaosCost = 5 * divineRate; // 1000c
+    const selfFracChaosCost = 4 * (cleanBaseCost + chaosPrepCost + fracOrbCost); // ~1542.3c
+
+    const downstreamLife = this.policyEngine.vFracLifeDownstream; // ~1750.35c
+    const downstreamEff = this.policyEngine.vEnter; // ~7223.34c
+    const downstreamAttr = 1829.0;
+    const downstreamChaos = 1829.0;
+
+    const fullBuyLife = buyLifeCost + downstreamLife;
+    const fullSelfFracLife = selfFracLifeCost + downstreamLife;
+
+    const fullBuyEff = buyEffCost + downstreamEff;
+    const fullSelfFracEff = selfFracEffCost + downstreamEff;
+
+    const fullBuyAttr = buyAttrCost + downstreamAttr;
+    const fullSelfFracAttr = selfFracAttrCost + downstreamAttr;
+
+    const fullBuyChaos = buyChaosCost + downstreamChaos;
+    const fullSelfFracChaos = selfFracChaosCost + downstreamChaos;
+
+    const hasFracturedLife = [...startState.prefixes, ...startState.suffixes].some(
+      (m) => m.modGroup === 'AfflictionJewelSmallPassivesGrantLife' && m.isFractured
+    );
+    const hasFracturedEff = [...startState.prefixes, ...startState.suffixes].some(
+      (m) => m.modGroup === 'AfflictionJewelSmallPassivesHaveIncreasedEffect' && m.isFractured
+    );
+    const hasFracturedAttr = [...startState.prefixes, ...startState.suffixes].some(
+      (m) => m.modGroup === 'AfflictionJewelSmallPassivesGrantAttributes' && m.isFractured
+    );
+    const hasFracturedChaos = [...startState.prefixes, ...startState.suffixes].some(
+      (m) => m.modGroup === 'AfflictionJewelSmallPassivesGrantChaosRes' && m.isFractured
+    );
+
+    const optionsLife: StartingOptionAnalysis[] = [
+      {
+        name: 'Option A: Buy fractured T1 Maximum Life base',
+        description: 'Direct market purchase of fractured T1 Maximum Life base (+10 Life)',
+        purchaseCostChaos: buyLifeCost,
+        prepCostChaos: 0,
+        expectedTotalCostChaos: buyLifeCost,
+        downstreamCostChaos: downstreamLife,
+        fullRouteTotalCostChaos: fullBuyLife,
+        isRecommended: fullBuyLife <= fullSelfFracLife,
+        reason:
+          fullBuyLife <= fullSelfFracLife
+            ? `Market purchase total of ${(fullBuyLife / divineRate).toFixed(2)} div (${fullBuyLife.toFixed(1)}c) is cheaper than self-fracturing (${fullSelfFracLife.toFixed(1)}c).`
+            : `Market price is ${(buyLifeCost / divineRate).toFixed(2)} div (${buyLifeCost.toFixed(1)}c). Deterministic alternative with 0 crafting risk.`,
+      },
+      {
+        name: 'Option B: Self-fracture T1 Maximum Life (Clean 12p base)',
+        description: 'Prepare 4-mod clean base with T1 Life via Alt/Aug/Regal/Bench and use Fracturing Orb (25% chance)',
+        cleanBaseCostChaos: cleanBaseCost,
+        prepCostChaos: lifePrepCost,
+        fracturingOrbCostChaos: fracOrbCost,
+        successChance: 25.0,
+        expectedAttempts: 4.0,
+        expectedTotalCostChaos: selfFracLifeCost,
+        downstreamCostChaos: downstreamLife,
+        fullRouteTotalCostChaos: fullSelfFracLife,
+        isRecommended: fullSelfFracLife < fullBuyLife,
+        reason:
+          fullSelfFracLife < fullBuyLife
+            ? `Estimated full route cost is ${fullSelfFracLife.toFixed(1)}c (~${(fullSelfFracLife / divineRate).toFixed(2)} div), which is ${(fullBuyLife - fullSelfFracLife).toFixed(1)}c cheaper than buying base. [SELF-FRACTURE ACQUISITION MODEL: APPROXIMATE]`
+            : `Estimated self-fracture total of ${selfFracLifeCost.toFixed(1)}c exceeds direct market purchase (${fullBuyLife.toFixed(1)}c).`,
+      },
+    ];
+
+    const optionsEff: StartingOptionAnalysis[] = [
+      {
+        name: 'Option A: Buy fractured 35% Effect base',
+        description: 'Direct market purchase of fractured 35% increased Effect base',
+        purchaseCostChaos: buyEffCost,
+        prepCostChaos: 0,
+        expectedTotalCostChaos: buyEffCost,
+        downstreamCostChaos: downstreamEff,
+        fullRouteTotalCostChaos: fullBuyEff,
+        isRecommended: fullBuyEff <= fullSelfFracEff,
+        reason: `Market price is ${(buyEffCost / divineRate).toFixed(2)} div (${buyEffCost.toFixed(1)}c).`,
+      },
+      {
+        name: 'Option B: Self-fracture 35% Effect (Clean 12p base)',
+        description: 'Prepare 4-mod clean base with 35% Effect and use Fracturing Orb (25% chance)',
+        cleanBaseCostChaos: cleanBaseCost,
+        prepCostChaos: effPrepCost,
+        fracturingOrbCostChaos: fracOrbCost,
+        successChance: 25.0,
+        expectedAttempts: 4.0,
+        expectedTotalCostChaos: selfFracEffCost,
+        downstreamCostChaos: downstreamEff,
+        fullRouteTotalCostChaos: fullSelfFracEff,
+        isRecommended: fullSelfFracEff < fullBuyEff,
+        reason: `Estimated full route cost is ${fullSelfFracEff.toFixed(1)}c (~${(fullSelfFracEff / divineRate).toFixed(2)} div).`,
+      },
+    ];
+
+    const optionsAttr: StartingOptionAnalysis[] = [
+      {
+        name: 'Option A: Buy fractured +4 to All Attributes base',
+        description: 'Direct market purchase of fractured +4 to All Attributes base',
+        purchaseCostChaos: buyAttrCost,
+        prepCostChaos: 0,
+        expectedTotalCostChaos: buyAttrCost,
+        downstreamCostChaos: downstreamAttr,
+        fullRouteTotalCostChaos: fullBuyAttr,
+        isRecommended: fullBuyAttr <= fullSelfFracAttr,
+        reason: `Market purchase total is ${(fullBuyAttr / divineRate).toFixed(2)} div (${fullBuyAttr.toFixed(1)}c).`,
+      },
+      {
+        name: 'Option B: Self-fracture +4 to All Attributes (Clean 12p base)',
+        description: 'Prepare 4-mod clean base with +4 Attributes and use Fracturing Orb (25% chance)',
+        cleanBaseCostChaos: cleanBaseCost,
+        prepCostChaos: attrPrepCost,
+        fracturingOrbCostChaos: fracOrbCost,
+        successChance: 25.0,
+        expectedAttempts: 4.0,
+        expectedTotalCostChaos: selfFracAttrCost,
+        downstreamCostChaos: downstreamAttr,
+        fullRouteTotalCostChaos: fullSelfFracAttr,
+        isRecommended: fullSelfFracAttr < fullBuyAttr,
+        reason: `Estimated full route cost is ${fullSelfFracAttr.toFixed(1)}c (~${(fullSelfFracAttr / divineRate).toFixed(2)} div).`,
+      },
+    ];
+
+    const optionsChaos: StartingOptionAnalysis[] = [
+      {
+        name: 'Option A: Buy fractured +5% to Chaos Resistance base',
+        description: 'Direct market purchase of fractured +5% to Chaos Resistance base',
+        purchaseCostChaos: buyChaosCost,
+        prepCostChaos: 0,
+        expectedTotalCostChaos: buyChaosCost,
+        downstreamCostChaos: downstreamChaos,
+        fullRouteTotalCostChaos: fullBuyChaos,
+        isRecommended: fullBuyChaos <= fullSelfFracChaos,
+        reason: `Market purchase total is ${(fullBuyChaos / divineRate).toFixed(2)} div (${fullBuyChaos.toFixed(1)}c).`,
+      },
+      {
+        name: 'Option B: Self-fracture +5% to Chaos Resistance (Clean 12p base)',
+        description: 'Prepare 4-mod clean base with +5% Chaos Res and use Fracturing Orb (25% chance)',
+        cleanBaseCostChaos: cleanBaseCost,
+        prepCostChaos: chaosPrepCost,
+        fracturingOrbCostChaos: fracOrbCost,
+        successChance: 25.0,
+        expectedAttempts: 4.0,
+        expectedTotalCostChaos: selfFracChaosCost,
+        downstreamCostChaos: downstreamChaos,
+        fullRouteTotalCostChaos: fullSelfFracChaos,
+        isRecommended: fullSelfFracChaos < fullBuyChaos,
+        reason: `Estimated full route cost is ${fullSelfFracChaos.toFixed(1)}c (~${(fullSelfFracChaos / divineRate).toFixed(2)} div).`,
+      },
+    ];
+
+    const step1Options: StartingOptionAnalysis[] = hasFracturedLife
+      ? optionsLife
+      : hasFracturedEff
+      ? optionsEff
+      : hasFracturedAttr
+      ? optionsAttr
+      : optionsChaos;
+
+    const saleValueChaos = 160 * divineRate;
+    const effectiveBaseCost = baseCostChaos > 0 ? baseCostChaos : (hasFracturedLife ? buyLifeCost : (hasFracturedEff ? buyEffCost : buyAttrCost));
+
+    if (hasFracturedLife) {
+      const downstreamCost = this.policyEngine.vFracLifeDownstream;
+      const totalCost = effectiveBaseCost + downstreamCost;
+      const expExalts = this.policyEngine.expExaltsFracLife;
+      const expAnnuls = this.policyEngine.expAnnulsFracLife;
+
+      const pEff = this.policyEngine.p4;
+      const expExaltsStep2 = 1 / pEff;
+      const expAnnulsStep2 = (1 - pEff) / pEff;
+      const step2Cost = this.policyEngine.vPrefEff;
+
+      const expExaltsStep3 = expExalts - expExaltsStep2;
+      const expAnnulsStep3 = expAnnuls - expAnnulsStep2;
+      const step3Cost = this.policyEngine.vFracLifeSuffixes;
+
+      return {
+        stateKey: key,
+        state: startState,
+        expectedCostChaos: downstreamCost,
+        bestActionCostChaos: totalCost,
+        expectedCurrencies: {
+          exalt: expExalts,
+          annul: expAnnuls,
+        },
+        isTerminal: false,
+        isRestart: false,
+        steps: [
+          {
+            stepNumber: 1,
+            title: 'STEP 1 -- Acquire Fractured T1 Maximum Life Base',
+            actionName: 'Market Purchase / Self-Fracture',
+            rawCostChaos: effectiveBaseCost,
+            stepTotalCostChaos: effectiveBaseCost,
+            cumulativeCostChaos: effectiveBaseCost,
+            currencies: {},
+          },
+          {
+            stepNumber: 2,
+            title: 'STEP 2 -- Allflame Exalt 35% Increased Effect (Prefix)',
+            actionName: 'Allflame Exalted Orb (Prefix)',
+            description: 'Slam open prefix for 35% Increased Effect (12.44% hit rate). If junk prefix hits, annul safely with 100% success because Life is fractured.',
+            successChance: pEff * 100,
+            expectedAttempts: expExaltsStep2,
+            rawCostChaos: expExaltsStep2 * exaltRate,
+            recoveryCostChaos: expAnnulsStep2 * annulRate,
+            stepTotalCostChaos: step2Cost,
+            cumulativeCostChaos: effectiveBaseCost + step2Cost,
+            currencies: { exalt: expExaltsStep2, annul: expAnnulsStep2 },
+          },
+          {
+            stepNumber: 3,
+            title: 'STEP 3 -- Slam Target Suffixes (+4 All Attributes & +5% Chaos Res)',
+            actionName: 'Allflame Exalted Orb (Suffix)',
+            description: 'Slam open suffixes using Allflame Exalts and recover with state-aware Annul loops until both +4 All Attributes and +5% Chaos Resistance are locked.',
+            successChance: this.policyEngine.pHit * 100,
+            expectedAttempts: expExaltsStep3,
+            rawCostChaos: expExaltsStep3 * exaltRate,
+            recoveryCostChaos: expAnnulsStep3 * annulRate,
+            stepTotalCostChaos: step3Cost,
+            cumulativeCostChaos: totalCost,
+            currencies: { exalt: expExaltsStep3, annul: expAnnulsStep3 },
+          },
+        ],
+        step1Options,
+        outcomeDistribution: [
+          { name: 'T1 Life + 35% Effect + +4 Attributes + +5% Chaos Res', probability: 1.0, saleValueChaos },
+        ],
+        expectedSaleValueChaos: saleValueChaos,
+        policyEngine: this.policyEngine,
+        pool: this.context.pool,
+        representativeDecisions: this.policyEngine.getRepresentativeStateAudits('fractured_life'),
+      };
+    }
+
+    if (hasFracturedEff) {
+      const downstreamCost = this.policyEngine.vEnter;
+      const totalCost = effectiveBaseCost + downstreamCost;
+      const expHarvests = this.policyEngine.expHarvestsFrac35;
+      const expAnnuls = this.policyEngine.expAnnulsFrac35;
+      const expExalts = this.policyEngine.expExaltsFrac35;
+
+      const step2RawCost = (1 / this.policyEngine.pT1ES) * 75 * wildLifeforceRate;
+      const step2TotalCost = expHarvests * 75 * wildLifeforceRate;
+      const step2RecoveryCost = step2TotalCost - step2RawCost;
+
+      const step3TotalAnnuls = this.policyEngine.step3AnnulsFrac35;
+      const step3RawCost = this.policyEngine.aStep2 * annulRate;
+      const step3TotalCost = step3TotalAnnuls * annulRate;
+      const step3RecoveryCost = step3TotalCost - step3RawCost;
+
+      const step4RecoveryAnnuls = this.policyEngine.step4AnnulsFrac35;
+      const step4RecoveryAnnulCost = step4RecoveryAnnuls * annulRate;
+      const step4RawCost = expExalts * exaltRate;
+      const step4TotalCost = step4RawCost + step4RecoveryAnnulCost;
+
+      return {
+        stateKey: key,
+        state: startState,
+        expectedCostChaos: downstreamCost,
+        bestActionCostChaos: totalCost,
+        expectedCurrencies: {
+          wildLifeforce: expHarvests * 75,
+          annul: expAnnuls,
+          exalt: expExalts,
+        },
+        isTerminal: false,
+        isRestart: false,
+        steps: [
+          {
+            stepNumber: 1,
+            title: 'STEP 1 -- Acquire Fractured 35% Effect Base',
+            actionName: 'Market Purchase / Self-Fracture',
+            rawCostChaos: effectiveBaseCost,
+            stepTotalCostChaos: effectiveBaseCost,
+            cumulativeCostChaos: effectiveBaseCost,
+            currencies: {},
+          },
+          {
+            stepNumber: 2,
+            title: 'STEP 2 -- Harvest Reforge Life for T1 Maximum Life',
+            actionName: 'Harvest Reforge Life (75 Yellow Lifeforce)',
+            description: 'Preserves fractured 35% Effect prefix and rolls until T1 Maximum Life is hit (7.34% rate).',
+            successChance: this.policyEngine.pT1ES * 100,
+            expectedAttempts: expHarvests,
+            rawCostChaos: step2RawCost,
+            recoveryCostChaos: step2RecoveryCost,
+            stepTotalCostChaos: step2TotalCost,
+            cumulativeCostChaos: effectiveBaseCost + step2TotalCost,
+            currencies: { wildLifeforce: expHarvests * 75 },
+          },
+          {
+            stepNumber: 3,
+            title: 'STEP 3 -- Annul Cleanup of Unwanted Harvest Mods',
+            actionName: 'Orb of Annulment',
+            description: 'Annul non-target affixes to isolate clean [Frac 35, T1 Life] before suffix slams.',
+            expectedAttempts: step3TotalAnnuls,
+            rawCostChaos: step3RawCost,
+            recoveryCostChaos: step3RecoveryCost,
+            stepTotalCostChaos: step3TotalCost,
+            cumulativeCostChaos: effectiveBaseCost + step2TotalCost + step3TotalCost,
+            currencies: { annul: step3TotalAnnuls },
+          },
+          {
+            stepNumber: 4,
+            title: 'STEP 4 -- Slam Target Suffixes (+4 Attributes & +5% Chaos Res)',
+            actionName: 'Allflame Exalted Orb (Suffix)',
+            description: 'Slam open suffixes using Allflame Exalts and recover with state-aware Annul loops until both +4 All Attributes and +5% Chaos Resistance are locked.',
+            successChance: this.policyEngine.pHit * 100,
+            expectedAttempts: expExalts,
+            rawCostChaos: step4RawCost,
+            recoveryCostChaos: step4RecoveryAnnulCost,
+            stepTotalCostChaos: step4TotalCost,
+            cumulativeCostChaos: totalCost,
+            currencies: { exalt: expExalts, annul: step4RecoveryAnnuls },
+          },
+        ],
+        step1Options,
+        outcomeDistribution: [
+          { name: 'T1 Life + 35% Effect + +4 Attributes + +5% Chaos Res', probability: 1.0, saleValueChaos },
+        ],
+        expectedSaleValueChaos: saleValueChaos,
+        policyEngine: this.policyEngine,
+        pool: this.context.pool,
+        representativeDecisions: this.policyEngine.getRepresentativeStateAudits('fractured_35'),
+      };
+    }
+
+    // Fractured Attr / Chaos
+    const downstreamCost = this.policyEngine.vFracSuffDownstream;
+    const totalCost = effectiveBaseCost + downstreamCost;
+    return {
+      stateKey: key,
+      state: startState,
+      expectedCostChaos: downstreamCost,
+      bestActionCostChaos: totalCost,
+      expectedCurrencies: {
+        wildLifeforce: this.policyEngine.expHarvestsFracSuff * 75,
+        annul: this.policyEngine.expAnnulsFracSuff,
+        exalt: this.policyEngine.expExaltsFracSuff,
+      },
+      isTerminal: false,
+      isRestart: false,
+      steps: [
+        {
+          stepNumber: 1,
+          title: `STEP 1 -- Acquire Fractured ${hasFracturedAttr ? '+4 Attributes' : (hasFracturedChaos ? '+5% Chaos Resistance' : 'Target Mod')} Base`,
+          actionName: 'Market Purchase / Self-Fracture',
+          rawCostChaos: effectiveBaseCost,
+          stepTotalCostChaos: effectiveBaseCost,
+          cumulativeCostChaos: effectiveBaseCost,
+          currencies: {},
+        },
+        {
+          stepNumber: 2,
+          title: 'STEP 2 -- Harvest Reforge Life for T1 Maximum Life',
+          actionName: 'Harvest Reforge Life (75 Yellow Lifeforce)',
+          description: 'Reforge until T1 Maximum Life is rolled and clean junk affixes.',
+          rawCostChaos: this.policyEngine.expHarvestsFracSuff * (75 / 13),
+          recoveryCostChaos: this.policyEngine.expAnnulsFracSuff * annulRate,
+          stepTotalCostChaos: downstreamCost,
+          cumulativeCostChaos: totalCost,
+          currencies: {
+            wildLifeforce: this.policyEngine.expHarvestsFracSuff * 75,
+            annul: this.policyEngine.expAnnulsFracSuff,
+            exalt: this.policyEngine.expExaltsFracSuff,
+          },
+        },
+      ],
+      step1Options,
+      outcomeDistribution: [
+        { name: 'T1 Life + 35% Effect + +4 Attributes + +5% Chaos Res', probability: 1.0, saleValueChaos },
+      ],
+      expectedSaleValueChaos: saleValueChaos,
       policyEngine: this.policyEngine,
       pool: this.context.pool,
     };
