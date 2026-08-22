@@ -280,11 +280,13 @@ Target Satisfied                      100.00%              100.00%             +
 --------------------------------------------------------------------------------------
 
 MONTE CARLO UNCERTAINTY & STABILITY METRICS:
-  Sample Mean Cost:       41249.6c (~206.25 div)
-  Sample Standard Dev:    40146.7c (~200.73 div)
-  Standard Error of Mean: 897.9c (~4.49 div)
-  95% Confidence Interval:[39489.7c (~197.45 div) - 43009.5c (~215.05 div)]
-  Analytical Expected:    42814.4c (~214.07 div) -> Inside 95% CI: YES (Statistically Consistent)
+  MC Mean (completed trials):  41249.6c (~206.25 div)
+  Sample SD (completed trials):40146.7c (~200.73 div)
+  Standard Error (completed):  897.9c (~4.49 div)
+  95% CI (completed trials):   [39489.7c (~197.45 div) - 43009.5c (~215.05 div)]
+  Timed out trials:            1 / 2000 (0.05%)
+  Censoring status:            PRESENT (Completed sample excludes censored right-tail costs; MC mean is lower bound)
+  Analytical Expected:         42814.4c (~214.07 div) -> Inside completed-trial CI: YES
 
 MONTE CARLO TIMEOUT & STEP CENSORING DIAGNOSTICS:
   Completed trials:       1,999 / 2,000 (99.95%)
@@ -34820,3 +34822,25 @@ LABELED GAME MECHANICS ASSUMPTIONS
 4. Allflame Crafting: Stateful Intangibility stacking remains deferred and disabled.
 
 ======================================================================
+
+================================================================================
+MULTI-SEED MONTE CARLO STABILITY HARNESS: Craft C (Minion Cluster) (5 SEEDS)
+================================================================================
+Analytical Expected Total: 42814.4c (~214.07 div)
+
+SEED RESULTS SUMMARY:
+Seed        MC Mean              Cost Diff     Harvest Diff  Annul Diff   Exalt Diff   Completion   Timeouts
+---------------------------------------------------------------------------------------------------------
+42          41249.6c (~206.25 div)      3.65%         5.80%        3.88%        2.50%       99.95%          1
+1337        41343.1c (~206.72 div)      3.44%         5.61%        4.23%        2.81%      100.00%          0
+2026        44064.6c (~220.32 div)      2.92%         0.89%       11.17%        9.69%      100.00%          0
+9001        42043.5c (~210.22 div)      1.80%         3.97%        6.14%        4.78%      100.00%          0
+123456      43716.9c (~218.58 div)      2.11%         0.06%       10.29%        8.88%      100.00%          0
+---------------------------------------------------------------------------------------------------------
+
+AGGREGATE STABILITY DIAGNOSTICS:
+  Min MC Mean:           41249.6c (~206.25 div)
+  Max MC Mean:           44064.6c (~220.32 div)
+  Mean of Seed Means:    42483.5c (~212.42 div) (-0.77% vs analytical)
+  Point Diff Range:      [1.80% - 3.65%]
+  Stability Conclusion:  PROVISIONAL / CAUTION (Observed variation across seeds)

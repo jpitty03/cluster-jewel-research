@@ -488,12 +488,25 @@ export function generateCraftExplanation(
       if (simulation.uncertaintyMetrics) {
         const um = simulation.uncertaintyMetrics;
         lines.push(`\nMONTE CARLO UNCERTAINTY & STABILITY METRICS:`);
-        lines.push(`  Sample Mean Cost:       ${formatChaos(simulation.meanCostChaos ?? 0, divineRate)}`);
-        lines.push(`  Sample Standard Dev:    ${formatChaos(um.sampleStandardDeviationChaos, divineRate)}`);
-        lines.push(`  Standard Error of Mean: ${formatChaos(um.standardErrorChaos, divineRate)}`);
-        lines.push(`  95% Confidence Interval:[${formatChaos(um.confidenceInterval95Chaos[0], divineRate)} - ${formatChaos(um.confidenceInterval95Chaos[1], divineRate)}]`);
-        if (um.analyticalExpectedCostChaos !== undefined) {
-          lines.push(`  Analytical Expected:    ${formatChaos(um.analyticalExpectedCostChaos, divineRate)} -> Inside 95% CI: ${um.analyticalInsideCi95 ? 'YES (Statistically Consistent)' : 'NO'}`);
+        if (um.isCensored) {
+          lines.push(`  MC Mean (completed trials):  ${formatChaos(simulation.meanCostChaos ?? 0, divineRate)}`);
+          lines.push(`  Sample SD (completed trials):${formatChaos(um.sampleStandardDeviationChaos, divineRate)}`);
+          lines.push(`  Standard Error (completed):  ${formatChaos(um.standardErrorChaos, divineRate)}`);
+          lines.push(`  95% CI (completed trials):   [${formatChaos(um.confidenceInterval95Chaos[0], divineRate)} - ${formatChaos(um.confidenceInterval95Chaos[1], divineRate)}]`);
+          lines.push(`  Timed out trials:            ${um.timedOutTrials} / ${simulation.totalTrials} (${((um.timedOutTrials / simulation.totalTrials) * 100).toFixed(2)}%)`);
+          lines.push(`  Censoring status:            PRESENT (Completed sample excludes censored right-tail costs; MC mean is lower bound)`);
+          if (um.analyticalExpectedCostChaos !== undefined) {
+            lines.push(`  Analytical Expected:         ${formatChaos(um.analyticalExpectedCostChaos, divineRate)} -> Inside completed-trial CI: ${um.analyticalInsideCi95 ? 'YES' : 'NO'}`);
+          }
+        } else {
+          lines.push(`  Sample Mean Cost:            ${formatChaos(simulation.meanCostChaos ?? 0, divineRate)}`);
+          lines.push(`  Sample Standard Dev:         ${formatChaos(um.sampleStandardDeviationChaos, divineRate)}`);
+          lines.push(`  Standard Error of Mean:      ${formatChaos(um.standardErrorChaos, divineRate)}`);
+          lines.push(`  95% Confidence Interval:     [${formatChaos(um.confidenceInterval95Chaos[0], divineRate)} - ${formatChaos(um.confidenceInterval95Chaos[1], divineRate)}]`);
+          lines.push(`  Censoring status:            NONE (Uncensored 100% completion sample)`);
+          if (um.analyticalExpectedCostChaos !== undefined) {
+            lines.push(`  Analytical Expected:         ${formatChaos(um.analyticalExpectedCostChaos, divineRate)} -> Inside 95% CI: ${um.analyticalInsideCi95 ? 'YES (Statistically Consistent)' : 'NO'}`);
+          }
         }
       }
 

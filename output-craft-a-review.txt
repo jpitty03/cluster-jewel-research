@@ -334,11 +334,12 @@ TERMINAL OUTCOME BRANCH VALIDATION:
 --------------------------------------------------------------------------------------
 
 MONTE CARLO UNCERTAINTY & STABILITY METRICS:
-  Sample Mean Cost:       7535.6c (~37.68 div)
-  Sample Standard Dev:    5807.2c (~29.04 div)
-  Standard Error of Mean: 129.9c
-  95% Confidence Interval:[7281.1c (~36.41 div) - 7790.1c (~38.95 div)]
-  Analytical Expected:    7623.7c (~38.12 div) -> Inside 95% CI: YES (Statistically Consistent)
+  Sample Mean Cost:            7535.6c (~37.68 div)
+  Sample Standard Dev:         5807.2c (~29.04 div)
+  Standard Error of Mean:      129.9c
+  95% Confidence Interval:     [7281.1c (~36.41 div) - 7790.1c (~38.95 div)]
+  Censoring status:            NONE (Uncensored 100% completion sample)
+  Analytical Expected:         7623.7c (~38.12 div) -> Inside 95% CI: YES (Statistically Consistent)
 
 MONTE CARLO TIMEOUT & STEP CENSORING DIAGNOSTICS:
   Completed trials:       2,000 / 2,000 (100.00%)
@@ -447,35 +448,12 @@ Trial #1 (198 steps) -> Total Cost: 1927.9c (~9.64 div)
     [Step 69] Harvest Reforge Defences: Reforged item (guaranteed defences: Glimmering) (+1.56c) -> P:[Powerful (t1), Glimmering (t2)], S:[of the Brute (t3)]
     [Step 70] Harvest Reforge Defences: Reforged item (guaranteed defences: Shining) (+1.56c) -> P:[Powerful (t1), Shining (t3)], S:[of the Prism (t2), Added Small Passive Skills also grant: 2% increased Attack Speed (t2)]
     [Step 71] Harvest Reforge Defences: Reforged item (guaranteed defences: Veteran Defender) (+1.56c) -> P:[Powerful (t1), Veteran Defender (t1)], S:[of the Crystal (t3)]
-    [Step 72] Harvest Reforge Defences: Reforged item (guaranteed defences: Glimmering) (+1.56c) -> P:[Powerful (t1), Glimmering (t2)], S:[of the Fox (t1)]
 
 ======================================================================
-REVIEW FILE NOTE: 17172 verbose middle lines omitted from this compact artifact.
+REVIEW FILE NOTE: 17195 verbose middle lines omitted from this compact artifact.
 See the corresponding full output-craft-*.txt file for complete Monte Carlo traces/details.
 ======================================================================
 
-    [Step 248] Harvest Reforge Defences: Reforged item (guaranteed defences: Agile) (+1.56c) -> P:[Powerful (t1), Agile (t3)], S:[Martial Prowess (t1)]
-    [Step 249] Harvest Reforge Defences: Reforged item (guaranteed defences: Ribbed) (+1.56c) -> P:[Powerful (t1), Ribbed (t1)], S:[of the Squall (t2), of Excitement (t3)]
-    [Step 250] Harvest Reforge Defences: Reforged item (guaranteed defences: Shining) (+1.56c) -> P:[Powerful (t1), Shining (t3)], S:[of the Whelpling (t3), Added Small Passive Skills also grant: 2% increased Attack Speed (t2)]
-    [Step 251] Harvest Reforge Defences: Reforged item (guaranteed defences: Shining) (+1.56c) -> P:[Powerful (t1), Shining (t3)], S:[of the Mongoose (t3), of the Squall (t2)]
-    [Step 252] Harvest Reforge Defences: Reforged item (guaranteed defences: Glimmering) (+1.56c) -> P:[Powerful (t1), Glimmering (t2)], S:[of the Penguin (t1), of Banishment (t2)]
-    [Step 253] Harvest Reforge Defences: Reforged item (guaranteed defences: Shining) (+1.56c) -> P:[Powerful (t1), Shining (t3)], S:[of the Cloud (t3), Smite the Weak (t1)]
-    [Step 254] Harvest Reforge Defences: Reforged item (guaranteed defences: Dancer's) (+1.56c) -> P:[Powerful (t1), Dancer's (t2)], S:[of the Crystal (t3)]
-    [Step 255] Harvest Reforge Defences: Reforged item (guaranteed defences: Acrobat's) (+1.56c) -> P:[Powerful (t1), Acrobat's (t1)], S:[of the Prodigy (t1), of the Prism (t2)]
-    [Step 256] Harvest Reforge Defences: Reforged item (guaranteed defences: Glowing) (+1.56c) -> P:[Powerful (t1), Glowing (t1)], S:[of the Lynx (t2), of Elation (t1)]
-    [Step 257] Harvest Reforge Defences: Reforged item (guaranteed defences: Dancer's) (+1.56c) -> P:[Powerful (t1), Dancer's (t2)], S:[of the Squall (t2)]
-    [Step 258] Harvest Reforge Defences: Reforged item (guaranteed defences: Lacquered) (+1.56c) -> P:[Powerful (t1), Lacquered (t3)], S:[of the Salamander (t2), of the Inuit (t3)]
-    [Step 259] Harvest Reforge Defences: Reforged item (guaranteed defences: Lacquered) (+1.56c) -> P:[Powerful (t1), Lacquered (t3)], S:[Martial Prowess (t1), of Joy (t2)]
-    [Step 260] Harvest Reforge Defences: Reforged item (guaranteed defences: Glowing) (+1.56c) -> P:[Powerful (t1), Glowing (t1)], S:[of the Drake (t1), of the Flatworm (t1)]
-    [Step 261] Harvest Reforge Defences: Reforged item (guaranteed defences: Veteran Defender) (+1.56c) -> P:[Powerful (t1), Veteran Defender (t1)], S:[of the Lost (t3), of the Kaleidoscope (t1)]
-    [Step 262] Harvest Reforge Defences: Reforged item (guaranteed defences: Shining) (+1.56c) -> P:[Powerful (t1), Shining (t3)], S:[of the Seal (t2), of the Pupil (t3)]
-    [Step 263] Harvest Reforge Defences: Reforged item (guaranteed defences: Veteran Defender) (+1.56c) -> P:[Powerful (t1), Veteran Defender (t1)], S:[of the Storm (t1)]
-    [Step 264] Harvest Reforge Defences: Reforged item (guaranteed defences: Veteran Defender) (+1.56c) -> P:[Powerful (t1), Veteran Defender (t1)], S:[Smite the Weak (t1), of the Inuit (t3)]
-    [Step 265] Harvest Reforge Defences: Reforged item (guaranteed defences: Dancer's) (+1.56c) -> P:[Powerful (t1), Dancer's (t2)], S:[Added Small Passive Skills also grant: 2% increased Attack Speed (t2), of the Crystal (t3)]
-    [Step 266] Harvest Reforge Defences: Reforged item (guaranteed defences: Acrobat's) (+1.56c) -> P:[Powerful (t1), Acrobat's (t1)], S:[of the Flatworm (t1), of the Inuit (t3)]
-    [Step 267] Harvest Reforge Defences: Reforged item (guaranteed defences: Glowing) (+1.56c) -> P:[Powerful (t1), Glowing (t1)], S:[of the Flatworm (t1), of the Cloud (t3)]
-    [Step 268] Harvest Reforge Defences: Reforged item (guaranteed defences: Acrobat's) (+1.56c) -> P:[Powerful (t1), Acrobat's (t1)], S:[Added Small Passive Skills also grant: 1% increased Attack Speed (t3), of the Brute (t3)]
-    [Step 269] Harvest Reforge Defences: Reforged item (guaranteed defences: Agile) (+1.56c) -> P:[Powerful (t1), Agile (t3)], S:[of Eviction (t1)]
     [Step 270] Harvest Reforge Defences: Reforged item (guaranteed defences: Veteran Defender) (+1.56c) -> P:[Powerful (t1), Veteran Defender (t1)], S:[of the Wrestler (t2), of the Mongoose (t3)]
     [Step 271] Harvest Reforge Defences: Reforged item (guaranteed defences: Studded) (+1.56c) -> P:[Powerful (t1), Studded (t2)], S:[of the Lost (t3), of the Flatworm (t1)]
     [Step 272] Harvest Reforge Defences: Reforged item (guaranteed defences: Glowing) (+1.56c) -> P:[Powerful (t1), Glowing (t1)], S:[of the Whelpling (t3)]
@@ -554,3 +532,25 @@ LABELED GAME MECHANICS ASSUMPTIONS
 4. Allflame Crafting: Stateful Intangibility stacking remains deferred and disabled.
 
 ======================================================================
+
+================================================================================
+MULTI-SEED MONTE CARLO STABILITY HARNESS: Craft A (Shield Cluster) (5 SEEDS)
+================================================================================
+Analytical Expected Total: 7623.7c (~38.12 div)
+
+SEED RESULTS SUMMARY:
+Seed        MC Mean              Cost Diff     Harvest Diff  Annul Diff   Exalt Diff   Completion   Timeouts
+---------------------------------------------------------------------------------------------------------
+42          7535.6c (~37.68 div)      1.16%         1.24%        1.83%        1.82%      100.00%          0
+1337        7545.6c (~37.73 div)      1.02%         1.06%        1.72%        1.46%      100.00%          0
+2026        7651.1c (~38.26 div)      0.36%         0.58%        0.19%        0.42%      100.00%          0
+9001        7466.6c (~37.33 div)      2.06%         2.64%        2.50%        1.94%      100.00%          0
+123456      7641.7c (~38.21 div)      0.24%         0.33%        0.23%        0.18%      100.00%          0
+---------------------------------------------------------------------------------------------------------
+
+AGGREGATE STABILITY DIAGNOSTICS:
+  Min MC Mean:           7466.6c (~37.33 div)
+  Max MC Mean:           7651.1c (~38.26 div)
+  Mean of Seed Means:    7568.1c (~37.84 div) (-0.73% vs analytical)
+  Point Diff Range:      [0.24% - 2.06%]
+  Stability Conclusion:  STABLE (Action counts <=10% and completion >=99% across all seeds)

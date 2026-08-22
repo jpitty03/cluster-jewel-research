@@ -82,6 +82,10 @@ export interface MonteCarloUncertaintyMetrics {
   confidenceInterval95Chaos: [number, number];
   analyticalExpectedCostChaos?: number;
   analyticalInsideCi95: boolean;
+  isCensored: boolean;
+  timedOutTrials: number;
+  censoringStatus: 'NONE' | 'PRESENT';
+  censoringNote?: string;
 }
 
 export interface SimulationResult {
@@ -657,12 +661,22 @@ export class MonteCarloSimulator {
             analyticalExpectedCostChaos <= confidenceInterval95Chaos[1]
           : false;
 
+      const isCensored = timedOutCount > 0;
+      const censoringStatus: 'NONE' | 'PRESENT' = isCensored ? 'PRESENT' : 'NONE';
+      const censoringNote = isCensored
+        ? `${timedOutCount} trial(s) timed out at step limit; completed-trial sample excludes heavy right tail`
+        : undefined;
+
       uncertaintyMetrics = {
         sampleStandardDeviationChaos,
         standardErrorChaos,
         confidenceInterval95Chaos,
         analyticalExpectedCostChaos,
         analyticalInsideCi95,
+        isCensored,
+        timedOutTrials: timedOutCount,
+        censoringStatus,
+        censoringNote,
       };
     }
 

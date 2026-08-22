@@ -280,11 +280,13 @@ Target Satisfied                      100.00%              100.00%             +
 --------------------------------------------------------------------------------------
 
 MONTE CARLO UNCERTAINTY & STABILITY METRICS:
-  Sample Mean Cost:       41249.6c (~206.25 div)
-  Sample Standard Dev:    40146.7c (~200.73 div)
-  Standard Error of Mean: 897.9c (~4.49 div)
-  95% Confidence Interval:[39489.7c (~197.45 div) - 43009.5c (~215.05 div)]
-  Analytical Expected:    42814.4c (~214.07 div) -> Inside 95% CI: YES (Statistically Consistent)
+  MC Mean (completed trials):  41249.6c (~206.25 div)
+  Sample SD (completed trials):40146.7c (~200.73 div)
+  Standard Error (completed):  897.9c (~4.49 div)
+  95% CI (completed trials):   [39489.7c (~197.45 div) - 43009.5c (~215.05 div)]
+  Timed out trials:            1 / 2000 (0.05%)
+  Censoring status:            PRESENT (Completed sample excludes censored right-tail costs; MC mean is lower bound)
+  Analytical Expected:         42814.4c (~214.07 div) -> Inside completed-trial CI: YES
 
 MONTE CARLO TIMEOUT & STEP CENSORING DIAGNOSTICS:
   Completed trials:       1,999 / 2,000 (99.95%)
@@ -446,36 +448,12 @@ Trial #1 (5317 steps) -> Total Cost: 33219.5c (~166.10 div)
     [Step 124] Orb of Annulment: Annul removed of the Whelpling (Suffix) [Step 4 Cleanup] (+9.00c) -> P:[Powerful (t1), Sanguine (t1)], S:[]
     [Step 125] Exalted Orb Slam (Suffix: +4 to all Attributes [of the Meteor] / +5% to Chaos Resistance [of Eviction]): Slammed of the Mongoose (+1.20c) -> P:[Powerful (t1), Sanguine (t1)], S:[of the Mongoose (t3)]
     [Step 126] Orb of Annulment: Annul removed of the Mongoose (Suffix) [Step 4 Cleanup] (+9.00c) -> P:[Powerful (t1), Sanguine (t1)], S:[]
-    [Step 127] Exalted Orb Slam (Suffix: +4 to all Attributes [of the Meteor] / +5% to Chaos Resistance [of Eviction]): Slammed of the Storm (+1.20c) -> P:[Powerful (t1), Sanguine (t1)], S:[of the Storm (t1)]
-    [Step 128] Orb of Annulment: Annul removed of the Storm (Suffix) [Step 4 Cleanup] (+9.00c) -> P:[Powerful (t1), Sanguine (t1)], S:[]
 
 ======================================================================
-REVIEW FILE NOTE: 34272 verbose middle lines omitted from this compact artifact.
+REVIEW FILE NOTE: 34296 verbose middle lines omitted from this compact artifact.
 See the corresponding full output-craft-*.txt file for complete Monte Carlo traces/details.
 ======================================================================
 
-    [Step 6571] Harvest Reforge Life: Reforged item (guaranteed life: Feasting Fiends) (+5.77c) -> P:[Powerful (t1), Feasting Fiends (t1)], S:[of the Flatworm (t1), of the Student (t2)]
-    [Step 6572] Harvest Reforge Life: Reforged item (guaranteed life: of the Newt) (+5.77c) -> P:[Powerful (t1)], S:[of the Newt (t3), of the Brute (t3)]
-    [Step 6573] Harvest Reforge Life: Reforged item (guaranteed life: Feasting Fiends) (+5.77c) -> P:[Powerful (t1), Feasting Fiends (t1)], S:[of the Mongoose (t3)]
-    [Step 6574] Harvest Reforge Life: Reforged item (guaranteed life: of the Newt) (+5.77c) -> P:[Powerful (t1), Hale (t3)], S:[of the Newt (t3)]
-    [Step 6575] Harvest Reforge Life: Reforged item (guaranteed life: of the Lizard) (+5.77c) -> P:[Powerful (t1)], S:[of the Lizard (t2), of the Cloud (t3)]
-    [Step 6576] Harvest Reforge Life: Reforged item (guaranteed life: Sanguine) (+5.77c) -> P:[Powerful (t1), Sanguine (t1)], S:[of the Kaleidoscope (t1)]
-    [Step 6577] Orb of Annulment: Annul removed of the Kaleidoscope (Suffix) [Step 3 Cleanup] (+9.00c) -> P:[Powerful (t1), Sanguine (t1)], S:[]
-    [Step 6578] Exalted Orb Slam (Suffix: +4 to all Attributes [of the Meteor] / +5% to Chaos Resistance [of Eviction]): Slammed of the Cloud (+1.20c) -> P:[Powerful (t1), Sanguine (t1)], S:[of the Cloud (t3)]
-    [Step 6579] Orb of Annulment: Annul removed of the Cloud (Suffix) [Step 4 Cleanup] (+9.00c) -> P:[Powerful (t1), Sanguine (t1)], S:[]
-    [Step 6580] Exalted Orb Slam (Suffix: +4 to all Attributes [of the Meteor] / +5% to Chaos Resistance [of Eviction]): Slammed of the Lynx (+1.20c) -> P:[Powerful (t1), Sanguine (t1)], S:[of the Lynx (t2)]
-    [Step 6581] Orb of Annulment: Annul removed Sanguine (Prefix) [Step 4 Cleanup] (+9.00c) -> P:[Powerful (t1)], S:[of the Lynx (t2)]
-    [Step 6582] Harvest Reforge Life: Reforged item (guaranteed life: Healthy) (+5.77c) -> P:[Powerful (t1), Healthy (t2)], S:[of the Mongoose (t3)]
-    [Step 6583] Harvest Reforge Life: Reforged item (guaranteed life: Hale) (+5.77c) -> P:[Powerful (t1), Hale (t3)], S:[of the Cloud (t3)]
-    [Step 6584] Harvest Reforge Life: Reforged item (guaranteed life: Feasting Fiends) (+5.77c) -> P:[Powerful (t1), Feasting Fiends (t1)], S:[of the Sky (t2)]
-    [Step 6585] Harvest Reforge Life: Reforged item (guaranteed life: of the Newt) (+5.77c) -> P:[Powerful (t1)], S:[of the Newt (t3), of the Student (t2)]
-    [Step 6586] Harvest Reforge Life: Reforged item (guaranteed life: Renewal) (+5.77c) -> P:[Powerful (t1), Renewal (t1)], S:[of the Newt (t3), of the Storm (t1)]
-    [Step 6587] Harvest Reforge Life: Reforged item (guaranteed life: Feasting Fiends) (+5.77c) -> P:[Powerful (t1), Feasting Fiends (t1)], S:[of the Brute (t3), of the Crystal (t3)]
-    [Step 6588] Harvest Reforge Life: Reforged item (guaranteed life: Feasting Fiends) (+5.77c) -> P:[Powerful (t1), Feasting Fiends (t1)], S:[of Eviction (t1), of the Inuit (t3)]
-    [Step 6589] Harvest Reforge Life: Reforged item (guaranteed life: Primordial Bond) (+5.77c) -> P:[Powerful (t1), Glimmering (t2)], S:[Primordial Bond (t1), of the Brute (t3)]
-    [Step 6590] Harvest Reforge Life: Reforged item (guaranteed life: of the Flatworm) (+5.77c) -> P:[Powerful (t1), Hale (t3)], S:[of the Flatworm (t1), of the Mongoose (t3)]
-    [Step 6591] Harvest Reforge Life: Reforged item (guaranteed life: of the Lizard) (+5.77c) -> P:[Powerful (t1)], S:[of the Lizard (t2), of the Fox (t1)]
-    [Step 6592] Harvest Reforge Life: Reforged item (guaranteed life: Feasting Fiends) (+5.77c) -> P:[Powerful (t1), Feasting Fiends (t1)], S:[of the Storm (t1)]
     [Step 6593] Harvest Reforge Life: Reforged item (guaranteed life: Healthy) (+5.77c) -> P:[Powerful (t1), Healthy (t2)], S:[of the Kaleidoscope (t1)]
     [Step 6594] Harvest Reforge Life: Reforged item (guaranteed life: Renewal) (+5.77c) -> P:[Powerful (t1), Renewal (t1)], S:[Added Small Passive Skills also grant: Minions have 1% increased Attack and Cast Speed (t3)]
     [Step 6595] Harvest Reforge Life: Reforged item (guaranteed life: Hale) (+5.77c) -> P:[Powerful (t1), Hale (t3)], S:[of the Bear (t1)]
@@ -554,3 +532,25 @@ LABELED GAME MECHANICS ASSUMPTIONS
 4. Allflame Crafting: Stateful Intangibility stacking remains deferred and disabled.
 
 ======================================================================
+
+================================================================================
+MULTI-SEED MONTE CARLO STABILITY HARNESS: Craft C (Minion Cluster) (5 SEEDS)
+================================================================================
+Analytical Expected Total: 42814.4c (~214.07 div)
+
+SEED RESULTS SUMMARY:
+Seed        MC Mean              Cost Diff     Harvest Diff  Annul Diff   Exalt Diff   Completion   Timeouts
+---------------------------------------------------------------------------------------------------------
+42          41249.6c (~206.25 div)      3.65%         5.80%        3.88%        2.50%       99.95%          1
+1337        41343.1c (~206.72 div)      3.44%         5.61%        4.23%        2.81%      100.00%          0
+2026        44064.6c (~220.32 div)      2.92%         0.89%       11.17%        9.69%      100.00%          0
+9001        42043.5c (~210.22 div)      1.80%         3.97%        6.14%        4.78%      100.00%          0
+123456      43716.9c (~218.58 div)      2.11%         0.06%       10.29%        8.88%      100.00%          0
+---------------------------------------------------------------------------------------------------------
+
+AGGREGATE STABILITY DIAGNOSTICS:
+  Min MC Mean:           41249.6c (~206.25 div)
+  Max MC Mean:           44064.6c (~220.32 div)
+  Mean of Seed Means:    42483.5c (~212.42 div) (-0.77% vs analytical)
+  Point Diff Range:      [1.80% - 3.65%]
+  Stability Conclusion:  PROVISIONAL / CAUTION (Observed variation across seeds)

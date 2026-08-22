@@ -16,29 +16,33 @@ export interface StrategyDiscoveryContext {
   cleanBaseCostChaos?: number;
 }
 
+export interface StartingStateCandidate {
+  state: ItemState;
+  label: string;
+  acquisitions: AcquisitionOption[];
+}
+
 /**
- * Automatically discovers and generates candidate starting strategies from a TargetDefinition.
+ * Discovers and generates physical starting state candidates with their attached acquisition routes
+ * from a TargetDefinition.
  *
- * Production abstraction:
- * 1. Generates Clean Base starting option.
- * 2. Generates Self-Fracture candidate starts for each unique target required mod.
- * 3. Generates Market Purchase candidate starts for target mods when market prices exist.
+ * Physical candidate state is separated from acquisition methods (Self-Fracture, Market Purchase).
  */
-export function generateStartingStrategies(
+export function generateStartingStateCandidates(
   target: TargetDefinition,
   baseType: string,
   clusterType: string,
   itemLevel: number,
   context: StrategyDiscoveryContext,
   passiveCount = 12
-): StartingCraftOption[] {
-  const options: StartingCraftOption[] = [];
+): StartingStateCandidate[] {
+  const candidates: StartingStateCandidate[] = [];
   const cleanBaseCost = context.cleanBaseCostChaos ?? 10;
   const priceBook = context.priceBook;
   const pool = context.pool;
   const fractureCost = priceBook.toChaos(1, 'fracture') || 359;
 
-  // 1. Clean Base Strategy
+  // 1. Clean Base Physical State
   const cleanState: ItemState = {
     baseType,
     clusterType,
@@ -50,26 +54,28 @@ export function generateStartingStrategies(
     fracturedModIds: [],
   };
 
-  options.push({
-    name: 'Clean Base (Start from Scratch)',
+  candidates.push({
     state: cleanState,
-    acquisition: {
-      type: 'clean-base',
-      costChaos: cleanBaseCost,
-      confidence: 'deterministic',
-      breakdown: {
-        cleanBaseCostChaos: cleanBaseCost,
-        prepCostChaos: 0,
-        fracturingOrbCostChaos: 0,
-        successChance: 100.0,
-        expectedAttempts: 1.0,
+    label: 'Clean Base',
+    acquisitions: [
+      {
+        type: 'clean-base',
+        costChaos: cleanBaseCost,
+        confidence: 'deterministic',
+        breakdown: {
+          cleanBaseCostChaos: cleanBaseCost,
+          prepCostChaos: 0,
+          fracturingOrbCostChaos: 0,
+          successChance: 100.0,
+          expectedAttempts: 1.0,
+        },
       },
-    },
+    ],
   });
 
-  // 2. Discover target mod candidates from TargetDefinition
-  if (!pool) return options;
+  if (!pool) return candidates;
 
+  // 2. Discover required mod fracture candidates
   const allMods = pool.getAllMods().filter((m) => m.ilvl <= itemLevel);
   const consideredGroups = new Set<string>();
 
@@ -88,7 +94,7 @@ export function generateStartingStrategies(
     const matchedMod = allMods.find((m) => matchesModRequirement(m, req));
     if (!matchedMod) continue;
 
-    // Build fractured state with this single fractured mod
+    // Physical state with single fractured mod
     const fracState: ItemState = {
       baseType,
       clusterType,
@@ -121,29 +127,66 @@ export function generateStartingStrategies(
       expectedAttempts: 4.0,
     };
 
-    // Add Self-Fracture Option
-    options.push({
-      name: `Self-Fracture ${modDisplayName}`,
-      state: fracState,
-      acquisition: {
+    const candidateAcquisitions: AcquisitionOption[] = [
+      {
         type: 'self-fracture',
         costChaos: totalSelfFracCost,
         confidence: 'approximate',
         breakdown: selfFracBreakdown,
       },
-    });
+    ];
 
-    // Add Market Option if price is supplied
-    const marketPrice = context.marketFracturedPricesChaos?.[groupKey] ?? context.marketFracturedPricesChaos?.[matchedMod.modId];
+    // Add Market Purchase if price is available
+    const marketPrice =
+      context.marketFracturedPricesChaos?.[groupKey] ??
+      context.marketFracturedPricesChaos?.[matchedMod.modId];
     if (marketPrice !== undefined && marketPrice > 0) {
+      candidateAcquisitions.push({
+        type: 'market',
+        costChaos: marketPrice,
+        confidence: 'deterministic',
+      });
+    }
+
+    candidates.push({
+      state: fracState,
+      label: modDisplayName,
+      acquisitions: candidateAcquisitions,
+    });
+  }
+
+  return candidates;
+}
+
+/**
+ * Convenience helper to convert StartingStateCandidate[] into StartingCraftOption[]
+ * for evaluation in CraftingOptimizer.
+ */
+export function generateStartingStrategies(
+  target: TargetDefinition,
+  baseType: string,
+  clusterType: string,
+  itemLevel: number,
+  context: StrategyDiscoveryContext,
+  passiveCount = 12
+): StartingCraftOption[] {
+  const candidates = generateStartingStateCandidates(
+    target,
+    baseType,
+    clusterType,
+    itemLevel,
+    context,
+    passiveCount
+  );
+
+  const options: StartingCraftOption[] = [];
+  for (const candidate of candidates) {
+    for (const acq of candidate.acquisitions) {
+      const modeLabel = acq.type === 'market' ? 'Buy Fractured' : (acq.type === 'clean-base' ? 'Start Clean Base' : 'Self-Fracture');
       options.push({
-        name: `Buy Fractured ${modDisplayName}`,
-        state: fracState,
-        acquisition: {
-          type: 'market',
-          costChaos: marketPrice,
-          confidence: 'deterministic',
-        },
+        name: `${modeLabel} ${candidate.label}`,
+        state: candidate.state,
+        acquisition: acq,
       });
     }
   }

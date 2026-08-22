@@ -6,6 +6,7 @@ import { ModPool } from '../src/domain/ModPool.ts';
 import { toRolledMod } from '../src/domain/Mod.ts';
 import type { ItemState } from '../src/domain/ItemState.ts';
 import { PriceBook } from '../src/domain/PriceBook.ts';
+import { runMultiSeedValidation } from '../src/probability/multiSeed.ts';
 
 const priceBook = new PriceBook();
 const optimizer = new CraftingOptimizer(undefined, priceBook);
@@ -105,7 +106,7 @@ const fracEffState: ItemState = {
   fracturedModIds: [eff35.modId],
 };
 
-const craftAResponse = optimizer.optimizeCraft({
+const craftARequest = {
   baseType: 'Large Cluster Jewel',
   clusterType: '12% increased Attack Damage while holding a Shield',
   itemLevel: 84,
@@ -191,12 +192,16 @@ const craftAResponse = optimizer.optimizeCraft({
   runMonteCarloValidation: true,
   monteCarloTrials: 2000,
   seed: 42,
-});
+};
+
+const craftAResponse = optimizer.optimizeCraft(craftARequest);
+const multiSeedSummaryA = runMultiSeedValidation('Craft A (Shield Cluster)', optimizer, craftARequest, [42, 1337, 2026, 9001, 123456]);
 
 console.log(craftAResponse.explanation);
+console.log(multiSeedSummaryA.explanation);
 verifyRepresentativeMinEv('Craft A', craftAResponse);
-writeCraftOutput('output-craft-a.txt', craftAResponse.explanation);
-writeCraftReview('output-craft-a-review.txt', craftAResponse.explanation);
+writeCraftOutput('output-craft-a.txt', craftAResponse.explanation + '\n' + multiSeedSummaryA.explanation);
+writeCraftReview('output-craft-a-review.txt', craftAResponse.explanation + '\n' + multiSeedSummaryA.explanation);
 
 // ------------------------------------------------------------- DEMO 2: Reference Craft B
 console.log('\n>>> OPTIMIZING REFERENCE CRAFT B: 8-Passive Cold Cluster (ilvl 83)');
@@ -300,7 +305,7 @@ const fracChaosState: ItemState = {
   fracturedModIds: [t1Chaos.modId],
 };
 
-const craftCResponse = optimizer.optimizeCraft({
+const craftCRequest = {
   baseType: 'Large Cluster Jewel',
   clusterType: 'Minions deal 10% increased Damage',
   itemLevel: 84,
@@ -385,10 +390,14 @@ const craftCResponse = optimizer.optimizeCraft({
   runMonteCarloValidation: true,
   monteCarloTrials: 2000,
   seed: 42,
-});
+};
+
+const craftCResponse = optimizer.optimizeCraft(craftCRequest);
+const multiSeedSummaryC = runMultiSeedValidation('Craft C (Minion Cluster)', optimizer, craftCRequest, [42, 1337, 2026, 9001, 123456]);
 
 console.log(craftCResponse.explanation);
+console.log(multiSeedSummaryC.explanation);
 verifyRepresentativeMinEv('Craft C', craftCResponse);
-writeCraftOutput('output-craft-c.txt', craftCResponse.explanation);
-writeCraftReview('output-craft-c-review.txt', craftCResponse.explanation);
+writeCraftOutput('output-craft-c.txt', craftCResponse.explanation + '\n' + multiSeedSummaryC.explanation);
+writeCraftReview('output-craft-c-review.txt', craftCResponse.explanation + '\n' + multiSeedSummaryC.explanation);
 console.log('='.repeat(80));

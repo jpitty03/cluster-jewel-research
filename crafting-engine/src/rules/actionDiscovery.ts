@@ -1,9 +1,11 @@
 import type { ItemState } from '../domain/ItemState.ts';
 import type { TargetDefinition } from '../domain/TargetDefinition.ts';
 import type { SolverContext, CraftAction } from '../domain/CraftAction.ts';
+import type { RolledMod } from '../domain/Mod.ts';
 import { canAcceptPrefix, canAcceptSuffix } from './affixRules.ts';
 import { getRemovableAffixes } from '../domain/ItemState.ts';
 import { getTaggedModsForCluster } from './clusterPoolHelpers.ts';
+import { matchesModRequirement } from '../domain/TargetDefinition.ts';
 
 export interface ActionDiscoveryContext extends SolverContext {
   availableHarvestTags?: string[];
@@ -147,4 +149,35 @@ export function getLegalActions(
   }
 
   return actions;
+}
+
+export interface CanonicalStateKeyOptions {
+  collapseEquivalentJunk?: boolean;
+}
+
+/**
+ * Generates a canonical state key for item state hashing and memoization.
+ * Implements target-aware roll normalization and equivalent-junk collapsing.
+ */
+export function getCanonicalStateKey(
+  state: ItemState,
+  target?: TargetDefinition,
+  options: CanonicalStateKeyOptions = { collapseEquivalentJunk: true }
+): string {
+  const reqs = target ? [...target.requiredMods, ...(target.outcomeBranches?.flatMap((b) => b.requiredMods) ?? [])] : [];
+
+  const formatMod = (m: RolledMod): string => {
+    const isTarget = reqs.some((r) => matchesModRequirement(m, r));
+    const isFrac = m.isFractured ? 'FRAC:' : '';
+    if (isTarget || !options.collapseEquivalentJunk || m.isFractured) {
+      return `${isFrac}${m.modGroup ?? m.modId}:t${m.tier}`;
+    }
+    // Collapse equivalent junk by genType and tag profile
+    const craftTags = (m.craftTags ?? []).slice().sort().join(',');
+    return `JUNK:${craftTags}`;
+  };
+
+  const pKeys = state.prefixes.map(formatMod).sort().join('|');
+  const sKeys = state.suffixes.map(formatMod).sort().join('|');
+  return `${state.rarity}|P:[${pKeys}]|S:[${sKeys}]`;
 }
