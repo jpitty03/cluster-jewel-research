@@ -46,17 +46,6 @@ const fracEffState: ItemState = {
   fracturedModIds: [eff35.modId],
 };
 
-const cleanBaseState: ItemState = {
-  baseType: 'Large Cluster Jewel',
-  clusterType: '12% increased Attack Damage while holding a Shield',
-  itemLevel: 84,
-  passiveCount: 12,
-  rarity: 'rare',
-  prefixes: [],
-  suffixes: [],
-  fracturedModIds: [],
-};
-
 const craftAResponse = optimizer.optimizeCraft({
   baseType: 'Large Cluster Jewel',
   clusterType: '12% increased Attack Damage while holding a Shield',
@@ -85,30 +74,27 @@ const craftAResponse = optimizer.optimizeCraft({
         saleValueChaos: 7 * 200, // 7 div = 1400c
       },
     ],
-    finalRollRequirements: [
-      { modGroup: 'AfflictionJewelSmallPassivesGrantInt', minValue: 8 },
-    ],
   },
   startingStates: [
     {
-      name: 'Buy Fractured T1 Intelligence Base (+8 Roll)',
+      name: 'Buy Fractured T1 Intelligence Base',
       state: fracIntState,
       baseCostChaos: 1600, // 8 divines
     },
     {
       name: 'Self-Fracture T1 Intelligence (Clean 12p Base)',
-      state: cleanBaseState,
+      state: fracIntState,
       baseCostChaos: 1516.6, // 4 * (10c base + 10.16c prep + 359c fracture)
+    },
+    {
+      name: 'Self-Fracture 35% Effect (Clean 12p Base)',
+      state: fracEffState,
+      baseCostChaos: 1550.0, // 4 * (10c base + 18.5c prep + 359c fracture)
     },
     {
       name: 'Buy Fractured 35% Effect Base',
       state: fracEffState,
       baseCostChaos: 2600, // 13 divines
-    },
-    {
-      name: 'Self-Fracture 35% Effect (Clean 12p Base)',
-      state: cleanBaseState,
-      baseCostChaos: 1550.0, // 4 * (10c base + 18.5c prep + 359c fracture)
     },
   ],
   enableAllflame: true,

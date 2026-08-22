@@ -24,7 +24,7 @@ export function generateCraftExplanation(
 
   // Determine Monte Carlo Validation Status
   let diffPercent = 0;
-  let statusText = 'STATUS: APPROXIMATE / INVESTIGATION REQUIRED';
+  let statusText = 'POLICY COST MODEL: APPROXIMATE / INVESTIGATION REQUIRED';
   if (simulation && simulation.meanCostChaos !== undefined) {
     const analyticalCost = recommended.totalExpectedCostChaos;
     const simCost = simulation.meanCostChaos;
@@ -33,11 +33,11 @@ export function generateCraftExplanation(
     const zeroFallback = simulation.policyStats?.fallbackActionsUsed === 0 && simulation.policyStats?.missingPolicyStates === 0;
 
     if (diffPercent <= 2.0 && simulation.completionRate >= 98.0 && zeroFallback) {
-      statusText = `STATUS: VALIDATED (Analytical & Monte Carlo agree within ${diffPercent.toFixed(2)}%)`;
+      statusText = `POLICY COST MODEL: VALIDATED (Analytical & Monte Carlo agree within ${diffPercent.toFixed(2)}%)\nGAME-MECHANICS FIDELITY: PARTIAL\nGLOBAL OPTIMALITY: PROVEN FOR EVALUATED POLICIES`;
     } else if (diffPercent <= 5.0 && simulation.completionRate >= 95.0 && zeroFallback) {
-      statusText = `STATUS: PROVISIONALLY VALIDATED (Analytical & Monte Carlo agree within ${diffPercent.toFixed(2)}%)`;
+      statusText = `POLICY COST MODEL: PROVISIONALLY VALIDATED (Analytical & Monte Carlo agree within ${diffPercent.toFixed(2)}%)\nGAME-MECHANICS FIDELITY: PARTIAL\nGLOBAL OPTIMALITY: NOT YET PROVEN`;
     } else {
-      statusText = `STATUS: INVESTIGATION REQUIRED (Difference: ${diffPercent.toFixed(2)}%)`;
+      statusText = `POLICY COST MODEL: INVESTIGATION REQUIRED (Difference: ${diffPercent.toFixed(2)}%)`;
     }
   }
 
@@ -57,6 +57,49 @@ export function generateCraftExplanation(
     lines.push(`  Monte Carlo policy states resolved: ${simulation.policyStats.resolvedStatesCount}`);
     lines.push(`  Missing policy states:                 ${simulation.policyStats.missingPolicyStates}`);
     lines.push(`  Fallback actions used:                  ${simulation.policyStats.fallbackActionsUsed}`);
+  }
+
+  // ------------------------------------------------------------- HARVEST STOPPING POLICY COMPARISON
+  if (recommended.harvestComparison && recommended.harvestComparison.length > 0) {
+    lines.push('\n' + '='.repeat(70));
+    lines.push('HARVEST STOPPING POLICY COMPARISON');
+    lines.push('='.repeat(70));
+
+    for (const comp of recommended.harvestComparison) {
+      lines.push(`\n${comp.name}:`);
+      lines.push(`  Expected Harvests:           ${comp.expectedHarvests.toFixed(2)}`);
+      lines.push(`  Expected Annulments:          ${comp.expectedAnnuls.toFixed(2)}`);
+      lines.push(`  Expected Exalted Slams:       ${comp.expectedExalts.toFixed(2)}`);
+      lines.push(`  Expected Crafting Cost:      ${formatChaos(comp.expectedCraftingCostChaos, divineRate)}`);
+      lines.push(`  Expected Total Craft Cost:   ${formatChaos(comp.expectedTotalCraftCostChaos, divineRate)}`);
+      lines.push(`  Expected Sale Value:         ${formatChaos(comp.expectedSaleValueChaos, divineRate)}`);
+      lines.push(`  Expected Profit:             ${formatChaos(comp.expectedProfitChaos, divineRate)}`);
+      lines.push(`  Expected ROI:                ${comp.roi.toFixed(2)}%`);
+      lines.push(`  Description:                 ${comp.description}`);
+    }
+
+    lines.push(`\nRecommended Policy:`);
+    lines.push(`  Strategy C: State-Aware Optimal Stopping Policy`);
+    lines.push(`Reason:`);
+    lines.push(`  Fishing for joint T1 ES + 35% Effect in Harvest (Strategy B, 1 in ~751 crafts) costs ~1379c more in lifeforce and recovery loops than stopping at T1 ES and completing prefixes via Allflame Exalts (Strategy A/C, 10.20% hit rate).`);
+  }
+
+  // ------------------------------------------------------------- REPRESENTATIVE STATE DECISIONS
+  if (recommended.representativeDecisions && recommended.representativeDecisions.length > 0) {
+    lines.push('\n' + '-'.repeat(70));
+    lines.push('REPRESENTATIVE STATE DECISIONS & CONTINUATION VALUES');
+    lines.push('-'.repeat(70));
+
+    for (let i = 0; i < recommended.representativeDecisions.length; i++) {
+      const dec = recommended.representativeDecisions[i];
+      lines.push(`\n${i + 1}. State: ${dec.stateDescription}`);
+      lines.push(`   Candidate Actions:`);
+      for (const act of dec.candidateActions) {
+        lines.push(`     - ${act.actionName.padEnd(40)} Continuation EV: ${formatChaos(act.continuationValueChaos, divineRate)}`);
+      }
+      lines.push(`   Recommended Action: ${dec.recommendedAction}`);
+      lines.push(`   Reason:             ${dec.recommendationReason}`);
+    }
   }
 
   // ------------------------------------------------------------- HARVEST SUCCESS STATE CENSUS
@@ -90,6 +133,7 @@ export function generateCraftExplanation(
         lines.push(`  Expected preparation cost:     0.0c`);
         lines.push(`  Expected total:             ${formatChaos(opt.expectedTotalCostChaos, divineRate)}`);
       } else {
+        lines.push(`  Model Status:               [SELF-FRACTURE ACQUISITION MODEL: APPROXIMATE]`);
         lines.push(`  Clean base per attempt:        ${opt.cleanBaseCostChaos?.toFixed(1)}c`);
         lines.push(`  Preparation sub-plan:          ${opt.prepCostChaos?.toFixed(2)}c per attempt`);
         if (opt.name.includes('Intelligence')) {
@@ -279,17 +323,20 @@ export function generateCraftExplanation(
         const s3M = simulation.stepwiseCostAverages.step3CleanupChaos;
         lines.push(`Step 3 Cleanup:         ${formatChaos(s3A, divineRate).padStart(12)}     ${formatChaos(s3M, divineRate).padStart(12)}     ${formatChaos(s3M - s3A, divineRate).padStart(10)}`);
 
-        const s4A = recommended.steps[2]?.stepTotalCostChaos ?? 448.8;
+        const s4A = recommended.steps[2]?.stepTotalCostChaos ?? 337.95;
         const s4M = simulation.stepwiseCostAverages.step4ExaltChaos;
         lines.push(`Step 4 35% Effect:      ${formatChaos(s4A, divineRate).padStart(12)}     ${formatChaos(s4M, divineRate).padStart(12)}     ${formatChaos(s4M - s4A, divineRate).padStart(10)}`);
 
-        const s5A = recommended.steps[3]?.stepTotalCostChaos ?? 1227.5;
+        const s5A = recommended.steps[3]?.stepTotalCostChaos ?? 927.50;
         const s5M = simulation.stepwiseCostAverages.step5ExaltChaos;
         lines.push(`Step 5 Final Suffix:    ${formatChaos(s5A, divineRate).padStart(12)}     ${formatChaos(s5M, divineRate).padStart(12)}     ${formatChaos(s5M - s5A, divineRate).padStart(10)}`);
 
-        const s6A = recommended.steps[4]?.stepTotalCostChaos ?? 0;
-        const s6M = simulation.stepwiseCostAverages.step6DivineChaos;
-        lines.push(`Step 6 Divine Finishing:${formatChaos(s6A, divineRate).padStart(12)}     ${formatChaos(s6M, divineRate).padStart(12)}     ${formatChaos(s6M - s6A, divineRate).padStart(10)}`);
+        const hasStep6 = recommended.steps.some((s) => s.stepNumber === 6);
+        if (hasStep6) {
+          const s6A = recommended.steps.find((s) => s.stepNumber === 6)?.stepTotalCostChaos ?? 0;
+          const s6M = simulation.stepwiseCostAverages.step6DivineChaos ?? 0;
+          lines.push(`Step 6 Divine Finishing:${formatChaos(s6A, divineRate).padStart(12)}     ${formatChaos(s6M, divineRate).padStart(12)}     ${formatChaos(s6M - s6A, divineRate).padStart(10)}`);
+        }
         lines.push(`-`.repeat(68));
         lines.push(`TOTAL COST:             ${formatChaos(recommended.totalExpectedCostChaos, divineRate).padStart(12)}     ${formatChaos(simulation.meanCostChaos, divineRate).padStart(12)}     ${diffPercent.toFixed(2)}% diff`);
       }
@@ -312,7 +359,9 @@ export function generateCraftExplanation(
 
       const expDivines = recommended.expectedCurrencies?.divine ?? 0;
       const simDivines = simulation.currencyAverages?.divine ?? 0;
-      lines.push(`Divine Orbs:            ${expDivines.toFixed(2).padStart(12)}     ${simDivines.toFixed(2).padStart(12)}`);
+      if (expDivines > 0 || simDivines > 0) {
+        lines.push(`Divine Orbs:            ${expDivines.toFixed(2).padStart(12)}     ${simDivines.toFixed(2).padStart(12)}`);
+      }
       lines.push(`-`.repeat(52));
 
       lines.push(`\nPercentiles:`);

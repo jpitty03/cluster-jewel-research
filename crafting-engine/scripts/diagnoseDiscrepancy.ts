@@ -40,7 +40,6 @@ const target: TargetDefinition = {
       saleValueChaos: 1400,
     },
   ],
-  finalRollRequirements: [{ modGroup: 'AfflictionJewelSmallPassivesGrantInt', minValue: 8 }],
 };
 
 function matchesTarget(m: Mod | { modId: string; modGroup: string; tier: number; name: string }): boolean {

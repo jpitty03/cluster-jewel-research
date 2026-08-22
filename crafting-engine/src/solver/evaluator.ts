@@ -11,7 +11,11 @@ import { ExaltAction } from '../actions/exalt.ts';
 import { AnnulAction } from '../actions/annul.ts';
 import { HarvestReforgeAction } from '../actions/harvestReforge.ts';
 import { AllflamePlugin } from '../plugins/allflame/index.ts';
-import type { CraftingPolicyEngine } from './policyEngine.ts';
+import type {
+  CraftingPolicyEngine,
+  HarvestStrategyComparison,
+  RepresentativeStateAudit,
+} from './policyEngine.ts';
 
 export interface StartingStrategyResult {
   strategyName: string;
@@ -27,6 +31,8 @@ export interface StartingStrategyResult {
   step1Options?: StartingOptionAnalysis[];
   isValidated: boolean;
   policyEngine?: CraftingPolicyEngine;
+  harvestComparison?: HarvestStrategyComparison[];
+  representativeDecisions?: RepresentativeStateAudit[];
 }
 
 export class CraftEvaluator {
@@ -87,6 +93,8 @@ export class CraftEvaluator {
       step1Options: result.step1Options,
       isValidated: false, // will be set dynamically based on simulation
       policyEngine: result.policyEngine,
+      harvestComparison: result.harvestComparison,
+      representativeDecisions: result.representativeDecisions,
     };
   }
 }

@@ -137,7 +137,11 @@ export class MonteCarloSimulator {
     // Use unified helper for Defence pool
     const defenceMods = getDefenceModsForCluster(this.context.pool, 84);
 
-    for (let trial = 0; trial < numTrials; trial++) {
+    let totalAttempts = 0;
+    const maxTotalAttempts = numTrials * 3;
+
+    while (completedCosts.length < numTrials && totalAttempts < maxTotalAttempts) {
+      totalAttempts++;
       let state = startStateFactory();
       let trialCostChaos = baseCostChaos;
       const trialCurrencies: Record<string, number> = {};
@@ -387,7 +391,7 @@ export class MonteCarloSimulator {
       }
 
       if (isCompleted || satisfiesTarget(state, this.target) || getMatchingOutcomeBranch(state, this.target)) {
-        // Step 6: Finishing Divines
+        // Optional Step 6: Finishing Divines
         const finishingDivines = this.divineAction.calculateExpectedFinishingCost(state, this.target);
         if (finishingDivines > 0) {
           const divineCost = finishingDivines * priceBook.getRate('divine');
@@ -409,7 +413,7 @@ export class MonteCarloSimulator {
 
         if (sampleTraces.length < traceTrialsCount && trialStepLogs.length > 0) {
           sampleTraces.push({
-            trialNumber: trial + 1,
+            trialNumber: completedCosts.length,
             stepCount: steps,
             finalPrefixes: state.prefixes.map((p) => `${p.name} (t${p.tier})`),
             finalSuffixes: state.suffixes.map((s) => `${s.name} (t${s.tier})`),
@@ -426,11 +430,11 @@ export class MonteCarloSimulator {
     }
 
     const completedCount = completedCosts.length;
-    const completionRate = (completedCount / numTrials) * 100;
+    const completionRate = totalAttempts > 0 ? (completedCount / totalAttempts) * 100 : 0;
 
     if (completedCount === 0) {
       return {
-        totalTrials: numTrials,
+        totalTrials: totalAttempts,
         completedTrials: 0,
         failedTrials: failedCount,
         timedOutTrials: timedOutCount,
@@ -441,7 +445,7 @@ export class MonteCarloSimulator {
           fallbackActionsUsed,
         },
         status: 'FAILED',
-        message: `VALIDATION FAILED: 0 / ${numTrials} simulations reached a terminal state within step limit (${maxStepsPerTrial}).`,
+        message: `VALIDATION FAILED: 0 / ${totalAttempts} simulations reached a terminal state within step limit (${maxStepsPerTrial}).`,
       };
     }
 
@@ -482,7 +486,7 @@ export class MonteCarloSimulator {
     const status = completionRate >= 95 ? 'SUCCESS' : 'PARTIAL';
 
     return {
-      totalTrials: numTrials,
+      totalTrials: totalAttempts,
       completedTrials: completedCount,
       failedTrials: failedCount,
       timedOutTrials: timedOutCount,

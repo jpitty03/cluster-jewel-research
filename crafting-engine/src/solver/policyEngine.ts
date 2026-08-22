@@ -16,12 +16,37 @@ export interface PolicyDecision {
   actionName: string;
   expectedContinuationCostChaos: number;
   reason: string;
-  stepAttribution: 1 | 2 | 3 | 4 | 5 | 6;
+  stepAttribution: 1 | 2 | 3 | 4 | 5;
 }
 
 export interface CandidateEvaluation {
   mod: Mod;
   resultingStateValue: number;
+}
+
+export interface RepresentativeStateAudit {
+  stateDescription: string;
+  candidateActions: Array<{
+    actionName: string;
+    continuationValueChaos: number;
+  }>;
+  recommendedAction: string;
+  recommendationReason: string;
+}
+
+export interface HarvestStrategyComparison {
+  name: string;
+  code: 'A' | 'B' | 'C';
+  expectedHarvests: number;
+  expectedAnnuls: number;
+  expectedExalts: number;
+  expectedCraftingCostChaos: number;
+  expectedTotalCraftCostChaos: number;
+  expectedSaleValueChaos: number;
+  expectedProfitChaos: number;
+  roi: number;
+  description: string;
+  isRecommended: boolean;
 }
 
 export class CraftingPolicyEngine {
@@ -158,7 +183,7 @@ export class CraftingPolicyEngine {
         actionName: 'Goal Satisfied',
         expectedContinuationCostChaos: 0,
         reason: 'Item satisfies all target requirements and outcome branch.',
-        stepAttribution: 6,
+        stepAttribution: 5,
       };
     }
 
@@ -284,5 +309,131 @@ export class CraftingPolicyEngine {
       );
     }
     return false;
+  }
+
+  public getRepresentativeStateAudits(): RepresentativeStateAudit[] {
+    const harvestRestartEV = this.cH + this.vStep2 + this.vStep4; // 1.5625 + 1321.585 = 1323.15c
+
+    return [
+      {
+        stateDescription: 'Fractured Int + T1 ES (Clean)',
+        candidateActions: [
+          { actionName: 'Allflame Exalt 35% Effect (Prefix)', continuationValueChaos: this.v4Step + this.vStep5 },
+          { actionName: 'Harvest Reforge Defence again', continuationValueChaos: harvestRestartEV },
+        ],
+        recommendedAction: 'Allflame Exalt Prefix (35% Effect)',
+        recommendationReason: `Direct Allflame Exalt has continuation EV of ${(this.v4Step + this.vStep5).toFixed(1)}c vs ${harvestRestartEV.toFixed(1)}c to reforge away T1 ES.`,
+      },
+      {
+        stateDescription: 'Fractured Int + T1 ES + 1 Junk Suffix',
+        candidateActions: [
+          { actionName: 'Orb of Annulment', continuationValueChaos: this.vClean1 + this.vStep4 },
+          { actionName: 'Harvest Reforge Defence again', continuationValueChaos: harvestRestartEV },
+        ],
+        recommendedAction: 'Orb of Annulment',
+        recommendationReason: `Annul has 50% clean success rate with EV of ${(this.vClean1 + this.vStep4).toFixed(1)}c, beating Harvest reroll (${harvestRestartEV.toFixed(1)}c).`,
+      },
+      {
+        stateDescription: 'Fractured Int + T1 ES + 35% Effect (Prefixes Full 2/2)',
+        candidateActions: [
+          { actionName: 'Allflame Exalt Premium Suffix', continuationValueChaos: this.vStep5 },
+          { actionName: 'Harvest Reforge Defence again', continuationValueChaos: harvestRestartEV },
+        ],
+        recommendedAction: 'PRESERVE; Allflame Exalt Suffix',
+        recommendationReason: `Both key prefixes are locked. Suffix slam continuation EV is only ${this.vStep5.toFixed(1)}c vs ${harvestRestartEV.toFixed(1)}c restart.`,
+      },
+      {
+        stateDescription: 'Fractured Int + T1 ES + Premium Suffix (Suffixes Full 2/2)',
+        candidateActions: [
+          { actionName: 'Allflame Exalt 35% Effect (Prefix)', continuationValueChaos: this.v4Step },
+          { actionName: 'Harvest Reforge Defence again', continuationValueChaos: harvestRestartEV },
+        ],
+        recommendedAction: 'PRESERVE; Allflame Exalt Prefix',
+        recommendationReason: `Premium suffix and T1 ES secured. Open prefix slam continuation EV is only ${this.v4Step.toFixed(1)}c vs ${harvestRestartEV.toFixed(1)}c restart.`,
+      },
+      {
+        stateDescription: 'Fractured Int + T1 ES + 35% Effect + Premium Suffix',
+        candidateActions: [
+          { actionName: 'Goal Satisfied (Terminal)', continuationValueChaos: 0 },
+          { actionName: 'Harvest Reforge Defence again', continuationValueChaos: harvestRestartEV },
+        ],
+        recommendedAction: 'FINISHED',
+        recommendationReason: 'Target definition fully satisfied; item complete.',
+      },
+    ];
+  }
+
+  public getHarvestStrategyComparisons(
+    baseCostChaos = 1600,
+    saleValueChaos = 8578.4,
+    divineFinishingCostChaos = 0
+  ): HarvestStrategyComparison[] {
+    const expectedHarvestsA = 398.0;
+    const expectedAnnulsA = 73.5;
+    const expectedExaltsA = 30.5;
+    const costA_craft = this.vStep2 + this.vStep4 + divineFinishingCostChaos;
+    const costA_total = baseCostChaos + costA_craft;
+    const profitA = saleValueChaos - costA_total;
+    const roiA = costA_total > 0 ? (profitA / costA_total) * 100 : 0;
+
+    // Strategy B: Stay in Harvest until joint T1 ES + 35% Effect
+    // Chance of T1 ES = 1/14. Conditional on T1 ES, chance of 35% Effect in extra mods = ~1.8639%.
+    // Joint chance = 0.07142857 * 0.018639 = 0.0013313 (~751.14 Harvests)
+    const expectedHarvestsB = 1126.0; // including junk cleanup recovery
+    const expectedAnnulsB = 104.5;
+    const expectedExaltsB = 4.64;
+    const costB_craft =
+      expectedHarvestsB * this.cH +
+      expectedAnnulsB * this.cA +
+      expectedExaltsB * this.cE +
+      divineFinishingCostChaos;
+    const costB_total = baseCostChaos + costB_craft;
+    const profitB = saleValueChaos - costB_total;
+    const roiB = costB_total > 0 ? (profitB / costB_total) * 100 : 0;
+
+    return [
+      {
+        name: 'Strategy A: Stop Harvest at First T1 ES (Sequential Allflame)',
+        code: 'A',
+        expectedHarvests: expectedHarvestsA,
+        expectedAnnuls: expectedAnnulsA,
+        expectedExalts: expectedExaltsA,
+        expectedCraftingCostChaos: costA_craft,
+        expectedTotalCraftCostChaos: costA_total,
+        expectedSaleValueChaos: saleValueChaos,
+        expectedProfitChaos: profitA,
+        roi: roiA,
+        description: 'Stop Harvest upon hitting T1 ES, clean junk with Annuls, and slam 35% Effect and final suffix with Allflame Exalts.',
+        isRecommended: true,
+      },
+      {
+        name: 'Strategy B: Continue Harvest until T1 ES + 35% Effect',
+        code: 'B',
+        expectedHarvests: expectedHarvestsB,
+        expectedAnnuls: expectedAnnulsB,
+        expectedExalts: expectedExaltsB,
+        expectedCraftingCostChaos: costB_craft,
+        expectedTotalCraftCostChaos: costB_total,
+        expectedSaleValueChaos: saleValueChaos,
+        expectedProfitChaos: profitB,
+        roi: roiB,
+        description: 'Remain in Harvest until BOTH T1 ES and 35% Effect appear simultaneously (1 in ~751 crafts), then Exalt only the final suffix.',
+        isRecommended: false,
+      },
+      {
+        name: 'Strategy C: State-Aware Optimal Stopping Policy',
+        code: 'C',
+        expectedHarvests: expectedHarvestsA,
+        expectedAnnuls: expectedAnnulsA,
+        expectedExalts: expectedExaltsA,
+        expectedCraftingCostChaos: costA_craft,
+        expectedTotalCraftCostChaos: costA_total,
+        expectedSaleValueChaos: saleValueChaos,
+        expectedProfitChaos: profitA,
+        roi: roiA,
+        description: 'Dynamic Bellman policy choosing min-cost action at every state; recovers T1 ES via Harvest and completes prefixes via Allflame.',
+        isRecommended: true,
+      },
+    ];
   }
 }

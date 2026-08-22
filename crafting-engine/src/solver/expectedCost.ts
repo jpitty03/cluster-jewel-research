@@ -5,7 +5,11 @@ import { satisfiesTarget, type TargetDefinition } from '../domain/TargetDefiniti
 import { DivineAction } from '../actions/divine.ts';
 import { getEligibleMods, calculateTotalWeight } from '../rules/modEligibility.ts';
 import type { PriceBook } from '../domain/PriceBook.ts';
-import { CraftingPolicyEngine } from './policyEngine.ts';
+import {
+  CraftingPolicyEngine,
+  type HarvestStrategyComparison,
+  type RepresentativeStateAudit,
+} from './policyEngine.ts';
 
 export interface CraftPlanStep {
   stepNumber: number;
@@ -56,6 +60,8 @@ export interface StateValueNode {
   outcomeDistribution?: FinalOutcomeDistribution[];
   expectedSaleValueChaos?: number;
   policyEngine?: CraftingPolicyEngine;
+  harvestComparison?: HarvestStrategyComparison[];
+  representativeDecisions?: RepresentativeStateAudit[];
 }
 
 export class ExpectedCostSolver {
@@ -128,20 +134,20 @@ export class ExpectedCostSolver {
     const effPrepCost = 18.5; // 65 alts (13.0c) + regal (1.0c) + bench/exalt filler (4.50c)
     const fracOrbCost = fracOrbRate; // 359c
 
-    const buyIntCost = 8 * divineRate; // 1600c (8 div, comes with +8 Int roll -> 0 Divines needed downstream)
-    const selfFracIntCost = 4 * (cleanBaseCost + intPrepCost + fracOrbCost); // 4 * (10 + 10.16 + 359) = 1516.6c (needs +400c Divines downstream)
+    const buyIntCost = 8 * divineRate; // 1600c (8 div, any +6..+8 roll accepted)
+    const selfFracIntCost = 4 * (cleanBaseCost + intPrepCost + fracOrbCost); // 4 * (10 + 10.16 + 359) = 1516.6c
     const buyEffCost = 13 * divineRate; // 2600c (13 div)
     const selfFracEffCost = 4 * (cleanBaseCost + effPrepCost + fracOrbCost); // 4 * (10 + 18.5 + 359) = 1550.0c
 
     const step1Options: StartingOptionAnalysis[] = [
       {
-        name: 'Option A: Buy fractured T1 Intelligence (+8 roll)',
-        description: 'Direct market purchase of fractured T1 Intelligence base with +8 roll',
+        name: 'Option A: Buy fractured T1 Intelligence base',
+        description: 'Direct market purchase of fractured T1 Intelligence base (+6 to +8 roll)',
         purchaseCostChaos: buyIntCost,
         prepCostChaos: 0,
         expectedTotalCostChaos: buyIntCost,
-        isRecommended: true,
-        reason: 'Includes guaranteed +8 Intelligence roll (saving 2.0 Divines / 400c downstream finishing), making it the cheapest overall route.',
+        isRecommended: false,
+        reason: 'Market purchase price is 8.00 div (1600.0c). Instant acquisition with 0 crafting risk.',
       },
       {
         name: 'Option B: Self-fracture T1 Intelligence (Clean 12p base)',
@@ -152,20 +158,11 @@ export class ExpectedCostSolver {
         successChance: 25.0,
         expectedAttempts: 4.0,
         expectedTotalCostChaos: selfFracIntCost,
-        isRecommended: false,
-        reason: `Acquisition cost is ${selfFracIntCost.toFixed(1)}c (~${(selfFracIntCost / divineRate).toFixed(2)} div), but requires +400c in Step 6 Divine rerolls, making total craft cost higher.`,
+        isRecommended: true,
+        reason: `Expected acquisition cost is ${selfFracIntCost.toFixed(1)}c (~${(selfFracIntCost / divineRate).toFixed(2)} div), which is ${(buyIntCost - selfFracIntCost).toFixed(1)}c cheaper than buying base. [SELF-FRACTURE ACQUISITION MODEL: APPROXIMATE]`,
       },
       {
-        name: 'Option C: Buy fractured 35% Effect',
-        description: 'Direct market purchase of fractured 35% Increased Effect base',
-        purchaseCostChaos: buyEffCost,
-        prepCostChaos: 0,
-        expectedTotalCostChaos: buyEffCost,
-        isRecommended: false,
-        reason: `Market price is 13.00 div (${buyEffCost.toFixed(1)}c), substantially higher than fractured Int.`,
-      },
-      {
-        name: 'Option D: Self-fracture 35% Effect (Clean 12p base)',
+        name: 'Option C: Self-fracture 35% Effect (Clean 12p base)',
         description: 'Prepare 4-mod clean base with 35% Effect and use Fracturing Orb (25% chance)',
         cleanBaseCostChaos: cleanBaseCost,
         prepCostChaos: effPrepCost,
@@ -174,7 +171,16 @@ export class ExpectedCostSolver {
         expectedAttempts: 4.0,
         expectedTotalCostChaos: selfFracEffCost,
         isRecommended: false,
-        reason: `Acquisition cost is ${selfFracEffCost.toFixed(1)}c (~${(selfFracEffCost / divineRate).toFixed(2)} div).`,
+        reason: `Acquisition cost is ${selfFracEffCost.toFixed(1)}c (~${(selfFracEffCost / divineRate).toFixed(2)} div). [SELF-FRACTURE ACQUISITION MODEL: APPROXIMATE]`,
+      },
+      {
+        name: 'Option D: Buy fractured 35% Effect base',
+        description: 'Direct market purchase of fractured 35% Increased Effect base',
+        purchaseCostChaos: buyEffCost,
+        prepCostChaos: 0,
+        expectedTotalCostChaos: buyEffCost,
+        isRecommended: false,
+        reason: `Market price is 13.00 div (${buyEffCost.toFixed(1)}c), substantially higher than fractured Int.`,
       },
     ];
 
@@ -203,6 +209,12 @@ export class ExpectedCostSolver {
       cumulativeCostChaos: cumulative,
       currencies: { primalLifeforce: totalRedLifeforce },
       details: {
+        initialAttempts: expectedHarvestAttempts,
+        initialRawCost: step2RawCost,
+        recoveryAttempts: 398.0 - expectedHarvestAttempts,
+        recoveryCost: (398.0 - expectedHarvestAttempts) * (redLifeforcePerCraft * primalLifeforceRate),
+        totalHarvestUsage: 398.0,
+        totalHarvestCost: 398.0 * (redLifeforcePerCraft * primalLifeforceRate),
         costPerAttemptChaos: redLifeforcePerCraft * primalLifeforceRate,
         t1ESProbability: pT1ES,
         totalDefenceWeight: 4200,
@@ -229,6 +241,10 @@ export class ExpectedCostSolver {
       details: {
         expectedAnnuls: expectedAnnulsStep3,
         cleanStateCost: this.policyEngine.vStep2,
+        initialCleanupAnnuls: expectedAnnulsStep3,
+        initialCleanupCost: step3TotalCost,
+        totalAnnulUsage: 73.5,
+        totalAnnulCost: 73.5 * annulRate,
         policy: {
           oneJunkMod: '50% clean success / 50% destructive (lose T1 ES -> Step 2)',
           twoJunkMods: '66.7% remove 1 junk / 33.3% destructive (lose T1 ES -> Step 2)',
@@ -275,6 +291,7 @@ export class ExpectedCostSolver {
         allflameChance: pAllflameEff * 100,
         rawSlams: expectedSlamsStep4,
         rawExaltCost: rawExaltCostStep4,
+        stepTotalContribution: step4TotalCost,
         recoveryOnMiss: {
           annulCleanMiss: '50.0%',
           loseT1ES: '50.0% (returns to Step 2/3 rebuild)',
@@ -368,19 +385,19 @@ export class ExpectedCostSolver {
       },
     });
 
-    // ------------------------------------------------------------- STEP 6: Route-Specific Divine Finishing
+    // ------------------------------------------------------------- STEP 6: Optional Divine Finishing (Only if explicit final roll required)
     const needsDivine = this.target.finalRollRequirements?.some(
       (r) => r.modGroup === 'AfflictionJewelSmallPassivesGrantInt' && r.minValue && r.minValue >= 8
     );
 
     let expectedDivines = 0;
-    let divineNote = 'No Divine Orbs required; target roll already satisfied.';
-
+    let step6Cost = 0;
     if (needsDivine) {
       const intMod = [...startState.prefixes, ...startState.suffixes].find(
         (m) => m.modGroup === 'AfflictionJewelSmallPassivesGrantInt'
       );
       const currentIntRoll = intMod?.currentRoll?.[0];
+      let divineNote = 'No Divine Orbs required; target roll already satisfied.';
 
       if (currentIntRoll !== undefined && currentIntRoll >= 8) {
         expectedDivines = 0;
@@ -392,37 +409,39 @@ export class ExpectedCostSolver {
         expectedDivines = 2.0;
         divineNote = 'Self-fractured base with uniform +6..+8 roll requires expected 2.0 Divine Orbs: (1/3 x 0) + (2/3 x 3).';
       }
+
+      step6Cost = expectedDivines * divineRate;
+      cumulative += step6Cost;
+
+      steps.push({
+        stepNumber: 6,
+        title: 'STEP 6 -- Finish Intelligence Numeric Roll',
+        actionName: expectedDivines > 0 ? 'Divine Orb Reroll' : 'No Action Required (Already +8)',
+        description: divineNote,
+        expectedAttempts: expectedDivines,
+        rawCostChaos: step6Cost,
+        stepTotalCostChaos: step6Cost,
+        cumulativeCostChaos: cumulative,
+        currencies: expectedDivines > 0 ? { divine: expectedDivines } : {},
+        details: {
+          modifier: 'T1 Intelligence +(6-8)',
+          requiredRoll: '+8',
+          expectedDivines,
+          divinePrice: divineRate,
+        },
+      });
     }
 
-    const step6Cost = expectedDivines * divineRate;
-    cumulative += step6Cost;
-
-    steps.push({
-      stepNumber: 6,
-      title: 'STEP 6 -- Finish Intelligence Numeric Roll',
-      actionName: expectedDivines > 0 ? 'Divine Orb Reroll' : 'No Action Required (Already +8)',
-      description: divineNote,
-      expectedAttempts: expectedDivines,
-      rawCostChaos: step6Cost,
-      stepTotalCostChaos: step6Cost,
-      cumulativeCostChaos: cumulative,
-      currencies: expectedDivines > 0 ? { divine: expectedDivines } : {},
-      details: {
-        modifier: 'T1 Intelligence +(6-8)',
-        requiredRoll: '+8',
-        expectedDivines,
-        divinePrice: divineRate,
-      },
-    });
-
-    // Total cumulative currencies
+    // Total cumulative currencies across complete recovery policy
     const totalHarvestAttempts = 398.0;
     const expectedCurrencies: Record<string, number> = {
       primalLifeforce: totalHarvestAttempts * 75,
       annul: 73.5,
       exalt: 30.5,
-      divine: expectedDivines,
     };
+    if (expectedDivines > 0) {
+      expectedCurrencies.divine = expectedDivines;
+    }
 
     const totalExpectedCostChaos = cumulative;
     const expectedCraftingCostChaos = totalExpectedCostChaos - effectiveBaseCost;
@@ -440,6 +459,12 @@ export class ExpectedCostSolver {
       outcomeDistribution: outcomeDist,
       expectedSaleValueChaos: expectedSaleValue,
       policyEngine: this.policyEngine,
+      harvestComparison: this.policyEngine.getHarvestStrategyComparisons(
+        effectiveBaseCost,
+        expectedSaleValue,
+        step6Cost
+      ),
+      representativeDecisions: this.policyEngine.getRepresentativeStateAudits(),
     };
   }
 
