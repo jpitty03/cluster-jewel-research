@@ -92,7 +92,7 @@ export class MonteCarloSimulator {
     this.context = context;
     this.target = target;
     this.allflameEnabled = allflameEnabled;
-    this.policyEngine = policyEngine ?? new CraftingPolicyEngine(target, context.priceBook, context.pool);
+    this.policyEngine = policyEngine ?? new CraftingPolicyEngine(target, context.priceBook, context.pool, allflameEnabled);
   }
 
   runSimulation(
@@ -284,8 +284,8 @@ export class MonteCarloSimulator {
           continue;
         }
 
-        // ------------------------------------------------------------- 3. ALLFLAME_EXALT_PREFIX
-        if (decision.actionType === 'ALLFLAME_EXALT_PREFIX') {
+        // ------------------------------------------------------------- 3. ALLFLAME_EXALT_PREFIX / EXALT_PREFIX
+        if (decision.actionType === 'ALLFLAME_EXALT_PREFIX' || decision.actionType === 'EXALT_PREFIX') {
           const eligiblePrefixes = getEligibleMods(state, allMods, { requiredGenType: 'Prefix' });
           if (eligiblePrefixes.length === 0) {
             failedCount++;
@@ -300,7 +300,8 @@ export class MonteCarloSimulator {
 
           let chosenMod: Mod;
           let evalSummary = '';
-          if (this.allflameEnabled) {
+          const isAllflame = decision.actionType === 'ALLFLAME_EXALT_PREFIX' && this.allflameEnabled;
+          if (isAllflame) {
             const candidates = [
               this.sampleWeightedMod(eligiblePrefixes),
               this.sampleWeightedMod(eligiblePrefixes),
@@ -322,7 +323,7 @@ export class MonteCarloSimulator {
           if (captureTrace) {
             trialStepLogs.push({
               step: steps,
-              actionTaken: 'Allflame Exalted Orb (Prefix)',
+              actionTaken: decision.actionName,
               details: `Slammed ${chosenMod.name}${evalSummary}`,
               costChaos,
               resultStatePrefixes: state.prefixes.map((p) => `${p.name} (t${p.tier})`),
@@ -332,8 +333,8 @@ export class MonteCarloSimulator {
           continue;
         }
 
-        // ------------------------------------------------------------- 4. ALLFLAME_EXALT_SUFFIX
-        if (decision.actionType === 'ALLFLAME_EXALT_SUFFIX') {
+        // ------------------------------------------------------------- 4. ALLFLAME_EXALT_SUFFIX / EXALT_SUFFIX
+        if (decision.actionType === 'ALLFLAME_EXALT_SUFFIX' || decision.actionType === 'EXALT_SUFFIX') {
           const eligibleSuffixes = getEligibleMods(state, allMods, { requiredGenType: 'Suffix' });
           if (eligibleSuffixes.length === 0) {
             failedCount++;
@@ -344,11 +345,16 @@ export class MonteCarloSimulator {
           const costChaos = priceBook.toChaos(1, 'exalt');
           trialCostChaos += costChaos;
           trialCurrencies.exalt = (trialCurrencies.exalt ?? 0) + 1;
-          trialStepCosts.step5 += costChaos;
+          if (decision.stepAttribution === 4) {
+            trialStepCosts.step4 += costChaos;
+          } else {
+            trialStepCosts.step5 += costChaos;
+          }
 
           let chosenMod: Mod;
           let evalSummary = '';
-          if (this.allflameEnabled) {
+          const isAllflame = decision.actionType === 'ALLFLAME_EXALT_SUFFIX' && this.allflameEnabled;
+          if (isAllflame) {
             const candidates = [
               this.sampleWeightedMod(eligibleSuffixes),
               this.sampleWeightedMod(eligibleSuffixes),
@@ -370,7 +376,7 @@ export class MonteCarloSimulator {
           if (captureTrace) {
             trialStepLogs.push({
               step: steps,
-              actionTaken: 'Allflame Exalted Orb (Suffix)',
+              actionTaken: decision.actionName,
               details: `Slammed ${chosenMod.name}${evalSummary}`,
               costChaos,
               resultStatePrefixes: state.prefixes.map((p) => `${p.name} (t${p.tier})`),

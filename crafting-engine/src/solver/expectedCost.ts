@@ -75,7 +75,8 @@ export class ExpectedCostSolver {
     this.context = context;
     this.target = target;
     this.actions = actions;
-    this.policyEngine = new CraftingPolicyEngine(target, context.priceBook);
+    const isAllflame = actions.some((a) => a.id.includes('allflame'));
+    this.policyEngine = new CraftingPolicyEngine(target, context.priceBook, context.pool, isAllflame);
   }
 
   solve(startState: ItemState, baseCostChaos = 0): StateValueNode {
@@ -130,61 +131,181 @@ export class ExpectedCostSolver {
 
     // ------------------------------------------------------------- STEP 1: Starting Option Analysis with Sub-Plan Modeling
     const cleanBaseCost = 10;
-    const intPrepCost = 10.16; // 23.3 alts (4.66c) + regal (1.0c) + bench/exalt filler (4.50c)
-    const effPrepCost = 18.5; // 65 alts (13.0c) + regal (1.0c) + bench/exalt filler (4.50c)
+    // T1 Int (Suffix, w=300 / W_S=15650): 52.17 alts (10.43c) + 13.04 augs (0.65c) + 1.0c regal + 4.5c filler = 16.58c
+    const intPrepCost = 16.58;
+    // 35% Effect (Prefix, w=300 / W_P=12502): 41.67 alts (8.33c) + 10.42 augs (0.52c) + 1.0c regal + 4.5c filler = 14.35c
+    const effPrepCost = 14.35;
     const fracOrbCost = fracOrbRate; // 359c
 
     const buyIntCost = 8 * divineRate; // 1600c (8 div, any +6..+8 roll accepted)
-    const selfFracIntCost = 4 * (cleanBaseCost + intPrepCost + fracOrbCost); // 4 * (10 + 10.16 + 359) = 1516.6c
+    const selfFracIntCost = 4 * (cleanBaseCost + intPrepCost + fracOrbCost); // 4 * (10 + 16.58 + 359) = 1542.3c (~7.71 div)
     const buyEffCost = 13 * divineRate; // 2600c (13 div)
-    const selfFracEffCost = 4 * (cleanBaseCost + effPrepCost + fracOrbCost); // 4 * (10 + 18.5 + 359) = 1550.0c
-
-    const step1Options: StartingOptionAnalysis[] = [
-      {
-        name: 'Option A: Buy fractured T1 Intelligence base',
-        description: 'Direct market purchase of fractured T1 Intelligence base (+6 to +8 roll)',
-        purchaseCostChaos: buyIntCost,
-        prepCostChaos: 0,
-        expectedTotalCostChaos: buyIntCost,
-        isRecommended: false,
-        reason: 'Market purchase price is 8.00 div (1600.0c). Instant acquisition with 0 crafting risk.',
-      },
-      {
-        name: 'Option B: Self-fracture T1 Intelligence (Clean 12p base)',
-        description: 'Prepare 4-mod clean base via Alt/Regal/Bench and use Fracturing Orb (25% chance)',
-        cleanBaseCostChaos: cleanBaseCost,
-        prepCostChaos: intPrepCost,
-        fracturingOrbCostChaos: fracOrbCost,
-        successChance: 25.0,
-        expectedAttempts: 4.0,
-        expectedTotalCostChaos: selfFracIntCost,
-        isRecommended: true,
-        reason: `Expected acquisition cost is ${selfFracIntCost.toFixed(1)}c (~${(selfFracIntCost / divineRate).toFixed(2)} div), which is ${(buyIntCost - selfFracIntCost).toFixed(1)}c cheaper than buying base. [SELF-FRACTURE ACQUISITION MODEL: APPROXIMATE]`,
-      },
-      {
-        name: 'Option C: Self-fracture 35% Effect (Clean 12p base)',
-        description: 'Prepare 4-mod clean base with 35% Effect and use Fracturing Orb (25% chance)',
-        cleanBaseCostChaos: cleanBaseCost,
-        prepCostChaos: effPrepCost,
-        fracturingOrbCostChaos: fracOrbCost,
-        successChance: 25.0,
-        expectedAttempts: 4.0,
-        expectedTotalCostChaos: selfFracEffCost,
-        isRecommended: false,
-        reason: `Acquisition cost is ${selfFracEffCost.toFixed(1)}c (~${(selfFracEffCost / divineRate).toFixed(2)} div). [SELF-FRACTURE ACQUISITION MODEL: APPROXIMATE]`,
-      },
-      {
-        name: 'Option D: Buy fractured 35% Effect base',
-        description: 'Direct market purchase of fractured 35% Increased Effect base',
-        purchaseCostChaos: buyEffCost,
-        prepCostChaos: 0,
-        expectedTotalCostChaos: buyEffCost,
-        isRecommended: false,
-        reason: `Market price is 13.00 div (${buyEffCost.toFixed(1)}c), substantially higher than fractured Int.`,
-      },
-    ];
+    const selfFracEffCost = 4 * (cleanBaseCost + effPrepCost + fracOrbCost); // 4 * (10 + 14.35 + 359) = 1533.4c (~7.67 div)
 
     const effectiveBaseCost = baseCostChaos > 0 ? baseCostChaos : buyIntCost;
+    const hasFracturedInt = [...startState.prefixes, ...startState.suffixes].some(
+      (m) => m.modGroup === 'AfflictionJewelSmallPassivesGrantInt' && m.isFractured
+    );
+    const hasFracturedEff = [...startState.prefixes, ...startState.suffixes].some(
+      (m) => m.modGroup === 'AfflictionJewelSmallPassivesHaveIncreasedEffect' && m.isFractured
+    );
+
+    const step1Options: StartingOptionAnalysis[] = hasFracturedEff
+      ? [
+          {
+            name: 'Option A: Buy fractured 35% Effect base',
+            description: 'Direct market purchase of fractured 35% Increased Effect base',
+            purchaseCostChaos: buyEffCost,
+            prepCostChaos: 0,
+            expectedTotalCostChaos: buyEffCost,
+            isRecommended: false,
+            reason: `Market price is ${(buyEffCost / divineRate).toFixed(2)} div (${buyEffCost.toFixed(1)}c). Deterministic alternative with 0 crafting risk.`,
+          },
+          {
+            name: 'Option B: Self-fracture 35% Effect (Clean 12p base)',
+            description: 'Prepare 4-mod clean base with 35% Effect and use Fracturing Orb (25% chance)',
+            cleanBaseCostChaos: cleanBaseCost,
+            prepCostChaos: effPrepCost,
+            fracturingOrbCostChaos: fracOrbCost,
+            successChance: 25.0,
+            expectedAttempts: 4.0,
+            expectedTotalCostChaos: selfFracEffCost,
+            isRecommended: true,
+            reason: `Estimated acquisition cost is ${selfFracEffCost.toFixed(1)}c (~${(selfFracEffCost / divineRate).toFixed(2)} div), which is ${(buyEffCost - selfFracEffCost).toFixed(1)}c cheaper than buying base. [SELF-FRACTURE ACQUISITION MODEL: APPROXIMATE]`,
+          },
+        ]
+      : [
+          {
+            name: 'Option A: Buy fractured T1 Intelligence base',
+            description: 'Direct market purchase of fractured T1 Intelligence base (+6 to +8 roll)',
+            purchaseCostChaos: buyIntCost,
+            prepCostChaos: 0,
+            expectedTotalCostChaos: buyIntCost,
+            isRecommended: false,
+            reason: 'Market purchase price is 8.00 div (1600.0c). Deterministic alternative with 0 crafting risk.',
+          },
+          {
+            name: 'Option B: Self-fracture T1 Intelligence (Clean 12p base)',
+            description: 'Prepare 4-mod clean base via Alt/Aug/Regal/Bench and use Fracturing Orb (25% chance)',
+            cleanBaseCostChaos: cleanBaseCost,
+            prepCostChaos: intPrepCost,
+            fracturingOrbCostChaos: fracOrbCost,
+            successChance: 25.0,
+            expectedAttempts: 4.0,
+            expectedTotalCostChaos: selfFracIntCost,
+            isRecommended: true,
+            reason: `Estimated acquisition cost is ${selfFracIntCost.toFixed(1)}c (~${(selfFracIntCost / divineRate).toFixed(2)} div), which is ${(buyIntCost - selfFracIntCost).toFixed(1)}c cheaper than buying base. [SELF-FRACTURE ACQUISITION MODEL: APPROXIMATE]`,
+          },
+        ];
+
+    // ------------------------------------------------------------- Outcome value distribution (Attributes / Attack Speed / All Res)
+    const suffixMods = allMods.filter((m) =>
+      m.genType === 'Suffix' && m.ilvl <= startState.itemLevel && m.modGroup !== 'AfflictionJewelSmallPassivesGrantInt'
+    );
+    const attrMod = suffixMods.find((m) => m.modGroup === 'AfflictionJewelSmallPassivesGrantAttributes' && m.tier === 1);
+    const asMod = suffixMods.find((m) => m.name.includes('3% increased Attack Speed') && m.tier === 1);
+    const resMod = suffixMods.find((m) => m.modGroup === 'AfflictionJewelSmallPassivesGrantElementalRes' && m.tier === 1);
+
+    const wAttr = attrMod ? attrMod.weight : 300;
+    const wAS = asMod ? asMod.weight : 250;
+    const wRes = resMod ? resMod.weight : 300;
+    const totalEligibleSuffixWeight = calculateTotalWeight(suffixMods) || 14450;
+
+    const pAttr = wAttr / totalEligibleSuffixWeight;
+    const pAS = wAS / totalEligibleSuffixWeight;
+    const pRes = wRes / totalEligibleSuffixWeight;
+    const pAnyAcceptable = pAttr + pAS + pRes;
+
+    const pAllflameAttr = isAllflame ? 1 - Math.pow(1 - pAttr, 4) : pAttr;
+    const pAllflameAS = isAllflame ? Math.pow(1 - pAttr, 4) - Math.pow(1 - pAttr - pAS, 4) : pAS;
+    const pAllflameRes = isAllflame ? Math.pow(1 - pAttr - pAS, 4) - Math.pow(1 - pAnyAcceptable, 4) : pRes;
+    const pAllflameAny = isAllflame ? 1 - Math.pow(1 - pAnyAcceptable, 4) : pAnyAcceptable;
+
+    const pctAttr = pAllflameAttr / pAllflameAny;
+    const pctAS = pAllflameAS / pAllflameAny;
+    const pctRes = pAllflameRes / pAllflameAny;
+
+    const outcomeDist: FinalOutcomeDistribution[] = [
+      { name: '+4 All Attributes (T1)', probability: pctAttr, saleValueChaos: 85 * divineRate },
+      { name: '3% Attack Speed (T1)', probability: pctAS, saleValueChaos: 39 * divineRate },
+      { name: '+4% All Elemental Resistance (T1)', probability: pctRes, saleValueChaos: 7 * divineRate },
+    ];
+
+    const expectedSaleValue =
+      pctAttr * (85 * divineRate) + pctAS * (39 * divineRate) + pctRes * (7 * divineRate);
+
+    // If starting with fractured 35% Effect, downstream crafting slams target suffixes
+    if (!hasFracturedInt && hasFracturedEff) {
+      const step2Cost = this.policyEngine.vStep2; // 56.14c (Harvest T1 ES + cleanup)
+      const targetRequiresInt = this.policyEngine.targetRequiresInt;
+      const suffixCost = targetRequiresInt ? this.policyEngine.vCleanFrac35 : this.policyEngine.v5StepFullPool;
+      const downstreamCost = step2Cost + suffixCost;
+      const totalCost = effectiveBaseCost + downstreamCost;
+      const expHarvests = targetRequiresInt ? this.policyEngine.expHarvestsFrac35 : 14.0;
+      const expAnnuls = targetRequiresInt ? this.policyEngine.expAnnulsFrac35 : (1 / 0.55) + (1 - this.policyEngine.p5FullPool) / this.policyEngine.p5FullPool;
+      const expExalts = targetRequiresInt ? this.policyEngine.expExaltsFrac35 : 1 / this.policyEngine.p5FullPool;
+      const unionChance = (targetRequiresInt
+        ? (isAllflame ? 1 - Math.pow(1 - (300 + 850) / 14750, 4) : (300 + 850) / 14750)
+        : this.policyEngine.p5FullPool) * 100;
+
+      return {
+        stateKey: key,
+        state: startState,
+        expectedCostChaos: downstreamCost,
+        bestActionCostChaos: totalCost,
+        expectedCurrencies: {
+          primalLifeforce: expHarvests * 75,
+          annul: expAnnuls,
+          exalt: expExalts,
+        },
+        isTerminal: false,
+        isRestart: false,
+        steps: [
+          {
+            stepNumber: 1,
+            title: 'STEP 1 -- Acquire Fractured 35% Effect Base',
+            actionName: 'Market Purchase / Self-Fracture',
+            rawCostChaos: effectiveBaseCost,
+            stepTotalCostChaos: effectiveBaseCost,
+            cumulativeCostChaos: effectiveBaseCost,
+            currencies: {},
+          },
+          {
+            stepNumber: 2,
+            title: 'STEP 2 -- Harvest Reforge Defence for T1 Maximum ES',
+            actionName: 'Harvest Reforge Defence (75 Red Lifeforce)',
+            description: 'Preserves fractured 35% Effect prefix and rolls until T1 Maximum Energy Shield is hit.',
+            successChance: this.policyEngine.pT1ES * 100,
+            expectedAttempts: 1 / this.policyEngine.pT1ES,
+            rawCostChaos: (1 / this.policyEngine.pT1ES) * 75 * primalLifeforceRate,
+            stepTotalCostChaos: step2Cost,
+            cumulativeCostChaos: effectiveBaseCost + step2Cost,
+            currencies: { primalLifeforce: (1 / this.policyEngine.pT1ES) * 75 },
+          },
+          {
+            stepNumber: 3,
+            title: targetRequiresInt ? 'STEP 3 -- Slam Target Suffixes (T1 Intelligence & Premium Suffix)' : 'STEP 3 -- Slam Target Premium Suffix',
+            actionName: isAllflame ? 'Allflame Exalted Orb (Suffix)' : 'Exalted Orb Slam',
+            description: targetRequiresInt ? 'Slam open suffix slots for T1 Intelligence (+6 to +8) and Premium Suffix (+4 Attributes / 3% AS / +4% All Res).' : 'Slam open suffix for Premium Suffix (+4 Attributes / 3% AS / +4% All Res).',
+            successChance: unionChance,
+            expectedAttempts: 100 / unionChance,
+            rawCostChaos: (100 / unionChance) * exaltRate,
+            stepTotalCostChaos: suffixCost,
+            cumulativeCostChaos: totalCost,
+            currencies: { exalt: expExalts },
+          },
+        ],
+        step1Options,
+        outcomeDistribution: outcomeDist,
+        expectedSaleValueChaos: expectedSaleValue,
+        policyEngine: this.policyEngine,
+      };
+    }
+
+    if (!hasFracturedInt && !hasFracturedEff) {
+      return this.solveGenericCraft(startState, effectiveBaseCost, isAllflame, priceBook);
+    }
+
     let cumulative = effectiveBaseCost;
     const steps: CraftPlanStep[] = [];
 
@@ -300,41 +421,6 @@ export class ExpectedCostSolver {
     });
 
     // ------------------------------------------------------------- STEP 5: Slam Final Premium Suffix
-    const suffixMods = allMods.filter((m) =>
-      m.genType === 'Suffix' && m.ilvl <= 84 && m.modGroup !== 'AfflictionJewelSmallPassivesGrantInt'
-    );
-    const attrMod = suffixMods.find((m) => m.modGroup === 'AfflictionJewelSmallPassivesGrantAttributes' && m.tier === 1);
-    const asMod = suffixMods.find((m) => m.name.includes('3% increased Attack Speed') && m.tier === 1);
-    const resMod = suffixMods.find((m) => m.modGroup === 'AfflictionJewelSmallPassivesGrantElementalRes' && m.tier === 1);
-
-    const wAttr = attrMod ? attrMod.weight : 300;
-    const wAS = asMod ? asMod.weight : 250;
-    const wRes = resMod ? resMod.weight : 300;
-    const totalEligibleSuffixWeight = calculateTotalWeight(suffixMods) || 14450;
-
-    const pAttr = wAttr / totalEligibleSuffixWeight; // 300 / 14450 = 2.0761%
-    const pAS = wAS / totalEligibleSuffixWeight; // 250 / 14450 = 1.7301%
-    const pRes = wRes / totalEligibleSuffixWeight; // 300 / 14450 = 2.0761%
-    const pAnyAcceptable = pAttr + pAS + pRes; // 850 / 14450 = 5.8824%
-
-    const pAllflameAttr = 1 - Math.pow(1 - pAttr, 4); // 8.05%
-    const pAllflameAS = Math.pow(1 - pAttr, 4) - Math.pow(1 - pAttr - pAS, 4); // 6.36%
-    const pAllflameRes = Math.pow(1 - pAttr - pAS, 4) - Math.pow(1 - pAnyAcceptable, 4); // 7.12%
-    const pAllflameAny = this.policyEngine.p5; // 21.53%
-
-    const pctAttr = pAllflameAttr / pAllflameAny; // 37.39%
-    const pctAS = pAllflameAS / pAllflameAny; // 29.54%
-    const pctRes = pAllflameRes / pAllflameAny; // 33.07%
-
-    const outcomeDist: FinalOutcomeDistribution[] = [
-      { name: '+4 All Attributes (T1)', probability: pctAttr, saleValueChaos: 85 * divineRate },
-      { name: '3% Attack Speed (T1)', probability: pctAS, saleValueChaos: 39 * divineRate },
-      { name: '+4% All Elemental Resistance (T1)', probability: pctRes, saleValueChaos: 7 * divineRate },
-    ];
-
-    const expectedSaleValue =
-      pctAttr * (85 * divineRate) + pctAS * (39 * divineRate) + pctRes * (7 * divineRate);
-
     const expectedSlamsStep5 = 1 / pAllflameAny; // ~4.64 slams
     const rawExaltCostStep5 = expectedSlamsStep5 * exaltRate;
 

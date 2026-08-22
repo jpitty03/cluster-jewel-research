@@ -84,12 +84,12 @@ const craftAResponse = optimizer.optimizeCraft({
     {
       name: 'Self-Fracture T1 Intelligence (Clean 12p Base)',
       state: fracIntState,
-      baseCostChaos: 1516.6, // 4 * (10c base + 10.16c prep + 359c fracture)
+      baseCostChaos: 1542.3, // 4 * (10c base + 16.58c prep + 359c fracture)
     },
     {
       name: 'Self-Fracture 35% Effect (Clean 12p Base)',
       state: fracEffState,
-      baseCostChaos: 1550.0, // 4 * (10c base + 18.5c prep + 359c fracture)
+      baseCostChaos: 1533.4, // 4 * (10c base + 14.35c prep + 359c fracture)
     },
     {
       name: 'Buy Fractured 35% Effect Base',
