@@ -179,7 +179,7 @@ export class CraftingPolicyEngine {
   public readonly p5: number;
   public readonly p5FullPool: number;
 
-  constructor(target: TargetDefinition, priceBook: PriceBook, pool?: ModPool, enableAllflame = true) {
+  constructor(target: TargetDefinition, priceBook: PriceBook, pool?: ModPool, enableAllflame = false) {
     this.target = target;
     this.priceBook = priceBook;
     this.enableAllflame = enableAllflame;
@@ -229,6 +229,15 @@ export class CraftingPolicyEngine {
             harvestModName = found.name;
             const tagged = allPoolMods.filter((m) => (m.craftTags.includes('defences') || m.tags.includes('defences')) && m.ilvl <= ilvl);
             const totalW = calculateTotalWeight(tagged) || 4200;
+            pHarvestTarget = found.weight / totalW;
+            break;
+          } else if (found.craftTags.includes('chaos') || found.tags.includes('chaos')) {
+            harvestTag = 'chaos';
+            harvestLifeforce = 'vividLifeforce';
+            harvestModGroup = found.modGroup;
+            harvestModName = found.name;
+            const tagged = allPoolMods.filter((m) => (m.craftTags.includes('chaos') || m.tags.includes('chaos')) && m.ilvl <= ilvl);
+            const totalW = calculateTotalWeight(tagged) || 2000;
             pHarvestTarget = found.weight / totalW;
             break;
           }

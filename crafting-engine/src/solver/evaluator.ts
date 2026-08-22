@@ -54,11 +54,24 @@ export class CraftEvaluator {
     baseCostChaos: number,
     saleValueChaos?: number
   ): StartingStrategyResult {
+    const harvestTags = [
+      'Defence',
+      'Life',
+      'Chaos',
+      'Attack',
+      'Caster',
+      'Physical',
+      'Fire',
+      'Cold',
+      'Lightning',
+      'Speed',
+      'Critical',
+    ];
+
     let actions: CraftAction[] = [
       new ExaltAction(),
       new AnnulAction(),
-      new HarvestReforgeAction('Defence'),
-      new HarvestReforgeAction('Attribute'),
+      ...harvestTags.map((tag) => new HarvestReforgeAction(tag)),
     ];
 
     if (this.allflameEnabled) {
