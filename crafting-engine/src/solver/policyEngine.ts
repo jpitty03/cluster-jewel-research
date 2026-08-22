@@ -64,10 +64,16 @@ export interface SuffixPoolAuditState {
   eligibleSuffixWeight: number;
   t1IntWeight?: number;
   t1IntChance?: number;
+  t1IntNormalChance?: number;
+  t1IntAllflameChance?: number;
   premiumTargetWeight?: number;
   premiumTargetChance?: number;
+  premiumTargetNormalChance?: number;
+  premiumTargetAllflameChance?: number;
   allTargetWeight?: number;
   allTargetChance?: number;
+  allTargetNormalChance?: number;
+  allTargetAllflameChance?: number;
   blockedGroups: string[];
 }
 
@@ -113,9 +119,12 @@ export class CraftingPolicyEngine {
   public readonly expHarvestsFrac35: number;
   public readonly expAnnulsFrac35: number;
   public readonly expExaltsFrac35: number;
+  public readonly expHarvestsDirectTarget: number;
+  public readonly expAnnulsDirectTarget: number;
   public readonly step3AnnulsFrac35: number;
   public readonly step4AnnulsFrac35: number;
   public readonly vEnter: number;
+  public readonly branchProbabilities: { attr: number; as: number; res: number };
   public readonly targetRequiresInt: boolean;
   public readonly enableAllflame: boolean;
 
@@ -226,7 +235,6 @@ export class CraftingPolicyEngine {
     // Model exact 1-draw and 2-draw Harvest additional affix probabilities:
     const activeTargetWeight = this.targetRequiresInt ? (wInt + wPrem) : wPrem;
     const qInt = wInt / this.W_A;
-    const qPrem = wPrem / this.W_A;
     const qTarget = activeTargetWeight / this.W_A;
     const qJunk = 1 - qTarget;
     const p1_target = qTarget;
@@ -237,14 +245,18 @@ export class CraftingPolicyEngine {
         ((wAttr / this.W_A) * (wInt / this.W_C)) +
         ((wAS / this.W_A) * (wInt / this.W_D)) +
         ((wRes / this.W_A) * (wInt / this.W_E))
-      : 0;
+      : ((wAttr / this.W_A) * ((wPrem - wAttr) / this.W_C)) +
+        ((wAS / this.W_A) * ((wPrem - wAS) / this.W_D)) +
+        ((wRes / this.W_A) * ((wPrem - wRes) / this.W_E));
 
     const p2_target_then_junk = this.targetRequiresInt
       ? qInt * ((this.W_B - wPrem) / this.W_B) +
         (wAttr / this.W_A) * ((this.W_C - wInt) / this.W_C) +
         (wAS / this.W_A) * ((this.W_D - wInt) / this.W_D) +
         (wRes / this.W_A) * ((this.W_E - wInt) / this.W_E)
-      : (wPrem / this.W_A) * ((this.W_B - wPrem) / this.W_B);
+      : (wAttr / this.W_A) * ((this.W_C - (wPrem - wAttr)) / this.W_C) +
+        (wAS / this.W_A) * ((this.W_D - (wPrem - wAS)) / this.W_D) +
+        (wRes / this.W_A) * ((this.W_E - (wPrem - wRes)) / this.W_E);
 
     let p2_junk_then_target = 0;
     if (pool) {
@@ -285,8 +297,12 @@ export class CraftingPolicyEngine {
     const A_Harvest = aSpend / this.pCleanPass;
     const v_Harvest = H_Harvest * this.cH + A_Harvest * this.cA;
 
-    const pTerminalFromHarvest = (0.5 * p2_int_prem * 1.0) / this.pCleanPass;
-    const pDirectTarget = (0.5 * p1_target * 1.0 + 0.5 * p2_target_junk * (1 / 3)) / this.pCleanPass;
+    const pTerminalFromHarvest = this.targetRequiresInt
+      ? (0.5 * p2_int_prem * 1.0) / this.pCleanPass
+      : (0.5 * p1_target * 1.0 + 0.5 * p2_int_prem * 1.0 + 0.5 * p2_target_junk * (1 / 3)) / this.pCleanPass;
+    const pDirectTarget = this.targetRequiresInt
+      ? (0.5 * p1_target * 1.0 + 0.5 * p2_target_junk * (1 / 3)) / this.pCleanPass
+      : 0;
     const pDirectS0 = 1 - pTerminalFromHarvest - pDirectTarget;
 
     const piH_Int = this.targetRequiresInt ? (wInt / activeTargetWeight) : 0;
@@ -294,22 +310,80 @@ export class CraftingPolicyEngine {
     const piH_AS = wAS / activeTargetWeight;
     const piH_Res = wRes / activeTargetWeight;
 
-    // 4-choice Allflame branch probabilities from S0:
+    // 4-choice Allflame branch probabilities from S0 using exact order statistics:
+    const qA = wAttr / this.W_A;
+    const qAS = wAS / this.W_A;
+    const qR = wRes / this.W_A;
+    const qI = wInt / this.W_A;
     const pAllJunk = enableAllflame ? Math.pow(qJunk, 4) : qJunk;
     this.pHit = 1 - pAllJunk;
-    const pIntBranch = this.targetRequiresInt ? (enableAllflame ? 1 - Math.pow(1 - qInt, 4) : qInt) : 0;
-    const pPremBranch = this.targetRequiresInt ? (enableAllflame ? Math.pow(1 - qInt, 4) - pAllJunk : qPrem) : this.pHit;
 
-    const piInt = this.targetRequiresInt ? (pIntBranch / this.pHit) : 0;
-    const piAttr = (pPremBranch * (wAttr / wPrem)) / this.pHit;
-    const piAS = (pPremBranch * (wAS / wPrem)) / this.pHit;
-    const piRes = (pPremBranch * (wRes / wPrem)) / this.pHit;
+    let pIntBranch = 0;
+    let pAttrBranch = 0;
+    let pASBranch = 0;
+    let pResBranch = 0;
 
-    // Value iteration to exact convergence (10,000 iterations):
+    if (this.targetRequiresInt) {
+      if (enableAllflame) {
+        pIntBranch = 1 - Math.pow(1 - qI, 4);
+        pAttrBranch = Math.pow(1 - qI, 4) - Math.pow(1 - qI - qA, 4);
+        pResBranch = Math.pow(1 - qI - qA, 4) - Math.pow(1 - qI - qA - qR, 4);
+        pASBranch = Math.pow(1 - qI - qA - qR, 4) - Math.pow(1 - qI - qA - qR - qAS, 4);
+      } else {
+        pIntBranch = qI;
+        pAttrBranch = qA;
+        pResBranch = qR;
+        pASBranch = qAS;
+      }
+    } else {
+      if (enableAllflame) {
+        pAttrBranch = 1 - Math.pow(1 - qA, 4);
+        pASBranch = Math.pow(1 - qA, 4) - Math.pow(1 - qA - qAS, 4);
+        pResBranch = Math.pow(1 - qA - qAS, 4) - Math.pow(1 - qA - qAS - qR, 4);
+      } else {
+        pAttrBranch = qA;
+        pASBranch = qAS;
+        pResBranch = qR;
+      }
+    }
+
+    const piInt = this.pHit > 0 ? pIntBranch / this.pHit : 0;
+    const piAttr = this.pHit > 0 ? pAttrBranch / this.pHit : 0;
+    const piAS = this.pHit > 0 ? pASBranch / this.pHit : 0;
+    const piRes = this.pHit > 0 ? pResBranch / this.pHit : 0;
+
+    // Terminal branch absorption probabilities:
     let V = [0, 0, 0, 0, 0]; // [S0, S_Int, S_Attr, S_AS, S_Res]
     let H_vec = [0, 0, 0, 0, 0];
     let A_vec = [0, 0, 0, 0, 0];
     let E_vec = [0, 0, 0, 0, 0];
+    let B_Attr = [0, 0, 0, 0, 0];
+    let B_AS = [0, 0, 0, 0, 0];
+    let B_Res = [0, 0, 0, 0, 0];
+
+    const qA_B = wAttr / this.W_B;
+    const qAS_B = wAS / this.W_B;
+    const pAttr_from_Int = enableAllflame
+      ? (1 - Math.pow(1 - qA_B, 4)) / this.pPremGivenInt
+      : (wAttr / wPrem);
+    const pAS_from_Int = enableAllflame
+      ? (Math.pow(1 - qA_B, 4) - Math.pow(1 - qA_B - qAS_B, 4)) / this.pPremGivenInt
+      : (wAS / wPrem);
+    const pRes_from_Int = Math.max(0, 1 - pAttr_from_Int - pAS_from_Int);
+
+    const p2_int_attr = this.targetRequiresInt ? (qInt * (wAttr / this.W_B)) + ((wAttr / this.W_A) * (wInt / this.W_C)) : 0;
+    const p2_int_as = this.targetRequiresInt ? (qInt * (wAS / this.W_B)) + ((wAS / this.W_A) * (wInt / this.W_D)) : 0;
+    const p2_int_res = this.targetRequiresInt ? (qInt * (wRes / this.W_B)) + ((wRes / this.W_A) * (wInt / this.W_E)) : 0;
+
+    const pTermAttr = this.targetRequiresInt
+      ? (0.5 * p2_int_attr * 1.0) / this.pCleanPass
+      : (0.5 * qA + 0.5 * (qA * ((wPrem - wAttr) / this.W_C) + (qA * ((this.W_C - (wPrem - wAttr)) / this.W_C) + p2_junk_then_target * (wAttr / activeTargetWeight)) * (1 / 3))) / this.pCleanPass;
+    const pTermAS = this.targetRequiresInt
+      ? (0.5 * p2_int_as * 1.0) / this.pCleanPass
+      : (0.5 * qAS + 0.5 * (qAS * ((wPrem - wAS) / this.W_D) + (qAS * ((this.W_D - (wPrem - wAS)) / this.W_D) + p2_junk_then_target * (wAS / activeTargetWeight)) * (1 / 3))) / this.pCleanPass;
+    const pTermRes = this.targetRequiresInt
+      ? (0.5 * p2_int_res * 1.0) / this.pCleanPass
+      : (0.5 * qR + 0.5 * (qR * ((wPrem - wRes) / this.W_E) + (qR * ((this.W_E - (wPrem - wRes)) / this.W_E) + p2_junk_then_target * (wRes / activeTargetWeight)) * (1 / 3))) / this.pCleanPass;
 
     for (let iter = 0; iter < 10000; iter++) {
       const [v0, vInt, vAttr, vAS, vRes] = V;
@@ -317,38 +391,103 @@ export class CraftingPolicyEngine {
       const vEnter = v_Harvest + vExit;
 
       const next_v0 = this.cE + this.pHit * (piInt * vInt + piAttr * vAttr + piAS * vAS + piRes * vRes) + (1 - this.pHit) * (this.cA + 0.5 * v0 + 0.5 * vEnter);
-      const next_vInt = (this.cE + (1 - this.pPremGivenInt) * ((4 / 3) * this.cA + (1 / 6) * v0 + 0.5 * vEnter)) / (1 - (1 / 3) * (1 - this.pPremGivenInt));
-      const next_vAttr = (this.cE + (1 - this.pIntGivenAttr) * ((4 / 3) * this.cA + (1 / 6) * v0 + 0.5 * vEnter)) / (1 - (1 / 3) * (1 - this.pIntGivenAttr));
-      const next_vAS = (this.cE + (1 - this.pIntGivenAS) * ((4 / 3) * this.cA + (1 / 6) * v0 + 0.5 * vEnter)) / (1 - (1 / 3) * (1 - this.pIntGivenAS));
-      const next_vRes = (this.cE + (1 - this.pIntGivenRes) * ((4 / 3) * this.cA + (1 / 6) * v0 + 0.5 * vEnter)) / (1 - (1 / 3) * (1 - this.pIntGivenRes));
-      V = [next_v0, next_vInt, next_vAttr, next_vAS, next_vRes];
-
+      const next_vInt = this.targetRequiresInt ? (this.cE + (1 - this.pPremGivenInt) * ((4 / 3) * this.cA + (1 / 6) * v0 + 0.5 * vEnter)) / (1 - (1 / 3) * (1 - this.pPremGivenInt)) : 0;
+      const next_vAttr = this.targetRequiresInt ? (this.cE + (1 - this.pIntGivenAttr) * ((4 / 3) * this.cA + (1 / 6) * v0 + 0.5 * vEnter)) / (1 - (1 / 3) * (1 - this.pIntGivenAttr)) : 0;
+      const next_vAS = this.targetRequiresInt ? (this.cE + (1 - this.pIntGivenAS) * ((4 / 3) * this.cA + (1 / 6) * v0 + 0.5 * vEnter)) / (1 - (1 / 3) * (1 - this.pIntGivenAS)) : 0;
+      const next_vRes = this.targetRequiresInt ? (this.cE + (1 - this.pIntGivenRes) * ((4 / 3) * this.cA + (1 / 6) * v0 + 0.5 * vEnter)) / (1 - (1 / 3) * (1 - this.pIntGivenRes)) : 0;
+      
       const hExit = pDirectS0 * H_vec[0] + pDirectTarget * (piH_Int * H_vec[1] + piH_Attr * H_vec[2] + piH_AS * H_vec[3] + piH_Res * H_vec[4]);
       const hEnter = H_Harvest + hExit;
       const next_h0 = this.pHit * (piInt * H_vec[1] + piAttr * H_vec[2] + piAS * H_vec[3] + piRes * H_vec[4]) + (1 - this.pHit) * (0.5 * H_vec[0] + 0.5 * hEnter);
-      const next_hInt = ((1 - this.pPremGivenInt) * ((1 / 6) * H_vec[0] + 0.5 * hEnter)) / (1 - (1 / 3) * (1 - this.pPremGivenInt));
-      const next_hAttr = ((1 - this.pIntGivenAttr) * ((1 / 6) * H_vec[0] + 0.5 * hEnter)) / (1 - (1 / 3) * (1 - this.pIntGivenAttr));
-      const next_hAS = ((1 - this.pIntGivenAS) * ((1 / 6) * H_vec[0] + 0.5 * hEnter)) / (1 - (1 / 3) * (1 - this.pIntGivenAS));
-      const next_hRes = ((1 - this.pIntGivenRes) * ((1 / 6) * H_vec[0] + 0.5 * hEnter)) / (1 - (1 / 3) * (1 - this.pIntGivenRes));
-      H_vec = [next_h0, next_hInt, next_hAttr, next_hAS, next_hRes];
+      const next_hInt = this.targetRequiresInt ? ((1 - this.pPremGivenInt) * ((1 / 6) * H_vec[0] + 0.5 * hEnter)) / (1 - (1 / 3) * (1 - this.pPremGivenInt)) : 0;
+      const next_hAttr = this.targetRequiresInt ? ((1 - this.pIntGivenAttr) * ((1 / 6) * H_vec[0] + 0.5 * hEnter)) / (1 - (1 / 3) * (1 - this.pIntGivenAttr)) : 0;
+      const next_hAS = this.targetRequiresInt ? ((1 - this.pIntGivenAS) * ((1 / 6) * H_vec[0] + 0.5 * hEnter)) / (1 - (1 / 3) * (1 - this.pIntGivenAS)) : 0;
+      const next_hRes = this.targetRequiresInt ? ((1 - this.pIntGivenRes) * ((1 / 6) * H_vec[0] + 0.5 * hEnter)) / (1 - (1 / 3) * (1 - this.pIntGivenRes)) : 0;
 
       const aExit = pDirectS0 * A_vec[0] + pDirectTarget * (piH_Int * A_vec[1] + piH_Attr * A_vec[2] + piH_AS * A_vec[3] + piH_Res * A_vec[4]);
       const aEnter = A_Harvest + aExit;
       const next_a0 = this.pHit * (piInt * A_vec[1] + piAttr * A_vec[2] + piAS * A_vec[3] + piRes * A_vec[4]) + (1 - this.pHit) * (1 + 0.5 * A_vec[0] + 0.5 * aEnter);
-      const next_aInt = ((1 - this.pPremGivenInt) * ((4 / 3) + (1 / 6) * A_vec[0] + 0.5 * aEnter)) / (1 - (1 / 3) * (1 - this.pPremGivenInt));
-      const next_aAttr = ((1 - this.pIntGivenAttr) * ((4 / 3) + (1 / 6) * A_vec[0] + 0.5 * aEnter)) / (1 - (1 / 3) * (1 - this.pIntGivenAttr));
-      const next_aAS = ((1 - this.pIntGivenAS) * ((4 / 3) + (1 / 6) * A_vec[0] + 0.5 * aEnter)) / (1 - (1 / 3) * (1 - this.pIntGivenAS));
-      const next_aRes = ((1 - this.pIntGivenRes) * ((4 / 3) + (1 / 6) * A_vec[0] + 0.5 * aEnter)) / (1 - (1 / 3) * (1 - this.pIntGivenRes));
-      A_vec = [next_a0, next_aInt, next_aAttr, next_aAS, next_aRes];
+      const next_aInt = this.targetRequiresInt ? ((1 - this.pPremGivenInt) * ((4 / 3) + (1 / 6) * A_vec[0] + 0.5 * aEnter)) / (1 - (1 / 3) * (1 - this.pPremGivenInt)) : 0;
+      const next_aAttr = this.targetRequiresInt ? ((1 - this.pIntGivenAttr) * ((4 / 3) + (1 / 6) * A_vec[0] + 0.5 * aEnter)) / (1 - (1 / 3) * (1 - this.pIntGivenAttr)) : 0;
+      const next_aAS = this.targetRequiresInt ? ((1 - this.pIntGivenAS) * ((4 / 3) + (1 / 6) * A_vec[0] + 0.5 * aEnter)) / (1 - (1 / 3) * (1 - this.pIntGivenAS)) : 0;
+      const next_aRes = this.targetRequiresInt ? ((1 - this.pIntGivenRes) * ((4 / 3) + (1 / 6) * A_vec[0] + 0.5 * aEnter)) / (1 - (1 / 3) * (1 - this.pIntGivenRes)) : 0;
 
       const eExit = pDirectS0 * E_vec[0] + pDirectTarget * (piH_Int * E_vec[1] + piH_Attr * E_vec[2] + piH_AS * E_vec[3] + piH_Res * E_vec[4]);
       const eEnter = eExit;
       const next_e0 = 1 + this.pHit * (piInt * E_vec[1] + piAttr * E_vec[2] + piAS * E_vec[3] + piRes * E_vec[4]) + (1 - this.pHit) * (0.5 * E_vec[0] + 0.5 * eEnter);
-      const next_eInt = (1 + (1 - this.pPremGivenInt) * ((1 / 6) * E_vec[0] + 0.5 * eEnter)) / (1 - (1 / 3) * (1 - this.pPremGivenInt));
-      const next_eAttr = (1 + (1 - this.pIntGivenAttr) * ((1 / 6) * E_vec[0] + 0.5 * eEnter)) / (1 - (1 / 3) * (1 - this.pIntGivenAttr));
-      const next_eAS = (1 + (1 - this.pIntGivenAS) * ((1 / 6) * E_vec[0] + 0.5 * eEnter)) / (1 - (1 / 3) * (1 - this.pIntGivenAS));
-      const next_eRes = (1 + (1 - this.pIntGivenRes) * ((1 / 6) * E_vec[0] + 0.5 * eEnter)) / (1 - (1 / 3) * (1 - this.pIntGivenRes));
+      const next_eInt = this.targetRequiresInt ? (1 + (1 - this.pPremGivenInt) * ((1 / 6) * E_vec[0] + 0.5 * eEnter)) / (1 - (1 / 3) * (1 - this.pPremGivenInt)) : 0;
+      const next_eAttr = this.targetRequiresInt ? (1 + (1 - this.pIntGivenAttr) * ((1 / 6) * E_vec[0] + 0.5 * eEnter)) / (1 - (1 / 3) * (1 - this.pIntGivenAttr)) : 0;
+      const next_eAS = this.targetRequiresInt ? (1 + (1 - this.pIntGivenAS) * ((1 / 6) * E_vec[0] + 0.5 * eEnter)) / (1 - (1 / 3) * (1 - this.pIntGivenAS)) : 0;
+      const next_eRes = this.targetRequiresInt ? (1 + (1 - this.pIntGivenRes) * ((1 / 6) * E_vec[0] + 0.5 * eEnter)) / (1 - (1 / 3) * (1 - this.pIntGivenRes)) : 0;
+
+      const exitAttr = pTermAttr + pDirectS0 * B_Attr[0] + pDirectTarget * (piH_Int * B_Attr[1] + piH_Attr * B_Attr[2] + piH_AS * B_Attr[3] + piH_Res * B_Attr[4]);
+      const next_b0_Attr = this.pHit * (piInt * B_Attr[1] + piAttr * B_Attr[2] + piAS * B_Attr[3] + piRes * B_Attr[4]) + (1 - this.pHit) * (0.5 * B_Attr[0] + 0.5 * exitAttr);
+      const next_bInt_Attr = this.targetRequiresInt ? (this.pPremGivenInt * pAttr_from_Int + (1 - this.pPremGivenInt) * ((1 / 6) * B_Attr[0] + 0.5 * exitAttr)) / (1 - (1 / 3) * (1 - this.pPremGivenInt)) : 0;
+      const next_bAttr_Attr = this.targetRequiresInt ? (this.pIntGivenAttr * 1.0 + (1 - this.pIntGivenAttr) * ((1 / 6) * B_Attr[0] + 0.5 * exitAttr)) / (1 - (1 / 3) * (1 - this.pIntGivenAttr)) : 1.0;
+      const next_bAS_Attr = this.targetRequiresInt ? ((1 - this.pIntGivenAS) * ((1 / 6) * B_Attr[0] + 0.5 * exitAttr)) / (1 - (1 / 3) * (1 - this.pIntGivenAS)) : 0;
+      const next_bRes_Attr = this.targetRequiresInt ? ((1 - this.pIntGivenRes) * ((1 / 6) * B_Attr[0] + 0.5 * exitAttr)) / (1 - (1 / 3) * (1 - this.pIntGivenRes)) : 0;
+
+      const exitAS = pTermAS + pDirectS0 * B_AS[0] + pDirectTarget * (piH_Int * B_AS[1] + piH_Attr * B_AS[2] + piH_AS * B_AS[3] + piH_Res * B_AS[4]);
+      const next_b0_AS = this.pHit * (piInt * B_AS[1] + piAttr * B_AS[2] + piAS * B_AS[3] + piRes * B_AS[4]) + (1 - this.pHit) * (0.5 * B_AS[0] + 0.5 * exitAS);
+      const next_bInt_AS = this.targetRequiresInt ? (this.pPremGivenInt * pAS_from_Int + (1 - this.pPremGivenInt) * ((1 / 6) * B_AS[0] + 0.5 * exitAS)) / (1 - (1 / 3) * (1 - this.pPremGivenInt)) : 0;
+      const next_bAttr_AS = this.targetRequiresInt ? ((1 - this.pIntGivenAttr) * ((1 / 6) * B_AS[0] + 0.5 * exitAS)) / (1 - (1 / 3) * (1 - this.pIntGivenAttr)) : 0;
+      const next_bAS_AS = this.targetRequiresInt ? (this.pIntGivenAS * 1.0 + (1 - this.pIntGivenAS) * ((1 / 6) * B_AS[0] + 0.5 * exitAS)) / (1 - (1 / 3) * (1 - this.pIntGivenAS)) : 1.0;
+      const next_bRes_AS = this.targetRequiresInt ? ((1 - this.pIntGivenRes) * ((1 / 6) * B_AS[0] + 0.5 * exitAS)) / (1 - (1 / 3) * (1 - this.pIntGivenRes)) : 0;
+
+      const exitRes = pTermRes + pDirectS0 * B_Res[0] + pDirectTarget * (piH_Int * B_Res[1] + piH_Attr * B_Res[2] + piH_AS * B_Res[3] + piH_Res * B_Res[4]);
+      const next_b0_Res = this.pHit * (piInt * B_Res[1] + piAttr * B_Res[2] + piAS * B_Res[3] + piRes * B_Res[4]) + (1 - this.pHit) * (0.5 * B_Res[0] + 0.5 * exitRes);
+      const next_bInt_Res = this.targetRequiresInt ? (this.pPremGivenInt * pRes_from_Int + (1 - this.pPremGivenInt) * ((1 / 6) * B_Res[0] + 0.5 * exitRes)) / (1 - (1 / 3) * (1 - this.pPremGivenInt)) : 0;
+      const next_bAttr_Res = this.targetRequiresInt ? ((1 - this.pIntGivenAttr) * ((1 / 6) * B_Res[0] + 0.5 * exitRes)) / (1 - (1 / 3) * (1 - this.pIntGivenAttr)) : 0;
+      const next_bAS_Res = this.targetRequiresInt ? ((1 - this.pIntGivenAS) * ((1 / 6) * B_Res[0] + 0.5 * exitRes)) / (1 - (1 / 3) * (1 - this.pIntGivenAS)) : 0;
+      const next_bRes_Res = this.targetRequiresInt ? (this.pIntGivenRes * 1.0 + (1 - this.pIntGivenRes) * ((1 / 6) * B_Res[0] + 0.5 * exitRes)) / (1 - (1 / 3) * (1 - this.pIntGivenRes)) : 1.0;
+
+      const delta = Math.max(
+        Math.abs(next_v0 - v0),
+        Math.abs(next_vInt - vInt),
+        Math.abs(next_vAttr - vAttr),
+        Math.abs(next_vAS - vAS),
+        Math.abs(next_vRes - vRes),
+        Math.abs(next_h0 - H_vec[0]),
+        Math.abs(next_hInt - H_vec[1]),
+        Math.abs(next_hAttr - H_vec[2]),
+        Math.abs(next_hAS - H_vec[3]),
+        Math.abs(next_hRes - H_vec[4]),
+        Math.abs(next_a0 - A_vec[0]),
+        Math.abs(next_aInt - A_vec[1]),
+        Math.abs(next_aAttr - A_vec[2]),
+        Math.abs(next_aAS - A_vec[3]),
+        Math.abs(next_aRes - A_vec[4]),
+        Math.abs(next_e0 - E_vec[0]),
+        Math.abs(next_eInt - E_vec[1]),
+        Math.abs(next_eAttr - E_vec[2]),
+        Math.abs(next_eAS - E_vec[3]),
+        Math.abs(next_eRes - E_vec[4]),
+        Math.abs(next_b0_Attr - B_Attr[0]),
+        Math.abs(next_bInt_Attr - B_Attr[1]),
+        Math.abs(next_bAttr_Attr - B_Attr[2]),
+        Math.abs(next_bAS_Attr - B_Attr[3]),
+        Math.abs(next_bRes_Attr - B_Attr[4]),
+        Math.abs(next_b0_AS - B_AS[0]),
+        Math.abs(next_bInt_AS - B_AS[1]),
+        Math.abs(next_bAttr_AS - B_AS[2]),
+        Math.abs(next_bAS_AS - B_AS[3]),
+        Math.abs(next_bRes_AS - B_AS[4]),
+        Math.abs(next_b0_Res - B_Res[0]),
+        Math.abs(next_bInt_Res - B_Res[1]),
+        Math.abs(next_bAttr_Res - B_Res[2]),
+        Math.abs(next_bAS_Res - B_Res[3]),
+        Math.abs(next_bRes_Res - B_Res[4])
+      );
+
+      V = [next_v0, next_vInt, next_vAttr, next_vAS, next_vRes];
+      H_vec = [next_h0, next_hInt, next_hAttr, next_hAS, next_hRes];
+      A_vec = [next_a0, next_aInt, next_aAttr, next_aAS, next_aRes];
       E_vec = [next_e0, next_eInt, next_eAttr, next_eAS, next_eRes];
+      B_Attr = [next_b0_Attr, next_bInt_Attr, next_bAttr_Attr, next_bAS_Attr, next_bRes_Attr];
+      B_AS = [next_b0_AS, next_bInt_AS, next_bAttr_AS, next_bAS_AS, next_bRes_AS];
+      B_Res = [next_b0_Res, next_bInt_Res, next_bAttr_Res, next_bAS_Res, next_bRes_Res];
+
+      if (delta < 1e-11 && iter > 10) break;
     }
 
     this.hStep2 = H_Harvest;
@@ -374,22 +513,28 @@ export class CraftingPolicyEngine {
     this.expAnnulsFrac35 = A_Harvest + (pDirectS0 * A_vec[0] + pDirectTarget * (piH_Int * A_vec[1] + piH_Attr * A_vec[2] + piH_AS * A_vec[3] + piH_Res * A_vec[4]));
     this.expExaltsFrac35 = pDirectS0 * E_vec[0] + pDirectTarget * (piH_Int * E_vec[1] + piH_Attr * E_vec[2] + piH_AS * E_vec[3] + piH_Res * E_vec[4]);
 
+    const pJointDirect = this.targetRequiresInt
+      ? (0.5 * p2_int_prem)
+      : (0.5 * p1_target + 0.5 * p2_int_prem + 0.5 * p2_target_junk * (1 / 3));
+    this.expHarvestsDirectTarget = pJointDirect > 0 ? (1 / (this.pT1ES * pJointDirect)) : 12280.0;
+    this.expAnnulsDirectTarget = (!this.targetRequiresInt && pJointDirect > 0)
+      ? (0.5 * p2_target_junk * (1 / 3)) / pJointDirect
+      : 0.0;
+
     this.vEnter = v_Harvest + (pDirectS0 * V[0] + pDirectTarget * (piH_Int * V[1] + piH_Attr * V[2] + piH_AS * V[3] + piH_Res * V[4]));
     this.step3AnnulsFrac35 = (this.expHarvestsFrac35 / H_Harvest) * A_Harvest;
     this.step4AnnulsFrac35 = this.expAnnulsFrac35 - this.step3AnnulsFrac35;
 
-    if (!this.targetRequiresInt) {
-      const p = this.p5FullPool;
-      const e = 1 / p;
-      const a = ((1 - p) / p) * (1 + 0.5 * this.aStep2);
-      const h = ((1 - p) / p) * (0.5 * this.hStep2);
-      this.expHarvestsFrac35 = this.hStep2 + h;
-      this.expAnnulsFrac35 = this.aStep2 + a;
-      this.expExaltsFrac35 = e;
-      this.step3AnnulsFrac35 = (this.expHarvestsFrac35 / H_Harvest) * A_Harvest;
-      this.step4AnnulsFrac35 = this.expAnnulsFrac35 - this.step3AnnulsFrac35;
-      this.vCleanFrac35 = this.v5StepFullPool;
-    }
+    const numAttr = pTermAttr + pDirectS0 * B_Attr[0] + pDirectTarget * (piH_Int * B_Attr[1] + piH_Attr * B_Attr[2] + piH_AS * B_Attr[3] + piH_Res * B_Attr[4]);
+    const numAS = pTermAS + pDirectS0 * B_AS[0] + pDirectTarget * (piH_Int * B_AS[1] + piH_Attr * B_AS[2] + piH_AS * B_AS[3] + piH_Res * B_AS[4]);
+    const numRes = pTermRes + pDirectS0 * B_Res[0] + pDirectTarget * (piH_Int * B_Res[1] + piH_Attr * B_Res[2] + piH_AS * B_Res[3] + piH_Res * B_Res[4]);
+    const totalBranchSum = numAttr + numAS + numRes || 1;
+
+    this.branchProbabilities = {
+      attr: numAttr / totalBranchSum,
+      as: numAS / totalBranchSum,
+      res: numRes / totalBranchSum,
+    };
 
     this.vStep5 = this.v5Step;
     this.vStep4 = this.v4Step + this.vStep5;
@@ -410,10 +555,8 @@ export class CraftingPolicyEngine {
     const wPrem = wAttr + wAS + wRes;
     const wTotalTarget = wInt + wPrem;
 
-    const sample = (w: number, W: number) => {
-      const q = w / W;
-      return (this.enableAllflame ? 1 - Math.pow(1 - q, 4) : q) * 100;
-    };
+    const normalRate = (w: number, W: number) => (w / W) * 100;
+    const allflameRate = (w: number, W: number) => (this.enableAllflame ? 1 - Math.pow(1 - w / W, 4) : w / W) * 100;
 
     return [
       {
@@ -422,11 +565,17 @@ export class CraftingPolicyEngine {
         eligibleSuffixCount: suffixes.length,
         eligibleSuffixWeight: this.W_A,
         t1IntWeight: wInt,
-        t1IntChance: sample(wInt, this.W_A),
+        t1IntChance: allflameRate(wInt, this.W_A),
+        t1IntNormalChance: normalRate(wInt, this.W_A),
+        t1IntAllflameChance: allflameRate(wInt, this.W_A),
         premiumTargetWeight: wPrem,
-        premiumTargetChance: sample(wPrem, this.W_A),
+        premiumTargetChance: allflameRate(wPrem, this.W_A),
+        premiumTargetNormalChance: normalRate(wPrem, this.W_A),
+        premiumTargetAllflameChance: allflameRate(wPrem, this.W_A),
         allTargetWeight: wTotalTarget,
         allTargetChance: this.pHit * 100,
+        allTargetNormalChance: normalRate(wTotalTarget, this.W_A),
+        allTargetAllflameChance: this.pHit * 100,
         blockedGroups: ['None (Full suffix pool)'],
       },
       {
@@ -436,7 +585,9 @@ export class CraftingPolicyEngine {
         eligibleSuffixWeight: this.W_B,
         premiumTargetWeight: wPrem,
         premiumTargetChance: this.pPremGivenInt * 100,
-        blockedGroups: ['AfflictionJewelSmallPassivesGrantInt (1,200 weight blocked)'],
+        premiumTargetNormalChance: normalRate(wPrem, this.W_B),
+        premiumTargetAllflameChance: this.pPremGivenInt * 100,
+        blockedGroups: [`AfflictionJewelSmallPassivesGrantInt (${(this.W_A - this.W_B).toLocaleString()} weight blocked)`],
       },
       {
         stateLabel: 'State C — Frac 35 + T1 ES + +4 All Attributes',
@@ -445,7 +596,9 @@ export class CraftingPolicyEngine {
         eligibleSuffixWeight: this.W_C,
         t1IntWeight: wInt,
         t1IntChance: this.pIntGivenAttr * 100,
-        blockedGroups: ['AfflictionJewelSmallPassivesGrantAttributes (1,200 weight blocked)'],
+        t1IntNormalChance: normalRate(wInt, this.W_C),
+        t1IntAllflameChance: this.pIntGivenAttr * 100,
+        blockedGroups: [`AfflictionJewelSmallPassivesGrantAttributes (${(this.W_A - this.W_C).toLocaleString()} weight blocked)`],
       },
       {
         stateLabel: 'State D — Frac 35 + T1 ES + 3% Attack Speed',
@@ -454,7 +607,9 @@ export class CraftingPolicyEngine {
         eligibleSuffixWeight: this.W_D,
         t1IntWeight: wInt,
         t1IntChance: this.pIntGivenAS * 100,
-        blockedGroups: ['3% Attack Speed Family (950 weight blocked)'],
+        t1IntNormalChance: normalRate(wInt, this.W_D),
+        t1IntAllflameChance: this.pIntGivenAS * 100,
+        blockedGroups: [`Attack Speed Group (${(this.W_A - this.W_D).toLocaleString()} weight blocked)`],
       },
       {
         stateLabel: 'State E — Frac 35 + T1 ES + +4% All Resistance',
@@ -463,7 +618,9 @@ export class CraftingPolicyEngine {
         eligibleSuffixWeight: this.W_E,
         t1IntWeight: wInt,
         t1IntChance: this.pIntGivenRes * 100,
-        blockedGroups: ['AfflictionJewelSmallPassivesGrantElementalRes (1,200 weight blocked)'],
+        t1IntNormalChance: normalRate(wInt, this.W_E),
+        t1IntAllflameChance: this.pIntGivenRes * 100,
+        blockedGroups: [`AfflictionJewelSmallPassivesGrantElementalRes (${(this.W_A - this.W_E).toLocaleString()} weight blocked)`],
       },
     ];
   }
@@ -633,7 +790,7 @@ export class CraftingPolicyEngine {
       return {
         actionType: 'HARVEST_DEFENCE',
         actionName: 'Harvest Reforge Defence',
-        expectedContinuationCostChaos: this.vStep2 + (hasFrac35 ? this.vCleanFrac35 : this.vStep4),
+        expectedContinuationCostChaos: hasFrac35 ? this.vEnter : (this.vStep2 + this.vStep4),
         reason: 'Prefixes lack T1 Maximum Energy Shield. Reforge Defence guarantees Defence mod at 7.14% T1 ES rate.',
         stepAttribution: 2,
       };
@@ -786,8 +943,98 @@ export class CraftingPolicyEngine {
     return false;
   }
 
-  public getRepresentativeStateAudits(): RepresentativeStateAudit[] {
-    const harvestRestartEV = this.cH + this.vStep2 + this.vStep4; // 1.5625 + 1321.585 = 1323.15c
+  public getRepresentativeStateAudits(isFractured35Route = true): RepresentativeStateAudit[] {
+    if (isFractured35Route) {
+      const harvestRestartEV = this.cH + this.vEnter;
+
+      return [
+        {
+          stateDescription: 'Frac 35 + T1 ES (Clean S0)',
+          candidateActions: [
+            { actionName: 'Allflame Exalt Suffix (T1 Int / Premium)', continuationValueChaos: this.vCleanFrac35 },
+            { actionName: 'Harvest Reforge Defence again', continuationValueChaos: harvestRestartEV },
+          ],
+          recommendedAction: 'Allflame Exalt Suffix',
+          recommendationReason: `Direct Allflame Exalt has continuation EV of ${this.vCleanFrac35.toFixed(1)}c vs ${harvestRestartEV.toFixed(1)}c to reforge away T1 ES.`,
+        },
+        {
+          stateDescription: 'Frac 35 + T1 ES + T1 Intelligence',
+          candidateActions: [
+            { actionName: 'Allflame Exalt Premium Suffix', continuationValueChaos: this.vInt },
+            { actionName: 'Orb of Annulment', continuationValueChaos: this.cA + (1 / 3) * this.vInt + (1 / 3) * this.vCleanFrac35 + (1 / 3) * this.vEnter },
+            { actionName: 'Harvest Reforge Defence again', continuationValueChaos: harvestRestartEV },
+          ],
+          recommendedAction: 'PRESERVE; Allflame Exalt Premium Suffix',
+          recommendationReason: `T1 Intelligence secured. Open suffix slam continuation EV is only ${this.vInt.toFixed(1)}c vs ${harvestRestartEV.toFixed(1)}c restart.`,
+        },
+        {
+          stateDescription: 'Frac 35 + T1 ES + +4 All Attributes',
+          candidateActions: [
+            { actionName: 'Allflame Exalt Suffix (T1 Intelligence)', continuationValueChaos: this.vAttr },
+            { actionName: 'Harvest Reforge Defence again', continuationValueChaos: harvestRestartEV },
+          ],
+          recommendedAction: 'PRESERVE; Allflame Exalt T1 Intelligence',
+          recommendationReason: `+4 All Attributes secured. Suffix slam continuation EV is only ${this.vAttr.toFixed(1)}c vs ${harvestRestartEV.toFixed(1)}c restart.`,
+        },
+        {
+          stateDescription: 'Frac 35 + T1 ES + 3% Attack Speed',
+          candidateActions: [
+            { actionName: 'Allflame Exalt Suffix (T1 Intelligence)', continuationValueChaos: this.vAS },
+            { actionName: 'Harvest Reforge Defence again', continuationValueChaos: harvestRestartEV },
+          ],
+          recommendedAction: 'PRESERVE; Allflame Exalt T1 Intelligence',
+          recommendationReason: `3% Attack Speed secured. Suffix slam continuation EV is only ${this.vAS.toFixed(1)}c vs ${harvestRestartEV.toFixed(1)}c restart.`,
+        },
+        {
+          stateDescription: 'Frac 35 + T1 ES + +4% All Resistance',
+          candidateActions: [
+            { actionName: 'Allflame Exalt Suffix (T1 Intelligence)', continuationValueChaos: this.vRes },
+            { actionName: 'Harvest Reforge Defence again', continuationValueChaos: harvestRestartEV },
+          ],
+          recommendedAction: 'PRESERVE; Allflame Exalt T1 Intelligence',
+          recommendationReason: `+4% All Resistance secured. Suffix slam continuation EV is only ${this.vRes.toFixed(1)}c vs ${harvestRestartEV.toFixed(1)}c restart.`,
+        },
+        {
+          stateDescription: 'Frac 35 + T1 ES + 1 Junk Suffix',
+          candidateActions: [
+            { actionName: 'Orb of Annulment', continuationValueChaos: this.cA + 0.5 * this.vCleanFrac35 + 0.5 * this.vEnter },
+            { actionName: 'Harvest Reforge Defence again', continuationValueChaos: harvestRestartEV },
+          ],
+          recommendedAction: 'Orb of Annulment',
+          recommendationReason: `Annul has 50% clean success rate with EV of ${(this.cA + 0.5 * this.vCleanFrac35 + 0.5 * this.vEnter).toFixed(1)}c, beating Harvest restart (${harvestRestartEV.toFixed(1)}c).`,
+        },
+        {
+          stateDescription: 'Frac 35 + T1 ES + T1 Intelligence + 1 Junk Suffix',
+          candidateActions: [
+            { actionName: 'Orb of Annulment', continuationValueChaos: this.cA + (1 / 3) * this.vInt + (1 / 3) * this.vCleanFrac35 + (1 / 3) * this.vEnter },
+            { actionName: 'Harvest Reforge Defence again', continuationValueChaos: harvestRestartEV },
+          ],
+          recommendedAction: 'Orb of Annulment',
+          recommendationReason: `Annul has 1/3 chance to isolate T1 Int and 1/3 for clean S0, beating Harvest restart.`,
+        },
+        {
+          stateDescription: 'Frac 35 + T1 ES + Premium Suffix + 1 Junk Suffix',
+          candidateActions: [
+            { actionName: 'Orb of Annulment', continuationValueChaos: this.cA + (1 / 3) * this.vAttr + (1 / 3) * this.vCleanFrac35 + (1 / 3) * this.vEnter },
+            { actionName: 'Harvest Reforge Defence again', continuationValueChaos: harvestRestartEV },
+          ],
+          recommendedAction: 'Orb of Annulment',
+          recommendationReason: `Annul has 1/3 chance to isolate Premium suffix and 1/3 for clean S0, beating Harvest restart.`,
+        },
+        {
+          stateDescription: 'Frac 35 + T1 ES + T1 Intelligence + Premium Suffix',
+          candidateActions: [
+            { actionName: 'Goal Satisfied (Terminal)', continuationValueChaos: 0 },
+            { actionName: 'Harvest Reforge Defence again', continuationValueChaos: harvestRestartEV },
+          ],
+          recommendedAction: 'FINISHED',
+          recommendationReason: 'Target definition fully satisfied; item complete.',
+        },
+      ];
+    }
+
+    // Fractured Int route representative decisions
+    const harvestRestartEV = this.cH + this.vStep2 + this.vStep4;
 
     return [
       {
@@ -839,10 +1086,81 @@ export class CraftingPolicyEngine {
   }
 
   public getHarvestStrategyComparisons(
-    baseCostChaos = 1600,
-    saleValueChaos = 8578.4,
-    divineFinishingCostChaos = 0
+    baseCostChaos = 1533.4,
+    saleValueChaos = 8946.0,
+    divineFinishingCostChaos = 0,
+    isFractured35Route = true
   ): HarvestStrategyComparison[] {
+    if (isFractured35Route) {
+      const expectedHarvestsA = this.expHarvestsFrac35;
+      const expectedAnnulsA = this.expAnnulsFrac35;
+      const expectedExaltsA = this.expExaltsFrac35;
+      const costA_craft = this.vEnter + divineFinishingCostChaos;
+      const costA_total = baseCostChaos + costA_craft;
+      const profitA = saleValueChaos - costA_total;
+      const roiA = costA_total > 0 ? (profitA / costA_total) * 100 : 0;
+
+      // Strategy B: Stay in Harvest until complete target is hit directly from Harvest
+      const expectedHarvestsB = this.expHarvestsDirectTarget;
+      const expectedAnnulsB = this.expAnnulsDirectTarget;
+      const expectedExaltsB = 0.0;
+      const costB_craft =
+        expectedHarvestsB * this.cH +
+        expectedAnnulsB * this.cA +
+        divineFinishingCostChaos;
+      const costB_total = baseCostChaos + costB_craft;
+      const profitB = saleValueChaos - costB_total;
+      const roiB = costB_total > 0 ? (profitB / costB_total) * 100 : 0;
+
+      return [
+        {
+          name: 'Strategy A: Stop Harvest at First T1 ES (Sequential Allflame)',
+          code: 'A',
+          expectedHarvests: expectedHarvestsA,
+          expectedAnnuls: expectedAnnulsA,
+          expectedExalts: expectedExaltsA,
+          expectedCraftingCostChaos: costA_craft,
+          expectedTotalCraftCostChaos: costA_total,
+          expectedSaleValueChaos: saleValueChaos,
+          expectedProfitChaos: profitA,
+          roi: roiA,
+          description: 'Stop Harvest upon hitting T1 ES, clean junk suffixes with Annuls, and slam target suffixes with Allflame Exalts.',
+          isRecommended: true,
+        },
+        {
+          name: 'Strategy B: Continue Harvest until T1 ES + Target Suffixes',
+          code: 'B',
+          expectedHarvests: expectedHarvestsB,
+          expectedAnnuls: expectedAnnulsB,
+          expectedExalts: expectedExaltsB,
+          expectedCraftingCostChaos: costB_craft,
+          expectedTotalCraftCostChaos: costB_total,
+          expectedSaleValueChaos: saleValueChaos,
+          expectedProfitChaos: profitB,
+          roi: roiB,
+          description: this.targetRequiresInt
+            ? `Remain in Harvest until BOTH T1 ES, T1 Intelligence, and Premium Suffix appear simultaneously (1 in ~${Math.round(expectedHarvestsB).toLocaleString()} crafts directly from Harvest).`
+            : `Remain in Harvest until BOTH T1 ES and a Premium Suffix appear simultaneously (1 in ~${Math.round(expectedHarvestsB).toLocaleString()} crafts directly from Harvest).`,
+          isRecommended: false,
+        },
+        {
+          name: 'Strategy C: State-Aware Optimal Stopping Policy',
+          code: 'C',
+          expectedHarvests: expectedHarvestsA,
+          expectedAnnuls: expectedAnnulsA,
+          expectedExalts: expectedExaltsA,
+          expectedCraftingCostChaos: costA_craft,
+          expectedTotalCraftCostChaos: costA_total,
+          expectedSaleValueChaos: saleValueChaos,
+          expectedProfitChaos: profitA,
+          roi: roiA,
+          description: 'Dynamic Bellman policy choosing min-cost action at every state; preserves any target suffix hit in Harvest, cleans junk, and slams remainder.',
+          isRecommended: true,
+        },
+      ];
+    }
+
+    // Fractured Int route comparison
     const expectedHarvestsA = 398.0;
     const expectedAnnulsA = 73.5;
     const expectedExaltsA = 30.5;
@@ -851,10 +1169,7 @@ export class CraftingPolicyEngine {
     const profitA = saleValueChaos - costA_total;
     const roiA = costA_total > 0 ? (profitA / costA_total) * 100 : 0;
 
-    // Strategy B: Stay in Harvest until joint T1 ES + 35% Effect
-    // Chance of T1 ES = 1/14. Conditional on T1 ES, chance of 35% Effect in extra mods = ~1.8639%.
-    // Joint chance = 0.07142857 * 0.018639 = 0.0013313 (~751.14 Harvests)
-    const expectedHarvestsB = 1126.0; // including junk cleanup recovery
+    const expectedHarvestsB = 1126.0;
     const expectedAnnulsB = 104.5;
     const expectedExaltsB = 4.64;
     const costB_craft =

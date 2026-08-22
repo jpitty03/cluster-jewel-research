@@ -113,13 +113,31 @@ export function generateCraftExplanation(
       lines.push(`  Eligible Suffix Count:  ${st.eligibleSuffixCount}`);
       lines.push(`  Total Suffix Weight:    ${st.eligibleSuffixWeight.toLocaleString()}`);
       if (st.t1IntWeight !== undefined) {
-        lines.push(`  T1 Int Weight:          ${st.t1IntWeight} (Hit chance: ${st.t1IntChance?.toFixed(2)}%)`);
+        lines.push(`  T1 Int Weight:          ${st.t1IntWeight}`);
+        if (st.t1IntNormalChance !== undefined) {
+          lines.push(`    Normal Exalt chance:  ${st.t1IntNormalChance.toFixed(2)}%`);
+        }
+        if (st.t1IntAllflameChance !== undefined) {
+          lines.push(`    Allflame (4-choice):  ${st.t1IntAllflameChance.toFixed(2)}%`);
+        }
       }
       if (st.premiumTargetWeight !== undefined) {
-        lines.push(`  Premium Target Weight:  ${st.premiumTargetWeight} (Hit chance: ${st.premiumTargetChance?.toFixed(2)}%)`);
+        lines.push(`  Premium Target Weight:  ${st.premiumTargetWeight}`);
+        if (st.premiumTargetNormalChance !== undefined) {
+          lines.push(`    Normal Exalt chance:  ${st.premiumTargetNormalChance.toFixed(2)}%`);
+        }
+        if (st.premiumTargetAllflameChance !== undefined) {
+          lines.push(`    Allflame (4-choice):  ${st.premiumTargetAllflameChance.toFixed(2)}%`);
+        }
       }
       if (st.allTargetWeight !== undefined) {
-        lines.push(`  Total Target Weight:    ${st.allTargetWeight} (Hit chance: ${st.allTargetChance?.toFixed(2)}%)`);
+        lines.push(`  Total Target Weight:    ${st.allTargetWeight}`);
+        if (st.allTargetNormalChance !== undefined) {
+          lines.push(`    Normal Exalt chance:  ${st.allTargetNormalChance.toFixed(2)}%`);
+        }
+        if (st.allTargetAllflameChance !== undefined) {
+          lines.push(`    Allflame (4-choice):  ${st.allTargetAllflameChance.toFixed(2)}%`);
+        }
       }
       if (st.blockedGroups && st.blockedGroups.length > 0) {
         lines.push(`  Blocked Mod Groups:     ${st.blockedGroups.join(', ')}`);
@@ -151,18 +169,25 @@ export function generateCraftExplanation(
     lines.push('\n' + '-'.repeat(70));
     lines.push('HARVEST SUCCESS STATE CENSUS (Given T1 ES Hit)');
     lines.push('-'.repeat(70));
-    lines.push(`  Total Harvest Crafts:         ${hc.totalHarvests}`);
-    lines.push(`  T1 ES Hit Rate:               ${hc.t1ESSuccessRate.toFixed(2)}% (${hc.t1ESSuccesses} hits)`);
+    lines.push(`  Total Harvest Crafts:         ${hc.totalHarvests.toLocaleString()}`);
+    lines.push(`  T1 ES Hit Rate:               ${hc.t1ESSuccessRate.toFixed(2)}% (${hc.t1ESSuccesses.toLocaleString()} hits)`);
+    lines.push(`  Additional Affix Distribution (Given T1 ES Hit):`);
+    lines.push(`    0 additional affixes:       ${(hc.t1ESAdditional0AffixesPct ?? 0).toFixed(2)}%`);
+    lines.push(`    1 additional affix:         ${(hc.t1ESAdditional1AffixesPct ?? 0).toFixed(2)}%`);
+    lines.push(`    2 additional affixes:       ${(hc.t1ESAdditional2AffixesPct ?? 0).toFixed(2)}%`);
     lines.push(`  Of T1 ES Successes:`);
     lines.push(`    T1 ES Only (Clean):         ${hc.t1ESOnlyPct.toFixed(2)}%`);
-    lines.push(`    +35% Effect:                ${hc.t1ESPlus35EffPct.toFixed(2)}% (Bypasses Step 4)`);
-    lines.push(`    +T1 Intelligence:           ${(hc.t1ESPlusIntPct ?? 0).toFixed(2)}% (Bypasses Suffix Step 1)`);
-    lines.push(`    +4 All Attributes:          ${hc.t1ESPlusAttributesPct.toFixed(2)}% (Bypasses Step 5)`);
-    lines.push(`    3% Attack Speed:            ${hc.t1ESPlusAttackSpeedPct.toFixed(2)}% (Bypasses Step 5)`);
-    lines.push(`    +4% All Resistance:         ${hc.t1ESPlusAllResPct.toFixed(2)}% (Bypasses Step 5)`);
-    lines.push(`    +T1 Int + Premium Suffix:   ${(hc.t1ESPlusIntAndPremiumPct ?? 0).toFixed(2)}% (Bypasses Suffix Steps)`);
-    lines.push(`    +35% + Premium Suffix:      ${hc.t1ESPlus35AndPremiumPct.toFixed(2)}% (Bypasses Step 4 & 5)`);
-    lines.push(`    junk-only extras:           ${hc.t1ESPlusJunkOnlyPct.toFixed(2)}% (Requires Step 3 Annul)`);
+    lines.push(`    +1 Junk Suffix:             ${(hc.t1ESPlusJunk1OnlyPct ?? 0).toFixed(2)}% (Requires 1-Junk Annul Cleanup)`);
+    lines.push(`    +2 Junk Suffixes:           ${(hc.t1ESPlusJunk2OnlyPct ?? 0).toFixed(2)}% (Requires 2-Junk Annul Cleanup)`);
+    lines.push(`    +T1 Intelligence:           ${(hc.t1ESPlusIntPct ?? 0).toFixed(2)}% (Preserve; Exalt Final Suffix)`);
+    lines.push(`    +4 All Attributes:          ${hc.t1ESPlusAttributesPct.toFixed(2)}% (Preserve; Exalt T1 Int)`);
+    lines.push(`    3% Attack Speed:            ${hc.t1ESPlusAttackSpeedPct.toFixed(2)}% (Preserve; Exalt T1 Int)`);
+    lines.push(`    +4% All Resistance:         ${hc.t1ESPlusAllResPct.toFixed(2)}% (Preserve; Exalt T1 Int)`);
+    lines.push(`    +T1 Int + Premium Suffix:   ${(hc.t1ESPlusIntAndPremiumPct ?? 0).toFixed(2)}% (Terminal Success)`);
+    if (hc.t1ESPlus35EffPct > 0 || hc.t1ESPlus35AndPremiumPct > 0) {
+      lines.push(`    +35% Effect:                ${hc.t1ESPlus35EffPct.toFixed(2)}% (Bypasses Prefix Slam)`);
+      lines.push(`    +35% + Premium Suffix:      ${hc.t1ESPlus35AndPremiumPct.toFixed(2)}% (Bypasses Step 4 & 5)`);
+    }
   }
 
   // ------------------------------------------------------------- STEP 1: Starting Fracture Acquisition
@@ -327,12 +352,25 @@ export function generateCraftExplanation(
   lines.push('RECOMMENDED CRAFTING PLAN');
   lines.push('='.repeat(70));
 
-  lines.push(`\nSTEP 1 -- Starting fracture:`);
-  lines.push(`  ${recommended.strategyName}`);
-  lines.push(`  Expected cost: ${formatChaos(recommended.baseCostChaos, divineRate)}`);
+  const hasExplicitAcquisitionStep = recommended.steps?.some(
+    (s) => s.stepNumber === 1 && s.title.toLowerCase().includes('acquire')
+  );
+
+  if (!hasExplicitAcquisitionStep && recommended.baseCostChaos > 0) {
+    lines.push(`\nSTEP 1 -- Starting base:`);
+    lines.push(`  ${recommended.strategyName}`);
+    lines.push(`  Expected cost: ${formatChaos(recommended.baseCostChaos, divineRate)}`);
+  }
 
   if (recommended.steps) {
     for (const s of recommended.steps) {
+      if (s.stepNumber === 1 && s.title.toLowerCase().includes('acquire')) {
+        lines.push(`\n${s.title}:`);
+        lines.push(`  Selected Option:            ${recommended.strategyName}`);
+        lines.push(`  Expected step cost:         ${formatChaos(s.stepTotalCostChaos, divineRate)}`);
+        lines.push(`  Cumulative:                 ${formatChaos(s.cumulativeCostChaos, divineRate)}`);
+        continue;
+      }
       lines.push(`\n${s.title}:`);
       if (s.successChance) {
         lines.push(`  Chance per attempt:         ${s.successChance.toFixed(2)}%`);
@@ -384,8 +422,8 @@ export function generateCraftExplanation(
     lines.push('\n' + '='.repeat(70));
     lines.push('MONTE CARLO EMPIRICAL VALIDATION & CROSS-COMPARISON');
     lines.push('='.repeat(70));
-    lines.push(`Status: ${statusText.replace('STATUS: ', '')}`);
-    lines.push(`Completed trials:       ${simulation.completedTrials} / ${simulation.totalTrials} (${simulation.completionRate.toFixed(2)}%)`);
+    lines.push(statusText.startsWith('STATUS: ') ? statusText : `Status: ${statusText}`);
+    lines.push(`Completed trials:       ${simulation.completedTrials.toLocaleString()} / ${simulation.totalTrials.toLocaleString()} (${simulation.completionRate.toFixed(2)}%)`);
     if (simulation.timedOutTrials > 0) {
       lines.push(`Timed out trials:       ${simulation.timedOutTrials}`);
     }
@@ -397,28 +435,31 @@ export function generateCraftExplanation(
       // Stepwise comparison table
       if (simulation.stepwiseCostAverages && recommended.steps) {
         lines.push(`\nSTEPWISE COST COMPARISON:`);
-        lines.push(`                         Analytical      Monte Carlo      Difference`);
-        lines.push(`-`.repeat(68));
+        lines.push(`                                  Analytical          Monte Carlo           Difference`);
+        lines.push(`-`.repeat(86));
+        const fmtCol = (chaos: number) => formatChaos(chaos, divineRate).padStart(20);
+        const fmtDiff = (chaos: number) => formatChaos(chaos, divineRate).padStart(20);
+
         const s1A = recommended.baseCostChaos;
         const s1M = simulation.stepwiseCostAverages.step1AcquisitionChaos;
-        lines.push(`Step 1 Acquisition:     ${formatChaos(s1A, divineRate).padStart(12)}     ${formatChaos(s1M, divineRate).padStart(12)}     ${formatChaos(s1M - s1A, divineRate).padStart(10)}`);
+        lines.push(`Step 1 Acquisition:     ${fmtCol(s1A)} ${fmtCol(s1M)} ${fmtDiff(s1M - s1A)}`);
 
         const step2Obj = recommended.steps.find((s) => s.stepNumber === 2);
         const s2A = step2Obj?.stepTotalCostChaos ?? 0;
         const s2M = simulation.stepwiseCostAverages.step2HarvestChaos;
-        lines.push(`Step 2 Harvest:         ${formatChaos(s2A, divineRate).padStart(12)}     ${formatChaos(s2M, divineRate).padStart(12)}     ${formatChaos(s2M - s2A, divineRate).padStart(10)}`);
+        lines.push(`Step 2 Harvest:         ${fmtCol(s2A)} ${fmtCol(s2M)} ${fmtDiff(s2M - s2A)}`);
 
         const step3Obj = recommended.steps.find((s) => s.stepNumber === 3);
         const s3A = step3Obj?.stepTotalCostChaos ?? 0;
         const s3M = simulation.stepwiseCostAverages.step3CleanupChaos;
-        lines.push(`Step 3 Cleanup:         ${formatChaos(s3A, divineRate).padStart(12)}     ${formatChaos(s3M, divineRate).padStart(12)}     ${formatChaos(s3M - s3A, divineRate).padStart(10)}`);
+        lines.push(`Step 3 Cleanup:         ${fmtCol(s3A)} ${fmtCol(s3M)} ${fmtDiff(s3M - s3A)}`);
 
         const step4Obj = recommended.steps.find((s) => s.stepNumber === 4);
         if (step4Obj) {
           const s4A = step4Obj.stepTotalCostChaos;
           const s4M = simulation.stepwiseCostAverages.step4ExaltChaos;
           const label = (step4Obj.title.replace(/^STEP 4 --\s*/i, '').replace(/Step 4:\s*/i, '').split('(')[0].trim()).padEnd(16).slice(0, 16);
-          lines.push(`Step 4 ${label}: ${formatChaos(s4A, divineRate).padStart(12)}     ${formatChaos(s4M, divineRate).padStart(12)}     ${formatChaos(s4M - s4A, divineRate).padStart(10)}`);
+          lines.push(`Step 4 ${label}: ${fmtCol(s4A)} ${fmtCol(s4M)} ${fmtDiff(s4M - s4A)}`);
         }
 
         const step5Obj = recommended.steps.find((s) => s.stepNumber === 5);
@@ -426,41 +467,63 @@ export function generateCraftExplanation(
           const s5A = step5Obj.stepTotalCostChaos;
           const s5M = simulation.stepwiseCostAverages.step5ExaltChaos;
           const label = (step5Obj.title.replace(/^STEP 5 --\s*/i, '').replace(/Step 5:\s*/i, '').split('(')[0].trim()).padEnd(16).slice(0, 16);
-          lines.push(`Step 5 ${label}: ${formatChaos(s5A, divineRate).padStart(12)}     ${formatChaos(s5M, divineRate).padStart(12)}     ${formatChaos(s5M - s5A, divineRate).padStart(10)}`);
+          lines.push(`Step 5 ${label}: ${fmtCol(s5A)} ${fmtCol(s5M)} ${fmtDiff(s5M - s5A)}`);
         }
 
         const hasStep6 = recommended.steps.some((s) => s.stepNumber === 6);
         if (hasStep6) {
           const s6A = recommended.steps.find((s) => s.stepNumber === 6)?.stepTotalCostChaos ?? 0;
           const s6M = simulation.stepwiseCostAverages.step6DivineChaos ?? 0;
-          lines.push(`Step 6 Divine Finishing:${formatChaos(s6A, divineRate).padStart(12)}     ${formatChaos(s6M, divineRate).padStart(12)}     ${formatChaos(s6M - s6A, divineRate).padStart(10)}`);
+          lines.push(`Step 6 Divine Finishing:${fmtCol(s6A)} ${fmtCol(s6M)} ${fmtDiff(s6M - s6A)}`);
         }
-        lines.push(`-`.repeat(68));
-        lines.push(`TOTAL COST:             ${formatChaos(recommended.totalExpectedCostChaos, divineRate).padStart(12)}     ${formatChaos(simulation.meanCostChaos, divineRate).padStart(12)}     ${diffPercent.toFixed(2)}% diff`);
+        lines.push(`-`.repeat(86));
+        lines.push(`TOTAL COST:             ${fmtCol(recommended.totalExpectedCostChaos)} ${fmtCol(simulation.meanCostChaos)} ${`${diffPercent.toFixed(2)}% diff`.padStart(20)}`);
       }
 
       // Action counts table
       lines.push(`\nACTION COUNTS (Cumulative Across All Recovery Loops):`);
-      lines.push(`                         Analytical      Monte Carlo`);
-      lines.push(`-`.repeat(52));
+      lines.push(`                                  Analytical          Monte Carlo           Difference`);
+      lines.push(`-`.repeat(86));
+      const fmtCount = (n: number) => n.toFixed(2).padStart(20);
+      const fmtPctDiff = (d: number) => `${d >= 0 ? '+' : ''}${d.toFixed(2)}% diff`.padStart(20);
+
       const expHarvests = (recommended.expectedCurrencies?.primalLifeforce ?? 1050) / 75;
       const simHarvests = (simulation.currencyAverages?.primalLifeforce ?? 0) / 75;
-      lines.push(`Harvest Attempts:       ${expHarvests.toFixed(2).padStart(12)}     ${simHarvests.toFixed(2).padStart(12)}`);
+      const hDiff = expHarvests > 0 ? ((simHarvests - expHarvests) / expHarvests) * 100 : 0;
+      lines.push(`Harvest Attempts:       ${fmtCount(expHarvests)} ${fmtCount(simHarvests)} ${fmtPctDiff(hDiff)}`);
 
       const expAnnuls = recommended.expectedCurrencies?.annul ?? 0;
       const simAnnuls = simulation.currencyAverages?.annul ?? 0;
-      lines.push(`Annulment Orbs:         ${expAnnuls.toFixed(2).padStart(12)}     ${simAnnuls.toFixed(2).padStart(12)}`);
+      const aDiff = expAnnuls > 0 ? ((simAnnuls - expAnnuls) / expAnnuls) * 100 : 0;
+      lines.push(`Annulment Orbs:         ${fmtCount(expAnnuls)} ${fmtCount(simAnnuls)} ${fmtPctDiff(aDiff)}`);
 
       const expExalts = recommended.expectedCurrencies?.exalt ?? 0;
       const simExalts = simulation.currencyAverages?.exalt ?? 0;
-      lines.push(`Exalted Orbs:           ${expExalts.toFixed(2).padStart(12)}     ${simExalts.toFixed(2).padStart(12)}`);
+      const eDiff = expExalts > 0 ? ((simExalts - expExalts) / expExalts) * 100 : 0;
+      lines.push(`Exalted Orbs:           ${fmtCount(expExalts)} ${fmtCount(simExalts)} ${fmtPctDiff(eDiff)}`);
 
       const expDivines = recommended.expectedCurrencies?.divine ?? 0;
       const simDivines = simulation.currencyAverages?.divine ?? 0;
       if (expDivines > 0 || simDivines > 0) {
-        lines.push(`Divine Orbs:            ${expDivines.toFixed(2).padStart(12)}     ${simDivines.toFixed(2).padStart(12)}`);
+        lines.push(`Divine Orbs:            ${fmtCount(expDivines)} ${fmtCount(simDivines)}`);
       }
-      lines.push(`-`.repeat(52));
+      lines.push(`-`.repeat(86));
+
+      // Terminal outcome branch validation table
+      if (recommended.outcomeDistribution && recommended.outcomeDistribution.length > 0 && simulation.outcomeBranchDistribution) {
+        lines.push(`\nTERMINAL OUTCOME BRANCH VALIDATION:`);
+        lines.push(`                                  Analytical          Monte Carlo           Difference`);
+        lines.push(`-`.repeat(86));
+        const fmtPct = (p: number) => `${p.toFixed(2)}%`.padStart(20);
+        const fmtPP = (pp: number) => `${pp >= 0 ? '+' : ''}${pp.toFixed(2)} pp`.padStart(20);
+        for (const od of recommended.outcomeDistribution) {
+          const aPct = od.probability * 100;
+          const mPct = simulation.outcomeBranchDistribution[od.name] ?? 0;
+          const diffPP = mPct - aPct;
+          lines.push(`${od.name.padEnd(24)} ${fmtPct(aPct)} ${fmtPct(mPct)} ${fmtPP(diffPP)}`);
+        }
+        lines.push(`-`.repeat(86));
+      }
 
       lines.push(`\nPercentiles:`);
       lines.push(`  Median Cost (P50):    ${formatChaos(simulation.medianCostChaos ?? 0, divineRate)}`);

@@ -236,8 +236,22 @@ export class ExpectedCostSolver {
     const expectedSaleValue =
       pctAttr * (85 * divineRate) + pctAS * (39 * divineRate) + pctRes * (7 * divineRate);
 
+    let finalOutcomeDist = outcomeDist;
+    let finalExpectedSaleValue = expectedSaleValue;
+
     // If starting with fractured 35% Effect, downstream crafting slams target suffixes
     if (!hasFracturedInt && hasFracturedEff) {
+      if (this.policyEngine.branchProbabilities) {
+        const bp = this.policyEngine.branchProbabilities;
+        finalOutcomeDist = [
+          { name: '+4 All Attributes (T1)', probability: bp.attr, saleValueChaos: 85 * divineRate },
+          { name: '3% Attack Speed (T1)', probability: bp.as, saleValueChaos: 39 * divineRate },
+          { name: '+4% All Elemental Resistance (T1)', probability: bp.res, saleValueChaos: 7 * divineRate },
+        ];
+        finalExpectedSaleValue =
+          bp.attr * (85 * divineRate) + bp.as * (39 * divineRate) + bp.res * (7 * divineRate);
+      }
+
       const targetRequiresInt = this.policyEngine.targetRequiresInt;
       const expHarvests = this.policyEngine.expHarvestsFrac35;
       const expAnnuls = this.policyEngine.expAnnulsFrac35;
@@ -338,13 +352,13 @@ export class ExpectedCostSolver {
           },
         ],
         step1Options,
-        outcomeDistribution: outcomeDist,
-        expectedSaleValueChaos: expectedSaleValue,
+        outcomeDistribution: finalOutcomeDist,
+        expectedSaleValueChaos: finalExpectedSaleValue,
         policyEngine: this.policyEngine,
         pool: this.context.pool,
         harvestComparison: this.policyEngine.getHarvestStrategyComparisons(
           effectiveBaseCost,
-          expectedSaleValue,
+          finalExpectedSaleValue,
           0
         ),
         representativeDecisions: this.policyEngine.getRepresentativeStateAudits(),
@@ -597,9 +611,10 @@ export class ExpectedCostSolver {
       harvestComparison: this.policyEngine.getHarvestStrategyComparisons(
         effectiveBaseCost,
         expectedSaleValue,
-        step6Cost
+        step6Cost,
+        false
       ),
-      representativeDecisions: this.policyEngine.getRepresentativeStateAudits(),
+      representativeDecisions: this.policyEngine.getRepresentativeStateAudits(false),
     };
   }
 

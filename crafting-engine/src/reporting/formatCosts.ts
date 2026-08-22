@@ -16,7 +16,8 @@ export function formatCurrencies(currencies: Record<string, number>, priceBook?:
       let extra = '';
       if (priceBook) {
         const chaosVal = priceBook.toChaos(amount, curr);
-        extra = ` (${formatChaos(chaosVal)})`;
+        const divRate = priceBook.getRate('divine') || 200;
+        extra = ` (${formatChaos(chaosVal, divRate)})`;
       }
       lines.push(`${formattedAmount}x ${curr}${extra}`);
     }

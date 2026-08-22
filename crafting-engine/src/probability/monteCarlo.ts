@@ -15,15 +15,19 @@ export interface HarvestCensusData {
   totalHarvests: number;
   t1ESSuccesses: number;
   t1ESSuccessRate: number;
+  t1ESAdditional0AffixesPct: number;
+  t1ESAdditional1AffixesPct: number;
+  t1ESAdditional2AffixesPct: number;
   t1ESOnlyPct: number;
-  t1ESPlus35EffPct: number;
+  t1ESPlusJunk1OnlyPct: number;
+  t1ESPlusJunk2OnlyPct: number;
   t1ESPlusIntPct: number;
   t1ESPlusAttributesPct: number;
   t1ESPlusAttackSpeedPct: number;
   t1ESPlusAllResPct: number;
   t1ESPlusIntAndPremiumPct: number;
+  t1ESPlus35EffPct: number;
   t1ESPlus35AndPremiumPct: number;
-  t1ESPlusJunkOnlyPct: number;
 }
 
 export interface TraceStepLog {
@@ -129,15 +133,19 @@ export class MonteCarloSimulator {
     // Detailed census tracking
     let totalHarvests = 0;
     let t1ESSuccesses = 0;
+    let countT1ESAdditional0 = 0;
+    let countT1ESAdditional1 = 0;
+    let countT1ESAdditional2 = 0;
     let countT1ESOnly = 0;
-    let countT1ESPlus35 = 0;
+    let countT1ESPlusJunk1Only = 0;
+    let countT1ESPlusJunk2Only = 0;
     let countT1ESPlusInt = 0;
     let countT1ESPlusAttr = 0;
     let countT1ESPlusAS = 0;
     let countT1ESPlusAllRes = 0;
     let countT1ESPlusIntAndPremium = 0;
+    let countT1ESPlus35 = 0;
     let countT1ESPlus35AndPremium = 0;
-    let countT1ESPlusJunkOnly = 0;
 
     // Use unified helper for Defence pool
     const defenceMods = getDefenceModsForCluster(this.context.pool, 84);
@@ -224,6 +232,10 @@ export class MonteCarloSimulator {
           const isT1ES = chosenDefence?.modGroup === 'AfflictionJewelSmallPassivesGrantES' && chosenDefence?.tier === 1;
           if (isT1ES) {
             t1ESSuccesses++;
+            if (extraMods.length === 0) countT1ESAdditional0++;
+            else if (extraMods.length === 1) countT1ESAdditional1++;
+            else if (extraMods.length === 2) countT1ESAdditional2++;
+
             const has35 = extraMods.some((m) => m.modGroup === 'AfflictionJewelSmallPassivesHaveIncreasedEffect' && m.tier === 1);
             const hasInt = extraMods.some((m) => m.modGroup === 'AfflictionJewelSmallPassivesGrantInt' && m.tier === 1);
             const hasAttr = extraMods.some((m) => m.modGroup === 'AfflictionJewelSmallPassivesGrantAttributes' && m.tier === 1);
@@ -231,17 +243,26 @@ export class MonteCarloSimulator {
             const hasAllRes = extraMods.some((m) => m.modGroup === 'AfflictionJewelSmallPassivesGrantElementalRes' && m.tier === 1);
             const hasAnyPremium = hasAttr || hasAS || hasAllRes;
 
-            if (extraMods.length === 0) countT1ESOnly++;
-            else if (has35 && hasInt && hasAnyPremium) countT1ESPlusIntAndPremium++;
-            else if (has35 && hasInt) countT1ESPlusInt++;
-            else if (has35 && hasAnyPremium) countT1ESPlus35AndPremium++;
-            else if (hasInt && hasAnyPremium) countT1ESPlusIntAndPremium++;
-            else if (has35) countT1ESPlus35++;
-            else if (hasInt) countT1ESPlusInt++;
-            else if (hasAttr) countT1ESPlusAttr++;
-            else if (hasAS) countT1ESPlusAS++;
-            else if (hasAllRes) countT1ESPlusAllRes++;
-            else countT1ESPlusJunkOnly++;
+            if (extraMods.length === 0) {
+              countT1ESOnly++;
+            } else if (hasInt && hasAnyPremium) {
+              countT1ESPlusIntAndPremium++;
+            } else if (has35 && hasAnyPremium) {
+              countT1ESPlus35AndPremium++;
+            } else if (has35) {
+              countT1ESPlus35++;
+            } else if (hasInt) {
+              countT1ESPlusInt++;
+            } else if (hasAttr) {
+              countT1ESPlusAttr++;
+            } else if (hasAS) {
+              countT1ESPlusAS++;
+            } else if (hasAllRes) {
+              countT1ESPlusAllRes++;
+            } else {
+              if (extraMods.length === 1) countT1ESPlusJunk1Only++;
+              else countT1ESPlusJunk2Only++;
+            }
           }
 
           if (captureTrace) {
@@ -509,15 +530,19 @@ export class MonteCarloSimulator {
       totalHarvests,
       t1ESSuccesses,
       t1ESSuccessRate: totalHarvests > 0 ? (t1ESSuccesses / totalHarvests) * 100 : 0,
+      t1ESAdditional0AffixesPct: t1ESSuccesses > 0 ? (countT1ESAdditional0 / t1ESSuccesses) * 100 : 0,
+      t1ESAdditional1AffixesPct: t1ESSuccesses > 0 ? (countT1ESAdditional1 / t1ESSuccesses) * 100 : 0,
+      t1ESAdditional2AffixesPct: t1ESSuccesses > 0 ? (countT1ESAdditional2 / t1ESSuccesses) * 100 : 0,
       t1ESOnlyPct: t1ESSuccesses > 0 ? (countT1ESOnly / t1ESSuccesses) * 100 : 0,
-      t1ESPlus35EffPct: t1ESSuccesses > 0 ? (countT1ESPlus35 / t1ESSuccesses) * 100 : 0,
+      t1ESPlusJunk1OnlyPct: t1ESSuccesses > 0 ? (countT1ESPlusJunk1Only / t1ESSuccesses) * 100 : 0,
+      t1ESPlusJunk2OnlyPct: t1ESSuccesses > 0 ? (countT1ESPlusJunk2Only / t1ESSuccesses) * 100 : 0,
       t1ESPlusIntPct: t1ESSuccesses > 0 ? (countT1ESPlusInt / t1ESSuccesses) * 100 : 0,
       t1ESPlusAttributesPct: t1ESSuccesses > 0 ? (countT1ESPlusAttr / t1ESSuccesses) * 100 : 0,
       t1ESPlusAttackSpeedPct: t1ESSuccesses > 0 ? (countT1ESPlusAS / t1ESSuccesses) * 100 : 0,
       t1ESPlusAllResPct: t1ESSuccesses > 0 ? (countT1ESPlusAllRes / t1ESSuccesses) * 100 : 0,
       t1ESPlusIntAndPremiumPct: t1ESSuccesses > 0 ? (countT1ESPlusIntAndPremium / t1ESSuccesses) * 100 : 0,
+      t1ESPlus35EffPct: t1ESSuccesses > 0 ? (countT1ESPlus35 / t1ESSuccesses) * 100 : 0,
       t1ESPlus35AndPremiumPct: t1ESSuccesses > 0 ? (countT1ESPlus35AndPremium / t1ESSuccesses) * 100 : 0,
-      t1ESPlusJunkOnlyPct: t1ESSuccesses > 0 ? (countT1ESPlusJunkOnly / t1ESSuccesses) * 100 : 0,
     };
 
     const outcomeBranchDistribution: Record<string, number> = {};
