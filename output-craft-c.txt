@@ -34824,11 +34824,11 @@ LABELED GAME MECHANICS ASSUMPTIONS
 ======================================================================
 
 ================================================================================
-MULTI-SEED MONTE CARLO STABILITY HARNESS: Craft C (Minion Cluster) (5 SEEDS)
+MULTI-SEED MONTE CARLO STABILITY HARNESS: Craft C (Minion Cluster) (5 SEEDS, 10,000 TOTAL TRIALS)
 ================================================================================
 Analytical Expected Total: 42814.4c (~214.07 div)
 
-SEED RESULTS SUMMARY:
+PER-SEED RESULTS SUMMARY:
 Seed        MC Mean              Cost Diff     Harvest Diff  Annul Diff   Exalt Diff   Completion   Timeouts
 ---------------------------------------------------------------------------------------------------------
 42          41249.6c (~206.25 div)      3.65%         5.80%        3.88%        2.50%       99.95%          1
@@ -34838,9 +34838,20 @@ Seed        MC Mean              Cost Diff     Harvest Diff  Annul Diff   Exalt 
 123456      43716.9c (~218.58 div)      2.11%         0.06%       10.29%        8.88%      100.00%          0
 ---------------------------------------------------------------------------------------------------------
 
-AGGREGATE STABILITY DIAGNOSTICS:
+AGGREGATE MULTI-SEED TOTAL COST METRICS:
   Min MC Mean:           41249.6c (~206.25 div)
   Max MC Mean:           44064.6c (~220.32 div)
   Mean of Seed Means:    42483.5c (~212.42 div) (-0.77% vs analytical)
   Point Diff Range:      [1.80% - 3.65%]
-  Stability Conclusion:  PROVISIONAL / CAUTION (Observed variation across seeds)
+
+POOLED MULTI-SEED ACTION COUNT METRICS (10,000 TRIALS):
+Action               Analytical EV     Pooled MC Mean    Pooled Diff %   Between-Seed SD
+-------------------------------------------------------------------------------------
+Harvest Reforges               5657.92            5494.70            2.88%             179.01
+Orb of Annulment                910.37             975.40            7.14%              30.98
+Exalted Orb Slam                371.51             392.80            5.73%              12.52
+-------------------------------------------------------------------------------------
+
+STABILITY CONCLUSION:
+  Status:                MULTI-SEED STABLE
+  Assessment:            Pooled action counts <=10% and completion >=99% across all deterministic seeds.

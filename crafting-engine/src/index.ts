@@ -56,33 +56,25 @@ export class CraftingOptimizer {
 
     const evaluatedStrategies: StartingStrategyResult[] = [];
 
-    if (request.startingStates && request.startingStates.length > 0) {
-      for (const start of request.startingStates) {
-        const acquisitionInput = start.acquisition ?? start.baseCostChaos ?? 0;
-        const result = evaluator.evaluateStartingStrategy(
-          start.name,
-          start.state,
-          acquisitionInput,
-          request.saleValueChaos
-        );
-        evaluatedStrategies.push(result);
-      }
-    } else {
-      // Default clean state
-      const defaultState: ItemState = {
-        baseType: request.baseType,
-        clusterType: request.clusterType,
-        itemLevel: request.itemLevel,
-        passiveCount: request.passiveCount,
-        rarity: 'rare',
-        prefixes: [],
-        suffixes: [],
-        fracturedModIds: [],
-      };
+    // Automatically discover candidate starts from TargetDefinition if not manually provided
+    const startingStates =
+      request.startingStates && request.startingStates.length > 0
+        ? request.startingStates
+        : generateStartingStrategies(
+            request.target,
+            request.baseType,
+            request.clusterType,
+            request.itemLevel,
+            { pool, priceBook },
+            request.passiveCount ?? 12
+          );
+
+    for (const start of startingStates) {
+      const acquisitionInput = start.acquisition ?? start.baseCostChaos ?? 0;
       const result = evaluator.evaluateStartingStrategy(
-        'Clean Base',
-        defaultState,
-        0,
+        start.name,
+        start.state,
+        acquisitionInput,
         request.saleValueChaos
       );
       evaluatedStrategies.push(result);
@@ -93,8 +85,8 @@ export class CraftingOptimizer {
     const alternates = evaluatedStrategies.slice(1);
 
     let simulationValidation: SimulationResult | undefined;
-    if (request.runMonteCarloValidation && request.startingStates && request.startingStates.length > 0) {
-      const bestStart = request.startingStates.find((s) => s.name === recommended.strategyName) ?? request.startingStates[0];
+    if (request.runMonteCarloValidation && startingStates && startingStates.length > 0) {
+      const bestStart = startingStates.find((s) => s.name === recommended.strategyName) ?? startingStates[0];
       if (bestStart) {
         const startCost = bestStart.acquisition?.costChaos ?? bestStart.baseCostChaos ?? recommended.baseCostChaos ?? 0;
         const mc = new MonteCarloSimulator(

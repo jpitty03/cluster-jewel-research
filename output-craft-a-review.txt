@@ -450,21 +450,10 @@ Trial #1 (198 steps) -> Total Cost: 1927.9c (~9.64 div)
     [Step 71] Harvest Reforge Defences: Reforged item (guaranteed defences: Veteran Defender) (+1.56c) -> P:[Powerful (t1), Veteran Defender (t1)], S:[of the Crystal (t3)]
 
 ======================================================================
-REVIEW FILE NOTE: 17195 verbose middle lines omitted from this compact artifact.
+REVIEW FILE NOTE: 17206 verbose middle lines omitted from this compact artifact.
 See the corresponding full output-craft-*.txt file for complete Monte Carlo traces/details.
 ======================================================================
 
-    [Step 270] Harvest Reforge Defences: Reforged item (guaranteed defences: Veteran Defender) (+1.56c) -> P:[Powerful (t1), Veteran Defender (t1)], S:[of the Wrestler (t2), of the Mongoose (t3)]
-    [Step 271] Harvest Reforge Defences: Reforged item (guaranteed defences: Studded) (+1.56c) -> P:[Powerful (t1), Studded (t2)], S:[of the Lost (t3), of the Flatworm (t1)]
-    [Step 272] Harvest Reforge Defences: Reforged item (guaranteed defences: Glowing) (+1.56c) -> P:[Powerful (t1), Glowing (t1)], S:[of the Whelpling (t3)]
-    [Step 273] Orb of Annulment: Annul removed of the Whelpling (Suffix) [Step 3 Cleanup] (+9.00c) -> P:[Powerful (t1), Glowing (t1)], S:[]
-    [Step 274] Exalted Orb Slam (Suffix: T1 Intelligence [of the Prodigy] / +4 All Attributes (T1) / 3% Attack Speed (T1) / +4% All Elemental Resistance (T1)): Slammed of Eviction (+1.20c) -> P:[Powerful (t1), Glowing (t1)], S:[of Eviction (t1)]
-    [Step 275] Orb of Annulment: Annul removed of Eviction (Suffix) [Step 4 Cleanup] (+9.00c) -> P:[Powerful (t1), Glowing (t1)], S:[]
-    [Step 276] Exalted Orb Slam (Suffix: T1 Intelligence [of the Prodigy] / +4 All Attributes (T1) / 3% Attack Speed (T1) / +4% All Elemental Resistance (T1)): Slammed of the Cloud (+1.20c) -> P:[Powerful (t1), Glowing (t1)], S:[of the Cloud (t3)]
-    [Step 277] Orb of Annulment: Annul removed Glowing (Prefix) [Step 4 Cleanup] (+9.00c) -> P:[Powerful (t1)], S:[of the Cloud (t3)]
-    [Step 278] Harvest Reforge Defences: Reforged item (guaranteed defences: Agile) (+1.56c) -> P:[Powerful (t1), Agile (t3)], S:[Martial Prowess (t1), of the Student (t2)]
-    [Step 279] Harvest Reforge Defences: Reforged item (guaranteed defences: Lacquered) (+1.56c) -> P:[Powerful (t1), Lacquered (t3)], S:[of the Prism (t2), of the Brute (t3)]
-    [Step 280] Harvest Reforge Defences: Reforged item (guaranteed defences: Studded) (+1.56c) -> P:[Powerful (t1), Studded (t2)], S:[of the Cloud (t3), of the Penguin (t1)]
     [Step 281] Harvest Reforge Defences: Reforged item (guaranteed defences: Shining) (+1.56c) -> P:[Powerful (t1), Shining (t3)], S:[of the Prism (t2), of the Penguin (t1)]
     [Step 282] Harvest Reforge Defences: Reforged item (guaranteed defences: Veteran Defender) (+1.56c) -> P:[Powerful (t1), Veteran Defender (t1)], S:[of the Lynx (t2), of the Inuit (t3)]
     [Step 283] Harvest Reforge Defences: Reforged item (guaranteed defences: Glimmering) (+1.56c) -> P:[Powerful (t1), Glimmering (t2)], S:[of the Flatworm (t1)]
@@ -534,11 +523,11 @@ LABELED GAME MECHANICS ASSUMPTIONS
 ======================================================================
 
 ================================================================================
-MULTI-SEED MONTE CARLO STABILITY HARNESS: Craft A (Shield Cluster) (5 SEEDS)
+MULTI-SEED MONTE CARLO STABILITY HARNESS: Craft A (Shield Cluster) (5 SEEDS, 10,000 TOTAL TRIALS)
 ================================================================================
 Analytical Expected Total: 7623.7c (~38.12 div)
 
-SEED RESULTS SUMMARY:
+PER-SEED RESULTS SUMMARY:
 Seed        MC Mean              Cost Diff     Harvest Diff  Annul Diff   Exalt Diff   Completion   Timeouts
 ---------------------------------------------------------------------------------------------------------
 42          7535.6c (~37.68 div)      1.16%         1.24%        1.83%        1.82%      100.00%          0
@@ -548,9 +537,20 @@ Seed        MC Mean              Cost Diff     Harvest Diff  Annul Diff   Exalt 
 123456      7641.7c (~38.21 div)      0.24%         0.33%        0.23%        0.18%      100.00%          0
 ---------------------------------------------------------------------------------------------------------
 
-AGGREGATE STABILITY DIAGNOSTICS:
+AGGREGATE MULTI-SEED TOTAL COST METRICS:
   Min MC Mean:           7466.6c (~37.33 div)
   Max MC Mean:           7651.1c (~38.26 div)
   Mean of Seed Means:    7568.1c (~37.84 div) (-0.73% vs analytical)
   Point Diff Range:      [0.24% - 2.06%]
-  Stability Conclusion:  STABLE (Action counts <=10% and completion >=99% across all seeds)
+
+POOLED MULTI-SEED ACTION COUNT METRICS (10,000 TRIALS):
+Action               Analytical EV     Pooled MC Mean    Pooled Diff %   Between-Seed SD
+-------------------------------------------------------------------------------------
+Harvest Reforges               2545.60            2525.07            0.81%              33.28
+Orb of Annulment                219.22             216.75            1.13%               2.75
+Exalted Orb Slam                116.53             115.45            0.92%               1.32
+-------------------------------------------------------------------------------------
+
+STABILITY CONCLUSION:
+  Status:                MULTI-SEED STABLE
+  Assessment:            Pooled action counts <=10% and completion >=99% across all deterministic seeds.
