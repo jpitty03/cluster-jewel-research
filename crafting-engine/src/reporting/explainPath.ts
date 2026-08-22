@@ -46,9 +46,9 @@ export function generateCraftExplanation(
     const allCountsPass = (expH === 0 || harvestDiffPct <= 10.0) && (expA === 0 || annulDiffPct <= 10.0) && (expE === 0 || exaltDiffPct <= 10.0);
 
     if (costDiffPct <= 2.0 && allCountsPass && simulation.completionRate >= 98.0 && zeroFallback) {
-      statusText = `POLICY COST MODEL: VALIDATED (Analytical & Monte Carlo agree within ${costDiffPct.toFixed(2)}%)\nGAME-MECHANICS FIDELITY: PARTIAL\nBEST OF EVALUATED POLICIES: PROVEN\nGLOBAL OPTIMALITY: NOT YET PROVEN`;
+      statusText = `POLICY COST MODEL: VALIDATED FOR CURRENT IMPLEMENTED MECHANICS (Analytical & Monte Carlo agree within ${costDiffPct.toFixed(2)}%)\nGAME-MECHANICS FIDELITY: PARTIAL\nBEST OF EVALUATED POLICIES: PROVEN\nGLOBAL OPTIMALITY: NOT YET PROVEN`;
     } else if (costDiffPct <= 5.0 && allCountsPass && simulation.completionRate >= 95.0 && zeroFallback) {
-      statusText = `POLICY COST MODEL: PROVISIONALLY VALIDATED (Analytical & Monte Carlo agree within ${costDiffPct.toFixed(2)}%)\nGAME-MECHANICS FIDELITY: PARTIAL\nBEST OF EVALUATED POLICIES: PROVEN\nGLOBAL OPTIMALITY: NOT YET PROVEN`;
+      statusText = `POLICY COST MODEL: PROVISIONALLY VALIDATED FOR CURRENT IMPLEMENTED MECHANICS (Analytical & Monte Carlo agree within ${costDiffPct.toFixed(2)}%)\nGAME-MECHANICS FIDELITY: PARTIAL\nBEST OF EVALUATED POLICIES: PROVEN\nGLOBAL OPTIMALITY: NOT YET PROVEN`;
     } else {
       statusText = `POLICY COST MODEL: INVESTIGATION REQUIRED (Cost Diff: ${costDiffPct.toFixed(2)}%, Harvest Diff: ${harvestDiffPct.toFixed(2)}%, Annul Diff: ${annulDiffPct.toFixed(2)}%, Exalt Diff: ${exaltDiffPct.toFixed(2)}%)`;
     }
@@ -94,13 +94,27 @@ export function generateCraftExplanation(
     lines.push(`\nRecommended Policy:`);
     lines.push(`  Strategy C: State-Aware Optimal Stopping Policy`);
     lines.push(`Reason:`);
-    lines.push(`  Fishing for joint T1 ES + 35% Effect in Harvest (Strategy B, 1 in ~751 crafts) costs ~1379c more in lifeforce and recovery loops than stopping at T1 ES and completing prefixes via Allflame Exalts (Strategy A/C, 10.20% hit rate).`);
+    const isFractured35Route =
+      recommended.strategyName?.toLowerCase().includes('fractured 35%') ||
+      recommended.strategyName?.toLowerCase().includes('fractured effect') ||
+      recommended.steps?.[0]?.title.includes('Fractured 35%') ||
+      recommended.steps?.[0]?.title.includes('35% Effect Base');
+
+    if (isFractured35Route) {
+      const compB = recommended.harvestComparison.find((c) => c.code === 'B');
+      const hB = compB ? Math.round(compB.expectedHarvests).toLocaleString() : '12,447';
+      lines.push(`  Strategy B intentionally keeps Harvesting until a single T1 ES result also supplies both required suffix targets (T1 Intelligence + one premium suffix). This requires roughly ${hB} Harvests on average and is far more expensive than preserving useful partial Harvest outcomes and completing the remaining suffix with Allflame Exalts.`);
+    } else {
+      lines.push(`  Fishing for joint T1 ES + 35% Effect in Harvest (Strategy B, 1 in ~751 crafts) costs ~1379c more in lifeforce and recovery loops than stopping at T1 ES and completing prefixes via Allflame Exalts (Strategy A/C, 10.20% hit rate).`);
+    }
   }
 
   // ------------------------------------------------------------- SUFFIX POOL DIAGNOSTIC AUDIT
   const isFractured35Route =
-    recommended.strategyName?.toLowerCase().includes('35%') ||
-    recommended.steps?.some((s) => s.title.includes('35% Effect'));
+    recommended.strategyName?.toLowerCase().includes('fractured 35%') ||
+    recommended.strategyName?.toLowerCase().includes('fractured effect') ||
+    recommended.steps?.[0]?.title.includes('Fractured 35%') ||
+    recommended.steps?.[0]?.title.includes('35% Effect Base');
 
   if (isFractured35Route && recommended.policyEngine && typeof recommended.policyEngine.getSuffixPoolAudit === 'function' && recommended.pool) {
     const auditStates = recommended.policyEngine.getSuffixPoolAudit(recommended.pool, 84);
@@ -175,6 +189,15 @@ export function generateCraftExplanation(
     lines.push(`    0 additional affixes:       ${(hc.t1ESAdditional0AffixesPct ?? 0).toFixed(2)}%`);
     lines.push(`    1 additional affix:         ${(hc.t1ESAdditional1AffixesPct ?? 0).toFixed(2)}%`);
     lines.push(`    2 additional affixes:       ${(hc.t1ESAdditional2AffixesPct ?? 0).toFixed(2)}%`);
+    lines.push(`  Harvest additional-affix model used by optimizer:`);
+    if (isFractured35Route) {
+      lines.push(`    1 additional suffix:        50.00%`);
+      lines.push(`    2 additional suffixes:      50.00%`);
+    } else {
+      lines.push(`    1 additional affix:         50.00%`);
+      lines.push(`    2 additional affixes:       50.00%`);
+    }
+    lines.push(`    Source status:              UNVERIFIED / MODEL ASSUMPTION`);
     lines.push(`  Of T1 ES Successes:`);
     lines.push(`    T1 ES Only (Clean):         ${hc.t1ESOnlyPct.toFixed(2)}%`);
     lines.push(`    +1 Junk Suffix:             ${(hc.t1ESPlusJunk1OnlyPct ?? 0).toFixed(2)}% (Requires 1-Junk Annul Cleanup)`);
@@ -224,20 +247,42 @@ export function generateCraftExplanation(
       }
     }
 
-    const bestOpt = recommended.step1Options.find((o: StartingOptionAnalysis) => o.isRecommended) ?? recommended.step1Options[0];
     const buyOpt = recommended.step1Options.find((o: StartingOptionAnalysis) => o.purchaseCostChaos !== undefined) ?? recommended.step1Options[0];
-    const diff = (buyOpt.expectedTotalCostChaos ?? 1600) - bestOpt.expectedTotalCostChaos;
+    const selfFracOpt = recommended.step1Options.find((o: StartingOptionAnalysis) => o.purchaseCostChaos === undefined) ?? recommended.step1Options[0];
 
-    lines.push(`\nPROVISIONAL CHEAPEST (STEP 1):`);
-    lines.push(`  ${bestOpt.name.replace(/^Option [A-D]:\s*/i, '')}`);
+    const downstreamDefault = recommended.totalExpectedCostChaos - recommended.baseCostChaos;
+    const buyTotal = buyOpt.fullRouteTotalCostChaos ?? ((buyOpt.expectedTotalCostChaos ?? 2600) + (buyOpt.downstreamCostChaos ?? downstreamDefault));
+    const selfFracTotal = selfFracOpt.fullRouteTotalCostChaos ?? ((selfFracOpt.expectedTotalCostChaos ?? 1533.4) + (selfFracOpt.downstreamCostChaos ?? downstreamDefault));
+
+    const isSelfFracCheapest = selfFracTotal < buyTotal;
+    const bestOpt = isSelfFracCheapest ? selfFracOpt : buyOpt;
+    const altOpt = isSelfFracCheapest ? buyOpt : selfFracOpt;
+    const diff = Math.abs(buyTotal - selfFracTotal);
+
+    const bestOptName = bestOpt.name.replace(/^Option [A-D]:\s*/i, '');
+    const altOptName = altOpt.name.replace(/^Option [A-D]:\s*/i, '');
+    const buyOptName = buyOpt.name.replace(/^Option [A-D]:\s*/i, '');
+    const selfFracOptName = selfFracOpt.name.replace(/^Option [A-D]:\s*/i, '');
+
+    lines.push(`\nRECOMMENDED ACQUISITION (STEP 1):`);
+    lines.push(`  ${bestOptName}`);
     lines.push(`  Estimated acquisition cost: ${formatChaos(bestOpt.expectedTotalCostChaos, divineRate)}`);
     lines.push(`\nMODEL CONFIDENCE:`);
-    lines.push(`  Approximate`);
-    lines.push(`\nDETERMINISTIC ALTERNATIVE (STEP 1):`);
-    lines.push(`  ${buyOpt.name.replace(/^Option [A-D]:\s*/i, '')}`);
-    lines.push(`  Market cost:                ${formatChaos(buyOpt.expectedTotalCostChaos, divineRate)}`);
-    lines.push(`\nEstimated difference:`);
+    lines.push(`  ${bestOpt === selfFracOpt ? 'Approximate (Self-Fracture Model)' : 'High (Deterministic Market Purchase)'}`);
+    lines.push(`\nALTERNATIVE ACQUISITION (STEP 1):`);
+    lines.push(`  ${altOptName}`);
+    lines.push(`  Estimated cost:             ${formatChaos(altOpt.expectedTotalCostChaos, divineRate)}`);
+    lines.push(`\nEstimated difference (Full Route):`);
     lines.push(`  ${(diff / divineRate).toFixed(2)} div / ${diff.toFixed(1)}c`);
+
+    lines.push(`\nHEADLINE CRAFT TOTALS BY STARTING OPTION:`);
+    if (isSelfFracCheapest) {
+      lines.push(`  Provisional cheapest route (${selfFracOptName}): ${formatChaos(selfFracTotal, divineRate)} [Model: Approximate]`);
+      lines.push(`  Deterministic market route (${buyOptName}):  ${formatChaos(buyTotal, divineRate)} [Downstream craft EV ${formatChaos(buyOpt.downstreamCostChaos ?? downstreamDefault, divineRate)} + ${formatChaos(buyOpt.expectedTotalCostChaos, divineRate)} base]`);
+    } else {
+      lines.push(`  Deterministic cheapest route (${buyOptName}): ${formatChaos(buyTotal, divineRate)} [Downstream craft EV ${formatChaos(buyOpt.downstreamCostChaos ?? downstreamDefault, divineRate)} + ${formatChaos(buyOpt.expectedTotalCostChaos, divineRate)} base]`);
+      lines.push(`  Provisional alternative route (${selfFracOptName}): ${formatChaos(selfFracTotal, divineRate)} [Model: Approximate]`);
+    }
   }
 
   // ------------------------------------------------------------- DETAILED STEPS 2 to N

@@ -43,6 +43,8 @@ export interface StartingOptionAnalysis {
   successChance?: number;
   expectedAttempts?: number;
   expectedTotalCostChaos: number;
+  downstreamCostChaos?: number;
+  fullRouteTotalCostChaos?: number;
   isRecommended: boolean;
   reason?: string;
 }
@@ -144,6 +146,11 @@ export class ExpectedCostSolver {
     const buyEffCost = 13 * divineRate; // 2600c (13 div)
     const selfFracEffCost = 4 * (cleanBaseCost + effPrepCost + fracOrbCost); // 4 * (10 + 14.35 + 359) = 1533.4c (~7.67 div)
 
+    const needsDivine = this.target.finalRollRequirements?.some(
+      (r) => r.modGroup === 'AfflictionJewelSmallPassivesGrantInt' && r.minValue && r.minValue >= 8
+    );
+    const selfFracDivineCost = needsDivine ? 2.0 * divineRate : 0;
+
     const effectiveBaseCost = baseCostChaos > 0 ? baseCostChaos : buyIntCost;
     const hasFracturedInt = [...startState.prefixes, ...startState.suffixes].some(
       (m) => m.modGroup === 'AfflictionJewelSmallPassivesGrantInt' && m.isFractured
@@ -152,53 +159,84 @@ export class ExpectedCostSolver {
       (m) => m.modGroup === 'AfflictionJewelSmallPassivesHaveIncreasedEffect' && m.isFractured
     );
 
-    const step1Options: StartingOptionAnalysis[] = hasFracturedEff
-      ? [
-          {
-            name: 'Option A: Buy fractured 35% Effect base',
-            description: 'Direct market purchase of fractured 35% Increased Effect base',
-            purchaseCostChaos: buyEffCost,
-            prepCostChaos: 0,
-            expectedTotalCostChaos: buyEffCost,
-            isRecommended: false,
-            reason: `Market price is ${(buyEffCost / divineRate).toFixed(2)} div (${buyEffCost.toFixed(1)}c). Deterministic alternative with 0 crafting risk.`,
-          },
-          {
-            name: 'Option B: Self-fracture 35% Effect (Clean 12p base)',
-            description: 'Prepare 4-mod clean base with 35% Effect and use Fracturing Orb (25% chance)',
-            cleanBaseCostChaos: cleanBaseCost,
-            prepCostChaos: effPrepCost,
-            fracturingOrbCostChaos: fracOrbCost,
-            successChance: 25.0,
-            expectedAttempts: 4.0,
-            expectedTotalCostChaos: selfFracEffCost,
-            isRecommended: true,
-            reason: `Estimated acquisition cost is ${selfFracEffCost.toFixed(1)}c (~${(selfFracEffCost / divineRate).toFixed(2)} div), which is ${(buyEffCost - selfFracEffCost).toFixed(1)}c cheaper than buying base. [SELF-FRACTURE ACQUISITION MODEL: APPROXIMATE]`,
-          },
-        ]
-      : [
-          {
-            name: 'Option A: Buy fractured T1 Intelligence base',
-            description: 'Direct market purchase of fractured T1 Intelligence base (+6 to +8 roll)',
-            purchaseCostChaos: buyIntCost,
-            prepCostChaos: 0,
-            expectedTotalCostChaos: buyIntCost,
-            isRecommended: false,
-            reason: 'Market purchase price is 8.00 div (1600.0c). Deterministic alternative with 0 crafting risk.',
-          },
-          {
-            name: 'Option B: Self-fracture T1 Intelligence (Clean 12p base)',
-            description: 'Prepare 4-mod clean base via Alt/Aug/Regal/Bench and use Fracturing Orb (25% chance)',
-            cleanBaseCostChaos: cleanBaseCost,
-            prepCostChaos: intPrepCost,
-            fracturingOrbCostChaos: fracOrbCost,
-            successChance: 25.0,
-            expectedAttempts: 4.0,
-            expectedTotalCostChaos: selfFracIntCost,
-            isRecommended: true,
-            reason: `Estimated acquisition cost is ${selfFracIntCost.toFixed(1)}c (~${(selfFracIntCost / divineRate).toFixed(2)} div), which is ${(buyIntCost - selfFracIntCost).toFixed(1)}c cheaper than buying base. [SELF-FRACTURE ACQUISITION MODEL: APPROXIMATE]`,
-          },
-        ];
+    const downstreamEff = this.policyEngine.vEnter; // ~1050.9c
+    const fullBuyEff = buyEffCost + downstreamEff;
+    const fullSelfFracEff = selfFracEffCost + downstreamEff;
+
+    const optionsEff: StartingOptionAnalysis[] = [
+      {
+        name: 'Option A: Buy fractured 35% Effect base',
+        description: 'Direct market purchase of fractured 35% increased Effect base',
+        purchaseCostChaos: buyEffCost,
+        prepCostChaos: 0,
+        expectedTotalCostChaos: buyEffCost,
+        downstreamCostChaos: downstreamEff,
+        fullRouteTotalCostChaos: fullBuyEff,
+        isRecommended: fullBuyEff <= fullSelfFracEff,
+        reason:
+          fullBuyEff <= fullSelfFracEff
+            ? `Market purchase total of ${(fullBuyEff / divineRate).toFixed(2)} div (${fullBuyEff.toFixed(1)}c) is cheaper than self-fracturing (${fullSelfFracEff.toFixed(1)}c).`
+            : `Market price is ${(buyEffCost / divineRate).toFixed(2)} div (${buyEffCost.toFixed(1)}c). Deterministic alternative with 0 crafting risk.`,
+      },
+      {
+        name: 'Option B: Self-fracture 35% Effect (Clean 12p base)',
+        description: 'Prepare 4-mod clean base with 35% Effect and use Fracturing Orb (25% chance)',
+        cleanBaseCostChaos: cleanBaseCost,
+        prepCostChaos: effPrepCost,
+        fracturingOrbCostChaos: fracOrbCost,
+        successChance: 25.0,
+        expectedAttempts: 4.0,
+        expectedTotalCostChaos: selfFracEffCost,
+        downstreamCostChaos: downstreamEff,
+        fullRouteTotalCostChaos: fullSelfFracEff,
+        isRecommended: fullSelfFracEff < fullBuyEff,
+        reason:
+          fullSelfFracEff < fullBuyEff
+            ? `Estimated full route cost is ${fullSelfFracEff.toFixed(1)}c (~${(fullSelfFracEff / divineRate).toFixed(2)} div), which is ${(fullBuyEff - fullSelfFracEff).toFixed(1)}c cheaper than buying base. [SELF-FRACTURE ACQUISITION MODEL: APPROXIMATE]`
+            : `Estimated self-fracture total of ${fullSelfFracEff.toFixed(1)}c exceeds direct market purchase (${fullBuyEff.toFixed(1)}c).`,
+      },
+    ];
+
+    const downstreamIntNoDivine = this.policyEngine.vStep2 + this.policyEngine.vStep4; // ~1804.5c
+    const downstreamIntWithDivine = downstreamIntNoDivine + selfFracDivineCost;
+    const fullBuyInt = buyIntCost + downstreamIntWithDivine;
+    const fullSelfFracInt = selfFracIntCost + downstreamIntWithDivine;
+
+    const optionsInt: StartingOptionAnalysis[] = [
+      {
+        name: 'Option A: Buy fractured T1 Intelligence base',
+        description: 'Direct market purchase of fractured T1 Intelligence base (+6 to +8 roll)',
+        purchaseCostChaos: buyIntCost,
+        prepCostChaos: 0,
+        expectedTotalCostChaos: buyIntCost,
+        downstreamCostChaos: downstreamIntWithDivine,
+        fullRouteTotalCostChaos: fullBuyInt,
+        isRecommended: fullBuyInt <= fullSelfFracInt,
+        reason:
+          fullBuyInt <= fullSelfFracInt
+            ? `Market purchase total of ${(fullBuyInt / divineRate).toFixed(2)} div (${fullBuyInt.toFixed(1)}c) is cheaper than self-fracturing (${fullSelfFracInt.toFixed(1)}c).`
+            : 'Market purchase price is 8.00 div (1600.0c). Deterministic alternative with 0 crafting risk.',
+      },
+      {
+        name: 'Option B: Self-fracture T1 Intelligence (Clean 12p base)',
+        description: 'Prepare 4-mod clean base via Alt/Aug/Regal/Bench and use Fracturing Orb (25% chance)',
+        cleanBaseCostChaos: cleanBaseCost,
+        prepCostChaos: intPrepCost,
+        fracturingOrbCostChaos: fracOrbCost,
+        successChance: 25.0,
+        expectedAttempts: 4.0,
+        expectedTotalCostChaos: selfFracIntCost,
+        downstreamCostChaos: downstreamIntWithDivine,
+        fullRouteTotalCostChaos: fullSelfFracInt,
+        isRecommended: fullSelfFracInt < fullBuyInt,
+        reason:
+          fullSelfFracInt < fullBuyInt
+            ? `Estimated full route cost is ${fullSelfFracInt.toFixed(1)}c (~${(fullSelfFracInt / divineRate).toFixed(2)} div), which is ${(fullBuyInt - fullSelfFracInt).toFixed(1)}c cheaper than buying base. [SELF-FRACTURE ACQUISITION MODEL: APPROXIMATE]`
+            : `Estimated self-fracture total of ${fullSelfFracInt.toFixed(1)}c exceeds direct market purchase (${fullBuyInt.toFixed(1)}c).`,
+      },
+    ];
+
+    const step1Options: StartingOptionAnalysis[] = hasFracturedEff ? optionsEff : optionsInt;
 
     // ------------------------------------------------------------- Outcome value distribution (Attributes / Attack Speed / All Res)
     const suffixMods = allMods.filter((m) =>
@@ -535,10 +573,6 @@ export class ExpectedCostSolver {
     });
 
     // ------------------------------------------------------------- STEP 6: Optional Divine Finishing (Only if explicit final roll required)
-    const needsDivine = this.target.finalRollRequirements?.some(
-      (r) => r.modGroup === 'AfflictionJewelSmallPassivesGrantInt' && r.minValue && r.minValue >= 8
-    );
-
     let expectedDivines = 0;
     let step6Cost = 0;
     if (needsDivine) {
