@@ -190,6 +190,7 @@ const craftAResponse = optimizer.optimizeCraft({
   priceBook,
   runMonteCarloValidation: true,
   monteCarloTrials: 2000,
+  seed: 42,
 });
 
 console.log(craftAResponse.explanation);
@@ -383,6 +384,7 @@ const craftCResponse = optimizer.optimizeCraft({
   priceBook,
   runMonteCarloValidation: true,
   monteCarloTrials: 2000,
+  seed: 42,
 });
 
 console.log(craftCResponse.explanation);

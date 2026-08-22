@@ -11,33 +11,49 @@ export function formatModDisplayName(mod: any): string {
   const group: string | undefined = typeof mod === 'object' ? mod.modGroup : undefined;
   const tier: number | undefined = typeof mod === 'object' ? mod.tier : undefined;
 
-  if (name.includes('35% increased Effect') || group === 'AfflictionJewelSmallPassivesHaveIncreasedEffect' || name === 'Powerful') {
-    return '35% Increased Effect [Powerful]';
+  // Generic Affliction Jewel modifier resolution
+  if (group === 'AfflictionJewelSmallPassivesHaveIncreasedEffect' || name === 'Powerful' || name.includes('35% increased Effect')) {
+    const pct = tier === 1 || name === 'Powerful' || name.includes('35%') ? '35%' : (tier === 2 ? '25%' : '20%');
+    const affixName = name === 'Powerful' ? 'Powerful' : (typeof mod === 'object' && mod.name ? mod.name : 'Powerful');
+    return `${pct} Increased Effect [${affixName}]`;
   }
-  if (name.includes('Maximum Energy Shield') || group === 'AfflictionJewelSmallPassivesGrantES' || name === 'Glowing') {
-    return 'T1 Maximum Energy Shield [Glowing]';
+  if (group === 'AfflictionJewelSmallPassivesGrantES' || name === 'Glowing' || name.includes('Maximum Energy Shield')) {
+    const tNum = tier ?? (name === 'Glowing' ? 1 : 1);
+    const affixName = name === 'Glowing' ? 'Glowing' : (typeof mod === 'object' && mod.name ? mod.name : 'Glowing');
+    return `T${tNum} Maximum Energy Shield [${affixName}]`;
   }
-  if (name.includes('Maximum Life') || group === 'AfflictionJewelSmallPassivesGrantLife' || name === 'Sanguine') {
-    return 'T1 Maximum Life [Sanguine]';
+  if (group === 'AfflictionJewelSmallPassivesGrantLife' || name === 'Sanguine' || name.includes('Maximum Life')) {
+    const tNum = tier ?? (name === 'Sanguine' ? 1 : 1);
+    const affixName = name === 'Sanguine' ? 'Sanguine' : (typeof mod === 'object' && mod.name ? mod.name : 'Sanguine');
+    return `T${tNum} Maximum Life [${affixName}]`;
   }
-  if (name.includes('Intelligence') || group === 'AfflictionJewelSmallPassivesGrantInt' || name === 'of the Prodigy') {
-    return 'T1 Intelligence [of the Prodigy]';
+  if (group === 'AfflictionJewelSmallPassivesGrantInt' || name === 'of the Prodigy' || name.includes('Intelligence')) {
+    const tNum = tier ?? (name === 'of the Prodigy' ? 1 : 1);
+    const affixName = name === 'of the Prodigy' ? 'of the Prodigy' : (typeof mod === 'object' && mod.name ? mod.name : 'of the Prodigy');
+    return `T${tNum} Intelligence [${affixName}]`;
   }
-  if (name.includes('All Attributes') || group === 'AfflictionJewelSmallPassivesGrantAttributes' || name === 'of the Meteor') {
-    return '+4 to all Attributes [of the Meteor]';
+  if (group === 'AfflictionJewelSmallPassivesGrantAttributes' || name === 'of the Meteor' || name.includes('All Attributes')) {
+    const val = tier === 1 || name === 'of the Meteor' ? '+4' : (tier === 2 ? '+3' : '+2');
+    const affixName = name === 'of the Meteor' ? 'of the Meteor' : (typeof mod === 'object' && mod.name ? mod.name : 'of the Meteor');
+    return `${val} to all Attributes [${affixName}]`;
   }
-  if (name.includes('Chaos Resistance') || group === 'AfflictionJewelSmallPassivesGrantChaosRes' || name === 'of Eviction') {
-    return '+5% to Chaos Resistance [of Eviction]';
+  if (group === 'AfflictionJewelSmallPassivesGrantChaosRes' || name === 'of Eviction' || name.includes('Chaos Resistance')) {
+    const val = tier === 1 || name === 'of Eviction' ? '+5%' : (tier === 2 ? '+4%' : '+3%');
+    const affixName = name === 'of Eviction' ? 'of Eviction' : (typeof mod === 'object' && mod.name ? mod.name : 'of Eviction');
+    return `${val} to Chaos Resistance [${affixName}]`;
   }
-  if (name.includes('All Elemental Resistance') || group === 'AfflictionJewelSmallPassivesGrantElementalRes' || name === 'of the Kaleidoscope') {
-    return '+4% to all Elemental Resistance [of the Kaleidoscope]';
+  if (group === 'AfflictionJewelSmallPassivesGrantElementalRes' || name === 'of the Kaleidoscope' || name.includes('All Elemental Resistance')) {
+    const val = tier === 1 || name === 'of the Kaleidoscope' ? '+4%' : (tier === 2 ? '+3%' : '+2%');
+    const affixName = name === 'of the Kaleidoscope' ? 'of the Kaleidoscope' : (typeof mod === 'object' && mod.name ? mod.name : 'of the Kaleidoscope');
+    return `${val} to all Elemental Resistance [${affixName}]`;
   }
-  if (name.includes('Attack Speed') || group?.includes('Attack Speed')) {
-    if (name.includes('3%') || tier === 1) return '3% increased Attack Speed [T1]';
-    if (name.includes('2%') || tier === 2) return '2% increased Attack Speed [T2]';
-    return '1% increased Attack Speed [T3]';
+  if (group?.includes('Attack Speed') || name.includes('Attack Speed')) {
+    const val = tier === 1 || name.includes('3%') ? '3%' : (tier === 2 || name.includes('2%') ? '2%' : '1%');
+    const affixName = typeof mod === 'object' && mod.name ? mod.name : `T${tier ?? 1}`;
+    return `${val} increased Attack Speed [${affixName}]`;
   }
 
+  // Generic fallback with tier and bracketed name
   const tierSuffix = tier ? ` (t${tier})` : '';
   return `${name}${tierSuffix}`;
 }
@@ -468,6 +484,19 @@ export function generateCraftExplanation(
         lines.push(`-`.repeat(86));
       }
 
+      // Uncertainty & Stability Metrics
+      if (simulation.uncertaintyMetrics) {
+        const um = simulation.uncertaintyMetrics;
+        lines.push(`\nMONTE CARLO UNCERTAINTY & STABILITY METRICS:`);
+        lines.push(`  Sample Mean Cost:       ${formatChaos(simulation.meanCostChaos ?? 0, divineRate)}`);
+        lines.push(`  Sample Standard Dev:    ${formatChaos(um.sampleStandardDeviationChaos, divineRate)}`);
+        lines.push(`  Standard Error of Mean: ${formatChaos(um.standardErrorChaos, divineRate)}`);
+        lines.push(`  95% Confidence Interval:[${formatChaos(um.confidenceInterval95Chaos[0], divineRate)} - ${formatChaos(um.confidenceInterval95Chaos[1], divineRate)}]`);
+        if (um.analyticalExpectedCostChaos !== undefined) {
+          lines.push(`  Analytical Expected:    ${formatChaos(um.analyticalExpectedCostChaos, divineRate)} -> Inside 95% CI: ${um.analyticalInsideCi95 ? 'YES (Statistically Consistent)' : 'NO'}`);
+        }
+      }
+
       // Timeout & Step Censoring Diagnostics
       if (simulation.timeoutDiagnostics) {
         const td = simulation.timeoutDiagnostics;
@@ -486,8 +515,8 @@ export function generateCraftExplanation(
         }
       }
 
-      // Percentiles
-      lines.push(`\nPercentiles:`);
+      // Cost Percentiles
+      lines.push(`\nPercentiles (Craft Cost Distribution):`);
       lines.push(`  Median Cost (P50):    ${formatChaos(simulation.medianCostChaos ?? 0, divineRate)}`);
       lines.push(`  75th Percentile (P75):${formatChaos(simulation.p75CostChaos ?? 0, divineRate)}`);
       lines.push(`  90th Percentile (P90):${formatChaos(simulation.p90CostChaos ?? 0, divineRate)}`);
@@ -496,18 +525,39 @@ export function generateCraftExplanation(
       // Profit & Risk Distribution Metrics
       if (simulation.riskMetrics && simulation.riskMetrics.saleValueChaos > 0) {
         const rm = simulation.riskMetrics;
-        const p75Loss = rm.saleValueChaos - rm.p75CostChaos;
-        const p90Loss = rm.saleValueChaos - rm.p90CostChaos;
-        const p95Loss = rm.saleValueChaos - rm.p95CostChaos;
+        if (rm.isBranchSpecific) {
+          lines.push(`\nPROFIT & RISK DISTRIBUTION METRICS (BRANCH-SPECIFIC SALE VALUES):`);
+          lines.push(`  Probability Realized Profit >= 0:${rm.profitProbabilityPercentage.toFixed(2)}% (${rm.profitableTrialsCount.toLocaleString()} / ${simulation.completedTrials.toLocaleString()} trials profitable)`);
+          lines.push(`  Expected Realized Profit (EV):   ${rm.meanRealizedProfitChaos >= 0 ? '+' : ''}${formatChaos(rm.meanRealizedProfitChaos, divineRate)}`);
+          lines.push(`  Realized Median Profit (P50):    ${rm.medianRealizedProfitChaos >= 0 ? '+' : ''}${formatChaos(rm.medianRealizedProfitChaos, divineRate)}`);
+          if (rm.p75ProfitChaos !== undefined) {
+            lines.push(`  75th Percentile Profit (P75):    ${rm.p75ProfitChaos >= 0 ? '+' : ''}${formatChaos(rm.p75ProfitChaos, divineRate)}`);
+          }
+          if (rm.p25ProfitChaos !== undefined) {
+            lines.push(`  25th Percentile Profit (P25):    ${rm.p25ProfitChaos >= 0 ? '+' : ''}${formatChaos(rm.p25ProfitChaos, divineRate)}`);
+          }
+          if (rm.p10ProfitChaos !== undefined) {
+            lines.push(`  10th Percentile Profit (P10):    ${rm.p10ProfitChaos >= 0 ? '+' : ''}${formatChaos(rm.p10ProfitChaos, divineRate)}`);
+          }
+          if (rm.p5ProfitChaos !== undefined) {
+            lines.push(`  5th Percentile Profit (P5):      ${rm.p5ProfitChaos >= 0 ? '+' : ''}${formatChaos(rm.p5ProfitChaos, divineRate)}`);
+          }
+          lines.push(`  Expected Shortfall (CVaR 95):    ${formatChaos(rm.cvar95CostChaos, divineRate)} (Average cost in worst 5% tail)`);
+          lines.push(`  Economic Risk Assessment:        ${rm.medianRealizedProfitChaos > 0 && (recommended.expectedProfitChaos ?? 0) < 0 ? 'Heavy Right-Tail Risk (Median craft is profitable, but long recovery chains drag Expected Value negative)' : ((recommended.expectedProfitChaos ?? 0) > 0 ? 'Favorable Risk-Neutral EV (Positive Expected Value and robust median profit)' : 'Unfavorable EV under current ordinary currency action set')}`);
+        } else {
+          const p75Loss = rm.saleValueChaos - rm.p75CostChaos;
+          const p90Loss = rm.saleValueChaos - rm.p90CostChaos;
+          const p95Loss = rm.saleValueChaos - rm.p95CostChaos;
 
-        lines.push(`\nPROFIT & RISK DISTRIBUTION METRICS (SALE VALUE: ${formatChaos(rm.saleValueChaos, divineRate)}):`);
-        lines.push(`  Probability Craft < Sale:    ${rm.profitProbabilityPercentage.toFixed(2)}% (${rm.profitableTrialsCount.toLocaleString()} / ${simulation.completedTrials.toLocaleString()} trials profitable)`);
-        lines.push(`  Realized Median Profit (P50):${rm.medianRealizedProfitChaos >= 0 ? '+' : ''}${formatChaos(rm.medianRealizedProfitChaos, divineRate)}`);
-        lines.push(`  75th Percentile Cost (P75):  ${formatChaos(rm.p75CostChaos, divineRate)} (Realized: ${p75Loss >= 0 ? '+' : ''}${formatChaos(p75Loss, divineRate)})`);
-        lines.push(`  90th Percentile Cost (P90):  ${formatChaos(rm.p90CostChaos, divineRate)} (Realized: ${p90Loss >= 0 ? '+' : ''}${formatChaos(p90Loss, divineRate)})`);
-        lines.push(`  95th Percentile Cost (P95):  ${formatChaos(rm.p95CostChaos, divineRate)} (Realized: ${p95Loss >= 0 ? '+' : ''}${formatChaos(p95Loss, divineRate)})`);
-        lines.push(`  Expected Shortfall (CVaR 95):${formatChaos(rm.cvar95CostChaos, divineRate)} (Average cost in worst 5% tail)`);
-        lines.push(`  Economic Risk Assessment:    ${rm.medianRealizedProfitChaos > 0 && (recommended.expectedProfitChaos ?? 0) < 0 ? 'Heavy Right-Tail Risk (Median craft is profitable, but long recovery chains drag Expected Value negative)' : ((recommended.expectedProfitChaos ?? 0) > 0 ? 'Favorable Risk-Neutral EV (Positive Expected Value and robust median profit)' : 'Unfavorable EV under current ordinary currency action set')}`);
+          lines.push(`\nPROFIT & RISK DISTRIBUTION METRICS (SALE VALUE: ${formatChaos(rm.saleValueChaos, divineRate)}):`);
+          lines.push(`  Probability Craft < Sale:    ${rm.profitProbabilityPercentage.toFixed(2)}% (${rm.profitableTrialsCount.toLocaleString()} / ${simulation.completedTrials.toLocaleString()} trials profitable)`);
+          lines.push(`  Realized Median Profit (P50):${rm.medianRealizedProfitChaos >= 0 ? '+' : ''}${formatChaos(rm.medianRealizedProfitChaos, divineRate)}`);
+          lines.push(`  75th Percentile Cost (P75):  ${formatChaos(rm.p75CostChaos, divineRate)} (Realized: ${p75Loss >= 0 ? '+' : ''}${formatChaos(p75Loss, divineRate)})`);
+          lines.push(`  90th Percentile Cost (P90):  ${formatChaos(rm.p90CostChaos, divineRate)} (Realized: ${p90Loss >= 0 ? '+' : ''}${formatChaos(p90Loss, divineRate)})`);
+          lines.push(`  95th Percentile Cost (P95):  ${formatChaos(rm.p95CostChaos, divineRate)} (Realized: ${p95Loss >= 0 ? '+' : ''}${formatChaos(p95Loss, divineRate)})`);
+          lines.push(`  Expected Shortfall (CVaR 95):${formatChaos(rm.cvar95CostChaos, divineRate)} (Average cost in worst 5% tail)`);
+          lines.push(`  Economic Risk Assessment:    ${rm.medianRealizedProfitChaos > 0 && (recommended.expectedProfitChaos ?? 0) < 0 ? 'Heavy Right-Tail Risk (Median craft is profitable, but long recovery chains drag Expected Value negative)' : ((recommended.expectedProfitChaos ?? 0) > 0 ? 'Favorable Risk-Neutral EV (Positive Expected Value and robust median profit)' : 'Unfavorable EV under current ordinary currency action set')}`);
+        }
       }
     }
 

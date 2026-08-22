@@ -28,6 +28,8 @@ export interface OptimizeCraftRequest {
   runMonteCarloValidation?: boolean;
   monteCarloTrials?: number;
   traceTrialsCount?: number;
+  seed?: number;
+  rng?: any;
 }
 
 export interface OptimizeCraftResponse {
@@ -99,13 +101,16 @@ export class CraftingOptimizer {
           context,
           request.target,
           request.enableAllflame ?? false,
-          recommended.policyEngine
+          recommended.policyEngine,
+          request.rng ?? request.seed
         );
         simulationValidation = mc.runSimulation(
           bestStart.state,
           request.monteCarloTrials ?? 2000,
           startCost,
-          75000
+          75000,
+          undefined,
+          recommended.totalExpectedCostChaos
         );
 
         if (simulationValidation && simulationValidation.meanCostChaos !== undefined) {

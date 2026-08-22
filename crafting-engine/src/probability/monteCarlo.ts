@@ -11,6 +11,8 @@ import { canAcceptPrefix, canAcceptSuffix } from '../rules/affixRules.ts';
 import { CraftingPolicyEngine } from '../solver/policyEngine.ts';
 import { getTaggedModsForCluster } from '../rules/clusterPoolHelpers.ts';
 
+import { type RandomSource, createRandomSource } from './random.ts';
+
 export interface HarvestCensusData {
   totalHarvests: number;
   t1HarvestSuccesses: number;
@@ -57,13 +59,29 @@ export interface TimeoutDiagnostics {
 
 export interface EconomicRiskMetrics {
   saleValueChaos: number;
+  isBranchSpecific: boolean;
   profitableTrialsCount: number;
   profitProbabilityPercentage: number;
+  meanRealizedProfitChaos: number;
   medianRealizedProfitChaos: number;
+  p75ProfitChaos?: number;
+  p90ProfitChaos?: number;
+  p95ProfitChaos?: number;
+  p25ProfitChaos?: number;
+  p10ProfitChaos?: number;
+  p5ProfitChaos?: number;
   p75CostChaos: number;
   p90CostChaos: number;
   p95CostChaos: number;
   cvar95CostChaos: number;
+}
+
+export interface MonteCarloUncertaintyMetrics {
+  sampleStandardDeviationChaos: number;
+  standardErrorChaos: number;
+  confidenceInterval95Chaos: [number, number];
+  analyticalExpectedCostChaos?: number;
+  analyticalInsideCi95: boolean;
 }
 
 export interface SimulationResult {
@@ -95,6 +113,7 @@ export interface SimulationResult {
   outcomeBranchDistribution?: Record<string, number>;
   timeoutDiagnostics?: TimeoutDiagnostics;
   riskMetrics?: EconomicRiskMetrics;
+  uncertaintyMetrics?: MonteCarloUncertaintyMetrics;
   sampleTraces?: SampleCraftTrace[];
   status: 'SUCCESS' | 'PARTIAL' | 'FAILED';
   message?: string;
@@ -106,17 +125,26 @@ export class MonteCarloSimulator {
   private allflameEnabled: boolean;
   private policyEngine: CraftingPolicyEngine;
   private divineAction = new DivineAction();
+  private rng: RandomSource;
 
   constructor(
     context: SolverContext,
     target: TargetDefinition,
     allflameEnabled = false,
-    policyEngine?: CraftingPolicyEngine
+    policyEngine?: CraftingPolicyEngine,
+    rngOrSeed?: RandomSource | number
   ) {
     this.context = context;
     this.target = target;
     this.allflameEnabled = allflameEnabled;
     this.policyEngine = policyEngine ?? new CraftingPolicyEngine(target, context.priceBook, context.pool, allflameEnabled);
+    if (typeof rngOrSeed === 'number') {
+      this.rng = createRandomSource(rngOrSeed);
+    } else if (rngOrSeed) {
+      this.rng = rngOrSeed;
+    } else {
+      this.rng = createRandomSource();
+    }
   }
 
   public runSimulation(
@@ -124,7 +152,8 @@ export class MonteCarloSimulator {
     numTrials = 2000,
     baseCostChaos = 0,
     maxStepsPerTrial = 75000,
-    priceBookOverride?: PriceBook
+    priceBookOverride?: PriceBook,
+    analyticalExpectedCostChaos?: number
   ): SimulationResult {
     const priceBook = priceBookOverride ?? this.context.priceBook;
     const allMods = this.context.pool ? this.context.pool.getAllMods().filter((m) => m.ilvl <= (startState.itemLevel ?? 84)) : [];
@@ -257,7 +286,7 @@ export class MonteCarloSimulator {
           }
 
           // Random additional affixes (50% 1 extra, 50% 2 extra)
-          const extraAffixesCount = Math.random() < 0.5 ? 1 : 2;
+          const extraAffixesCount = this.rng.next() < 0.5 ? 1 : 2;
           const extraMods: Mod[] = [];
           for (let e = 0; e < extraAffixesCount; e++) {
             const reqGenType = !canAcceptPrefix(state) ? 'Suffix' : (!canAcceptSuffix(state) ? 'Prefix' : undefined);
@@ -337,7 +366,7 @@ export class MonteCarloSimulator {
           else if (attributedStep === 5) trialStepCosts.step5 += costChaos;
           else trialStepCosts.step3 += costChaos;
 
-          const targetIndex = Math.floor(Math.random() * removable.length);
+          const targetIndex = Math.floor(this.rng.next() * removable.length);
           const removedMod = removable[targetIndex];
 
           if (removedMod.genType === 'Prefix') {
@@ -571,13 +600,22 @@ export class MonteCarloSimulator {
     }
 
     let riskMetrics: EconomicRiskMetrics | undefined;
+    const isBranchSpecific = Boolean(this.target.outcomeBranches && this.target.outcomeBranches.length > 1);
     const configuredSale = this.target.saleValueChaos ?? (this.target.outcomeBranches && this.target.outcomeBranches.length > 0 ? (this.target.outcomeBranches[0].saleValueChaos ?? 0) : 0);
 
     if (completedProfits.length > 0) {
       completedProfits.sort((a, b) => a - b);
       const profitableTrials = completedProfits.filter((p) => p >= 0).length;
       const profitProb = (profitableTrials / completedProfits.length) * 100;
+      const meanProfit = completedProfits.reduce((s, p) => s + p, 0) / completedProfits.length;
       const medianProfit = completedProfits[Math.floor(completedProfits.length * 0.5)];
+
+      const p75Profit = completedProfits[Math.floor(completedProfits.length * 0.75)];
+      const p90Profit = completedProfits[Math.floor(completedProfits.length * 0.90)];
+      const p95Profit = completedProfits[Math.floor(completedProfits.length * 0.95)];
+      const p25Profit = completedProfits[Math.floor(completedProfits.length * 0.25)];
+      const p10Profit = completedProfits[Math.floor(completedProfits.length * 0.10)];
+      const p5Profit = completedProfits[Math.floor(completedProfits.length * 0.05)];
 
       const worst5PctIdx = Math.floor(completedCount * 0.95);
       const worst5PctSlice = completedCosts.slice(worst5PctIdx);
@@ -585,13 +623,46 @@ export class MonteCarloSimulator {
 
       riskMetrics = {
         saleValueChaos: configuredSale,
+        isBranchSpecific,
         profitableTrialsCount: profitableTrials,
         profitProbabilityPercentage: profitProb,
+        meanRealizedProfitChaos: meanProfit,
         medianRealizedProfitChaos: medianProfit,
+        p75ProfitChaos: p75Profit,
+        p90ProfitChaos: p90Profit,
+        p95ProfitChaos: p95Profit,
+        p25ProfitChaos: p25Profit,
+        p10ProfitChaos: p10Profit,
+        p5ProfitChaos: p5Profit,
         p75CostChaos,
         p90CostChaos,
         p95CostChaos,
         cvar95CostChaos: cvar95,
+      };
+    }
+
+    let uncertaintyMetrics: MonteCarloUncertaintyMetrics | undefined;
+    if (completedCount > 1) {
+      const variance = completedCosts.reduce((s, c) => s + (c - meanCostChaos) ** 2, 0) / (completedCount - 1);
+      const sampleStandardDeviationChaos = Math.sqrt(variance);
+      const standardErrorChaos = sampleStandardDeviationChaos / Math.sqrt(completedCount);
+      const ciHalfWidth = 1.96 * standardErrorChaos;
+      const confidenceInterval95Chaos: [number, number] = [
+        Math.max(0, meanCostChaos - ciHalfWidth),
+        meanCostChaos + ciHalfWidth,
+      ];
+      const analyticalInsideCi95 =
+        analyticalExpectedCostChaos !== undefined
+          ? analyticalExpectedCostChaos >= confidenceInterval95Chaos[0] &&
+            analyticalExpectedCostChaos <= confidenceInterval95Chaos[1]
+          : false;
+
+      uncertaintyMetrics = {
+        sampleStandardDeviationChaos,
+        standardErrorChaos,
+        confidenceInterval95Chaos,
+        analyticalExpectedCostChaos,
+        analyticalInsideCi95,
       };
     }
 
@@ -619,6 +690,7 @@ export class MonteCarloSimulator {
       outcomeBranchDistribution,
       timeoutDiagnostics,
       riskMetrics,
+      uncertaintyMetrics,
       sampleTraces,
       status,
       message:
@@ -633,7 +705,7 @@ export class MonteCarloSimulator {
     const totalWeight = calculateTotalWeight(mods);
     if (totalWeight <= 0) return mods[0];
 
-    const r = Math.random() * totalWeight;
+    const r = this.rng.next() * totalWeight;
     let acc = 0;
     for (const m of mods) {
       acc += m.weight;
