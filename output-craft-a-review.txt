@@ -2,12 +2,15 @@
 REFERENCE CRAFT A VALIDATION REPORT & STEPWISE FINANCIAL PLAN
 ======================================================================
 
-POLICY COST MODEL: INVESTIGATION REQUIRED (Cost Diff: 6.93%, Harvest Diff: 17.72%, Annul Diff: 36.66%, Exalt Diff: 20.91%)
+POLICY COST MODEL: VALIDATED FOR CURRENT IMPLEMENTED MECHANICS (Analytical & Monte Carlo agree within 1.97%)
+GAME-MECHANICS FIDELITY: PARTIAL
+BEST OF EVALUATED POLICIES: PROVEN
+GLOBAL OPTIMALITY: NOT YET PROVEN
 
 ----------------------------------------------------------------------
 POLICY CONSISTENCY
 ----------------------------------------------------------------------
-  Monte Carlo policy states resolved: 5861094
+  Monte Carlo policy states resolved: 5623338
   Missing policy states:                 0
   Fallback actions used:                  0
 
@@ -16,14 +19,14 @@ HARVEST STOPPING POLICY COMPARISON
 ======================================================================
 
 Strategy A: Stop Harvest at First Glowing (Sequential Exalts):
-  Expected Harvests:           2185.26
-  Expected Annulments:          344.89
-  Expected Exalted Slams:       147.46
-  Expected Crafting Cost:      6695.4c (~33.48 div)
-  Expected Total Craft Cost:   8228.8c (~41.14 div)
+  Expected Harvests:           2545.60
+  Expected Annulments:          219.22
+  Expected Exalted Slams:       116.53
+  Expected Crafting Cost:      6090.3c (~30.45 div)
+  Expected Total Craft Cost:   7623.7c (~38.12 div)
   Expected Sale Value:         8790.7c (~43.95 div)
-  Expected Profit:             561.9c (~2.81 div)
-  Expected ROI:                6.83%
+  Expected Profit:             1167.0c (~5.83 div)
+  Expected ROI:                15.31%
   Description:                 Stop Harvest upon hitting Glowing, clean junk suffixes with Annuls, and slam target suffixes with Exalted Orbs.
 
 Strategy B: Pure Harvest Fishing (Until Glowing + Target Suffixes):
@@ -38,14 +41,14 @@ Strategy B: Pure Harvest Fishing (Until Glowing + Target Suffixes):
   Description:                 Remain in Harvest until BOTH Glowing and all Target Suffixes appear simultaneously directly from Harvest (1 in ~12,447 crafts).
 
 Strategy C: State-Aware Optimal Stopping Policy:
-  Expected Harvests:           2185.26
-  Expected Annulments:          344.89
-  Expected Exalted Slams:       147.46
-  Expected Crafting Cost:      6695.4c (~33.48 div)
-  Expected Total Craft Cost:   8228.8c (~41.14 div)
+  Expected Harvests:           2545.60
+  Expected Annulments:          219.22
+  Expected Exalted Slams:       116.53
+  Expected Crafting Cost:      6090.3c (~30.45 div)
+  Expected Total Craft Cost:   7623.7c (~38.12 div)
   Expected Sale Value:         8790.7c (~43.95 div)
-  Expected Profit:             561.9c (~2.81 div)
-  Expected ROI:                6.83%
+  Expected Profit:             1167.0c (~5.83 div)
+  Expected ROI:                15.31%
   Description:                 Dynamic Bellman policy choosing min-cost action at every state; preserves any target suffix hit in Harvest, cleans junk, and slams remainder with Exalted Orbs.
 
 Recommended Policy:
@@ -123,73 +126,67 @@ REPRESENTATIVE STATE DECISIONS & CONTINUATION VALUES
 
 1. State: Frac 35 + Glowing (Clean S0)
    Candidate Actions:
-     - Harvest Reforge Defences                 Continuation EV: 6693.9c (~33.47 div)
-     - Exalted Orb Slam (Suffix: of the Prodigy / +4 All Attributes (T1) / 3% Attack Speed (T1) / +4% All Elemental Resistance (T1)) Continuation EV: 6672.6c (~33.36 div)
+     - Harvest Reforge Defences                 Continuation EV: 6090.3c (~30.45 div)
+     - Exalted Orb Slam (Suffix: of the Prodigy / +4 All Attributes (T1) / 3% Attack Speed (T1) / +4% All Elemental Resistance (T1)) Continuation EV: 6071.4c (~30.36 div)
    Recommended Action: Exalted Orb Slam (Suffix: of the Prodigy / +4 All Attributes (T1) / 3% Attack Speed (T1) / +4% All Elemental Resistance (T1))
-   Reason:             Exalted Orb Slam (Suffix: of the Prodigy / +4 All Attributes (T1) / 3% Attack Speed (T1) / +4% All Elemental Resistance (T1)) has continuation EV of 6672.6c vs 6697.0c to reforge.
+   Reason:             Exalted Orb Slam (Suffix: of the Prodigy / +4 All Attributes (T1) / 3% Attack Speed (T1) / +4% All Elemental Resistance (T1)) has continuation EV of 6071.4c vs 6090.3c to reforge.
 
 2. State: Frac 35 + Glowing + of the Prodigy
    Candidate Actions:
-     - Harvest Reforge Defences                 Continuation EV: 6693.9c (~33.47 div)
-     - Exalted Orb Slam (Suffix: of the Prodigy / +4 All Attributes (T1) / 3% Attack Speed (T1) / +4% All Elemental Resistance (T1)) Continuation EV: 6133.6c (~30.67 div)
+     - Harvest Reforge Defences                 Continuation EV: 6090.3c (~30.45 div)
+     - Exalted Orb Slam (Suffix: of the Prodigy / +4 All Attributes (T1) / 3% Attack Speed (T1) / +4% All Elemental Resistance (T1)) Continuation EV: 5581.2c (~27.91 div)
    Recommended Action: Exalted Orb Slam (Suffix: of the Prodigy / +4 All Attributes (T1) / 3% Attack Speed (T1) / +4% All Elemental Resistance (T1))
-   Reason:             Exalted Orb Slam (Suffix: of the Prodigy / +4 All Attributes (T1) / 3% Attack Speed (T1) / +4% All Elemental Resistance (T1)) has continuation EV of 6133.6c vs 6697.0c to reforge.
+   Reason:             Exalted Orb Slam (Suffix: of the Prodigy / +4 All Attributes (T1) / 3% Attack Speed (T1) / +4% All Elemental Resistance (T1)) has continuation EV of 5581.2c vs 6090.3c to reforge.
 
 3. State: Frac 35 + Glowing + +4 All Attributes (T1)
    Candidate Actions:
-     - Harvest Reforge Defences                 Continuation EV: 6693.9c (~33.47 div)
-     - Exalted Orb Slam (Suffix: of the Prodigy / +4 All Attributes (T1) / 3% Attack Speed (T1) / +4% All Elemental Resistance (T1)) Continuation EV: 6501.8c (~32.51 div)
+     - Harvest Reforge Defences                 Continuation EV: 6090.3c (~30.45 div)
+     - Exalted Orb Slam (Suffix: of the Prodigy / +4 All Attributes (T1) / 3% Attack Speed (T1) / +4% All Elemental Resistance (T1)) Continuation EV: 5916.3c (~29.58 div)
    Recommended Action: Exalted Orb Slam (Suffix: of the Prodigy / +4 All Attributes (T1) / 3% Attack Speed (T1) / +4% All Elemental Resistance (T1))
-   Reason:             Exalted Orb Slam (Suffix: of the Prodigy / +4 All Attributes (T1) / 3% Attack Speed (T1) / +4% All Elemental Resistance (T1)) has continuation EV of 6501.8c vs 6697.0c to reforge.
+   Reason:             Exalted Orb Slam (Suffix: of the Prodigy / +4 All Attributes (T1) / 3% Attack Speed (T1) / +4% All Elemental Resistance (T1)) has continuation EV of 5916.3c vs 6090.3c to reforge.
 
 4. State: Frac 35 + Glowing + 3% Attack Speed (T1)
    Candidate Actions:
-     - Harvest Reforge Defences                 Continuation EV: 6693.9c (~33.47 div)
-     - Exalted Orb Slam (Suffix: of the Prodigy / +4 All Attributes (T1) / 3% Attack Speed (T1) / +4% All Elemental Resistance (T1)) Continuation EV: 6505.3c (~32.53 div)
+     - Harvest Reforge Defences                 Continuation EV: 6090.3c (~30.45 div)
+     - Exalted Orb Slam (Suffix: of the Prodigy / +4 All Attributes (T1) / 3% Attack Speed (T1) / +4% All Elemental Resistance (T1)) Continuation EV: 5919.5c (~29.60 div)
    Recommended Action: Exalted Orb Slam (Suffix: of the Prodigy / +4 All Attributes (T1) / 3% Attack Speed (T1) / +4% All Elemental Resistance (T1))
-   Reason:             Exalted Orb Slam (Suffix: of the Prodigy / +4 All Attributes (T1) / 3% Attack Speed (T1) / +4% All Elemental Resistance (T1)) has continuation EV of 6505.3c vs 6697.0c to reforge.
+   Reason:             Exalted Orb Slam (Suffix: of the Prodigy / +4 All Attributes (T1) / 3% Attack Speed (T1) / +4% All Elemental Resistance (T1)) has continuation EV of 5919.5c vs 6090.3c to reforge.
 
 5. State: Frac 35 + Glowing + +4% All Elemental Resistance (T1)
    Candidate Actions:
-     - Harvest Reforge Defences                 Continuation EV: 6693.9c (~33.47 div)
-     - Exalted Orb Slam (Suffix: of the Prodigy / +4 All Attributes (T1) / 3% Attack Speed (T1) / +4% All Elemental Resistance (T1)) Continuation EV: 6501.8c (~32.51 div)
+     - Harvest Reforge Defences                 Continuation EV: 6090.3c (~30.45 div)
+     - Exalted Orb Slam (Suffix: of the Prodigy / +4 All Attributes (T1) / 3% Attack Speed (T1) / +4% All Elemental Resistance (T1)) Continuation EV: 5916.3c (~29.58 div)
    Recommended Action: Exalted Orb Slam (Suffix: of the Prodigy / +4 All Attributes (T1) / 3% Attack Speed (T1) / +4% All Elemental Resistance (T1))
-   Reason:             Exalted Orb Slam (Suffix: of the Prodigy / +4 All Attributes (T1) / 3% Attack Speed (T1) / +4% All Elemental Resistance (T1)) has continuation EV of 6501.8c vs 6697.0c to reforge.
+   Reason:             Exalted Orb Slam (Suffix: of the Prodigy / +4 All Attributes (T1) / 3% Attack Speed (T1) / +4% All Elemental Resistance (T1)) has continuation EV of 5916.3c vs 6090.3c to reforge.
 
 6. State: Frac 35 + Glowing + 1 Junk Suffix
    Candidate Actions:
-     - Harvest Reforge Defences                 Continuation EV: 6693.9c (~33.47 div)
-     - Orb of Annulment                         Continuation EV: 6684.6c (~33.42 div)
+     - Harvest Reforge Defences                 Continuation EV: 6090.3c (~30.45 div)
+     - Orb of Annulment                         Continuation EV: 6081.4c (~30.41 div)
    Recommended Action: Orb of Annulment
-   Reason:             Orb of Annulment has continuation EV of 6684.6c vs 6697.0c to reforge.
+   Reason:             Orb of Annulment has continuation EV of 6081.4c vs 6090.3c to reforge.
 
 ----------------------------------------------------------------------
 HARVEST SUCCESS STATE CENSUS (Given Glowing Hit)
 ----------------------------------------------------------------------
-  Total Harvest Crafts:         5,184,018
-  Glowing Hit Rate:         7.13% (369,628 hits)
+  Total Harvest Crafts:         4,965,387
+  Glowing Hit Rate:         7.15% (354,877 hits)
   Additional Affix Distribution (Given Glowing Hit):
     0 additional affixes:       0.00%
-    1 additional affix:         49.87%
-    2 additional affixes:       50.13%
+    1 additional affix:         49.99%
+    2 additional affixes:       50.01%
   Of Glowing Successes:
     Glowing Only (Clean):   0.00%
-    +1 Junk Suffix:             46.25% (Requires 1-Junk Annul Cleanup)
-    +2 Junk Suffixes:           42.88% (Requires 2-Junk Annul Cleanup)
-    +of the Prodigy:                  2.86% (Preserve; Exalt Final Suffix)
-    ++4 All Attributes (T1):                  2.92% (Preserve; Exalt Final Suffix)
-    +3% Attack Speed (T1):                  2.40% (Preserve; Exalt Final Suffix)
-    ++4% All Elemental Resistance (T1):                  2.91% (Preserve; Exalt Final Suffix)
+    +1 Junk Suffix:             46.33% (Requires 1-Junk Annul Cleanup)
+    +2 Junk Suffixes:           42.85% (Requires 2-Junk Annul Cleanup)
+    +of the Prodigy:                  2.87% (Preserve; Exalt Final Suffix)
+    ++4 All Attributes (T1):                  2.88% (Preserve; Exalt Final Suffix)
+    +3% Attack Speed (T1):                  2.42% (Preserve; Exalt Final Suffix)
+    ++4% All Elemental Resistance (T1):                  2.88% (Preserve; Exalt Final Suffix)
 
 ----------------------------------------------------------------------
 STEP 1 -- Acquire Starting Fracture
 ----------------------------------------------------------------------
-
-Direct market purchase of fractured Powerful base:
-  Purchase cost:              1533.4c (~7.67 div)
-  Expected preparation cost:     0.0c
-  Expected total:             1533.4c (~7.67 div)
-  Model confidence:           High (Deterministic Market Purchase)
 
 Prepare 4-mod clean base with Powerful via Alt/Aug/Regal/Bench and use Fracturing Orb (25% chance):
   Model Status:               [SELF-FRACTURE ACQUISITION MODEL: APPROXIMATE]
@@ -202,23 +199,18 @@ Prepare 4-mod clean base with Powerful via Alt/Aug/Regal/Bench and use Fracturin
   Model confidence:           Approximate (Self-Fracture Model)
 
 RECOMMENDED ACQUISITION (STEP 1):
-  Direct market purchase of fractured Powerful base
+  Prepare 4-mod clean base with Powerful via Alt/Aug/Regal/Bench and use Fracturing Orb (25% chance)
   Estimated acquisition cost: 1533.4c (~7.67 div)
 
 MODEL CONFIDENCE:
-  High (Deterministic Market Purchase)
+  Approximate (Self-Fracture Model)
 
-ALTERNATIVE ACQUISITION (STEP 1):
-  Prepare 4-mod clean base with Powerful via Alt/Aug/Regal/Bench and use Fracturing Orb (25% chance)
-  Estimated cost:             1533.4c (~7.67 div)
-
-Estimated difference (Full Route):
-  0.00 div / 0.0c
+Market purchase: unavailable / not supplied (Self-fracture evaluated from pool weights).
 
 ----------------------------------------------------------------------
 Base Acquisition
 ----------------------------------------------------------------------
-Action: Direct market purchase of fractured Powerful base
+Action: Prepare 4-mod clean base with Powerful via Alt/Aug/Regal/Bench and use Fracturing Orb (25% chance)
 Note: Starting fractured base: Powerful
 Raw step cost:                1533.4c (~7.67 div)
 Expected step total:          1533.4c (~7.67 div)
@@ -230,29 +222,29 @@ Prefix Acquisition: Harvest Reforge Defences
 Action: Harvest Reforge Defences
 Note: Reforge with guaranteed defences modifier until Glowing hits (7.14% per craft).
 Success chance:               7.14%
-Expected attempts:            2185.26
-Raw step cost:                3414.5c (~17.07 div)
-Expected step total:          3414.5c (~17.07 div)
-Expected cumulative cost:     4947.9c (~24.74 div)
+Expected attempts:            2545.60
+Raw step cost:                3977.5c (~19.89 div)
+Expected step total:          3977.5c (~19.89 div)
+Expected cumulative cost:     5510.9c (~27.55 div)
 
 ----------------------------------------------------------------------
 Suffix Cleanup: Orb of Annulment
 ----------------------------------------------------------------------
 Action: Orb of Annulment
 Note: Annul non-target junk suffixes while preserving Glowing and any target suffixes generated during Harvest.
-Raw step cost:                1785.1c (~8.93 div)
-Expected step total:          1785.1c (~8.93 div)
-Expected cumulative cost:     6733.0c (~33.66 div)
+Raw step cost:                915.2c (~4.58 div)
+Expected step total:          915.2c (~4.58 div)
+Expected cumulative cost:     6426.1c (~32.13 div)
 
 ----------------------------------------------------------------------
 Suffix Completion: Sequential Exalted Slams
 ----------------------------------------------------------------------
 Action: Exalted Orb Slam (Suffix)
 Note: Slam open suffix slots with Exalted Orbs for target suffixes (of the Prodigy, +4 All Attributes (T1), 3% Attack Speed (T1), +4% All Elemental Resistance (T1)). Annul on misses.
-Raw step cost:                177.0c
-Expected recovery cost:       1318.9c (~6.59 div)
-Expected step total:          1495.8c (~7.48 div)
-Expected cumulative cost:     8228.8c (~41.14 div)
+Raw step cost:                139.8c
+Expected recovery cost:       1057.8c (~5.29 div)
+Expected step total:          1197.7c (~5.99 div)
+Expected cumulative cost:     7623.7c (~38.12 div)
 
 ======================================================================
 RECOMMENDED CRAFTING PLAN
@@ -265,292 +257,300 @@ Base Acquisition:
 
 Prefix Acquisition: Harvest Reforge Defences:
   Chance per attempt:         7.14%
-  Expected attempts:          2185.26
-  Expected step cost:         3414.5c (~17.07 div)
-  Cumulative:                 4947.9c (~24.74 div)
+  Expected attempts:          2545.60
+  Expected step cost:         3977.5c (~19.89 div)
+  Cumulative:                 5510.9c (~27.55 div)
 
 Suffix Cleanup: Orb of Annulment:
-  Expected step cost:         1785.1c (~8.93 div)
-  Cumulative:                 6733.0c (~33.66 div)
+  Expected step cost:         915.2c (~4.58 div)
+  Cumulative:                 6426.1c (~32.13 div)
 
 Suffix Completion: Sequential Exalted Slams:
-  Raw step cost:              177.0c
-  Expected recovery cost:     1318.9c (~6.59 div)
-  Expected step cost:         1495.8c (~7.48 div)
-  Cumulative:                 8228.8c (~41.14 div)
+  Raw step cost:              139.8c
+  Expected recovery cost:     1057.8c (~5.29 div)
+  Expected step cost:         1197.7c (~5.99 div)
+  Cumulative:                 7623.7c (~38.12 div)
 
 ----------------------------------------------------------------------
 EXPECTED TOTAL CRAFT COST:
-  8228.8c (~41.14 div)
+  7623.7c (~38.12 div)
 
 FINAL OUTCOME VALUE DISTRIBUTION:
-  35.38%  +4 All Attributes (T1)               (17000.0c (~85.00 div))  [Sim: 34.88%]
-  29.23%  3% Attack Speed (T1)                 (7800.0c (~39.00 div))  [Sim: 30.78%]
-  35.38%  +4% All Elemental Resistance (T1)    (1400.0c (~7.00 div))  [Sim: 34.33%]
+  35.38%  +4 All Attributes (T1)               (17000.0c (~85.00 div))  [Sim: 36.70%]
+  29.23%  3% Attack Speed (T1)                 (7800.0c (~39.00 div))  [Sim: 27.65%]
+  35.38%  +4% All Elemental Resistance (T1)    (1400.0c (~7.00 div))  [Sim: 35.65%]
 
 EXPECTED SALE VALUE:
   8790.7c (~43.95 div)
 
 EXPECTED PROFIT:
-  561.9c (~2.81 div)
+  1167.0c (~5.83 div)
 
 EXPECTED ROI:
-  6.83%
+  15.31%
 
 ======================================================================
 MONTE CARLO EMPIRICAL VALIDATION & CROSS-COMPARISON
 ======================================================================
-Status: POLICY COST MODEL: INVESTIGATION REQUIRED (Cost Diff: 6.93%, Harvest Diff: 17.72%, Annul Diff: 36.66%, Exalt Diff: 20.91%)
-Completed trials:       1,998 / 2,000 (99.90%)
-Timed out trials:       2
+Status: POLICY COST MODEL: VALIDATED FOR CURRENT IMPLEMENTED MECHANICS (Analytical & Monte Carlo agree within 1.97%)
+GAME-MECHANICS FIDELITY: PARTIAL
+BEST OF EVALUATED POLICIES: PROVEN
+GLOBAL OPTIMALITY: NOT YET PROVEN
+Completed trials:       2,000 / 2,000 (100.00%)
 
 STEPWISE COST COMPARISON:
                                   Analytical          Monte Carlo           Difference
 --------------------------------------------------------------------------------------
 Step 1 Acquisition:      1533.4c (~7.67 div)  1533.4c (~7.67 div)                -0.0c
-Step 2 Harvest:         3414.5c (~17.07 div) 4019.4c (~20.10 div)   604.9c (~3.02 div)
-Step 3 Cleanup:          1785.1c (~8.93 div)   918.2c (~4.59 div) -866.9c (~-4.33 div)
-Step 4 Suffix Slams:     1495.8c (~7.48 div)  1187.7c (~5.94 div) -308.1c (~-1.54 div)
+Step 2 Harvest:         3977.5c (~19.89 div) 3879.2c (~19.40 div)               -98.3c
+Step 3 Cleanup:           915.2c (~4.58 div)   889.5c (~4.45 div)               -25.7c
+Step 4 Suffix Slams:     1197.7c (~5.99 div)  1171.5c (~5.86 div)               -26.1c
 --------------------------------------------------------------------------------------
-TOTAL COST:             8228.8c (~41.14 div) 7658.7c (~38.29 div)           6.93% diff
+TOTAL COST:             7623.7c (~38.12 div) 7473.6c (~37.37 div)           1.97% diff
 
 ACTION COUNTS (Cumulative Across All Recovery Loops):
                                   Analytical          Monte Carlo           Difference
 --------------------------------------------------------------------------------------
-Harvest Attempts:                    2185.26              2572.38         +17.72% diff
-Annulment Orbs:                       344.89               218.44         -36.66% diff
-Exalted Orbs:                         147.46               116.63         -20.91% diff
+Harvest Attempts:                    2545.60              2482.69          -2.47% diff
+Annulment Orbs:                       219.22               213.78          -2.48% diff
+Exalted Orbs:                         116.53               114.20          -2.00% diff
 --------------------------------------------------------------------------------------
 
 TERMINAL OUTCOME BRANCH VALIDATION:
                                   Analytical          Monte Carlo           Difference
 --------------------------------------------------------------------------------------
-+4 All Attributes (T1)                 35.38%               34.88%             -0.50 pp
-3% Attack Speed (T1)                   29.23%               30.78%             +1.55 pp
-+4% All Elemental Resistance (T1)               35.38%               34.33%             -1.05 pp
++4 All Attributes (T1)                 35.38%               36.70%             +1.32 pp
+3% Attack Speed (T1)                   29.23%               27.65%             -1.58 pp
++4% All Elemental Resistance (T1)               35.38%               35.65%             +0.27 pp
 --------------------------------------------------------------------------------------
 
+MONTE CARLO TIMEOUT & STEP CENSORING DIAGNOSTICS:
+  Completed trials:       2,000 / 2,000 (100.00%)
+  Timed out trials:       0 (0.00%)
+  Average steps / trial:  2,812 steps
+  Maximum steps observed: 24,460 steps
+  Trials > 5,000 steps:   337 (16.85%)
+  Trials > 10,000 steps:  56 (2.80%)
+  Trials > 20,000 steps:  1 (0.05%)
+  Timeout censoring bias: None (0 timed-out trials)
+
 Percentiles:
-  Median Cost (P50):    5648.8c (~28.24 div)
-  75th Percentile (P75):10223.5c (~51.12 div)
-  90th Percentile (P90):15927.9c (~79.64 div)
-  95th Percentile (P95):20257.7c (~101.29 div)
+  Median Cost (P50):    5646.4c (~28.23 div)
+  75th Percentile (P75):9821.8c (~49.11 div)
+  90th Percentile (P90):15376.8c (~76.88 div)
+  95th Percentile (P95):19934.5c (~99.67 div)
 
 ----------------------------------------------------------------------
 SAMPLE MONTE CARLO CRAFT TRACES (5 TRIALS)
 ----------------------------------------------------------------------
 
-Trial #1 (17357 steps) -> Total Cost: 38292.8c (~191.46 div)
+Trial #1 (1170 steps) -> Total Cost: 4091.2c (~20.46 div)
   Final Prefixes: [Powerful (t1), Glowing (t1)]
-  Final Suffixes: [of the Meteor (t1), of the Prodigy (t1)]
-  Total Actions:  Harvests=15333, Annuls=1330, Exalts=693
+  Final Suffixes: [of the Prodigy (t1), of the Kaleidoscope (t1)]
+  Total Actions:  Harvests=1013, Annuls=101, Exalts=55
   Step Log:
-    [Step 1] Harvest Reforge Defences: Reforged item (guaranteed defences: Shining) (+1.56c) -> P:[Powerful (t1), Shining (t3)], S:[of the Lost (t3), of the Cloud (t3)]
-    [Step 2] Harvest Reforge Defences: Reforged item (guaranteed defences: Ribbed) (+1.56c) -> P:[Powerful (t1), Ribbed (t1)], S:[of Excitement (t3), of Eviction (t1)]
-    [Step 3] Harvest Reforge Defences: Reforged item (guaranteed defences: Ribbed) (+1.56c) -> P:[Powerful (t1), Ribbed (t1)], S:[of Elation (t1)]
-    [Step 4] Harvest Reforge Defences: Reforged item (guaranteed defences: Glowing) (+1.56c) -> P:[Powerful (t1), Glowing (t1)], S:[of the Kaleidoscope (t1)]
-    [Step 5] Exalted Orb Slam (Suffix: of the Prodigy / +4 All Attributes (T1) / 3% Attack Speed (T1) / +4% All Elemental Resistance (T1)): Slammed Heavy Hitter (+1.20c) -> P:[Powerful (t1), Glowing (t1)], S:[of the Kaleidoscope (t1), Heavy Hitter (t1)]
-    [Step 6] Orb of Annulment: Annul removed of the Kaleidoscope (Suffix) [Step 4 Cleanup] (+9.00c) -> P:[Powerful (t1), Glowing (t1)], S:[Heavy Hitter (t1)]
-    [Step 7] Orb of Annulment: Annul removed Heavy Hitter (Suffix) [Step 4 Cleanup] (+9.00c) -> P:[Powerful (t1), Glowing (t1)], S:[]
-    [Step 8] Exalted Orb Slam (Suffix: of the Prodigy / +4 All Attributes (T1) / 3% Attack Speed (T1) / +4% All Elemental Resistance (T1)): Slammed of the Cloud (+1.20c) -> P:[Powerful (t1), Glowing (t1)], S:[of the Cloud (t3)]
-    [Step 9] Orb of Annulment: Annul removed of the Cloud (Suffix) [Step 4 Cleanup] (+9.00c) -> P:[Powerful (t1), Glowing (t1)], S:[]
-    [Step 10] Exalted Orb Slam (Suffix: of the Prodigy / +4 All Attributes (T1) / 3% Attack Speed (T1) / +4% All Elemental Resistance (T1)): Slammed of the Squall (+1.20c) -> P:[Powerful (t1), Glowing (t1)], S:[of the Squall (t2)]
-    [Step 11] Orb of Annulment: Annul removed Glowing (Prefix) [Step 4 Cleanup] (+9.00c) -> P:[Powerful (t1)], S:[of the Squall (t2)]
-    [Step 12] Harvest Reforge Defences: Reforged item (guaranteed defences: Ribbed) (+1.56c) -> P:[Powerful (t1), Ribbed (t1)], S:[of the Salamander (t2)]
-    [Step 13] Harvest Reforge Defences: Reforged item (guaranteed defences: Glowing) (+1.56c) -> P:[Powerful (t1), Glowing (t1)], S:[Martial Prowess (t1)]
-    [Step 14] Orb of Annulment: Annul removed Glowing (Prefix) [Step 3 Cleanup] (+9.00c) -> P:[Powerful (t1)], S:[Martial Prowess (t1)]
-    [Step 15] Harvest Reforge Defences: Reforged item (guaranteed defences: Glimmering) (+1.56c) -> P:[Powerful (t1), Glimmering (t2)], S:[of the Crystal (t3), of the Flatworm (t1)]
-    [Step 16] Harvest Reforge Defences: Reforged item (guaranteed defences: Dancer's) (+1.56c) -> P:[Powerful (t1), Dancer's (t2)], S:[of the Lizard (t2)]
-    [Step 17] Harvest Reforge Defences: Reforged item (guaranteed defences: Dancer's) (+1.56c) -> P:[Powerful (t1), Dancer's (t2)], S:[of the Whelpling (t3)]
-    [Step 18] Harvest Reforge Defences: Reforged item (guaranteed defences: Studded) (+1.56c) -> P:[Powerful (t1), Studded (t2)], S:[of the Newt (t3)]
-    [Step 19] Harvest Reforge Defences: Reforged item (guaranteed defences: Dancer's) (+1.56c) -> P:[Powerful (t1), Dancer's (t2)], S:[of the Whelpling (t3)]
-    [Step 20] Harvest Reforge Defences: Reforged item (guaranteed defences: Veteran Defender) (+1.56c) -> P:[Powerful (t1), Veteran Defender (t1)], S:[of the Prism (t2), of the Mongoose (t3)]
-    [Step 21] Harvest Reforge Defences: Reforged item (guaranteed defences: Studded) (+1.56c) -> P:[Powerful (t1), Studded (t2)], S:[of the Whelpling (t3)]
-    [Step 22] Harvest Reforge Defences: Reforged item (guaranteed defences: Ribbed) (+1.56c) -> P:[Powerful (t1), Ribbed (t1)], S:[Martial Prowess (t1)]
-    [Step 23] Harvest Reforge Defences: Reforged item (guaranteed defences: Agile) (+1.56c) -> P:[Powerful (t1), Agile (t3)], S:[of the Cloud (t3), Added Small Passive Skills also grant: 2% increased Attack Speed (t2)]
-    [Step 24] Harvest Reforge Defences: Reforged item (guaranteed defences: Agile) (+1.56c) -> P:[Powerful (t1), Agile (t3)], S:[of the Lost (t3), of the Cloud (t3)]
-    [Step 25] Harvest Reforge Defences: Reforged item (guaranteed defences: Studded) (+1.56c) -> P:[Powerful (t1), Studded (t2)], S:[of the Student (t2), Smite the Weak (t1)]
-    [Step 26] Harvest Reforge Defences: Reforged item (guaranteed defences: Shining) (+1.56c) -> P:[Powerful (t1), Shining (t3)], S:[of the Whelpling (t3)]
-    [Step 27] Harvest Reforge Defences: Reforged item (guaranteed defences: Acrobat's) (+1.56c) -> P:[Powerful (t1), Acrobat's (t1)], S:[of the Salamander (t2), Smite the Weak (t1)]
-    [Step 28] Harvest Reforge Defences: Reforged item (guaranteed defences: Veteran Defender) (+1.56c) -> P:[Powerful (t1), Veteran Defender (t1)], S:[of the Seal (t2), of the Crystal (t3)]
-    [Step 29] Harvest Reforge Defences: Reforged item (guaranteed defences: Glowing) (+1.56c) -> P:[Powerful (t1), Glowing (t1)], S:[of the Whelpling (t3)]
-    [Step 30] Orb of Annulment: Annul removed Glowing (Prefix) [Step 3 Cleanup] (+9.00c) -> P:[Powerful (t1)], S:[of the Whelpling (t3)]
-    [Step 31] Harvest Reforge Defences: Reforged item (guaranteed defences: Glowing) (+1.56c) -> P:[Powerful (t1), Glowing (t1)], S:[of the Cloud (t3)]
-    [Step 32] Orb of Annulment: Annul removed of the Cloud (Suffix) [Step 3 Cleanup] (+9.00c) -> P:[Powerful (t1), Glowing (t1)], S:[]
-    [Step 33] Exalted Orb Slam (Suffix: of the Prodigy / +4 All Attributes (T1) / 3% Attack Speed (T1) / +4% All Elemental Resistance (T1)): Slammed of the Squall (+1.20c) -> P:[Powerful (t1), Glowing (t1)], S:[of the Squall (t2)]
-    [Step 34] Orb of Annulment: Annul removed of the Squall (Suffix) [Step 4 Cleanup] (+9.00c) -> P:[Powerful (t1), Glowing (t1)], S:[]
-    [Step 35] Exalted Orb Slam (Suffix: of the Prodigy / +4 All Attributes (T1) / 3% Attack Speed (T1) / +4% All Elemental Resistance (T1)): Slammed of the Whelpling (+1.20c) -> P:[Powerful (t1), Glowing (t1)], S:[of the Whelpling (t3)]
-    [Step 36] Orb of Annulment: Annul removed Glowing (Prefix) [Step 4 Cleanup] (+9.00c) -> P:[Powerful (t1)], S:[of the Whelpling (t3)]
-    [Step 37] Harvest Reforge Defences: Reforged item (guaranteed defences: Veteran Defender) (+1.56c) -> P:[Powerful (t1), Veteran Defender (t1)], S:[of the Lizard (t2)]
-    [Step 38] Harvest Reforge Defences: Reforged item (guaranteed defences: Veteran Defender) (+1.56c) -> P:[Powerful (t1), Veteran Defender (t1)], S:[of the Wrestler (t2), of Banishment (t2)]
-    [Step 39] Harvest Reforge Defences: Reforged item (guaranteed defences: Lacquered) (+1.56c) -> P:[Powerful (t1), Lacquered (t3)], S:[of the Pupil (t3), of the Mongoose (t3)]
-    [Step 40] Harvest Reforge Defences: Reforged item (guaranteed defences: Studded) (+1.56c) -> P:[Powerful (t1), Studded (t2)], S:[of the Newt (t3), of Banishment (t2)]
-    [Step 41] Harvest Reforge Defences: Reforged item (guaranteed defences: Lacquered) (+1.56c) -> P:[Powerful (t1), Lacquered (t3)], S:[Added Small Passive Skills also grant: 1% increased Attack Speed (t3)]
-    [Step 42] Harvest Reforge Defences: Reforged item (guaranteed defences: Acrobat's) (+1.56c) -> P:[Powerful (t1), Acrobat's (t1)], S:[of the Lizard (t2)]
-    [Step 43] Harvest Reforge Defences: Reforged item (guaranteed defences: Glowing) (+1.56c) -> P:[Powerful (t1), Glowing (t1)], S:[of the Pupil (t3), of the Prism (t2)]
-    [Step 44] Harvest Reforge Defences: Reforged item (guaranteed defences: Ribbed) (+1.56c) -> P:[Powerful (t1), Ribbed (t1)], S:[of the Cloud (t3)]
-    [Step 45] Harvest Reforge Defences: Reforged item (guaranteed defences: Veteran Defender) (+1.56c) -> P:[Powerful (t1), Veteran Defender (t1)], S:[of the Wrestler (t2), of the Lynx (t2)]
-    [Step 46] Harvest Reforge Defences: Reforged item (guaranteed defences: Glimmering) (+1.56c) -> P:[Powerful (t1), Glimmering (t2)], S:[of the Seal (t2)]
-    [Step 47] Harvest Reforge Defences: Reforged item (guaranteed defences: Shining) (+1.56c) -> P:[Powerful (t1), Shining (t3)], S:[of the Lynx (t2), of the Lizard (t2)]
-    [Step 48] Harvest Reforge Defences: Reforged item (guaranteed defences: Acrobat's) (+1.56c) -> P:[Powerful (t1), Acrobat's (t1)], S:[Martial Prowess (t1)]
-    [Step 49] Harvest Reforge Defences: Reforged item (guaranteed defences: Glimmering) (+1.56c) -> P:[Powerful (t1), Glimmering (t2)], S:[of the Cloud (t3), of the Whelpling (t3)]
-    [Step 50] Harvest Reforge Defences: Reforged item (guaranteed defences: Acrobat's) (+1.56c) -> P:[Powerful (t1), Acrobat's (t1)], S:[of the Lost (t3)]
-    [Step 51] Harvest Reforge Defences: Reforged item (guaranteed defences: Agile) (+1.56c) -> P:[Powerful (t1), Agile (t3)], S:[of the Lost (t3)]
-    [Step 52] Harvest Reforge Defences: Reforged item (guaranteed defences: Veteran Defender) (+1.56c) -> P:[Powerful (t1), Veteran Defender (t1)], S:[Martial Prowess (t1), of Elation (t1)]
-    [Step 53] Harvest Reforge Defences: Reforged item (guaranteed defences: Studded) (+1.56c) -> P:[Powerful (t1), Studded (t2)], S:[of the Sky (t2)]
-    [Step 54] Harvest Reforge Defences: Reforged item (guaranteed defences: Lacquered) (+1.56c) -> P:[Powerful (t1), Lacquered (t3)], S:[of Joy (t2), of the Meteor (t1)]
-    [Step 55] Harvest Reforge Defences: Reforged item (guaranteed defences: Glimmering) (+1.56c) -> P:[Powerful (t1), Glimmering (t2)], S:[of Joy (t2)]
-    [Step 56] Harvest Reforge Defences: Reforged item (guaranteed defences: Studded) (+1.56c) -> P:[Powerful (t1), Studded (t2)], S:[of the Prism (t2), of the Pupil (t3)]
-    [Step 57] Harvest Reforge Defences: Reforged item (guaranteed defences: Lacquered) (+1.56c) -> P:[Powerful (t1), Lacquered (t3)], S:[of the Lizard (t2), of Eviction (t1)]
-    [Step 58] Harvest Reforge Defences: Reforged item (guaranteed defences: Veteran Defender) (+1.56c) -> P:[Powerful (t1), Veteran Defender (t1)], S:[Added Small Passive Skills also grant: 1% increased Attack Speed (t3), of the Prodigy (t1)]
-    [Step 59] Harvest Reforge Defences: Reforged item (guaranteed defences: Veteran Defender) (+1.56c) -> P:[Powerful (t1), Veteran Defender (t1)], S:[of Elation (t1)]
-    [Step 60] Harvest Reforge Defences: Reforged item (guaranteed defences: Agile) (+1.56c) -> P:[Powerful (t1), Agile (t3)], S:[of the Newt (t3)]
-    [Step 61] Harvest Reforge Defences: Reforged item (guaranteed defences: Agile) (+1.56c) -> P:[Powerful (t1), Agile (t3)], S:[Smite the Weak (t1), of Elation (t1)]
-    [Step 62] Harvest Reforge Defences: Reforged item (guaranteed defences: Ribbed) (+1.56c) -> P:[Powerful (t1), Ribbed (t1)], S:[of the Prism (t2)]
-    [Step 63] Harvest Reforge Defences: Reforged item (guaranteed defences: Shining) (+1.56c) -> P:[Powerful (t1), Shining (t3)], S:[of the Salamander (t2)]
-    [Step 64] Harvest Reforge Defences: Reforged item (guaranteed defences: Ribbed) (+1.56c) -> P:[Powerful (t1), Ribbed (t1)], S:[Smite the Weak (t1), of the Wrestler (t2)]
-    [Step 65] Harvest Reforge Defences: Reforged item (guaranteed defences: Ribbed) (+1.56c) -> P:[Powerful (t1), Ribbed (t1)], S:[Added Small Passive Skills also grant: 2% increased Attack Speed (t2)]
-    [Step 66] Harvest Reforge Defences: Reforged item (guaranteed defences: Glimmering) (+1.56c) -> P:[Powerful (t1), Glimmering (t2)], S:[of the Salamander (t2)]
-    [Step 67] Harvest Reforge Defences: Reforged item (guaranteed defences: Agile) (+1.56c) -> P:[Powerful (t1), Agile (t3)], S:[of the Storm (t1)]
-    [Step 68] Harvest Reforge Defences: Reforged item (guaranteed defences: Glimmering) (+1.56c) -> P:[Powerful (t1), Glimmering (t2)], S:[of the Salamander (t2)]
-    [Step 69] Harvest Reforge Defences: Reforged item (guaranteed defences: Dancer's) (+1.56c) -> P:[Powerful (t1), Dancer's (t2)], S:[of the Lizard (t2)]
-    [Step 70] Harvest Reforge Defences: Reforged item (guaranteed defences: Glimmering) (+1.56c) -> P:[Powerful (t1), Glimmering (t2)], S:[of the Prism (t2), of the Fox (t1)]
-    [Step 71] Harvest Reforge Defences: Reforged item (guaranteed defences: Veteran Defender) (+1.56c) -> P:[Powerful (t1), Veteran Defender (t1)], S:[of the Whelpling (t3), Added Small Passive Skills also grant: 1% increased Attack Speed (t3)]
-    [Step 72] Harvest Reforge Defences: Reforged item (guaranteed defences: Shining) (+1.56c) -> P:[Powerful (t1), Shining (t3)], S:[of the Prism (t2), of Excitement (t3)]
-    [Step 73] Harvest Reforge Defences: Reforged item (guaranteed defences: Shining) (+1.56c) -> P:[Powerful (t1), Shining (t3)], S:[of the Storm (t1), Martial Prowess (t1)]
-    [Step 74] Harvest Reforge Defences: Reforged item (guaranteed defences: Lacquered) (+1.56c) -> P:[Powerful (t1), Lacquered (t3)], S:[of the Wrestler (t2), of the Lynx (t2)]
-    [Step 75] Harvest Reforge Defences: Reforged item (guaranteed defences: Glowing) (+1.56c) -> P:[Powerful (t1), Glowing (t1)], S:[of the Brute (t3)]
-    [Step 76] Orb of Annulment: Annul removed Glowing (Prefix) [Step 3 Cleanup] (+9.00c) -> P:[Powerful (t1)], S:[of the Brute (t3)]
-    [Step 77] Harvest Reforge Defences: Reforged item (guaranteed defences: Lacquered) (+1.56c) -> P:[Powerful (t1), Lacquered (t3)], S:[of the Cloud (t3)]
-    [Step 78] Harvest Reforge Defences: Reforged item (guaranteed defences: Studded) (+1.56c) -> P:[Powerful (t1), Studded (t2)], S:[of the Drake (t1)]
-    [Step 79] Harvest Reforge Defences: Reforged item (guaranteed defences: Agile) (+1.56c) -> P:[Powerful (t1), Agile (t3)], S:[of the Prism (t2), of the Lizard (t2)]
-    [Step 80] Harvest Reforge Defences: Reforged item (guaranteed defences: Agile) (+1.56c) -> P:[Powerful (t1), Agile (t3)], S:[of the Bear (t1), of the Salamander (t2)]
-    [Step 81] Harvest Reforge Defences: Reforged item (guaranteed defences: Acrobat's) (+1.56c) -> P:[Powerful (t1), Acrobat's (t1)], S:[of Excitement (t3), of the Newt (t3)]
-    [Step 82] Harvest Reforge Defences: Reforged item (guaranteed defences: Studded) (+1.56c) -> P:[Powerful (t1), Studded (t2)], S:[of the Pupil (t3), of the Sky (t2)]
-    [Step 83] Harvest Reforge Defences: Reforged item (guaranteed defences: Dancer's) (+1.56c) -> P:[Powerful (t1), Dancer's (t2)], S:[Smite the Weak (t1)]
-    [Step 84] Harvest Reforge Defences: Reforged item (guaranteed defences: Agile) (+1.56c) -> P:[Powerful (t1), Agile (t3)], S:[of the Flatworm (t1)]
-    [Step 85] Harvest Reforge Defences: Reforged item (guaranteed defences: Lacquered) (+1.56c) -> P:[Powerful (t1), Lacquered (t3)], S:[of Joy (t2)]
-    [Step 86] Harvest Reforge Defences: Reforged item (guaranteed defences: Dancer's) (+1.56c) -> P:[Powerful (t1), Dancer's (t2)], S:[Added Small Passive Skills also grant: 2% increased Attack Speed (t2)]
-    [Step 87] Harvest Reforge Defences: Reforged item (guaranteed defences: Ribbed) (+1.56c) -> P:[Powerful (t1), Ribbed (t1)], S:[of the Crystal (t3)]
-    [Step 88] Harvest Reforge Defences: Reforged item (guaranteed defences: Veteran Defender) (+1.56c) -> P:[Powerful (t1), Veteran Defender (t1)], S:[Added Small Passive Skills also grant: 1% increased Attack Speed (t3), of the Crystal (t3)]
-    [Step 89] Harvest Reforge Defences: Reforged item (guaranteed defences: Veteran Defender) (+1.56c) -> P:[Powerful (t1), Veteran Defender (t1)], S:[of the Prism (t2)]
-    [Step 90] Harvest Reforge Defences: Reforged item (guaranteed defences: Acrobat's) (+1.56c) -> P:[Powerful (t1), Acrobat's (t1)], S:[Smite the Weak (t1)]
-    [Step 91] Harvest Reforge Defences: Reforged item (guaranteed defences: Ribbed) (+1.56c) -> P:[Powerful (t1), Ribbed (t1)], S:[of the Meteor (t1)]
-    [Step 92] Harvest Reforge Defences: Reforged item (guaranteed defences: Veteran Defender) (+1.56c) -> P:[Powerful (t1), Veteran Defender (t1)], S:[of the Squall (t2), of the Salamander (t2)]
-    [Step 93] Harvest Reforge Defences: Reforged item (guaranteed defences: Ribbed) (+1.56c) -> P:[Powerful (t1), Ribbed (t1)], S:[of the Pupil (t3), of the Storm (t1)]
-    [Step 94] Harvest Reforge Defences: Reforged item (guaranteed defences: Studded) (+1.56c) -> P:[Powerful (t1), Studded (t2)], S:[of Elation (t1)]
-    [Step 95] Harvest Reforge Defences: Reforged item (guaranteed defences: Dancer's) (+1.56c) -> P:[Powerful (t1), Dancer's (t2)], S:[of the Cloud (t3), of the Sky (t2)]
-    [Step 96] Harvest Reforge Defences: Reforged item (guaranteed defences: Studded) (+1.56c) -> P:[Powerful (t1), Studded (t2)], S:[of the Seal (t2)]
-    [Step 97] Harvest Reforge Defences: Reforged item (guaranteed defences: Glowing) (+1.56c) -> P:[Powerful (t1), Glowing (t1)], S:[of the Seal (t2)]
-    [Step 98] Orb of Annulment: Annul removed Glowing (Prefix) [Step 3 Cleanup] (+9.00c) -> P:[Powerful (t1)], S:[of the Seal (t2)]
-    [Step 99] Harvest Reforge Defences: Reforged item (guaranteed defences: Studded) (+1.56c) -> P:[Powerful (t1), Studded (t2)], S:[of the Sky (t2), of Joy (t2)]
-    [Step 100] Harvest Reforge Defences: Reforged item (guaranteed defences: Ribbed) (+1.56c) -> P:[Powerful (t1), Ribbed (t1)], S:[of the Whelpling (t3)]
-    [Step 101] Harvest Reforge Defences: Reforged item (guaranteed defences: Glowing) (+1.56c) -> P:[Powerful (t1), Glowing (t1)], S:[Added Small Passive Skills also grant: 2% increased Attack Speed (t2)]
-    [Step 102] Orb of Annulment: Annul removed Added Small Passive Skills also grant: 2% increased Attack Speed (Suffix) [Step 3 Cleanup] (+9.00c) -> P:[Powerful (t1), Glowing (t1)], S:[]
-    [Step 103] Exalted Orb Slam (Suffix: of the Prodigy / +4 All Attributes (T1) / 3% Attack Speed (T1) / +4% All Elemental Resistance (T1)): Slammed Heavy Hitter (+1.20c) -> P:[Powerful (t1), Glowing (t1)], S:[Heavy Hitter (t1)]
+    [Step 1] Harvest Reforge Defences: Reforged item (guaranteed defences: Lacquered) (+1.56c) -> P:[Powerful (t1), Lacquered (t3)], S:[of the Cloud (t3)]
+    [Step 2] Harvest Reforge Defences: Reforged item (guaranteed defences: Studded) (+1.56c) -> P:[Powerful (t1), Studded (t2)], S:[Added Small Passive Skills also grant: 2% increased Attack Speed (t2), Martial Prowess (t1)]
+    [Step 3] Harvest Reforge Defences: Reforged item (guaranteed defences: Studded) (+1.56c) -> P:[Powerful (t1), Studded (t2)], S:[Added Small Passive Skills also grant: 1% increased Attack Speed (t3)]
+    [Step 4] Harvest Reforge Defences: Reforged item (guaranteed defences: Shining) (+1.56c) -> P:[Powerful (t1), Shining (t3)], S:[of the Crystal (t3), of the Meteor (t1)]
+    [Step 5] Harvest Reforge Defences: Reforged item (guaranteed defences: Shining) (+1.56c) -> P:[Powerful (t1), Shining (t3)], S:[of the Lizard (t2)]
+    [Step 6] Harvest Reforge Defences: Reforged item (guaranteed defences: Veteran Defender) (+1.56c) -> P:[Powerful (t1), Veteran Defender (t1)], S:[of the Cloud (t3)]
+    [Step 7] Harvest Reforge Defences: Reforged item (guaranteed defences: Agile) (+1.56c) -> P:[Powerful (t1), Agile (t3)], S:[of the Inuit (t3), of the Squall (t2)]
+    [Step 8] Harvest Reforge Defences: Reforged item (guaranteed defences: Glimmering) (+1.56c) -> P:[Powerful (t1), Glimmering (t2)], S:[of the Storm (t1)]
+    [Step 9] Harvest Reforge Defences: Reforged item (guaranteed defences: Acrobat's) (+1.56c) -> P:[Powerful (t1), Acrobat's (t1)], S:[Added Small Passive Skills also grant: 2% increased Attack Speed (t2)]
+    [Step 10] Harvest Reforge Defences: Reforged item (guaranteed defences: Dancer's) (+1.56c) -> P:[Powerful (t1), Dancer's (t2)], S:[of the Seal (t2)]
+    [Step 11] Harvest Reforge Defences: Reforged item (guaranteed defences: Lacquered) (+1.56c) -> P:[Powerful (t1), Lacquered (t3)], S:[of the Pupil (t3)]
+    [Step 12] Harvest Reforge Defences: Reforged item (guaranteed defences: Studded) (+1.56c) -> P:[Powerful (t1), Studded (t2)], S:[of the Brute (t3), of the Squall (t2)]
+    [Step 13] Harvest Reforge Defences: Reforged item (guaranteed defences: Dancer's) (+1.56c) -> P:[Powerful (t1), Dancer's (t2)], S:[of the Cloud (t3), of the Lynx (t2)]
+    [Step 14] Harvest Reforge Defences: Reforged item (guaranteed defences: Lacquered) (+1.56c) -> P:[Powerful (t1), Lacquered (t3)], S:[of the Drake (t1)]
+    [Step 15] Harvest Reforge Defences: Reforged item (guaranteed defences: Ribbed) (+1.56c) -> P:[Powerful (t1), Ribbed (t1)], S:[of the Whelpling (t3)]
+    [Step 16] Harvest Reforge Defences: Reforged item (guaranteed defences: Agile) (+1.56c) -> P:[Powerful (t1), Agile (t3)], S:[of the Squall (t2), of the Bear (t1)]
+    [Step 17] Harvest Reforge Defences: Reforged item (guaranteed defences: Veteran Defender) (+1.56c) -> P:[Powerful (t1), Veteran Defender (t1)], S:[of the Kaleidoscope (t1), of the Pupil (t3)]
+    [Step 18] Harvest Reforge Defences: Reforged item (guaranteed defences: Acrobat's) (+1.56c) -> P:[Powerful (t1), Acrobat's (t1)], S:[Martial Prowess (t1)]
+    [Step 19] Harvest Reforge Defences: Reforged item (guaranteed defences: Glimmering) (+1.56c) -> P:[Powerful (t1), Glimmering (t2)], S:[of the Drake (t1)]
+    [Step 20] Harvest Reforge Defences: Reforged item (guaranteed defences: Glimmering) (+1.56c) -> P:[Powerful (t1), Glimmering (t2)], S:[of the Brute (t3), of the Lynx (t2)]
+    [Step 21] Harvest Reforge Defences: Reforged item (guaranteed defences: Dancer's) (+1.56c) -> P:[Powerful (t1), Dancer's (t2)], S:[of the Seal (t2), of the Whelpling (t3)]
+    [Step 22] Harvest Reforge Defences: Reforged item (guaranteed defences: Agile) (+1.56c) -> P:[Powerful (t1), Agile (t3)], S:[of Joy (t2)]
+    [Step 23] Harvest Reforge Defences: Reforged item (guaranteed defences: Dancer's) (+1.56c) -> P:[Powerful (t1), Dancer's (t2)], S:[of the Squall (t2)]
+    [Step 24] Harvest Reforge Defences: Reforged item (guaranteed defences: Lacquered) (+1.56c) -> P:[Powerful (t1), Lacquered (t3)], S:[Added Small Passive Skills also grant: 2% increased Attack Speed (t2), of the Sky (t2)]
+    [Step 25] Harvest Reforge Defences: Reforged item (guaranteed defences: Glowing) (+1.56c) -> P:[Powerful (t1), Glowing (t1)], S:[of the Pupil (t3), Added Small Passive Skills also grant: 1% increased Attack Speed (t3)]
+    [Step 26] Harvest Reforge Defences: Reforged item (guaranteed defences: Acrobat's) (+1.56c) -> P:[Powerful (t1), Acrobat's (t1)], S:[of the Prodigy (t1)]
+    [Step 27] Harvest Reforge Defences: Reforged item (guaranteed defences: Agile) (+1.56c) -> P:[Powerful (t1), Agile (t3)], S:[Smite the Weak (t1), of Joy (t2)]
+    [Step 28] Harvest Reforge Defences: Reforged item (guaranteed defences: Dancer's) (+1.56c) -> P:[Powerful (t1), Dancer's (t2)], S:[of Joy (t2), Added Small Passive Skills also grant: 2% increased Attack Speed (t2)]
+    [Step 29] Harvest Reforge Defences: Reforged item (guaranteed defences: Studded) (+1.56c) -> P:[Powerful (t1), Studded (t2)], S:[of the Penguin (t1), of the Whelpling (t3)]
+    [Step 30] Harvest Reforge Defences: Reforged item (guaranteed defences: Shining) (+1.56c) -> P:[Powerful (t1), Shining (t3)], S:[of the Crystal (t3), of the Meteor (t1)]
+    [Step 31] Harvest Reforge Defences: Reforged item (guaranteed defences: Dancer's) (+1.56c) -> P:[Powerful (t1), Dancer's (t2)], S:[of Excitement (t3)]
+    [Step 32] Harvest Reforge Defences: Reforged item (guaranteed defences: Ribbed) (+1.56c) -> P:[Powerful (t1), Ribbed (t1)], S:[of the Crystal (t3)]
+    [Step 33] Harvest Reforge Defences: Reforged item (guaranteed defences: Glowing) (+1.56c) -> P:[Powerful (t1), Glowing (t1)], S:[of Excitement (t3)]
+    [Step 34] Orb of Annulment: Annul removed of Excitement (Suffix) [Step 3 Cleanup] (+9.00c) -> P:[Powerful (t1), Glowing (t1)], S:[]
+    [Step 35] Exalted Orb Slam (Suffix: of the Prodigy / +4 All Attributes (T1) / 3% Attack Speed (T1) / +4% All Elemental Resistance (T1)): Slammed of the Crystal (+1.20c) -> P:[Powerful (t1), Glowing (t1)], S:[of the Crystal (t3)]
+    [Step 36] Orb of Annulment: Annul removed Glowing (Prefix) [Step 4 Cleanup] (+9.00c) -> P:[Powerful (t1)], S:[of the Crystal (t3)]
+    [Step 37] Harvest Reforge Defences: Reforged item (guaranteed defences: Shining) (+1.56c) -> P:[Powerful (t1), Shining (t3)], S:[of Joy (t2), of the Prism (t2)]
+    [Step 38] Harvest Reforge Defences: Reforged item (guaranteed defences: Acrobat's) (+1.56c) -> P:[Powerful (t1), Acrobat's (t1)], S:[of the Flatworm (t1), of the Prism (t2)]
+    [Step 39] Harvest Reforge Defences: Reforged item (guaranteed defences: Veteran Defender) (+1.56c) -> P:[Powerful (t1), Veteran Defender (t1)], S:[of the Sky (t2), Added Small Passive Skills also grant: 1% increased Attack Speed (t3)]
+    [Step 40] Harvest Reforge Defences: Reforged item (guaranteed defences: Studded) (+1.56c) -> P:[Powerful (t1), Studded (t2)], S:[of the Storm (t1), Added Small Passive Skills also grant: 2% increased Attack Speed (t2)]
+    [Step 41] Harvest Reforge Defences: Reforged item (guaranteed defences: Acrobat's) (+1.56c) -> P:[Powerful (t1), Acrobat's (t1)], S:[Heavy Hitter (t1)]
+    [Step 42] Harvest Reforge Defences: Reforged item (guaranteed defences: Veteran Defender) (+1.56c) -> P:[Powerful (t1), Veteran Defender (t1)], S:[of the Fox (t1)]
+    [Step 43] Harvest Reforge Defences: Reforged item (guaranteed defences: Studded) (+1.56c) -> P:[Powerful (t1), Studded (t2)], S:[of the Lizard (t2)]
+    [Step 44] Harvest Reforge Defences: Reforged item (guaranteed defences: Veteran Defender) (+1.56c) -> P:[Powerful (t1), Veteran Defender (t1)], S:[of the Brute (t3)]
+    [Step 45] Harvest Reforge Defences: Reforged item (guaranteed defences: Lacquered) (+1.56c) -> P:[Powerful (t1), Lacquered (t3)], S:[of the Cloud (t3), Added Small Passive Skills also grant: 2% increased Attack Speed (t2)]
+    [Step 46] Harvest Reforge Defences: Reforged item (guaranteed defences: Veteran Defender) (+1.56c) -> P:[Powerful (t1), Veteran Defender (t1)], S:[Smite the Weak (t1)]
+    [Step 47] Harvest Reforge Defences: Reforged item (guaranteed defences: Glowing) (+1.56c) -> P:[Powerful (t1), Glowing (t1)], S:[Smite the Weak (t1), of the Penguin (t1)]
+    [Step 48] Harvest Reforge Defences: Reforged item (guaranteed defences: Dancer's) (+1.56c) -> P:[Powerful (t1), Dancer's (t2)], S:[of the Newt (t3)]
+    [Step 49] Harvest Reforge Defences: Reforged item (guaranteed defences: Acrobat's) (+1.56c) -> P:[Powerful (t1), Acrobat's (t1)], S:[of Banishment (t2)]
+    [Step 50] Harvest Reforge Defences: Reforged item (guaranteed defences: Veteran Defender) (+1.56c) -> P:[Powerful (t1), Veteran Defender (t1)], S:[of the Wrestler (t2), of the Lost (t3)]
+    [Step 51] Harvest Reforge Defences: Reforged item (guaranteed defences: Agile) (+1.56c) -> P:[Powerful (t1), Agile (t3)], S:[of the Bear (t1)]
+    [Step 52] Harvest Reforge Defences: Reforged item (guaranteed defences: Ribbed) (+1.56c) -> P:[Powerful (t1), Ribbed (t1)], S:[of the Sky (t2), Heavy Hitter (t1)]
+    [Step 53] Harvest Reforge Defences: Reforged item (guaranteed defences: Studded) (+1.56c) -> P:[Powerful (t1), Studded (t2)], S:[of the Pupil (t3), Martial Prowess (t1)]
+    [Step 54] Harvest Reforge Defences: Reforged item (guaranteed defences: Dancer's) (+1.56c) -> P:[Powerful (t1), Dancer's (t2)], S:[Martial Prowess (t1), Added Small Passive Skills also grant: 1% increased Attack Speed (t3)]
+    [Step 55] Harvest Reforge Defences: Reforged item (guaranteed defences: Veteran Defender) (+1.56c) -> P:[Powerful (t1), Veteran Defender (t1)], S:[of the Crystal (t3), Smite the Weak (t1)]
+    [Step 56] Harvest Reforge Defences: Reforged item (guaranteed defences: Dancer's) (+1.56c) -> P:[Powerful (t1), Dancer's (t2)], S:[of the Crystal (t3)]
+    [Step 57] Harvest Reforge Defences: Reforged item (guaranteed defences: Glimmering) (+1.56c) -> P:[Powerful (t1), Glimmering (t2)], S:[of the Penguin (t1), of the Prodigy (t1)]
+    [Step 58] Harvest Reforge Defences: Reforged item (guaranteed defences: Ribbed) (+1.56c) -> P:[Powerful (t1), Ribbed (t1)], S:[of the Lynx (t2), of the Meteor (t1)]
+    [Step 59] Harvest Reforge Defences: Reforged item (guaranteed defences: Acrobat's) (+1.56c) -> P:[Powerful (t1), Acrobat's (t1)], S:[of the Pupil (t3)]
+    [Step 60] Harvest Reforge Defences: Reforged item (guaranteed defences: Studded) (+1.56c) -> P:[Powerful (t1), Studded (t2)], S:[Martial Prowess (t1)]
+    [Step 61] Harvest Reforge Defences: Reforged item (guaranteed defences: Studded) (+1.56c) -> P:[Powerful (t1), Studded (t2)], S:[of the Lynx (t2)]
+    [Step 62] Harvest Reforge Defences: Reforged item (guaranteed defences: Glowing) (+1.56c) -> P:[Powerful (t1), Glowing (t1)], S:[of the Squall (t2)]
+    [Step 63] Orb of Annulment: Annul removed Glowing (Prefix) [Step 3 Cleanup] (+9.00c) -> P:[Powerful (t1)], S:[of the Squall (t2)]
+    [Step 64] Harvest Reforge Defences: Reforged item (guaranteed defences: Shining) (+1.56c) -> P:[Powerful (t1), Shining (t3)], S:[of the Storm (t1)]
+    [Step 65] Harvest Reforge Defences: Reforged item (guaranteed defences: Agile) (+1.56c) -> P:[Powerful (t1), Agile (t3)], S:[Added Small Passive Skills also grant: 1% increased Attack Speed (t3)]
+    [Step 66] Harvest Reforge Defences: Reforged item (guaranteed defences: Glimmering) (+1.56c) -> P:[Powerful (t1), Glimmering (t2)], S:[of Joy (t2)]
+    [Step 67] Harvest Reforge Defences: Reforged item (guaranteed defences: Agile) (+1.56c) -> P:[Powerful (t1), Agile (t3)], S:[of the Lost (t3)]
+    [Step 68] Harvest Reforge Defences: Reforged item (guaranteed defences: Acrobat's) (+1.56c) -> P:[Powerful (t1), Acrobat's (t1)], S:[of the Crystal (t3), of the Sky (t2)]
+    [Step 69] Harvest Reforge Defences: Reforged item (guaranteed defences: Agile) (+1.56c) -> P:[Powerful (t1), Agile (t3)], S:[Added Small Passive Skills also grant: 2% increased Attack Speed (t2), of the Brute (t3)]
+    [Step 70] Harvest Reforge Defences: Reforged item (guaranteed defences: Glowing) (+1.56c) -> P:[Powerful (t1), Glowing (t1)], S:[of the Newt (t3)]
+    [Step 71] Orb of Annulment: Annul removed of the Newt (Suffix) [Step 3 Cleanup] (+9.00c) -> P:[Powerful (t1), Glowing (t1)], S:[]
+    [Step 72] Exalted Orb Slam (Suffix: of the Prodigy / +4 All Attributes (T1) / 3% Attack Speed (T1) / +4% All Elemental Resistance (T1)): Slammed of the Drake (+1.20c) -> P:[Powerful (t1), Glowing (t1)], S:[of the Drake (t1)]
+    [Step 73] Orb of Annulment: Annul removed of the Drake (Suffix) [Step 4 Cleanup] (+9.00c) -> P:[Powerful (t1), Glowing (t1)], S:[]
+    [Step 74] Exalted Orb Slam (Suffix: of the Prodigy / +4 All Attributes (T1) / 3% Attack Speed (T1) / +4% All Elemental Resistance (T1)): Slammed of the Cloud (+1.20c) -> P:[Powerful (t1), Glowing (t1)], S:[of the Cloud (t3)]
+    [Step 75] Orb of Annulment: Annul removed of the Cloud (Suffix) [Step 4 Cleanup] (+9.00c) -> P:[Powerful (t1), Glowing (t1)], S:[]
+    [Step 76] Exalted Orb Slam (Suffix: of the Prodigy / +4 All Attributes (T1) / 3% Attack Speed (T1) / +4% All Elemental Resistance (T1)): Slammed of the Salamander (+1.20c) -> P:[Powerful (t1), Glowing (t1)], S:[of the Salamander (t2)]
+    [Step 77] Orb of Annulment: Annul removed Glowing (Prefix) [Step 4 Cleanup] (+9.00c) -> P:[Powerful (t1)], S:[of the Salamander (t2)]
+    [Step 78] Harvest Reforge Defences: Reforged item (guaranteed defences: Veteran Defender) (+1.56c) -> P:[Powerful (t1), Veteran Defender (t1)], S:[Added Small Passive Skills also grant: 2% increased Attack Speed (t2)]
+    [Step 79] Harvest Reforge Defences: Reforged item (guaranteed defences: Lacquered) (+1.56c) -> P:[Powerful (t1), Lacquered (t3)], S:[of the Mongoose (t3)]
+    [Step 80] Harvest Reforge Defences: Reforged item (guaranteed defences: Glimmering) (+1.56c) -> P:[Powerful (t1), Glimmering (t2)], S:[Smite the Weak (t1)]
+    [Step 81] Harvest Reforge Defences: Reforged item (guaranteed defences: Shining) (+1.56c) -> P:[Powerful (t1), Shining (t3)], S:[of Joy (t2), of the Brute (t3)]
+    [Step 82] Harvest Reforge Defences: Reforged item (guaranteed defences: Agile) (+1.56c) -> P:[Powerful (t1), Agile (t3)], S:[of the Sky (t2)]
+    [Step 83] Harvest Reforge Defences: Reforged item (guaranteed defences: Ribbed) (+1.56c) -> P:[Powerful (t1), Ribbed (t1)], S:[Added Small Passive Skills also grant: 3% increased Attack Speed (t1)]
+    [Step 84] Harvest Reforge Defences: Reforged item (guaranteed defences: Lacquered) (+1.56c) -> P:[Powerful (t1), Lacquered (t3)], S:[Martial Prowess (t1)]
+    [Step 85] Harvest Reforge Defences: Reforged item (guaranteed defences: Shining) (+1.56c) -> P:[Powerful (t1), Shining (t3)], S:[Added Small Passive Skills also grant: 1% increased Attack Speed (t3)]
+    [Step 86] Harvest Reforge Defences: Reforged item (guaranteed defences: Studded) (+1.56c) -> P:[Powerful (t1), Studded (t2)], S:[of the Brute (t3), of the Cloud (t3)]
+    [Step 87] Harvest Reforge Defences: Reforged item (guaranteed defences: Lacquered) (+1.56c) -> P:[Powerful (t1), Lacquered (t3)], S:[Smite the Weak (t1)]
+    [Step 88] Harvest Reforge Defences: Reforged item (guaranteed defences: Studded) (+1.56c) -> P:[Powerful (t1), Studded (t2)], S:[of the Whelpling (t3)]
+    [Step 89] Harvest Reforge Defences: Reforged item (guaranteed defences: Glimmering) (+1.56c) -> P:[Powerful (t1), Glimmering (t2)], S:[of the Cloud (t3)]
+    [Step 90] Harvest Reforge Defences: Reforged item (guaranteed defences: Agile) (+1.56c) -> P:[Powerful (t1), Agile (t3)], S:[of Eviction (t1)]
+    [Step 91] Harvest Reforge Defences: Reforged item (guaranteed defences: Glimmering) (+1.56c) -> P:[Powerful (t1), Glimmering (t2)], S:[Smite the Weak (t1)]
+    [Step 92] Harvest Reforge Defences: Reforged item (guaranteed defences: Shining) (+1.56c) -> P:[Powerful (t1), Shining (t3)], S:[of the Salamander (t2)]
+    [Step 93] Harvest Reforge Defences: Reforged item (guaranteed defences: Agile) (+1.56c) -> P:[Powerful (t1), Agile (t3)], S:[of the Prism (t2)]
+    [Step 94] Harvest Reforge Defences: Reforged item (guaranteed defences: Agile) (+1.56c) -> P:[Powerful (t1), Agile (t3)], S:[of Elation (t1), of the Cloud (t3)]
+    [Step 95] Harvest Reforge Defences: Reforged item (guaranteed defences: Glimmering) (+1.56c) -> P:[Powerful (t1), Glimmering (t2)], S:[of the Wrestler (t2), of the Student (t2)]
+    [Step 96] Harvest Reforge Defences: Reforged item (guaranteed defences: Agile) (+1.56c) -> P:[Powerful (t1), Agile (t3)], S:[of the Crystal (t3), of the Prodigy (t1)]
+    [Step 97] Harvest Reforge Defences: Reforged item (guaranteed defences: Acrobat's) (+1.56c) -> P:[Powerful (t1), Acrobat's (t1)], S:[of the Lynx (t2)]
+    [Step 98] Harvest Reforge Defences: Reforged item (guaranteed defences: Lacquered) (+1.56c) -> P:[Powerful (t1), Lacquered (t3)], S:[of the Fox (t1), Added Small Passive Skills also grant: 2% increased Attack Speed (t2)]
+    [Step 99] Harvest Reforge Defences: Reforged item (guaranteed defences: Lacquered) (+1.56c) -> P:[Powerful (t1), Lacquered (t3)], S:[of the Seal (t2)]
 
 ======================================================================
-REVIEW FILE NOTE: 35833 verbose middle lines omitted from this compact artifact.
+REVIEW FILE NOTE: 10279 verbose middle lines omitted from this compact artifact.
 See the corresponding full output-craft-*.txt file for complete Monte Carlo traces/details.
 ======================================================================
 
-    [Step 4647] Harvest Reforge Defences: Reforged item (guaranteed defences: Glimmering) (+1.56c) -> P:[Powerful (t1), Glimmering (t2)], S:[of the Prodigy (t1)]
-    [Step 4648] Harvest Reforge Defences: Reforged item (guaranteed defences: Veteran Defender) (+1.56c) -> P:[Powerful (t1), Veteran Defender (t1)], S:[Martial Prowess (t1)]
-    [Step 4649] Harvest Reforge Defences: Reforged item (guaranteed defences: Glowing) (+1.56c) -> P:[Powerful (t1), Glowing (t1)], S:[Smite the Weak (t1)]
-    [Step 4650] Orb of Annulment: Annul removed Smite the Weak (Suffix) [Step 3 Cleanup] (+9.00c) -> P:[Powerful (t1), Glowing (t1)], S:[]
-    [Step 4651] Exalted Orb Slam (Suffix: of the Prodigy / +4 All Attributes (T1) / 3% Attack Speed (T1) / +4% All Elemental Resistance (T1)): Slammed of the Lynx (+1.20c) -> P:[Powerful (t1), Glowing (t1)], S:[of the Lynx (t2)]
-    [Step 4652] Orb of Annulment: Annul removed of the Lynx (Suffix) [Step 4 Cleanup] (+9.00c) -> P:[Powerful (t1), Glowing (t1)], S:[]
-    [Step 4653] Exalted Orb Slam (Suffix: of the Prodigy / +4 All Attributes (T1) / 3% Attack Speed (T1) / +4% All Elemental Resistance (T1)): Slammed Heavy Hitter (+1.20c) -> P:[Powerful (t1), Glowing (t1)], S:[Heavy Hitter (t1)]
-    [Step 4654] Orb of Annulment: Annul removed Heavy Hitter (Suffix) [Step 4 Cleanup] (+9.00c) -> P:[Powerful (t1), Glowing (t1)], S:[]
-    [Step 4655] Exalted Orb Slam (Suffix: of the Prodigy / +4 All Attributes (T1) / 3% Attack Speed (T1) / +4% All Elemental Resistance (T1)): Slammed Martial Prowess (+1.20c) -> P:[Powerful (t1), Glowing (t1)], S:[Martial Prowess (t1)]
-    [Step 4656] Orb of Annulment: Annul removed Glowing (Prefix) [Step 4 Cleanup] (+9.00c) -> P:[Powerful (t1)], S:[Martial Prowess (t1)]
-    [Step 4657] Harvest Reforge Defences: Reforged item (guaranteed defences: Agile) (+1.56c) -> P:[Powerful (t1), Agile (t3)], S:[of the Sky (t2)]
-    [Step 4658] Harvest Reforge Defences: Reforged item (guaranteed defences: Glowing) (+1.56c) -> P:[Powerful (t1), Glowing (t1)], S:[of the Salamander (t2), of the Prism (t2)]
-    [Step 4659] Harvest Reforge Defences: Reforged item (guaranteed defences: Lacquered) (+1.56c) -> P:[Powerful (t1), Lacquered (t3)], S:[of the Lynx (t2), of the Seal (t2)]
-    [Step 4660] Harvest Reforge Defences: Reforged item (guaranteed defences: Veteran Defender) (+1.56c) -> P:[Powerful (t1), Veteran Defender (t1)], S:[of the Penguin (t1)]
-    [Step 4661] Harvest Reforge Defences: Reforged item (guaranteed defences: Lacquered) (+1.56c) -> P:[Powerful (t1), Lacquered (t3)], S:[of the Prism (t2)]
-    [Step 4662] Harvest Reforge Defences: Reforged item (guaranteed defences: Studded) (+1.56c) -> P:[Powerful (t1), Studded (t2)], S:[of Eviction (t1), of the Newt (t3)]
-    [Step 4663] Harvest Reforge Defences: Reforged item (guaranteed defences: Lacquered) (+1.56c) -> P:[Powerful (t1), Lacquered (t3)], S:[of the Brute (t3)]
-    [Step 4664] Harvest Reforge Defences: Reforged item (guaranteed defences: Agile) (+1.56c) -> P:[Powerful (t1), Agile (t3)], S:[of the Lost (t3)]
-    [Step 4665] Harvest Reforge Defences: Reforged item (guaranteed defences: Veteran Defender) (+1.56c) -> P:[Powerful (t1), Veteran Defender (t1)], S:[of the Fox (t1)]
-    [Step 4666] Harvest Reforge Defences: Reforged item (guaranteed defences: Agile) (+1.56c) -> P:[Powerful (t1), Agile (t3)], S:[of Banishment (t2)]
-    [Step 4667] Harvest Reforge Defences: Reforged item (guaranteed defences: Agile) (+1.56c) -> P:[Powerful (t1), Agile (t3)], S:[of the Lizard (t2)]
-    [Step 4668] Harvest Reforge Defences: Reforged item (guaranteed defences: Veteran Defender) (+1.56c) -> P:[Powerful (t1), Veteran Defender (t1)], S:[of the Student (t2)]
-    [Step 4669] Harvest Reforge Defences: Reforged item (guaranteed defences: Shining) (+1.56c) -> P:[Powerful (t1), Shining (t3)], S:[of the Inuit (t3)]
-    [Step 4670] Harvest Reforge Defences: Reforged item (guaranteed defences: Shining) (+1.56c) -> P:[Powerful (t1), Shining (t3)], S:[of the Storm (t1)]
-    [Step 4671] Harvest Reforge Defences: Reforged item (guaranteed defences: Glimmering) (+1.56c) -> P:[Powerful (t1), Glimmering (t2)], S:[of the Penguin (t1)]
-    [Step 4672] Harvest Reforge Defences: Reforged item (guaranteed defences: Dancer's) (+1.56c) -> P:[Powerful (t1), Dancer's (t2)], S:[of Banishment (t2), of the Lizard (t2)]
-    [Step 4673] Harvest Reforge Defences: Reforged item (guaranteed defences: Agile) (+1.56c) -> P:[Powerful (t1), Agile (t3)], S:[of the Crystal (t3)]
-    [Step 4674] Harvest Reforge Defences: Reforged item (guaranteed defences: Studded) (+1.56c) -> P:[Powerful (t1), Studded (t2)], S:[of the Mongoose (t3)]
-    [Step 4675] Harvest Reforge Defences: Reforged item (guaranteed defences: Glimmering) (+1.56c) -> P:[Powerful (t1), Glimmering (t2)], S:[of the Cloud (t3)]
-    [Step 4676] Harvest Reforge Defences: Reforged item (guaranteed defences: Glimmering) (+1.56c) -> P:[Powerful (t1), Glimmering (t2)], S:[Smite the Weak (t1)]
-    [Step 4677] Harvest Reforge Defences: Reforged item (guaranteed defences: Agile) (+1.56c) -> P:[Powerful (t1), Agile (t3)], S:[of the Cloud (t3)]
-    [Step 4678] Harvest Reforge Defences: Reforged item (guaranteed defences: Ribbed) (+1.56c) -> P:[Powerful (t1), Ribbed (t1)], S:[of the Squall (t2)]
-    [Step 4679] Harvest Reforge Defences: Reforged item (guaranteed defences: Agile) (+1.56c) -> P:[Powerful (t1), Agile (t3)], S:[of Eviction (t1)]
-    [Step 4680] Harvest Reforge Defences: Reforged item (guaranteed defences: Dancer's) (+1.56c) -> P:[Powerful (t1), Dancer's (t2)], S:[of the Crystal (t3)]
-    [Step 4681] Harvest Reforge Defences: Reforged item (guaranteed defences: Agile) (+1.56c) -> P:[Powerful (t1), Agile (t3)], S:[of the Kaleidoscope (t1)]
-    [Step 4682] Harvest Reforge Defences: Reforged item (guaranteed defences: Lacquered) (+1.56c) -> P:[Powerful (t1), Lacquered (t3)], S:[of the Crystal (t3)]
-    [Step 4683] Harvest Reforge Defences: Reforged item (guaranteed defences: Glimmering) (+1.56c) -> P:[Powerful (t1), Glimmering (t2)], S:[of the Cloud (t3)]
-    [Step 4684] Harvest Reforge Defences: Reforged item (guaranteed defences: Shining) (+1.56c) -> P:[Powerful (t1), Shining (t3)], S:[of the Lizard (t2), of the Brute (t3)]
-    [Step 4685] Harvest Reforge Defences: Reforged item (guaranteed defences: Dancer's) (+1.56c) -> P:[Powerful (t1), Dancer's (t2)], S:[of the Salamander (t2), of the Squall (t2)]
-    [Step 4686] Harvest Reforge Defences: Reforged item (guaranteed defences: Dancer's) (+1.56c) -> P:[Powerful (t1), Dancer's (t2)], S:[of Joy (t2)]
-    [Step 4687] Harvest Reforge Defences: Reforged item (guaranteed defences: Ribbed) (+1.56c) -> P:[Powerful (t1), Ribbed (t1)], S:[of the Whelpling (t3), Martial Prowess (t1)]
-    [Step 4688] Harvest Reforge Defences: Reforged item (guaranteed defences: Shining) (+1.56c) -> P:[Powerful (t1), Shining (t3)], S:[of the Drake (t1), of the Inuit (t3)]
-    [Step 4689] Harvest Reforge Defences: Reforged item (guaranteed defences: Lacquered) (+1.56c) -> P:[Powerful (t1), Lacquered (t3)], S:[of the Inuit (t3)]
-    [Step 4690] Harvest Reforge Defences: Reforged item (guaranteed defences: Shining) (+1.56c) -> P:[Powerful (t1), Shining (t3)], S:[of the Brute (t3)]
-    [Step 4691] Harvest Reforge Defences: Reforged item (guaranteed defences: Shining) (+1.56c) -> P:[Powerful (t1), Shining (t3)], S:[of Joy (t2), of the Student (t2)]
-    [Step 4692] Harvest Reforge Defences: Reforged item (guaranteed defences: Studded) (+1.56c) -> P:[Powerful (t1), Studded (t2)], S:[of the Lizard (t2), of the Fox (t1)]
-    [Step 4693] Harvest Reforge Defences: Reforged item (guaranteed defences: Acrobat's) (+1.56c) -> P:[Powerful (t1), Acrobat's (t1)], S:[of the Salamander (t2), of the Inuit (t3)]
-    [Step 4694] Harvest Reforge Defences: Reforged item (guaranteed defences: Acrobat's) (+1.56c) -> P:[Powerful (t1), Acrobat's (t1)], S:[of the Penguin (t1), of the Pupil (t3)]
-    [Step 4695] Harvest Reforge Defences: Reforged item (guaranteed defences: Glowing) (+1.56c) -> P:[Powerful (t1), Glowing (t1)], S:[of Elation (t1), of the Sky (t2)]
-    [Step 4696] Harvest Reforge Defences: Reforged item (guaranteed defences: Dancer's) (+1.56c) -> P:[Powerful (t1), Dancer's (t2)], S:[of the Lynx (t2)]
-    [Step 4697] Harvest Reforge Defences: Reforged item (guaranteed defences: Lacquered) (+1.56c) -> P:[Powerful (t1), Lacquered (t3)], S:[Heavy Hitter (t1), of the Newt (t3)]
-    [Step 4698] Harvest Reforge Defences: Reforged item (guaranteed defences: Studded) (+1.56c) -> P:[Powerful (t1), Studded (t2)], S:[of the Inuit (t3)]
-    [Step 4699] Harvest Reforge Defences: Reforged item (guaranteed defences: Dancer's) (+1.56c) -> P:[Powerful (t1), Dancer's (t2)], S:[of the Wrestler (t2)]
-    [Step 4700] Harvest Reforge Defences: Reforged item (guaranteed defences: Lacquered) (+1.56c) -> P:[Powerful (t1), Lacquered (t3)], S:[of the Newt (t3)]
-    [Step 4701] Harvest Reforge Defences: Reforged item (guaranteed defences: Studded) (+1.56c) -> P:[Powerful (t1), Studded (t2)], S:[of the Seal (t2)]
-    [Step 4702] Harvest Reforge Defences: Reforged item (guaranteed defences: Shining) (+1.56c) -> P:[Powerful (t1), Shining (t3)], S:[of the Whelpling (t3)]
-    [Step 4703] Harvest Reforge Defences: Reforged item (guaranteed defences: Agile) (+1.56c) -> P:[Powerful (t1), Agile (t3)], S:[of the Penguin (t1)]
-    [Step 4704] Harvest Reforge Defences: Reforged item (guaranteed defences: Agile) (+1.56c) -> P:[Powerful (t1), Agile (t3)], S:[Added Small Passive Skills also grant: 2% increased Attack Speed (t2), of the Flatworm (t1)]
-    [Step 4705] Harvest Reforge Defences: Reforged item (guaranteed defences: Dancer's) (+1.56c) -> P:[Powerful (t1), Dancer's (t2)], S:[of the Prism (t2)]
-    [Step 4706] Harvest Reforge Defences: Reforged item (guaranteed defences: Lacquered) (+1.56c) -> P:[Powerful (t1), Lacquered (t3)], S:[of the Mongoose (t3), of the Inuit (t3)]
-    [Step 4707] Harvest Reforge Defences: Reforged item (guaranteed defences: Acrobat's) (+1.56c) -> P:[Powerful (t1), Acrobat's (t1)], S:[of the Sky (t2), Smite the Weak (t1)]
-    [Step 4708] Harvest Reforge Defences: Reforged item (guaranteed defences: Glimmering) (+1.56c) -> P:[Powerful (t1), Glimmering (t2)], S:[Martial Prowess (t1)]
-    [Step 4709] Harvest Reforge Defences: Reforged item (guaranteed defences: Studded) (+1.56c) -> P:[Powerful (t1), Studded (t2)], S:[of the Lost (t3), Added Small Passive Skills also grant: 1% increased Attack Speed (t3)]
-    [Step 4710] Harvest Reforge Defences: Reforged item (guaranteed defences: Lacquered) (+1.56c) -> P:[Powerful (t1), Lacquered (t3)], S:[of Excitement (t3), of the Newt (t3)]
-    [Step 4711] Harvest Reforge Defences: Reforged item (guaranteed defences: Acrobat's) (+1.56c) -> P:[Powerful (t1), Acrobat's (t1)], S:[of the Drake (t1), of Eviction (t1)]
-    [Step 4712] Harvest Reforge Defences: Reforged item (guaranteed defences: Agile) (+1.56c) -> P:[Powerful (t1), Agile (t3)], S:[of the Crystal (t3)]
-    [Step 4713] Harvest Reforge Defences: Reforged item (guaranteed defences: Glowing) (+1.56c) -> P:[Powerful (t1), Glowing (t1)], S:[of the Cloud (t3), of the Wrestler (t2)]
-    [Step 4714] Harvest Reforge Defences: Reforged item (guaranteed defences: Lacquered) (+1.56c) -> P:[Powerful (t1), Lacquered (t3)], S:[of the Salamander (t2)]
-    [Step 4715] Harvest Reforge Defences: Reforged item (guaranteed defences: Shining) (+1.56c) -> P:[Powerful (t1), Shining (t3)], S:[of the Seal (t2)]
-    [Step 4716] Harvest Reforge Defences: Reforged item (guaranteed defences: Shining) (+1.56c) -> P:[Powerful (t1), Shining (t3)], S:[of the Kaleidoscope (t1)]
-    [Step 4717] Harvest Reforge Defences: Reforged item (guaranteed defences: Glowing) (+1.56c) -> P:[Powerful (t1), Glowing (t1)], S:[of the Sky (t2)]
-    [Step 4718] Orb of Annulment: Annul removed of the Sky (Suffix) [Step 3 Cleanup] (+9.00c) -> P:[Powerful (t1), Glowing (t1)], S:[]
-    [Step 4719] Exalted Orb Slam (Suffix: of the Prodigy / +4 All Attributes (T1) / 3% Attack Speed (T1) / +4% All Elemental Resistance (T1)): Slammed of the Cloud (+1.20c) -> P:[Powerful (t1), Glowing (t1)], S:[of the Cloud (t3)]
-    [Step 4720] Orb of Annulment: Annul removed of the Cloud (Suffix) [Step 4 Cleanup] (+9.00c) -> P:[Powerful (t1), Glowing (t1)], S:[]
-    [Step 4721] Exalted Orb Slam (Suffix: of the Prodigy / +4 All Attributes (T1) / 3% Attack Speed (T1) / +4% All Elemental Resistance (T1)): Slammed of the Cloud (+1.20c) -> P:[Powerful (t1), Glowing (t1)], S:[of the Cloud (t3)]
-    [Step 4722] Orb of Annulment: Annul removed of the Cloud (Suffix) [Step 4 Cleanup] (+9.00c) -> P:[Powerful (t1), Glowing (t1)], S:[]
-    [Step 4723] Exalted Orb Slam (Suffix: of the Prodigy / +4 All Attributes (T1) / 3% Attack Speed (T1) / +4% All Elemental Resistance (T1)): Slammed of the Kaleidoscope (+1.20c) -> P:[Powerful (t1), Glowing (t1)], S:[of the Kaleidoscope (t1)]
-    [Step 4724] Exalted Orb Slam (Suffix: of the Prodigy / +4 All Attributes (T1) / 3% Attack Speed (T1) / +4% All Elemental Resistance (T1)): Slammed of the Prodigy (+1.20c) -> P:[Powerful (t1), Glowing (t1)], S:[of the Kaleidoscope (t1), of the Prodigy (t1)]
+    [Step 857] Harvest Reforge Defences: Reforged item (guaranteed defences: Veteran Defender) (+1.56c) -> P:[Powerful (t1), Veteran Defender (t1)], S:[of the Seal (t2)]
+    [Step 858] Harvest Reforge Defences: Reforged item (guaranteed defences: Glimmering) (+1.56c) -> P:[Powerful (t1), Glimmering (t2)], S:[Martial Prowess (t1), Smite the Weak (t1)]
+    [Step 859] Harvest Reforge Defences: Reforged item (guaranteed defences: Shining) (+1.56c) -> P:[Powerful (t1), Shining (t3)], S:[of the Lizard (t2), of the Wrestler (t2)]
+    [Step 860] Harvest Reforge Defences: Reforged item (guaranteed defences: Studded) (+1.56c) -> P:[Powerful (t1), Studded (t2)], S:[of the Sky (t2)]
+    [Step 861] Harvest Reforge Defences: Reforged item (guaranteed defences: Lacquered) (+1.56c) -> P:[Powerful (t1), Lacquered (t3)], S:[of the Cloud (t3)]
+    [Step 862] Harvest Reforge Defences: Reforged item (guaranteed defences: Lacquered) (+1.56c) -> P:[Powerful (t1), Lacquered (t3)], S:[of the Brute (t3)]
+    [Step 863] Harvest Reforge Defences: Reforged item (guaranteed defences: Veteran Defender) (+1.56c) -> P:[Powerful (t1), Veteran Defender (t1)], S:[of the Cloud (t3), of the Lynx (t2)]
+    [Step 864] Harvest Reforge Defences: Reforged item (guaranteed defences: Lacquered) (+1.56c) -> P:[Powerful (t1), Lacquered (t3)], S:[of the Seal (t2), of Joy (t2)]
+    [Step 865] Harvest Reforge Defences: Reforged item (guaranteed defences: Glowing) (+1.56c) -> P:[Powerful (t1), Glowing (t1)], S:[of the Newt (t3)]
+    [Step 866] Orb of Annulment: Annul removed Glowing (Prefix) [Step 3 Cleanup] (+9.00c) -> P:[Powerful (t1)], S:[of the Newt (t3)]
+    [Step 867] Harvest Reforge Defences: Reforged item (guaranteed defences: Agile) (+1.56c) -> P:[Powerful (t1), Agile (t3)], S:[of the Cloud (t3)]
+    [Step 868] Harvest Reforge Defences: Reforged item (guaranteed defences: Glimmering) (+1.56c) -> P:[Powerful (t1), Glimmering (t2)], S:[of the Lynx (t2), of the Prism (t2)]
+    [Step 869] Harvest Reforge Defences: Reforged item (guaranteed defences: Glimmering) (+1.56c) -> P:[Powerful (t1), Glimmering (t2)], S:[of the Cloud (t3), of the Flatworm (t1)]
+    [Step 870] Harvest Reforge Defences: Reforged item (guaranteed defences: Acrobat's) (+1.56c) -> P:[Powerful (t1), Acrobat's (t1)], S:[of the Fox (t1)]
+    [Step 871] Harvest Reforge Defences: Reforged item (guaranteed defences: Lacquered) (+1.56c) -> P:[Powerful (t1), Lacquered (t3)], S:[of the Storm (t1)]
+    [Step 872] Harvest Reforge Defences: Reforged item (guaranteed defences: Shining) (+1.56c) -> P:[Powerful (t1), Shining (t3)], S:[of Excitement (t3), of the Seal (t2)]
+    [Step 873] Harvest Reforge Defences: Reforged item (guaranteed defences: Shining) (+1.56c) -> P:[Powerful (t1), Shining (t3)], S:[of the Flatworm (t1)]
+    [Step 874] Harvest Reforge Defences: Reforged item (guaranteed defences: Studded) (+1.56c) -> P:[Powerful (t1), Studded (t2)], S:[of the Mongoose (t3)]
+    [Step 875] Harvest Reforge Defences: Reforged item (guaranteed defences: Veteran Defender) (+1.56c) -> P:[Powerful (t1), Veteran Defender (t1)], S:[of the Lost (t3), of the Whelpling (t3)]
+    [Step 876] Harvest Reforge Defences: Reforged item (guaranteed defences: Shining) (+1.56c) -> P:[Powerful (t1), Shining (t3)], S:[of the Lost (t3)]
+    [Step 877] Harvest Reforge Defences: Reforged item (guaranteed defences: Ribbed) (+1.56c) -> P:[Powerful (t1), Ribbed (t1)], S:[of the Drake (t1), of the Seal (t2)]
+    [Step 878] Harvest Reforge Defences: Reforged item (guaranteed defences: Glimmering) (+1.56c) -> P:[Powerful (t1), Glimmering (t2)], S:[of the Bear (t1), of the Drake (t1)]
+    [Step 879] Harvest Reforge Defences: Reforged item (guaranteed defences: Veteran Defender) (+1.56c) -> P:[Powerful (t1), Veteran Defender (t1)], S:[of the Storm (t1)]
+    [Step 880] Harvest Reforge Defences: Reforged item (guaranteed defences: Lacquered) (+1.56c) -> P:[Powerful (t1), Lacquered (t3)], S:[of the Seal (t2), of the Kaleidoscope (t1)]
+    [Step 881] Harvest Reforge Defences: Reforged item (guaranteed defences: Glowing) (+1.56c) -> P:[Powerful (t1), Glowing (t1)], S:[Martial Prowess (t1)]
+    [Step 882] Orb of Annulment: Annul removed Glowing (Prefix) [Step 3 Cleanup] (+9.00c) -> P:[Powerful (t1)], S:[Martial Prowess (t1)]
+    [Step 883] Harvest Reforge Defences: Reforged item (guaranteed defences: Veteran Defender) (+1.56c) -> P:[Powerful (t1), Veteran Defender (t1)], S:[of the Inuit (t3), of the Cloud (t3)]
+    [Step 884] Harvest Reforge Defences: Reforged item (guaranteed defences: Agile) (+1.56c) -> P:[Powerful (t1), Agile (t3)], S:[of the Cloud (t3), of the Fox (t1)]
+    [Step 885] Harvest Reforge Defences: Reforged item (guaranteed defences: Veteran Defender) (+1.56c) -> P:[Powerful (t1), Veteran Defender (t1)], S:[of the Student (t2), of the Brute (t3)]
+    [Step 886] Harvest Reforge Defences: Reforged item (guaranteed defences: Studded) (+1.56c) -> P:[Powerful (t1), Studded (t2)], S:[of the Cloud (t3), of the Crystal (t3)]
+    [Step 887] Harvest Reforge Defences: Reforged item (guaranteed defences: Shining) (+1.56c) -> P:[Powerful (t1), Shining (t3)], S:[of the Storm (t1)]
+    [Step 888] Harvest Reforge Defences: Reforged item (guaranteed defences: Glimmering) (+1.56c) -> P:[Powerful (t1), Glimmering (t2)], S:[of the Storm (t1), of Excitement (t3)]
+    [Step 889] Harvest Reforge Defences: Reforged item (guaranteed defences: Glowing) (+1.56c) -> P:[Powerful (t1), Glowing (t1)], S:[of the Inuit (t3), Smite the Weak (t1)]
+    [Step 890] Harvest Reforge Defences: Reforged item (guaranteed defences: Glowing) (+1.56c) -> P:[Powerful (t1), Glowing (t1)], S:[of Banishment (t2)]
+    [Step 891] Orb of Annulment: Annul removed Glowing (Prefix) [Step 3 Cleanup] (+9.00c) -> P:[Powerful (t1)], S:[of Banishment (t2)]
+    [Step 892] Harvest Reforge Defences: Reforged item (guaranteed defences: Shining) (+1.56c) -> P:[Powerful (t1), Shining (t3)], S:[Added Small Passive Skills also grant: 2% increased Attack Speed (t2)]
+    [Step 893] Harvest Reforge Defences: Reforged item (guaranteed defences: Shining) (+1.56c) -> P:[Powerful (t1), Shining (t3)], S:[of the Lizard (t2)]
+    [Step 894] Harvest Reforge Defences: Reforged item (guaranteed defences: Acrobat's) (+1.56c) -> P:[Powerful (t1), Acrobat's (t1)], S:[of the Bear (t1), of the Cloud (t3)]
+    [Step 895] Harvest Reforge Defences: Reforged item (guaranteed defences: Lacquered) (+1.56c) -> P:[Powerful (t1), Lacquered (t3)], S:[of the Cloud (t3)]
+    [Step 896] Harvest Reforge Defences: Reforged item (guaranteed defences: Ribbed) (+1.56c) -> P:[Powerful (t1), Ribbed (t1)], S:[of the Bear (t1)]
+    [Step 897] Harvest Reforge Defences: Reforged item (guaranteed defences: Shining) (+1.56c) -> P:[Powerful (t1), Shining (t3)], S:[of the Prism (t2)]
+    [Step 898] Harvest Reforge Defences: Reforged item (guaranteed defences: Studded) (+1.56c) -> P:[Powerful (t1), Studded (t2)], S:[of the Whelpling (t3), of the Mongoose (t3)]
+    [Step 899] Harvest Reforge Defences: Reforged item (guaranteed defences: Agile) (+1.56c) -> P:[Powerful (t1), Agile (t3)], S:[of the Salamander (t2), of the Inuit (t3)]
+    [Step 900] Harvest Reforge Defences: Reforged item (guaranteed defences: Ribbed) (+1.56c) -> P:[Powerful (t1), Ribbed (t1)], S:[of the Lynx (t2), of the Whelpling (t3)]
+    [Step 901] Harvest Reforge Defences: Reforged item (guaranteed defences: Glimmering) (+1.56c) -> P:[Powerful (t1), Glimmering (t2)], S:[of the Mongoose (t3), Added Small Passive Skills also grant: 1% increased Attack Speed (t3)]
+    [Step 902] Harvest Reforge Defences: Reforged item (guaranteed defences: Ribbed) (+1.56c) -> P:[Powerful (t1), Ribbed (t1)], S:[of the Flatworm (t1)]
+    [Step 903] Harvest Reforge Defences: Reforged item (guaranteed defences: Glowing) (+1.56c) -> P:[Powerful (t1), Glowing (t1)], S:[of Joy (t2), of the Seal (t2)]
+    [Step 904] Harvest Reforge Defences: Reforged item (guaranteed defences: Agile) (+1.56c) -> P:[Powerful (t1), Agile (t3)], S:[of the Drake (t1)]
+    [Step 905] Harvest Reforge Defences: Reforged item (guaranteed defences: Lacquered) (+1.56c) -> P:[Powerful (t1), Lacquered (t3)], S:[of the Sky (t2), Added Small Passive Skills also grant: 3% increased Attack Speed (t1)]
+    [Step 906] Harvest Reforge Defences: Reforged item (guaranteed defences: Shining) (+1.56c) -> P:[Powerful (t1), Shining (t3)], S:[of the Newt (t3), of the Lynx (t2)]
+    [Step 907] Harvest Reforge Defences: Reforged item (guaranteed defences: Lacquered) (+1.56c) -> P:[Powerful (t1), Lacquered (t3)], S:[of the Cloud (t3)]
+    [Step 908] Harvest Reforge Defences: Reforged item (guaranteed defences: Ribbed) (+1.56c) -> P:[Powerful (t1), Ribbed (t1)], S:[Smite the Weak (t1), of Elation (t1)]
+    [Step 909] Harvest Reforge Defences: Reforged item (guaranteed defences: Agile) (+1.56c) -> P:[Powerful (t1), Agile (t3)], S:[of Joy (t2), Smite the Weak (t1)]
+    [Step 910] Harvest Reforge Defences: Reforged item (guaranteed defences: Glowing) (+1.56c) -> P:[Powerful (t1), Glowing (t1)], S:[of the Seal (t2)]
+    [Step 911] Orb of Annulment: Annul removed Glowing (Prefix) [Step 3 Cleanup] (+9.00c) -> P:[Powerful (t1)], S:[of the Seal (t2)]
+    [Step 912] Harvest Reforge Defences: Reforged item (guaranteed defences: Glowing) (+1.56c) -> P:[Powerful (t1), Glowing (t1)], S:[of the Cloud (t3)]
+    [Step 913] Orb of Annulment: Annul removed of the Cloud (Suffix) [Step 3 Cleanup] (+9.00c) -> P:[Powerful (t1), Glowing (t1)], S:[]
+    [Step 914] Exalted Orb Slam (Suffix: of the Prodigy / +4 All Attributes (T1) / 3% Attack Speed (T1) / +4% All Elemental Resistance (T1)): Slammed of the Prodigy (+1.20c) -> P:[Powerful (t1), Glowing (t1)], S:[of the Prodigy (t1)]
+    [Step 915] Exalted Orb Slam (Suffix: of the Prodigy / +4 All Attributes (T1) / 3% Attack Speed (T1) / +4% All Elemental Resistance (T1)): Slammed Added Small Passive Skills also grant: 3% increased Attack Speed (+1.20c) -> P:[Powerful (t1), Glowing (t1)], S:[of the Prodigy (t1), Added Small Passive Skills also grant: 3% increased Attack Speed (t1)]
+
+======================================================================
+STARTING FRACTURE ROUTE COMPARISON
+======================================================================
+Starting Base / Route                Acquisition          Downstream EV        Total EV             Status
+--------------------------------------------------------------------------------------------------------------
+Self-Fracture 35% Effect (Clean 12p Base) 1533.4c (~7.67 div)  6090.3c (~30.45 div) 7623.7c (~38.12 div) BEST
+Buy Fractured 35% Effect Base        2600.0c (~13.00 div) 6090.3c (~30.45 div) 8690.3c (~43.45 div) +1066.6c (~5.33 div)
+Self-Fracture T1 Intelligence (Clean 12p Base) 1542.3c (~7.71 div)  117000.0c (~585.00 div) 118542.3c (~592.71 div) +110918.6c (~554.59 div)
+Buy Fractured T1 Intelligence Base   1600.0c (~8.00 div)  117000.0c (~585.00 div) 118600.0c (~593.00 div) +110976.3c (~554.88 div)
+--------------------------------------------------------------------------------------------------------------
 
 ======================================================================
 ALTERNATE STARTING ROUTES
 ======================================================================
 
 1. Self-Fracture 35% Effect (Clean 12p Base)
-   Expected total craft cost:  8228.8c (~41.14 div)
+   Expected total craft cost:  7623.7c (~38.12 div)
    Difference from best:        BEST
 
 2. Buy Fractured 35% Effect Base
-   Expected total craft cost:  9295.4c (~46.48 div)
+   Expected total craft cost:  8690.3c (~43.45 div)
    Difference from best:       +1066.6c (~5.33 div)
 
 3. Self-Fracture T1 Intelligence (Clean 12p Base)
    Expected total craft cost:  118542.3c (~592.71 div)
-   Difference from best:       +110313.5c (~551.57 div)
+   Difference from best:       +110918.6c (~554.59 div)
 
 4. Buy Fractured T1 Intelligence Base
    Expected total craft cost:  118600.0c (~593.00 div)
-   Difference from best:       +110371.2c (~551.86 div)
+   Difference from best:       +110976.3c (~554.88 div)
+
+======================================================================
+LABELED GAME MECHANICS ASSUMPTIONS
+======================================================================
+1. Harvest Additional Affixes: Modeled as 50% chance of 1 additional affix / 50% chance of 2 additional affixes.
+2. Base Self-Fracture Model: Approximate Alteration/Augmentation/Regal/Bench preparation + Fracturing Orb (25% hit rate).
+3. Market Purchase Prices: Any unsupplied market price is reported as not supplied / unavailable rather than inferred.
+4. Allflame Crafting: Stateful Intangibility stacking remains deferred and disabled.
 
 ======================================================================

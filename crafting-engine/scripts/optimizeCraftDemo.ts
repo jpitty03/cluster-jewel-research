@@ -138,22 +138,38 @@ const craftAResponse = optimizer.optimizeCraft({
     {
       name: 'Self-Fracture 35% Effect (Clean 12p Base)',
       state: fracEffState,
-      baseCostChaos: 1533.4, // 4 * (10c base + 14.35c prep + 359c fracture)
+      acquisition: {
+        type: 'self-fracture',
+        costChaos: 1533.4, // 4 * (10c base + 14.35c prep + 359c fracture)
+        confidence: 'approximate',
+      },
     },
     {
       name: 'Buy Fractured 35% Effect Base',
       state: fracEffState,
-      baseCostChaos: 2600, // 13 divines
+      acquisition: {
+        type: 'market',
+        costChaos: 2600, // 13 divines
+        confidence: 'deterministic',
+      },
     },
     {
       name: 'Self-Fracture T1 Intelligence (Clean 12p Base)',
       state: fracIntState,
-      baseCostChaos: 1542.3, // 4 * (10c base + 16.58c prep + 359c fracture)
+      acquisition: {
+        type: 'self-fracture',
+        costChaos: 1542.3, // 4 * (10c base + 16.58c prep + 359c fracture)
+        confidence: 'approximate',
+      },
     },
     {
       name: 'Buy Fractured T1 Intelligence Base',
       state: fracIntState,
-      baseCostChaos: 1600, // 8 divines
+      acquisition: {
+        type: 'market',
+        costChaos: 1600, // 8 divines
+        confidence: 'deterministic',
+      },
     },
   ],
   enableAllflame: false,
@@ -196,7 +212,11 @@ const craftBResponse = optimizer.optimizeCraft({
     {
       name: 'Clean 8-Passive Cold Cluster Base',
       state: coldCleanState,
-      baseCostChaos: 100, // 0.5 div base
+      acquisition: {
+        type: 'clean-base',
+        costChaos: 100, // 0.5 div base
+        confidence: 'deterministic',
+      },
     },
   ],
   saleValueChaos: 800, // 4 div finished sale price
@@ -277,31 +297,47 @@ const craftCResponse = optimizer.optimizeCraft({
       { modGroup: 'AfflictionJewelSmallPassivesGrantAttributes', maxTierNumber: 1 },
       { modGroup: 'AfflictionJewelSmallPassivesGrantChaosRes', maxTierNumber: 1 },
     ],
+    saleValueChaos: 32000, // 160 divines
   },
   startingStates: [
     {
       name: 'Fractured 35% Increased Effect Base (Self-Fracture)',
       state: fracEffMinionState,
-      baseCostChaos: 1533.4, // 4 * (10c base + 14.35c prep + 359c fracture)
+      acquisition: {
+        type: 'self-fracture',
+        costChaos: 1533.4, // 4 * (10c base + 14.35c prep + 359c fracture)
+        confidence: 'approximate',
+      },
     },
     {
       name: 'Fractured T1 Maximum Life Base (Self-Fracture)',
       state: fracLifeState,
-      baseCostChaos: 1527.4, // 4 * (10c base + 12.85c prep + 359c fracture)
+      acquisition: {
+        type: 'self-fracture',
+        costChaos: 1527.4, // 4 * (10c base + 12.85c prep + 359c fracture)
+        confidence: 'approximate',
+      },
     },
     {
       name: 'Fractured +4 to All Attributes Base (Self-Fracture)',
       state: fracAttrState,
-      baseCostChaos: 1542.3, // 4 * (10c base + 16.58c prep + 359c fracture)
+      acquisition: {
+        type: 'self-fracture',
+        costChaos: 1542.3, // 4 * (10c base + 16.58c prep + 359c fracture)
+        confidence: 'approximate',
+      },
     },
     {
       name: 'Fractured +5% to Chaos Resistance Base (Self-Fracture)',
       state: fracChaosState,
-      baseCostChaos: 1542.3, // 4 * (10c base + 16.58c prep + 359c fracture)
+      acquisition: {
+        type: 'self-fracture',
+        costChaos: 1542.3, // 4 * (10c base + 16.58c prep + 359c fracture)
+        confidence: 'approximate',
+      },
     },
   ],
-  saleValueChaos: 160 * 200, // 160 divines = 32,000c
-  enableAllflame: false,
+  saleValueChaos: 32000, // 160 divines
   priceBook,
   runMonteCarloValidation: true,
   monteCarloTrials: 2000,

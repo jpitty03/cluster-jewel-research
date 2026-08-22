@@ -85,8 +85,24 @@ export class ExpectedCostSolver {
     this.policyEngine = new CraftingPolicyEngine(target, context.priceBook, context.pool, isAllflame);
   }
 
-  public solve(startState: ItemState, baseCostChaos = 0): StateValueNode {
+  public solve(
+    startState: ItemState,
+    acquisitionInput?:
+      | {
+          type: 'market' | 'self-fracture' | 'clean-base';
+          costChaos: number;
+          confidence: 'deterministic' | 'approximate';
+        }
+      | number
+  ): StateValueNode {
     const key = generateStateKey(startState);
+
+    const acquisition =
+      typeof acquisitionInput === 'number'
+        ? { type: 'self-fracture' as const, costChaos: acquisitionInput, confidence: 'approximate' as const }
+        : acquisitionInput;
+
+    const baseCostChaos = acquisition?.costChaos ?? 0;
 
     // 1. Check if start state already satisfies target
     if (satisfiesTarget(startState, this.target)) {
@@ -155,12 +171,11 @@ export class ExpectedCostSolver {
       const selfFracCost = 4 * (cleanBaseCost + prepCost + fracOrbRate);
       const fullSelfFrac = selfFracCost + downstreamCraftCost;
 
-      // Option A: Market Purchase (only if baseCostChaos is explicitly supplied or available)
-      if (baseCostChaos > 0) {
-        const fullBuy = baseCostChaos + downstreamCraftCost;
+      if (acquisition && acquisition.type === 'market') {
+        const fullBuy = acquisition.costChaos + downstreamCraftCost;
         step1Options.push({
           type: 'market',
-          costChaos: baseCostChaos,
+          costChaos: acquisition.costChaos,
           confidence: 'deterministic',
           description: `Direct market purchase of fractured ${fracMod.name} base`,
           isRecommended: fullBuy <= fullSelfFrac,
@@ -169,14 +184,16 @@ export class ExpectedCostSolver {
           reason:
             fullBuy <= fullSelfFrac
               ? `Market purchase total of ${(fullBuy / divineRate).toFixed(2)} div (${fullBuy.toFixed(1)}c) is cheaper than self-fracturing (${fullSelfFrac.toFixed(1)}c).`
-              : `Market price is ${(baseCostChaos / divineRate).toFixed(2)} div (${baseCostChaos.toFixed(1)}c). Deterministic alternative with 0 crafting risk.`,
+              : `Market price is ${(acquisition.costChaos / divineRate).toFixed(2)} div (${acquisition.costChaos.toFixed(1)}c). Deterministic alternative with 0 crafting risk.`,
         });
       }
 
-      // Option B: Self-Fracture
+      // Self-Fracture option
+      const selfFracActualCost = acquisition?.type === 'self-fracture' && acquisition.costChaos > 0 ? acquisition.costChaos : selfFracCost;
+      const fullActualSelfFrac = selfFracActualCost + downstreamCraftCost;
       step1Options.push({
         type: 'self-fracture',
-        costChaos: selfFracCost,
+        costChaos: selfFracActualCost,
         confidence: 'approximate',
         description: `Prepare 4-mod clean base with ${fracMod.name} via Alt/Aug/Regal/Bench and use Fracturing Orb (25% chance)`,
         cleanBaseCostChaos: cleanBaseCost,
@@ -184,14 +201,14 @@ export class ExpectedCostSolver {
         fracturingOrbCostChaos: fracOrbRate,
         successChance: 25.0,
         expectedAttempts: 4.0,
-        isRecommended: baseCostChaos === 0 || fullSelfFrac < (baseCostChaos + downstreamCraftCost),
+        isRecommended: !acquisition || acquisition.type === 'self-fracture' || fullActualSelfFrac < (baseCostChaos + downstreamCraftCost),
         downstreamCostChaos: downstreamCraftCost,
-        fullRouteTotalCostChaos: fullSelfFrac,
+        fullRouteTotalCostChaos: fullActualSelfFrac,
         reason:
-          baseCostChaos > 0
-            ? fullSelfFrac < (baseCostChaos + downstreamCraftCost)
-              ? `Self-fracturing saves ${(baseCostChaos - selfFracCost).toFixed(1)}c on average vs market purchase.`
-              : `Market purchase saves ${(selfFracCost - baseCostChaos).toFixed(1)}c vs self-fracturing.`
+          acquisition?.type === 'market'
+            ? fullActualSelfFrac < (baseCostChaos + downstreamCraftCost)
+              ? `Self-fracturing saves ${(baseCostChaos - selfFracActualCost).toFixed(1)}c on average vs market purchase.`
+              : `Market purchase saves ${(selfFracActualCost - baseCostChaos).toFixed(1)}c vs self-fracturing.`
             : 'Self-fracturing route evaluated with Alt/Aug/Regal/Bench prep + Fracturing Orb.',
       });
     }
@@ -318,9 +335,10 @@ export class ExpectedCostSolver {
 
     // Build Terminal Outcome Distribution
     const outcomeDistribution: FinalOutcomeDistribution[] = [];
-    let expectedSaleValueChaos = 0;
+    let expectedSaleValueChaos = this.target.saleValueChaos ?? 0;
 
     if (this.target.outcomeBranches && this.target.outcomeBranches.length > 0) {
+      expectedSaleValueChaos = 0;
       for (const branch of this.target.outcomeBranches) {
         const prob = this.policyEngine.branchProbabilitiesMap.get(branch.name) ?? (1 / this.target.outcomeBranches.length);
         const saleVal = branch.saleValueChaos ?? 0;
@@ -335,7 +353,7 @@ export class ExpectedCostSolver {
       outcomeDistribution.push({
         name: 'Target Satisfied',
         probability: 1.0,
-        saleValueChaos: 0,
+        saleValueChaos: expectedSaleValueChaos,
       });
     }
 

@@ -45,6 +45,16 @@ export interface SampleCraftTrace {
   stepLogs: TraceStepLog[];
 }
 
+export interface TimeoutDiagnostics {
+  averageStepsCompleted: number;
+  maxStepsCompleted: number;
+  trialsExceeding5kSteps: number;
+  trialsExceeding10kSteps: number;
+  trialsExceeding20kSteps: number;
+  timeoutPartialCostChaos: number;
+  timeoutRatePercentage: number;
+}
+
 export interface SimulationResult {
   totalTrials: number;
   completedTrials: number;
@@ -72,6 +82,7 @@ export interface SimulationResult {
   };
   harvestCensus?: HarvestCensusData;
   outcomeBranchDistribution?: Record<string, number>;
+  timeoutDiagnostics?: TimeoutDiagnostics;
   sampleTraces?: SampleCraftTrace[];
   status: 'SUCCESS' | 'PARTIAL' | 'FAILED';
   message?: string;
@@ -100,22 +111,30 @@ export class MonteCarloSimulator {
     startState: ItemState,
     numTrials = 2000,
     baseCostChaos = 0,
-    maxStepsPerTrial = 25000
+    maxStepsPerTrial = 75000,
+    priceBookOverride?: PriceBook
   ): SimulationResult {
-    const priceBook = this.context.priceBook;
-    const pool = this.context.pool;
-    const allMods = pool ? pool.getAllMods().filter((m) => m.ilvl <= (startState.itemLevel ?? 84)) : [];
+    const priceBook = priceBookOverride ?? this.context.priceBook;
+    const allMods = this.context.pool ? this.context.pool.getAllMods().filter((m) => m.ilvl <= (startState.itemLevel ?? 84)) : [];
 
+    let totalAttempts = 0;
     let completedCount = 0;
     let failedCount = 0;
     let timedOutCount = 0;
-    let totalAttempts = 0;
 
     let resolvedStatesCount = 0;
     let missingPolicyStates = 0;
     let fallbackActionsUsed = 0;
 
-    // Harvest Census counters
+    // Timeout & step tracking diagnostics
+    let totalCompletedSteps = 0;
+    let maxCompletedSteps = 0;
+    let trialsOver5k = 0;
+    let trialsOver10k = 0;
+    let trialsOver20k = 0;
+    let timeoutPartialCost = 0;
+
+    // Dynamic Harvest Census tracking variables
     let totalHarvests = 0;
     let t1HarvestSuccesses = 0;
     let countT1Additional0 = 0;
@@ -124,6 +143,7 @@ export class MonteCarloSimulator {
     let countT1Only = 0;
     let countT1PlusJunk1Only = 0;
     let countT1PlusJunk2Only = 0;
+
     const targetSuffixHitCounts: Record<string, number> = {};
     for (const g of this.policyEngine.targetSuffixGroups) {
       targetSuffixHitCounts[g.name] = 0;
@@ -416,6 +436,11 @@ export class MonteCarloSimulator {
         }
 
         completedCosts.push(trialCostChaos);
+        totalCompletedSteps += steps;
+        if (steps > maxCompletedSteps) maxCompletedSteps = steps;
+        if (steps > 5000) trialsOver5k++;
+        if (steps > 10000) trialsOver10k++;
+        if (steps > 20000) trialsOver20k++;
 
         for (const [curr, amt] of Object.entries(trialCurrencies)) {
           currencyTotals[curr] = (currencyTotals[curr] ?? 0) + amt;
@@ -446,10 +471,24 @@ export class MonteCarloSimulator {
         }
       } else {
         timedOutCount++;
+        timeoutPartialCost += trialCostChaos;
+        if (steps > 5000) trialsOver5k++;
+        if (steps > 10000) trialsOver10k++;
+        if (steps > 20000) trialsOver20k++;
       }
     }
 
     const completionRate = totalAttempts > 0 ? (completedCount / totalAttempts) * 100 : 0;
+
+    const timeoutDiagnostics: TimeoutDiagnostics = {
+      averageStepsCompleted: completedCount > 0 ? totalCompletedSteps / completedCount : 0,
+      maxStepsCompleted: maxCompletedSteps,
+      trialsExceeding5kSteps: trialsOver5k,
+      trialsExceeding10kSteps: trialsOver10k,
+      trialsExceeding20kSteps: trialsOver20k,
+      timeoutPartialCostChaos: timeoutPartialCost,
+      timeoutRatePercentage: totalAttempts > 0 ? (timedOutCount / totalAttempts) * 100 : 0,
+    };
 
     if (completedCount === 0) {
       return {
@@ -463,6 +502,7 @@ export class MonteCarloSimulator {
           missingPolicyStates,
           fallbackActionsUsed,
         },
+        timeoutDiagnostics,
         status: 'FAILED',
         message: `VALIDATION FAILED: 0 / ${totalAttempts} simulations reached a terminal state within step limit (${maxStepsPerTrial}).`,
       };
@@ -534,6 +574,7 @@ export class MonteCarloSimulator {
       },
       harvestCensus,
       outcomeBranchDistribution,
+      timeoutDiagnostics,
       sampleTraces,
       status,
       message:

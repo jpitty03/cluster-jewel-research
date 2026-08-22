@@ -405,6 +405,25 @@ export function generateCraftExplanation(
         lines.push(`-`.repeat(86));
       }
 
+      // Timeout & Step Censoring Diagnostics
+      if (simulation.timeoutDiagnostics) {
+        const td = simulation.timeoutDiagnostics;
+        lines.push(`\nMONTE CARLO TIMEOUT & STEP CENSORING DIAGNOSTICS:`);
+        lines.push(`  Completed trials:       ${simulation.completedTrials.toLocaleString()} / ${simulation.totalTrials.toLocaleString()} (${simulation.completionRate.toFixed(2)}%)`);
+        lines.push(`  Timed out trials:       ${simulation.timedOutTrials.toLocaleString()} (${td.timeoutRatePercentage.toFixed(2)}%)`);
+        lines.push(`  Average steps / trial:  ${Math.round(td.averageStepsCompleted).toLocaleString()} steps`);
+        lines.push(`  Maximum steps observed: ${td.maxStepsCompleted.toLocaleString()} steps`);
+        lines.push(`  Trials > 5,000 steps:   ${td.trialsExceeding5kSteps.toLocaleString()} (${((td.trialsExceeding5kSteps / simulation.totalTrials) * 100).toFixed(2)}%)`);
+        lines.push(`  Trials > 10,000 steps:  ${td.trialsExceeding10kSteps.toLocaleString()} (${((td.trialsExceeding10kSteps / simulation.totalTrials) * 100).toFixed(2)}%)`);
+        lines.push(`  Trials > 20,000 steps:  ${td.trialsExceeding20kSteps.toLocaleString()} (${((td.trialsExceeding20kSteps / simulation.totalTrials) * 100).toFixed(2)}%)`);
+        if (td.timeoutPartialCostChaos > 0) {
+          lines.push(`  Timeout partial cost:   ${formatChaos(td.timeoutPartialCostChaos, divineRate)} accumulated across timed-out trials`);
+        } else {
+          lines.push(`  Timeout censoring bias: None (0 timed-out trials)`);
+        }
+      }
+
+      // Percentiles
       lines.push(`\nPercentiles:`);
       lines.push(`  Median Cost (P50):    ${formatChaos(simulation.medianCostChaos ?? 0, divineRate)}`);
       lines.push(`  75th Percentile (P75):${formatChaos(simulation.p75CostChaos ?? 0, divineRate)}`);
@@ -432,6 +451,31 @@ export function generateCraftExplanation(
     }
   }
 
+  // ------------------------------------------------------------- STARTING FRACTURE ROUTE COMPARISON TABLE
+  const allStartingRoutes = [recommended, ...alternates];
+  if (allStartingRoutes.length > 1) {
+    lines.push('\n' + '='.repeat(70));
+    lines.push('STARTING FRACTURE ROUTE COMPARISON');
+    lines.push('='.repeat(70));
+    lines.push(
+      `${'Starting Base / Route'.padEnd(36)} ${'Acquisition'.padEnd(20)} ${'Downstream EV'.padEnd(20)} ${'Total EV'.padEnd(20)} Status`
+    );
+    lines.push('-'.repeat(110));
+
+    for (let i = 0; i < allStartingRoutes.length; i++) {
+      const r = allStartingRoutes[i];
+      const acqStr = formatChaos(r.baseCostChaos, divineRate);
+      const downStr = formatChaos(r.expectedCraftingCostChaos, divineRate);
+      const totStr = formatChaos(r.totalExpectedCostChaos, divineRate);
+      const diff = r.totalExpectedCostChaos - recommended.totalExpectedCostChaos;
+      const statusStr = i === 0 ? 'BEST' : `+${formatChaos(diff, divineRate)}`;
+      lines.push(
+        `${r.strategyName.padEnd(36)} ${acqStr.padEnd(20)} ${downStr.padEnd(20)} ${totStr.padEnd(20)} ${statusStr}`
+      );
+    }
+    lines.push('-'.repeat(110));
+  }
+
   // ------------------------------------------------------------- ALTERNATE ROUTES COMPARISON
   if (alternates.length > 0) {
     lines.push('\n' + '='.repeat(70));
@@ -451,6 +495,15 @@ export function generateCraftExplanation(
       lines.push(`   Difference from best:       ${diffStr}`);
     }
   }
+
+  // ------------------------------------------------------------- LABELED GAME MECHANICS ASSUMPTIONS
+  lines.push('\n' + '='.repeat(70));
+  lines.push('LABELED GAME MECHANICS ASSUMPTIONS');
+  lines.push('='.repeat(70));
+  lines.push('1. Harvest Additional Affixes: Modeled as 50% chance of 1 additional affix / 50% chance of 2 additional affixes.');
+  lines.push('2. Base Self-Fracture Model: Approximate Alteration/Augmentation/Regal/Bench preparation + Fracturing Orb (25% hit rate).');
+  lines.push('3. Market Purchase Prices: Any unsupplied market price is reported as not supplied / unavailable rather than inferred.');
+  lines.push('4. Allflame Crafting: Stateful Intangibility stacking remains deferred and disabled.');
 
   lines.push('\n' + '='.repeat(70));
   return lines.join('\n');

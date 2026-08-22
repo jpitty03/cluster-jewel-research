@@ -21,6 +21,12 @@ import type {
 
 export interface StartingStrategyResult {
   strategyName: string;
+  state?: ItemState;
+  acquisition?: {
+    type: 'market' | 'self-fracture' | 'clean-base';
+    costChaos: number;
+    confidence: 'deterministic' | 'approximate';
+  };
   baseCostChaos: number;
   expectedCraftingCostChaos: number;
   totalExpectedCostChaos: number;
@@ -53,7 +59,13 @@ export class CraftEvaluator {
   evaluateStartingStrategy(
     strategyName: string,
     startState: ItemState,
-    baseCostChaos: number,
+    acquisitionInput?:
+      | {
+          type: 'market' | 'self-fracture' | 'clean-base';
+          costChaos: number;
+          confidence: 'deterministic' | 'approximate';
+        }
+      | number,
     saleValueChaos?: number
   ): StartingStrategyResult {
     const harvestTags = [
@@ -82,13 +94,18 @@ export class CraftEvaluator {
     }
 
     const solver = new ExpectedCostSolver(this.context, this.target, actions);
-    const result = solver.solve(startState, baseCostChaos);
+    const result = solver.solve(startState, acquisitionInput);
 
-    const effectiveAcquisitionCost = baseCostChaos > 0 ? baseCostChaos : (result.step1Options?.[0]?.costChaos ?? 0);
+    const baseCost =
+      typeof acquisitionInput === 'number'
+        ? acquisitionInput
+        : acquisitionInput?.costChaos ?? (result.step1Options?.[0]?.costChaos ?? 0);
+
+    const effectiveAcquisitionCost = baseCost > 0 ? baseCost : (result.step1Options?.[0]?.costChaos ?? 0);
     const totalExpectedCostChaos = effectiveAcquisitionCost + result.expectedCostChaos;
     const expectedCraftingCostChaos = result.expectedCostChaos;
 
-    const effectiveSaleValue = saleValueChaos ?? result.expectedSaleValueChaos;
+    const effectiveSaleValue = saleValueChaos ?? (this.target.saleValueChaos ?? result.expectedSaleValueChaos);
     let expectedProfitChaos: number | undefined;
     let roi: number | undefined;
 
@@ -97,8 +114,19 @@ export class CraftEvaluator {
       roi = totalExpectedCostChaos > 0 ? (expectedProfitChaos / totalExpectedCostChaos) * 100 : 0;
     }
 
+    const acquisition =
+      typeof acquisitionInput === 'object'
+        ? acquisitionInput
+        : {
+            type: (baseCost > 0 ? 'market' : 'self-fracture') as 'market' | 'self-fracture',
+            costChaos: effectiveAcquisitionCost,
+            confidence: (baseCost > 0 ? 'deterministic' : 'approximate') as 'deterministic' | 'approximate',
+          };
+
     return {
       strategyName,
+      state: startState,
+      acquisition,
       baseCostChaos: effectiveAcquisitionCost,
       expectedCraftingCostChaos,
       totalExpectedCostChaos,
@@ -114,7 +142,7 @@ export class CraftEvaluator {
       harvestComparison: result.harvestComparison,
       representativeDecisions: result.representativeDecisions,
       suffixPoolAudits: result.suffixPoolAudits,
-      pool: result.pool ?? this.context.pool,
+      pool: this.context.pool,
     };
   }
 }

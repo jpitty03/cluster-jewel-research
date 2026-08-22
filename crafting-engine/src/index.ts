@@ -7,17 +7,24 @@ import { CraftEvaluator, type StartingStrategyResult } from './solver/evaluator.
 import { generateCraftExplanation } from './reporting/explainPath.ts';
 import { MonteCarloSimulator, type SimulationResult } from './probability/monteCarlo.ts';
 
+export interface StartingCraftOption {
+  name: string;
+  state: ItemState;
+  acquisition?: {
+    type: 'market' | 'self-fracture' | 'clean-base';
+    costChaos: number;
+    confidence: 'deterministic' | 'approximate';
+  };
+  baseCostChaos?: number;
+}
+
 export interface OptimizeCraftRequest {
   baseType: BaseType;
   clusterType: string;
   itemLevel: number;
   passiveCount?: number;
   target: TargetDefinition;
-  startingStates?: Array<{
-    name: string;
-    state: ItemState;
-    baseCostChaos: number;
-  }>;
+  startingStates?: StartingCraftOption[];
   saleValueChaos?: number;
   enableAllflame?: boolean;
   priceBook?: PriceBook;
@@ -52,10 +59,11 @@ export class CraftingOptimizer {
 
     if (request.startingStates && request.startingStates.length > 0) {
       for (const start of request.startingStates) {
+        const acquisitionInput = start.acquisition ?? start.baseCostChaos ?? 0;
         const result = evaluator.evaluateStartingStrategy(
           start.name,
           start.state,
-          start.baseCostChaos,
+          acquisitionInput,
           request.saleValueChaos
         );
         evaluatedStrategies.push(result);
@@ -89,6 +97,7 @@ export class CraftingOptimizer {
     if (request.runMonteCarloValidation && request.startingStates && request.startingStates.length > 0) {
       const bestStart = request.startingStates.find((s) => s.name === recommended.strategyName) ?? request.startingStates[0];
       if (bestStart) {
+        const startCost = bestStart.acquisition?.costChaos ?? bestStart.baseCostChaos ?? recommended.baseCostChaos ?? 0;
         const mc = new MonteCarloSimulator(
           context,
           request.target,
@@ -98,8 +107,8 @@ export class CraftingOptimizer {
         simulationValidation = mc.runSimulation(
           bestStart.state,
           request.monteCarloTrials ?? 2000,
-          bestStart.baseCostChaos,
-          25000
+          startCost,
+          75000
         );
 
         if (simulationValidation && simulationValidation.meanCostChaos !== undefined) {

@@ -77,23 +77,23 @@ REPRESENTATIVE STATE DECISIONS & CONTINUATION VALUES
 1. State: Frac 35 + T1 Maximum Energy Shield (Clean S0)
    Candidate Actions:
      - Harvest Reforge Defences                 Continuation EV: 0.0c
-     - Orb of Annulment                         Continuation EV: 0.0c
+     - Exalted Orb Slam (Suffix: Widespread Destruction) Continuation EV: 19.6c
    Recommended Action: Harvest Reforge Defences
-   Reason:             Harvest Reforge Defences has continuation EV of 0.0c vs 1.6c to reforge.
+   Reason:             Harvest Reforge Defences has continuation EV of 0.0c vs 0.0c to reforge.
 
 2. State: Frac 35 + T1 Maximum Energy Shield + Widespread Destruction
    Candidate Actions:
      - Harvest Reforge Defences                 Continuation EV: 0.0c
-     - Orb of Annulment                         Continuation EV: 9.7c
+     - Exalted Orb Slam (Suffix: Widespread Destruction) Continuation EV: 23.8c
    Recommended Action: Harvest Reforge Defences
-   Reason:             Harvest Reforge Defences has continuation EV of 0.0c vs 1.6c to reforge.
+   Reason:             Harvest Reforge Defences has continuation EV of 0.0c vs 0.0c to reforge.
 
 3. State: Frac 35 + T1 Maximum Energy Shield + 1 Junk Suffix
    Candidate Actions:
      - Harvest Reforge Defences                 Continuation EV: 0.0c
-     - Orb of Annulment                         Continuation EV: 9.7c
+     - Orb of Annulment                         Continuation EV: 10.4c
    Recommended Action: Harvest Reforge Defences
-   Reason:             Harvest Reforge Defences has continuation EV of 0.0c vs 1.6c to reforge.
+   Reason:             Harvest Reforge Defences has continuation EV of 0.0c vs 0.0c to reforge.
 
 ----------------------------------------------------------------------
 Base Acquisition
@@ -141,5 +141,13 @@ EXPECTED PROFIT:
 
 EXPECTED ROI:
   700.00%
+
+======================================================================
+LABELED GAME MECHANICS ASSUMPTIONS
+======================================================================
+1. Harvest Additional Affixes: Modeled as 50% chance of 1 additional affix / 50% chance of 2 additional affixes.
+2. Base Self-Fracture Model: Approximate Alteration/Augmentation/Regal/Bench preparation + Fracturing Orb (25% hit rate).
+3. Market Purchase Prices: Any unsupplied market price is reported as not supplied / unavailable rather than inferred.
+4. Allflame Crafting: Stateful Intangibility stacking remains deferred and disabled.
 
 ======================================================================

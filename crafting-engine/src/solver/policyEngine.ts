@@ -421,13 +421,10 @@ export class CraftingPolicyEngine {
 
     // Row K+1: Equation for VH
     // Harvest extra affixes transitions:
-    let q0_harvest = 0.5 * 0.5 * pJunk0;
     const qi_harvest = new Array(K).fill(0);
     for (let i = 0; i < K; i++) {
       qi_harvest[i] += 0.5 * pTargets0[i];
     }
-    let qH_harvest = 0.5 * 0.5 * pJunk0;
-    let kA_harvest = 0.5 * pJunk0;
 
     // Calculate 2-extra suffix probabilities:
     let pPairWinSum = 0;
@@ -457,9 +454,11 @@ export class CraftingPolicyEngine {
     for (let i = 0; i < K; i++) {
       qi_harvest[i] += 0.5 * (1 / 3) * p1TargetJunk[i];
     }
-    q0_harvest += 0.5 * ((1 / 6) * p1TargetJunkSum + (1 / 3) * p2Junk);
-    qH_harvest += 0.5 * ((1 / 2) * p1TargetJunkSum + (2 / 3) * p2Junk);
-    kA_harvest += 0.5 * ((4 / 3) * p1TargetJunkSum + (5 / 3) * p2Junk);
+
+    // Determine whether annulling 2 junk suffixes is EV-positive: 5 * cA < VH - V(S0)
+    let q0_harvest = 0.5 * 0.5 * pJunk0 + 0.5 * (1 / 6) * p1TargetJunkSum;
+    let qH_harvest = 0.5 * 0.5 * pJunk0 + 0.5 * (0.5 * p1TargetJunkSum + 1.0 * p2Junk);
+    let kA_harvest = 0.5 * pJunk0 + 0.5 * (4 / 3) * p1TargetJunkSum;
 
     M[K + 1][K + 1] = 1 - qH_harvest;
     M[K + 1][0] = -q0_harvest;
@@ -468,14 +467,27 @@ export class CraftingPolicyEngine {
     }
 
     // ------------------------------------------------------------- 4a. Solve Costs (V)
-    const bV = new Array(N).fill(0);
+    let bV = new Array(N).fill(0);
     bV[0] = this.cE + pJunk0 * this.cA;
     for (let i = 0; i < K; i++) {
       bV[i + 1] = 3 * this.cE + 4 * (1 - pWin[i]) * this.cA;
     }
     bV[K + 1] = this.cH / this.pT1Harvest + kA_harvest * this.cA;
 
-    const V_sol = solveLinearSystem(M, bV);
+    let V_sol = solveLinearSystem(M, bV);
+
+    // If annulling 2 junk suffixes is strictly cheaper: (VH - V(S0)) > 5 * cA
+    if (V_sol[K + 1] - V_sol[0] > 5 * this.cA) {
+      q0_harvest = 0.5 * 0.5 * pJunk0 + 0.5 * ((1 / 6) * p1TargetJunkSum + (1 / 3) * p2Junk);
+      qH_harvest = 0.5 * 0.5 * pJunk0 + 0.5 * ((1 / 2) * p1TargetJunkSum + (2 / 3) * p2Junk);
+      kA_harvest = 0.5 * pJunk0 + 0.5 * ((4 / 3) * p1TargetJunkSum + (5 / 3) * p2Junk);
+
+      M[K + 1][K + 1] = 1 - qH_harvest;
+      M[K + 1][0] = -q0_harvest;
+      bV[K + 1] = this.cH / this.pT1Harvest + kA_harvest * this.cA;
+      V_sol = solveLinearSystem(M, bV);
+    }
+
     this.vS0 = V_sol[0];
     for (let i = 0; i < K; i++) {
       this.vGroupMap.set(this.targetSuffixGroups[i].id, V_sol[i + 1]);
@@ -556,22 +568,45 @@ export class CraftingPolicyEngine {
   // ------------------------------------------------------------- Mechanical Evaluation Core
   public getJunkMods(state: ItemState): RolledMod[] {
     const junk: RolledMod[] = [];
-    const all = [...state.prefixes, ...state.suffixes];
-    const bestBranch = getMatchingOutcomeBranch(state, this.target);
 
-    for (const m of all) {
-      if (m.isFractured) continue;
-
-      const matchesRequired = this.target.requiredMods.some((req: ModRequirement) => matchesModRequirement(m, req));
-      if (matchesRequired) continue;
-
-      const matchesBranch = this.target.outcomeBranches?.some((b: TargetOutcomeBranch) =>
-        b.requiredMods.some((req: ModRequirement) => matchesModRequirement(m, req))
-      );
-      if (matchesBranch) continue;
-
-      junk.push(m);
+    // If item already satisfies target, 0 junk
+    if (satisfiesTarget(state, this.target) || getMatchingOutcomeBranch(state, this.target)) {
+      return [];
     }
+
+    // Check non-fractured prefixes
+    for (const p of state.prefixes) {
+      if (p.isFractured) continue;
+      const isHarvestT1 = p.modGroup === this.harvestModGroup && p.tier === 1;
+      if (!isHarvestT1) {
+        junk.push(p);
+      }
+    }
+
+    // Check suffixes
+    if (state.suffixes.length === 1) {
+      const s = state.suffixes[0];
+      const isTarget = this.targetSuffixGroups.some((g) => g.modGroup === s.modGroup && s.tier <= g.tier);
+      if (!isTarget) {
+        junk.push(s);
+      }
+    } else if (state.suffixes.length === 2) {
+      const [s1, s2] = state.suffixes;
+      const g1 = this.targetSuffixGroups.find((g) => g.modGroup === s1.modGroup && s1.tier <= g.tier);
+      const g2 = this.targetSuffixGroups.find((g) => g.modGroup === s2.modGroup && s2.tier <= g.tier);
+
+      if (!g1 && !g2) {
+        junk.push(s1, s2);
+      } else if (g1 && !g2) {
+        junk.push(s2);
+      } else if (!g1 && g2) {
+        junk.push(s1);
+      } else if (g1 && g2) {
+        // Both match target groups, but pair is mutually incompatible because satisfiesTarget was false
+        junk.push(s1, s2);
+      }
+    }
+
     return junk;
   }
 
@@ -600,8 +635,8 @@ export class CraftingPolicyEngine {
         actionType: 'HARVEST_REFORGE',
         actionName,
         immediateCostChaos: this.cH,
-        expectedContinuationCostChaos: Math.max(0, this.vEnter - this.cH),
-        expectedTotalCostChaos: this.vEnter,
+        expectedContinuationCostChaos: this.vEnter,
+        expectedTotalCostChaos: this.cH + this.vEnter,
         stepAttribution: 2,
         reason: `${actionName} guarantees ${this.harvestTag} modifier at ${(this.pT1Harvest * 100).toFixed(2)}% rate.`,
       };
@@ -897,6 +932,9 @@ export class CraftingPolicyEngine {
     const bestCandidate = candidates.find((c) => c.actionType === best.actionType);
     const isMinEvVerified = Math.abs((bestCandidate?.expectedTotalCostChaos ?? 0) - minCandidateCost) < 1e-4;
 
+    const harvestCandidate = candidates.find((c) => c.actionType === 'HARVEST_REFORGE' || c.actionType === 'HARVEST_DEFENCE');
+    const harvestContEv = harvestCandidate ? harvestCandidate.expectedContinuationCostChaos : (this.vEnter - this.cH);
+
     return {
       stateDescription: desc,
       candidateActions: candidates.map((c) => ({
@@ -906,7 +944,7 @@ export class CraftingPolicyEngine {
         totalExpectedCostChaos: c.expectedTotalCostChaos,
       })),
       recommendedAction: best.actionName,
-      recommendationReason: `${best.actionName} has continuation EV of ${best.expectedContinuationCostChaos.toFixed(1)}c vs ${(this.cH + this.vEnter).toFixed(1)}c to reforge.`,
+      recommendationReason: `${best.actionName} has continuation EV of ${best.expectedContinuationCostChaos.toFixed(1)}c vs ${harvestContEv.toFixed(1)}c to reforge.`,
       isMinEvVerified,
     };
   }

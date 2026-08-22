@@ -30,6 +30,7 @@ export interface TargetDefinition {
   outcomeBranches?: TargetOutcomeBranch[];
   acceptableAnyOf?: ModRequirement[][];
   finalRollRequirements?: RollRequirement[];
+  saleValueChaos?: number;
 }
 
 export function matchesModRequirement(mod: RolledMod | Mod, req: ModRequirement): boolean {
