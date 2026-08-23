@@ -1,3 +1,6 @@
+export type PriceSource = 'user-supplied' | 'market-feed' | 'research-default' | 'unavailable';
+export type PriceConfidence = 'known' | 'research-fallback' | 'unavailable';
+
 export interface CurrencyRates {
   chaos: number;
   divine: number;
@@ -35,8 +38,8 @@ export const DEFAULT_CURRENCY_RATES: CurrencyRates = {
 
 export interface PriceEvaluation {
   costChaos: number;
-  source: 'market' | 'user' | 'research-default';
-  confidence: 'known' | 'research-fallback' | 'unavailable';
+  source: PriceSource;
+  confidence: PriceConfidence;
 }
 
 export interface BaseItemPrices {
@@ -76,20 +79,29 @@ export class PriceBook {
   }
 
   getRate(currency: keyof CurrencyRates | string): number {
-    return this.rates[currency] ?? 1;
+    return this.rates[currency] ?? 0;
   }
 
   evaluateRate(currency: keyof CurrencyRates | string, fallbackPrice?: number): PriceEvaluation {
     const isCustom = this.customRates.has(currency as string);
     const known = this.rates[currency];
 
+    if (isCustom && known !== undefined && known > 0) {
+      return {
+        costChaos: known,
+        source: 'market-feed',
+        confidence: 'known',
+      };
+    }
+
     if (known !== undefined && known > 0) {
       return {
         costChaos: known,
-        source: isCustom ? 'market' : 'research-default',
-        confidence: isCustom ? 'known' : 'known', // Validated base rate
+        source: 'research-default',
+        confidence: 'research-fallback',
       };
     }
+
     if (fallbackPrice !== undefined && fallbackPrice > 0) {
       return {
         costChaos: fallbackPrice,
@@ -97,9 +109,10 @@ export class PriceBook {
         confidence: 'research-fallback',
       };
     }
+
     return {
       costChaos: 0,
-      source: 'research-default',
+      source: 'unavailable',
       confidence: 'unavailable',
     };
   }
@@ -109,7 +122,7 @@ export class PriceBook {
     if (known !== undefined) {
       return amount * known;
     }
-    return amount * this.getRate(currency);
+    return 0;
   }
 
   getBasePrice(key: string): BaseItemPrices | undefined {

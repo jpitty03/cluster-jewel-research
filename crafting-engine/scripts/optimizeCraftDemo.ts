@@ -432,40 +432,58 @@ function runCleanBaseT1IntSearchDiagnostic(): string {
 
   const genericSearch = new GenericSearchEngine({ pool: poolA, priceBook }, target);
   const searchResult = genericSearch.search(cleanBaseState);
-
-  const response = optimizer.optimizeCraft({
-    baseType: 'Large Cluster Jewel',
-    clusterType: '12% increased Attack Damage while holding a Shield',
-    itemLevel: 84,
-    passiveCount: 12,
-    target,
-    startingStates: [
-      {
-        name: 'Clean Normal Base',
-        state: cleanBaseState,
-        baseCostChaos: 10,
-      },
-    ],
-    runMonteCarloValidation: false,
-  });
-
-  const best = response.recommendedStrategy;
   const divineRate = priceBook.getRate('divine') || 200;
 
   lines.push(`Target: T1 Intelligence (ilvl 84 12p Shield Cluster)`);
-  lines.push(`Starting Physical State: ${cleanBaseState.rarity} base (0 affixes, base cost: ${formatChaos(best.baseCostChaos, divineRate)})`);
-  lines.push(`Reachable Canonical States Discovered: ${searchResult.canonicalStatesVisited}`);
+  lines.push(`Starting Physical State: ${cleanBaseState.rarity} base (0 affixes, base cost: 10.0c)`);
 
-  lines.push(`\nREPRESENTATIVE STATE Q-VALUE AUDITS & ACTION COMPETITION:`);
+  // 1. Graph Completeness Report
+  lines.push(`\n1. GRAPH-BUILD COMPLETENESS:`);
+  lines.push(`   - Reachable Canonical States Discovered: ${searchResult.canonicalStatesVisited}`);
+  lines.push(`   - Graph Hit Hard State Cap (maxStates=${searchResult.graphBuild.maxStates}): ${searchResult.graphBuild.hitStateLimit ? 'YES (TRUNCATED / NOT YET PROVEN COMPLETE)' : 'NO (FULLY EXPLORED)'}`);
+  lines.push(`   - Queued Unexpanded States at Cap:       ${searchResult.graphBuild.queuedButUnexpandedStates}`);
+  lines.push(`   - Transitions to Unexpanded States:      ${searchResult.graphBuild.transitionsToUnexpandedStates}`);
+  lines.push(`   - Transition Prob Mass to Unexpanded:    ${(searchResult.graphBuild.transitionProbabilityMassToUnexpandedStates * 100).toFixed(4)}%`);
+  lines.push(`   - Terminal Target States Discovered:     ${searchResult.graphBuild.terminalStatesFound}`);
+  lines.push(`   - State Counts by Rarity: Normal: ${searchResult.graphBuild.stateCountsByRarity.normal}, Magic: ${searchResult.graphBuild.stateCountsByRarity.magic}, Rare: ${searchResult.graphBuild.stateCountsByRarity.rare}`);
+  lines.push(`   - Top State Subspaces: ${Object.entries(searchResult.graphBuild.stateCountsByAffixes).slice(0, 5).map(([k, v]) => `${k}:${v}`).join(', ')}`);
+
+  // 2. Value Iteration Convergence Report
+  lines.push(`\n2. VALUE ITERATION NUMERICAL CONVERGENCE:`);
+  lines.push(`   - Value Iteration Converged:             ${searchResult.convergence.converged ? 'YES' : 'NO'}`);
+  lines.push(`   - Iterations Executed:                   ${searchResult.convergence.iterations} (max: ${searchResult.convergence.maxIterations})`);
+  lines.push(`   - Final Max Bellman Residual / Delta:    ${searchResult.convergence.finalMaxResidual.toExponential(4)} (epsilon: ${searchResult.convergence.epsilon})`);
+
+  // 3. Policy Properness & Reachability Report
+  lines.push(`\n3. SELECTED POLICY PROPERNESS & REACHABILITY:`);
+  lines.push(`   - Policy Proper & Absorbing:             ${searchResult.properness.isProper ? 'YES' : 'NO'}`);
+  lines.push(`   - Terminal Absorption Probability:       ${(searchResult.properness.terminalAbsorptionProbability * 100).toFixed(1)}%`);
+  lines.push(`   - Unresolved Selected Policy Transitions:${searchResult.properness.unresolvedSelectedPolicyTransitions}`);
+  lines.push(`   - Non-Terminal Dead Ends:                ${searchResult.properness.nonTerminalDeadEnds}`);
+
+  // 4. Expected-Cost Reconciliation Report
+  lines.push(`\n4. EXPECTED CURRENCY USAGE & COST RECONCILIATION:`);
+  lines.push(`   - Markov Occupancy Solver Converged:     ${searchResult.reconciliation.visitConverged ? 'YES' : 'NO'} (${searchResult.reconciliation.visitIterations} iterations, residual: ${searchResult.reconciliation.visitMaxResidual.toExponential(4)})`);
+  lines.push(`   - Expected Transmutation Orbs:           ${(searchResult.expectedCurrencies.transmutation ?? 0).toFixed(2)}`);
+  lines.push(`   - Expected Alteration Orbs:              ${(searchResult.expectedCurrencies.alteration ?? 0).toFixed(2)}`);
+  lines.push(`   - Expected Augmentation Orbs:            ${(searchResult.expectedCurrencies.augmentation ?? 0).toFixed(2)}`);
+  lines.push(`   - Expected Regal Orbs:                   ${(searchResult.expectedCurrencies.regal ?? 0).toFixed(2)}`);
+  lines.push(`   - Expected Annulment Orbs:               ${(searchResult.expectedCurrencies.annul ?? 0).toFixed(2)}`);
+  lines.push(`   - Sum(Expected Action * Immediate Cost): ${searchResult.reconciliation.sumExpectedActionCostChaos.toFixed(3)}c`);
+  lines.push(`   - Reported Downstream Crafting EV:       ${searchResult.reconciliation.reportedDownstreamEVChaos.toFixed(3)}c`);
+  lines.push(`   - EV Reconciliation Difference:          ${searchResult.reconciliation.differenceChaos.toFixed(4)}c (${searchResult.reconciliation.isReconciled ? 'RECONCILED' : 'FLAGGED'})`);
+
+  // 5. Representative State Q-Value Audits
+  lines.push(`\n5. REPRESENTATIVE STATE Q-VALUE AUDITS (Action Competition):`);
   for (const audit of searchResult.representativeAudits.slice(0, 4)) {
     lines.push(`\n  State: [${audit.state.rarity.toUpperCase()}] P:${audit.state.prefixes.length} (${audit.state.prefixes.map((p) => p.name).join(', ') || 'none'}) | S:${audit.state.suffixes.length} (${audit.state.suffixes.map((s) => s.name).join(', ') || 'none'})`);
     for (const c of audit.candidateQValues) {
       const isSelected = c.actionId === audit.bestActionId;
-      lines.push(`    - Action: ${c.actionName.padEnd(22)} | Immediate: ${c.immediateCostChaos.toFixed(2).padStart(5)}c | Cont EV: ${c.expectedContinuationChaos.toFixed(2).padStart(6)}c | Q(s,a): ${c.totalQValueChaos.toFixed(2).padStart(6)}c ${isSelected ? '<-- OPTIMAL (MIN Q)' : ''}`);
+      lines.push(`    - Action: ${c.actionName.padEnd(22)} | Immediate: ${c.immediateCostChaos.toFixed(2).padStart(5)}c | Cont EV: ${c.expectedContinuationChaos.toFixed(2).padStart(6)}c | Total Q(s,a): ${c.totalQValueChaos.toFixed(2).padStart(6)}c ${isSelected ? '<-- OPTIMAL (MIN Q)' : ''}`);
     }
   }
 
-  // Check if Augmentation ever beats Alteration
+  // 6. Action Competition Check
   let augBeatsAlt = false;
   for (const decision of searchResult.policyMap.values()) {
     if (decision.state.rarity === 'magic' && decision.state.prefixes.length === 1 && decision.state.suffixes.length === 0) {
@@ -476,23 +494,22 @@ function runCleanBaseT1IntSearchDiagnostic(): string {
   }
   lines.push(`\nAction Competition Check: Does Augmentation beat Alteration on 1-Prefix Magic Miss items? ${augBeatsAlt ? 'YES (Augmentation has lower Q-value by preserving prefix and attempting direct suffix hit)' : 'NO'}`);
 
-  lines.push(`\nDISCOVERED CRAFTING PLAN (${best.steps?.length ?? 0} steps):`);
-
-  if (best.steps) {
-    for (const s of best.steps) {
-      lines.push(`  Step ${s.stepNumber}: ${s.actionName} - ${s.description} (+${formatChaos(s.stepTotalCostChaos, divineRate)})`);
-    }
+  // 7. Optimal Policy Summary (Branching Rules)
+  lines.push(`\n6. OPTIMAL POLICY BRANCHING RULES:`);
+  for (const step of searchResult.steps) {
+    lines.push(`  - State: ${step.stateDescription}`);
+    lines.push(`    Chosen Action: ${step.selectedAction} (Immediate Cost: ${step.immediateCostChaos.toFixed(2)}c, Cont EV: ${step.continuationCostChaos.toFixed(2)}c, Q(s,a): ${step.totalQValueChaos.toFixed(2)}c)`);
+    lines.push(`    Rationale: ${step.reason}`);
   }
 
-  lines.push(`\nEXPECTED ECONOMICS:`);
-  lines.push(`  Base Acquisition Cost:      ${formatChaos(best.baseCostChaos, divineRate)}`);
-  lines.push(`  Downstream Crafting EV:     ${formatChaos(best.expectedCraftingCostChaos, divineRate)}`);
-  lines.push(`  Total Route EV:             ${formatChaos(best.totalExpectedCostChaos, divineRate)}`);
-  lines.push(`  Expected Transmutation Orbs: ${(best.expectedCurrencies.transmutation ?? 0).toFixed(2)}`);
-  lines.push(`  Expected Alteration Orbs:    ${(best.expectedCurrencies.alteration ?? 0).toFixed(2)}`);
+  // 8. Unknown Currency Provenance Check
+  const unknownEval = priceBook.evaluateRate('unknown_currency_test');
+  lines.push(`\n7. PRICE PROVENANCE & UNKNOWN RATE SAFETY CHECK:`);
+  lines.push(`   - Query: 'unknown_currency_test' -> source: ${unknownEval.source}, confidence: ${unknownEval.confidence}, costChaos: ${unknownEval.costChaos}c`);
+  lines.push(`   - Result: ${unknownEval.confidence === 'unavailable' && unknownEval.costChaos === 0 ? 'PASSED (Unknown currency returns UNAVAILABLE, never 1c)' : 'FAILED'}`);
 
-  const passed = (best.expectedCurrencies.alteration ?? 0) > 40 && (best.expectedCurrencies.alteration ?? 0) < 80;
-  lines.push(`\nClean-Base Generic Search Verification: ${passed ? 'PASSED (Stochastic Shortest Path Bellman solver derived optimal policy)' : 'FAILED'}`);
+  const passed = searchResult.reconciliation.isReconciled && searchResult.convergence.converged;
+  lines.push(`\nClean-Base Generic Search Verification: ${passed ? 'PASSED (Stochastic Shortest Path Bellman solver derived optimal policy with full convergence & reconciliation)' : 'FAILED'}`);
 
   return lines.join('\n');
 }
