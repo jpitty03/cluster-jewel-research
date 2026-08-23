@@ -7,6 +7,20 @@ import {
 interface PendingRequest {
   resolve: (result: OptimizeCraftResult) => void;
   reject: (error: Error) => void;
+  timeoutId: ReturnType<typeof setTimeout>;
+}
+
+export const SEARCH_WALL_TIME_GRACE_MS = 250;
+
+export class SearchWallTimeExceededError extends Error {
+  readonly code = 'SEARCH_WALL_TIME_EXCEEDED';
+  readonly budgetMs: number;
+
+  constructor(budgetMs: number) {
+    super(`Search exceeded the configured ${budgetMs} ms wall-time budget`);
+    this.name = 'SearchWallTimeExceededError';
+    this.budgetMs = budgetMs;
+  }
 }
 
 function cancellationError(): Error {
@@ -27,8 +41,13 @@ export class OptimizerWorkerClient {
   optimize(input: OptimizeCraftInput): Promise<OptimizeCraftResult> {
     const requestId = `optimizer_${this.nextRequestId++}`;
     const request: OptimizerWorkerRequest = { type: 'OPTIMIZE', requestId, input };
+    const budgetMs = Math.max(1, input.searchBudget?.maxWallTimeMs ?? 30_000);
     return new Promise((resolve, reject) => {
-      this.pending.set(requestId, { resolve, reject });
+      const timeoutId = setTimeout(() => {
+        if (!this.pending.has(requestId)) return;
+        this.replaceWorker(new SearchWallTimeExceededError(budgetMs));
+      }, budgetMs + SEARCH_WALL_TIME_GRACE_MS);
+      this.pending.set(requestId, { resolve, reject, timeoutId });
       this.worker.postMessage(request);
     });
   }
@@ -42,7 +61,10 @@ export class OptimizerWorkerClient {
   dispose(): void {
     this.worker.terminate();
     const error = cancellationError();
-    for (const pending of this.pending.values()) pending.reject(error);
+    for (const pending of this.pending.values()) {
+      clearTimeout(pending.timeoutId);
+      pending.reject(error);
+    }
     this.pending.clear();
   }
 
@@ -53,6 +75,7 @@ export class OptimizerWorkerClient {
       const pending = this.pending.get(event.data.requestId);
       if (!pending) return;
       this.pending.delete(event.data.requestId);
+      clearTimeout(pending.timeoutId);
       if (event.data.type === 'RESULT') pending.resolve(event.data.result);
       else pending.reject(Object.assign(new Error(event.data.error.message), { name: event.data.error.name }));
     });
@@ -67,7 +90,10 @@ export class OptimizerWorkerClient {
 
   private replaceWorker(error: Error): void {
     this.worker.terminate();
-    for (const pending of this.pending.values()) pending.reject(error);
+    for (const pending of this.pending.values()) {
+      clearTimeout(pending.timeoutId);
+      pending.reject(error);
+    }
     this.pending.clear();
     this.worker = this.createWorker();
   }

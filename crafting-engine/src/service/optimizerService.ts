@@ -15,6 +15,8 @@ import type {
   AcquisitionPortfolioCandidate,
   MechanicsConfidence,
 } from '../rules/actionRegistry.ts';
+import { createHarvestReforgeMechanics } from '../rules/actionRegistry.ts';
+import { getTaggedModsForCluster } from '../rules/clusterPoolHelpers.ts';
 import {
   GenericSearchEngine,
   type ActionResolutionStatus,
@@ -25,11 +27,33 @@ import {
   generateStartingStateCandidates,
   type StartingStateCandidate,
 } from '../solver/strategyDiscovery.ts';
+import {
+  OptimizerInputValidationError,
+  validateOptimizeCraftInput,
+  type OptimizerValidationIssue,
+} from './optimizerValidation.ts';
 
 export interface OptimizeCraftPriceContext {
   currencyRates?: Partial<CurrencyRates>;
   cleanBaseCostChaos?: number;
+  cleanBasePriceSource?: 'manual' | 'market';
+  cleanBasePriceProvenance?: string;
   marketFracturedPricesChaos?: Record<string, number>;
+}
+
+export interface OptimizerMarketContext {
+  league: string;
+  snapshotAt: string;
+  currencyRatesAt?: string;
+  stale: boolean;
+  cleanBaseQuote: {
+    status: 'AVAILABLE' | 'UNAVAILABLE';
+    costChaos?: number;
+    listed?: number;
+    sampled?: number;
+    provenance: string;
+  };
+  currencyMappings: Record<string, string>;
 }
 
 export interface SearchBudget {
@@ -49,6 +73,7 @@ export interface OptimizeCraftInput {
   harvestTags?: string[];
   allowResearchFallbackPrices?: boolean;
   expectedSaleValueChaos?: number;
+  marketContext?: OptimizerMarketContext;
 }
 
 export interface SerializableCandidateQValue {
@@ -179,10 +204,25 @@ export interface OptimizationSearchSummary {
   harvestActionScope: {
     mode: 'DISABLED' | 'TARGET_INFERRED' | 'EXPLICIT';
     tags: string[];
+    rawInferredTags: string[];
+    enabledCrafts: Array<{ actionId: string; actionName: string; tag: string }>;
   };
 }
 
+export type OptimizationWarningCategory =
+  | 'SELECTED_ROUTE'
+  | 'PROOF_SEARCH'
+  | 'CONSIDERED_ALTERNATIVE'
+  | 'DATA_FRESHNESS';
+
+export interface OptimizationWarning {
+  category: OptimizationWarningCategory;
+  message: string;
+}
+
 export interface OptimizeCraftResult {
+  target: TargetDefinition;
+  validationNotices: OptimizerValidationIssue[];
   recommendationStatus: RecommendationStatus;
   recommended: RouteSummary | null;
   alternatives: RouteSummary[];
@@ -212,6 +252,8 @@ export interface OptimizeCraftResult {
     reconciliationDifferenceChaos: number;
     costReconciled: boolean;
   };
+  marketContext?: OptimizerMarketContext;
+  warningDetails: OptimizationWarning[];
   warnings: string[];
 }
 
@@ -257,7 +299,10 @@ function buildAcquisitionPortfolio(
       provenance: method.type === 'market'
         ? 'user-supplied fractured-base market price'
         : method.type === 'clean-base' && input.prices?.cleanBaseCostChaos !== undefined
-          ? 'user-supplied clean-base price'
+          ? input.prices.cleanBasePriceProvenance ??
+            (input.prices.cleanBasePriceSource === 'market'
+              ? 'league trade snapshot clean-base quote'
+              : 'user-supplied clean-base price')
           : method.type === 'self-fracture'
             ? 'Approximate self-fracture acquisition estimate; preparation is a research model, not an executable solver route'
             : `${method.type} research estimate`,
@@ -341,6 +386,9 @@ export class OptimizerService {
   }
 
   optimize(input: OptimizeCraftInput): OptimizeCraftResult {
+    const validation = validateOptimizeCraftInput(this.repo, input);
+    if (!validation.valid) throw new OptimizerInputValidationError(validation.errors);
+    input = validation.normalizedInput;
     const priceBook = new PriceBook(input.prices?.currencyRates ?? {});
     const pool = ModPool.forCluster(this.repo, input.baseType, input.clusterType);
     const starts = generateStartingStateCandidates(
@@ -358,6 +406,21 @@ export class OptimizerService {
     );
     const portfolio = buildAcquisitionPortfolio(starts, input);
     const harvestTags = input.harvestTags ?? inferHarvestTags(input.target, pool);
+    const enabledHarvestCrafts = harvestTags.length > 0
+      ? createHarvestReforgeMechanics({ pool, priceBook }, harvestTags)
+        .filter((mechanic) =>
+          getTaggedModsForCluster(
+            pool,
+            String(mechanic.parameters?.harvestTag ?? ''),
+            input.itemLevel
+          ).length > 0
+        )
+        .map((mechanic) => ({
+            actionId: mechanic.id,
+            actionName: mechanic.name,
+            tag: String(mechanic.parameters?.harvestTag ?? ''),
+          }))
+      : [];
     const startState = virtualAcquisitionState(input);
     const result = new GenericSearchEngine(
       { pool, priceBook },
@@ -430,8 +493,39 @@ export class OptimizerService {
     const selectedMechanicsEvidence = result.mechanicsConfidence.evidence.filter(
       (entry) => entry.onPolicySelections > 0
     );
+    const selectedMechanicsWarnings = mechanicsScope(selectedMechanicsEvidence).warnings;
+    const warningDetails: OptimizationWarning[] = [
+      ...proofWarnings.map((message): OptimizationWarning => ({ category: 'PROOF_SEARCH', message })),
+      ...result.priceConfidence.warnings.map((message): OptimizationWarning => ({ category: 'SELECTED_ROUTE', message })),
+      ...selectedMechanicsWarnings.map((message): OptimizationWarning => ({ category: 'SELECTED_ROUTE', message })),
+      ...result.consideredPriceConfidence.warnings
+        .filter((message) => !result.priceConfidence.warnings.includes(message))
+        .map((message): OptimizationWarning => ({ category: 'CONSIDERED_ALTERNATIVE', message })),
+      ...result.mechanicsConfidence.warnings
+        .filter((message) => !selectedMechanicsWarnings.includes(message))
+        .map((message): OptimizationWarning => ({ category: 'CONSIDERED_ALTERNATIVE', message })),
+      ...(input.marketContext?.stale
+        ? [{
+            category: 'DATA_FRESHNESS' as const,
+            message: `Market snapshot for ${input.marketContext.league} is stale (${input.marketContext.snapshotAt}).`,
+          }]
+        : []),
+      ...(input.marketContext?.cleanBaseQuote.status === 'UNAVAILABLE'
+        ? [{
+            category: 'DATA_FRESHNESS' as const,
+            message: input.marketContext.cleanBaseQuote.provenance,
+          }]
+        : []),
+    ];
+    const uniqueWarningDetails = warningDetails.filter((warning, index, all) =>
+      all.findIndex((candidate) =>
+        candidate.category === warning.category && candidate.message === warning.message
+      ) === index
+    );
 
     const output: OptimizeCraftResult = {
+      target: input.target,
+      validationNotices: validation.notices,
       recommendationStatus,
       recommended,
       alternatives: acquisitionRoutes.filter((route) => route.actionId !== recommended?.actionId),
@@ -505,6 +599,8 @@ export class OptimizerService {
               ? 'TARGET_INFERRED'
               : 'EXPLICIT',
           tags: [...harvestTags],
+          rawInferredTags: input.harvestTags === undefined ? [...harvestTags] : [],
+          enabledCrafts: enabledHarvestCrafts,
         },
       },
       solver: {
@@ -515,11 +611,9 @@ export class OptimizerService {
         reconciliationDifferenceChaos: result.reconciliation.differenceChaos,
         costReconciled: result.reconciliation.isReconciled,
       },
-      warnings: [...new Set([
-        ...proofWarnings,
-        ...result.priceConfidence.warnings,
-        ...result.mechanicsConfidence.warnings,
-      ])],
+      marketContext: input.marketContext,
+      warningDetails: uniqueWarningDetails,
+      warnings: [...new Set(uniqueWarningDetails.map((warning) => warning.message))],
     };
 
     // This assertion belongs at the boundary: an accidental Map/Infinity must

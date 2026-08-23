@@ -1,0 +1,13 @@
+DEVELOPER UI PHASE 2 — HARD RUNTIME / TARGET-PARITY BROWSER SMOKE
+URL: http://127.0.0.1:4173/
+typed hard guard: PASS in 374ms
+hard guard termination/recreation: PASS (workers=2)
+worker usable after forced timeout: PASS in 59ms
+exact two-mod target summary: Target summary |  | Large Cluster Jewel · 12% increased Attack Damage while holding a Shield · ilvl 84 · 12 passives |  | Final rarity: rare |  | AfflictionJewelSmallPassivesGrantInt3 | AfflictionJewelSmallPassivesGrantES3
+5-second browser search: 5295ms; Search stopped at the configured 5,000 ms runtime budget. The worker was replaced and is ready for another run.Retry deeper
+5-second ceiling: PASS
+page responsive after 5-second stop: PASS
+30-second two-mod browser search: 7171ms; Best resolved route foundUnresolved routes may still be cheaper.
+30-second ceiling: PASS
+explicit cancellation: PASS in 6ms
+worker usable after two-mod stop: PASS in 54ms

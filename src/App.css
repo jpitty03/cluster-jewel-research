@@ -755,6 +755,34 @@ td a {
   margin-top: 18px;
 }
 
+.target-summary {
+  margin-top: 16px;
+  padding: 12px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--surface-2);
+
+  h3,
+  p {
+    margin: 0 0 6px;
+  }
+
+  ul {
+    margin: 6px 0;
+  }
+}
+
+.optimizer-summary dl {
+  display: grid;
+  grid-template-columns: minmax(120px, auto) 1fr;
+  gap: 4px 14px;
+}
+
+.optimizer-summary button,
+.error button {
+  margin-top: 10px;
+}
+
 .target-row {
   display: flex;
   gap: 8px;

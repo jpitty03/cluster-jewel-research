@@ -1,0 +1,82 @@
+DEVELOPER UI PHASE 2A — SIMPLE-CRAFT SEARCH DIAGNOSTIC
+Exact live fixture: Large shield cluster, ilvl 84, 12 passives, exact T1 Glowing, clean base 10c.
+
+ROOT CAUSE OF THE BASELINE ~1534c RECOMMENDATION:
+  The clean acquisition was classified from its proper selected continuation, which abandoned into self-fracture.
+  Competitive expansion only traversed the global selected route, so it did not recurse into the off-policy clean acquisition.
+  Transmutation had cheap unresolved descendants, but that value uncertainty was not propagated back to the clean acquisition/menu proof.
+  The queue therefore stopped after one round and incorrectly reported that no unresolved candidate could beat the incumbent.
+
+ACQUISITION MENU:
+  selected: Restart/Reacquire: clean-base: Clean Base; V=14.817009c
+    Restart/Reacquire: clean-base: Clean Base: RESOLVED; Q=14.817009c; LB=10.000000c; unresolved=0; could beat incumbent=NO
+    Restart/Reacquire: Approximate self-fracture: Glowing (T1): RESOLVED; Q=1534.300000c; LB=1534.300000c; unresolved=0; could beat incumbent=NO
+
+CLEAN-BASE DOWNSTREAM STATE KEY:
+  Large Cluster Jewel:12% increased Attack Damage while holding a Shield:84:12:flags(influenced=false,synthesised=false,acquisitionMenu=false):normal|P:[]|S:[]
+
+CLEAN NORMAL STATE:
+  selected: Orb of Transmutation; V=4.817000c
+    Orb of Transmutation: RESOLVED; Q=4.817000c; LB=0.030000c; unresolved=0; could beat incumbent=NO
+    Restart/Reacquire: Approximate self-fracture: Glowing (T1): RESOLVED; Q=1534.300000c; LB=1534.300000c; unresolved=0; could beat incumbent=NO
+
+TRANSMUTATION BRANCH:
+  successors: 1359
+  immediate exact-target probability: 1.799712%
+  representative miss: 1 Prefix: Prodigious Defence
+
+REPRESENTATIVE MAGIC MISS:
+  selected: Orb of Alteration; V=4.897000c
+    Orb of Alteration: RESOLVED; Q=4.897000c; LB=0.110000c; unresolved=0; could beat incumbent=NO
+    Orb of Augmentation: RESOLVED; Q=4.927009c; LB=0.030000c; unresolved=0; could beat incumbent=YES
+    Orb of Scouring: RESOLVED; Q=5.317009c; LB=0.500000c; unresolved=0; could beat incumbent=YES
+    Restart/Reacquire: clean-base: Clean Base: RESOLVED; Q=14.817009c; LB=10.000000c; unresolved=0; could beat incumbent=NO
+    Restart/Reacquire: Approximate self-fracture: Glowing (T1): RESOLVED; Q=1534.300000c; LB=1534.300000c; unresolved=0; could beat incumbent=NO
+    Regal Orb: UNRESOLVED; Q=UNRESOLVED; LB=0.200000c; unresolved=70; could beat incumbent=YES
+
+SEARCH RESULT:
+  elapsed: 30002ms
+  graph states: 3334
+  selected route: Restart/Reacquire: clean-base: Clean Base -> Best Fully Resolved Policy
+  downstream EV: 14.817009c
+  proof: BEST FULLY RESOLVED POLICY FOUND
+  unresolved candidates may be cheaper: YES
+  on-policy states: 1361
+  absorption: 99.999999%
+  unresolved on-policy probability: 0.000000%
+  Bellman / occupancy: 435 / 712
+  reconciliation delta: 0.000397c
+  budget exhausted: YES
+
+FULL-POOL ONE-MOD SANITY — T1 INTELLIGENCE:
+  selected acquisition: Restart/Reacquire: clean-base: Clean Base
+  expected cost: 16.050082c
+  actions: Restart/Reacquire: clean-base: Clean Base -> Orb of Alteration -> Orb of Augmentation -> Orb of Transmutation
+  on-policy states: 1361
+  absorption: 99.999999%
+  Bellman: CONVERGED in 529
+  occupancy: CONVERGED in 893
+  reconciliation: 0.000505c (PASS)
+  unresolved competitors may be cheaper: YES (2721)
+  runtime: 10021ms
+
+FULL-POOL ONE-MOD SANITY — PRECISE RETALIATION:
+  selected acquisition: Restart/Reacquire: clean-base: Clean Base
+  expected cost: 14.817009c
+  actions: Restart/Reacquire: clean-base: Clean Base -> Orb of Alteration -> Orb of Augmentation -> Orb of Transmutation
+  on-policy states: 1361
+  absorption: 99.999999%
+  Bellman: CONVERGED in 435
+  occupancy: CONVERGED in 712
+  reconciliation: 0.000397c (PASS)
+  unresolved competitors may be cheaper: YES (2709)
+  runtime: 10012ms
+
+HARVEST TOTAL-AFFIX APPROXIMATION:
+  model: preserve fractures + guaranteed tagged mod + roll to 3/4 total explicit affixes (50% each)
+  unfractured analytical: 3 affixes=50.0000% | 4 affixes=50.0000%
+  unfractured seeded: 3 affixes=49.6700% | 4 affixes=50.3300%
+  one-fracture analytical: 3 affixes=50.0000% | 4 affixes=50.0000%
+  one-fracture seeded: 3 affixes=50.1200% | 4 affixes=49.8800%
+  confidence label: APPROXIMATE / EXTERNALLY CLOSE
+  external compound parity: CLOSE / APPROXIMATE — ENGINE ~19% OPTIMISTIC (external observation remains fixture data, not hardcoded engine output)

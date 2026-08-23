@@ -5,8 +5,18 @@ import type {
   OptimizeCraftResult,
   RecommendationStatus,
 } from '../crafting-engine/src/service/optimizerService.ts';
-import { browserCraftingCatalog } from './crafting/browserEngine.ts';
-import { OptimizerWorkerClient } from './crafting/optimizerWorkerClient.ts';
+import {
+  browserCraftingCatalog,
+  validateBrowserOptimizeInput,
+} from './crafting/browserEngine.ts';
+import {
+  getBrowserOptimizerPricing,
+  getOptimizerPricingLeagues,
+} from './crafting/optimizerPricing.ts';
+import {
+  OptimizerWorkerClient,
+  SearchWallTimeExceededError,
+} from './crafting/optimizerWorkerClient.ts';
 
 const DEFAULT_ITEM_LEVEL = 84;
 const DEFAULT_BUDGET = { maxStates: 5000, maxWallTimeMs: 30_000, maxExpansionRounds: 3 };
@@ -54,16 +64,105 @@ function CraftOptimizer() {
     [baseType, clusterType, itemLevel],
   );
   const [targetModIds, setTargetModIds] = useState(['']);
-  const [cleanBaseCost, setCleanBaseCost] = useState('10');
+  const [finalRarity, setFinalRarity] = useState<'any' | 'magic' | 'rare'>('any');
+  const [modSearch, setModSearch] = useState('');
+  const [cleanBaseCost, setCleanBaseCost] = useState('');
+  const [fracturedMarketPrices, setFracturedMarketPrices] = useState<Record<string, string>>({});
+  const [saleValue, setSaleValue] = useState('');
+  const pricingLeagues = useMemo(() => getOptimizerPricingLeagues(), []);
+  const [league, setLeague] = useState(pricingLeagues[0] ?? '');
   const [allowFallback, setAllowFallback] = useState(true);
   const [maxStates, setMaxStates] = useState(DEFAULT_BUDGET.maxStates);
   const [maxWallTimeMs, setMaxWallTimeMs] = useState(DEFAULT_BUDGET.maxWallTimeMs);
   const [maxExpansionRounds, setMaxExpansionRounds] = useState(DEFAULT_BUDGET.maxExpansionRounds);
   const [result, setResult] = useState<OptimizeCraftResult | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [wallTimeExceeded, setWallTimeExceeded] = useState(false);
   const [running, setRunning] = useState(false);
   const [runtimeMs, setRuntimeMs] = useState<number | null>(null);
   const workerRef = useRef<OptimizerWorkerClient | null>(null);
+
+  const marketPricing = useMemo(
+    () => getBrowserOptimizerPricing(league, baseType, clusterType, passiveCount, itemLevel),
+    [baseType, clusterType, itemLevel, league, passiveCount],
+  );
+  const selectedTargetIds = useMemo(() => targetModIds.filter(Boolean), [targetModIds]);
+  const effectiveRarity = selectedTargetIds.length >= 3 ? 'rare' : finalRarity;
+  const groupedEligibleMods = useMemo(() => {
+    const needle = modSearch.trim().toLowerCase();
+    const filtered = eligibleMods.filter((mod) =>
+      selectedTargetIds.includes(mod.modId) ||
+      needle.length === 0 ||
+      `${mod.displayName} ${mod.statText} ${mod.modId} t${mod.tier} ${mod.genType}`.toLowerCase().includes(needle)
+    );
+    const groups = new Map<string, typeof filtered>();
+    for (const mod of filtered) {
+      const key = `${mod.isNotable ? 'Notable' : 'Ordinary'} ${mod.genType}`;
+      const entries = groups.get(key) ?? [];
+      entries.push(mod);
+      groups.set(key, entries);
+    }
+    return [...groups.entries()];
+  }, [eligibleMods, modSearch, selectedTargetIds]);
+
+  const draftInput = useMemo((): OptimizeCraftInput => {
+    const manualClean = cleanBaseCost.trim() === '' ? undefined : Number(cleanBaseCost);
+    const marketFracturedPricesChaos = Object.fromEntries(
+      selectedTargetIds.flatMap((modId) => {
+        const raw = fracturedMarketPrices[modId]?.trim();
+        const value = raw ? Number(raw) : NaN;
+        return Number.isFinite(value) && value > 0 ? [[modId, value]] : [];
+      })
+    );
+    const parsedSaleValue = saleValue.trim() === '' ? undefined : Number(saleValue);
+    return {
+      baseType,
+      clusterType,
+      itemLevel,
+      passiveCount,
+      target: {
+        requiredMods: selectedTargetIds.map((modId) => ({ modId })),
+        requiredRarity: effectiveRarity === 'any' ? undefined : effectiveRarity,
+      },
+      prices: {
+        ...marketPricing?.priceContext,
+        cleanBaseCostChaos: Number.isFinite(manualClean) && manualClean !== undefined && manualClean >= 0
+          ? manualClean
+          : marketPricing?.priceContext.cleanBaseCostChaos,
+        cleanBasePriceSource: Number.isFinite(manualClean) && manualClean !== undefined
+          ? 'manual'
+          : marketPricing?.priceContext.cleanBasePriceSource,
+        cleanBasePriceProvenance: Number.isFinite(manualClean) && manualClean !== undefined
+          ? 'manual clean-base override supplied in Developer UI'
+          : marketPricing?.priceContext.cleanBasePriceProvenance,
+        marketFracturedPricesChaos: Object.keys(marketFracturedPricesChaos).length > 0
+          ? marketFracturedPricesChaos
+          : undefined,
+      },
+      marketContext: marketPricing?.marketContext,
+      expectedSaleValueChaos: Number.isFinite(parsedSaleValue) && parsedSaleValue !== undefined && parsedSaleValue >= 0
+        ? parsedSaleValue
+        : undefined,
+      allowResearchFallbackPrices: allowFallback,
+      searchBudget: { maxStates, maxWallTimeMs, maxExpansionRounds },
+    };
+  }, [
+    allowFallback,
+    baseType,
+    cleanBaseCost,
+    clusterType,
+    effectiveRarity,
+    fracturedMarketPrices,
+    itemLevel,
+    marketPricing,
+    maxExpansionRounds,
+    maxStates,
+    maxWallTimeMs,
+    passiveCount,
+    saleValue,
+    selectedTargetIds,
+  ]);
+  const validation = useMemo(() => validateBrowserOptimizeInput(draftInput), [draftInput]);
 
   useEffect(() => {
     const client = new OptimizerWorkerClient();
@@ -74,35 +173,7 @@ function CraftOptimizer() {
     };
   }, []);
 
-  const validationError = useMemo(() => {
-    const selected = targetModIds.filter(Boolean);
-    if (!clusterTypes.includes(clusterType)) return 'Choose a cluster type valid for this base.';
-    if (!Number.isInteger(itemLevel) || itemLevel < 1 || itemLevel > 100) {
-      return 'Item level must be an integer from 1 to 100.';
-    }
-    if (!passiveCounts.includes(passiveCount)) return 'Choose a valid passive count for this base.';
-    if (selected.length === 0) return 'Choose at least one desired modifier.';
-    if (new Set(selected).size !== selected.length) return 'Desired modifiers cannot be duplicated.';
-    const eligibleIds = new Set(eligibleMods.map((mod) => mod.modId));
-    if (selected.some((modId) => !eligibleIds.has(modId))) {
-      return 'A desired modifier is not eligible for this base, cluster type, or item level.';
-    }
-    if (maxStates < 1 || maxWallTimeMs < 1 || maxExpansionRounds < 1) {
-      return 'Search budgets must be positive integers.';
-    }
-    return null;
-  }, [
-    clusterType,
-    clusterTypes,
-    eligibleMods,
-    itemLevel,
-    maxExpansionRounds,
-    maxStates,
-    maxWallTimeMs,
-    passiveCount,
-    passiveCounts,
-    targetModIds,
-  ]);
+  const validationError = validation.errors.map((issue) => issue.message).join(' ') || null;
 
   const changeBase = (nextBase: BaseType) => {
     const nextClusterTypes = browserCraftingCatalog.getClusterTypes(nextBase);
@@ -124,25 +195,17 @@ function CraftOptimizer() {
     setTargetModIds((current) => current.map((value, i) => (i === index ? modId : value)));
   };
 
-  const optimize = async () => {
+  const optimize = async (budget = { maxStates, maxWallTimeMs, maxExpansionRounds }) => {
     if (validationError || !workerRef.current) return;
-    const parsedCleanBaseCost = Number(cleanBaseCost);
-    const input: OptimizeCraftInput = {
-      baseType,
-      clusterType,
-      itemLevel,
-      passiveCount,
-      target: {
-        requiredMods: targetModIds.filter(Boolean).map((modId) => ({ modId })),
-      },
-      prices: Number.isFinite(parsedCleanBaseCost) && parsedCleanBaseCost >= 0
-        ? { cleanBaseCostChaos: parsedCleanBaseCost }
-        : undefined,
-      allowResearchFallbackPrices: allowFallback,
-      searchBudget: { maxStates, maxWallTimeMs, maxExpansionRounds },
-    };
+    const requestValidation = validateBrowserOptimizeInput({ ...draftInput, searchBudget: budget });
+    if (!requestValidation.valid) {
+      setError(requestValidation.errors.map((issue) => issue.message).join(' '));
+      return;
+    }
+    const input = requestValidation.normalizedInput;
     setRunning(true);
     setError(null);
+    setWallTimeExceeded(false);
     setResult(null);
     setRuntimeMs(null);
     const started = performance.now();
@@ -151,7 +214,13 @@ function CraftOptimizer() {
       setResult(nextResult);
       setRuntimeMs(performance.now() - started);
     } catch (caught) {
-      if (caught instanceof Error && caught.name === 'AbortError') {
+      if (caught instanceof SearchWallTimeExceededError) {
+        setWallTimeExceeded(true);
+        setError(
+          `Search stopped at the configured ${caught.budgetMs.toLocaleString()} ms runtime budget. ` +
+          'The worker was replaced and is ready for another run.'
+        );
+      } else if (caught instanceof Error && caught.name === 'AbortError') {
         setError('Optimization cancelled. The worker was replaced and is ready for another run.');
       } else {
         setError(caught instanceof Error ? caught.message : String(caught));
@@ -159,6 +228,18 @@ function CraftOptimizer() {
     } finally {
       setRunning(false);
     }
+  };
+
+  const retryDeeper = () => {
+    const budget = {
+      maxStates: Math.max(maxStates + 1, maxStates * 2),
+      maxWallTimeMs: Math.max(maxWallTimeMs + 1, maxWallTimeMs * 2),
+      maxExpansionRounds: maxExpansionRounds + 1,
+    };
+    setMaxStates(budget.maxStates);
+    setMaxWallTimeMs(budget.maxWallTimeMs);
+    setMaxExpansionRounds(budget.maxExpansionRounds);
+    void optimize(budget);
   };
 
   const cancel = () => workerRef.current?.cancel();
@@ -202,21 +283,69 @@ function CraftOptimizer() {
             </select>
           </label>
           <label>
-            <span>Clean base price (chaos)</span>
-            <input type="number" min="0" step="0.1" value={cleanBaseCost} onChange={(event) => setCleanBaseCost(event.target.value)} />
+            <span>Final rarity</span>
+            <select
+              value={effectiveRarity}
+              disabled={selectedTargetIds.length >= 3}
+              onChange={(event) => setFinalRarity(event.target.value as typeof finalRarity)}
+            >
+              <option value="any">Any</option>
+              <option value="magic">Magic</option>
+              <option value="rare">Rare</option>
+            </select>
+          </label>
+          <label>
+            <span>Pricing league</span>
+            <select value={league} onChange={(event) => setLeague(event.target.value)}>
+              {pricingLeagues.map((value) => <option key={value}>{value}</option>)}
+            </select>
+          </label>
+          <label>
+            <span>Clean base manual override (chaos)</span>
+            <input
+              type="number"
+              min="0"
+              step="0.1"
+              value={cleanBaseCost}
+              placeholder={marketPricing?.marketContext.cleanBaseQuote.status === 'AVAILABLE'
+                ? String(marketPricing.marketContext.cleanBaseQuote.costChaos)
+                : 'Market quote unavailable'}
+              onChange={(event) => setCleanBaseCost(event.target.value)}
+            />
+          </label>
+          <label>
+            <span>Expected sale value (chaos, optional)</span>
+            <input type="number" min="0" step="1" value={saleValue} onChange={(event) => setSaleValue(event.target.value)} />
           </label>
         </div>
 
+        <p className="muted">
+          {marketPricing?.marketContext.cleanBaseQuote.provenance ?? 'No league price snapshot is available.'}
+        </p>
+
         <div className="target-list">
           <h3>Desired exact modifiers ({targetModIds.length}/4)</h3>
+          <label>
+            <span>Search modifiers</span>
+            <input
+              type="search"
+              value={modSearch}
+              placeholder="Name, tier, Prefix/Suffix, notable…"
+              onChange={(event) => setModSearch(event.target.value)}
+            />
+          </label>
           {targetModIds.map((modId, index) => (
             <div className="target-row" key={index}>
               <select value={modId} onChange={(event) => updateTarget(index, event.target.value)} aria-label={`Desired modifier ${index + 1}`}>
                 <option value="">Select an eligible modifier…</option>
-                {eligibleMods.map((mod) => (
-                  <option key={mod.modId} value={mod.modId}>
-                    {mod.displayName} — {mod.genType}, ilvl {mod.requiredItemLevel}
-                  </option>
+                {groupedEligibleMods.map(([group, mods]) => (
+                  <optgroup key={group} label={group}>
+                    {mods.map((mod) => (
+                      <option key={mod.modId} value={mod.modId}>
+                        {mod.displayName} — T{mod.tier}, ilvl {mod.requiredItemLevel}
+                      </option>
+                    ))}
+                  </optgroup>
                 ))}
               </select>
               {targetModIds.length > 1 && (
@@ -231,7 +360,37 @@ function CraftOptimizer() {
               Add modifier
             </button>
           )}
+          {selectedTargetIds.map((modId) => {
+            const mod = eligibleMods.find((candidate) => candidate.modId === modId);
+            return (
+              <label key={`fractured-${modId}`}>
+                <span>Fractured-base market price — {mod?.displayName ?? modId} (optional chaos)</span>
+                <input
+                  type="number"
+                  min="0"
+                  step="1"
+                  value={fracturedMarketPrices[modId] ?? ''}
+                  onChange={(event) => setFracturedMarketPrices((current) => ({
+                    ...current,
+                    [modId]: event.target.value,
+                  }))}
+                />
+              </label>
+            );
+          })}
         </div>
+
+        <section className="target-summary">
+          <h3>Target summary</h3>
+          <p>{baseType} · {clusterType} · ilvl {itemLevel} · {passiveCount} passives</p>
+          <p>Final rarity: {validation.normalizedInput.target.requiredRarity ?? 'Any'}</p>
+          <ul>
+            {validation.normalizedInput.target.requiredMods.map((requirement) => (
+              <li key={requirement.modId}>{requirement.modId}</li>
+            ))}
+          </ul>
+          {validation.notices.map((notice) => <p className="muted" key={notice.code}>{notice.message}</p>)}
+        </section>
 
         <details className="advanced-controls">
           <summary>Advanced search budgets</summary>
@@ -249,18 +408,50 @@ function CraftOptimizer() {
 
         {validationError && <div className="optimizer-validation">{validationError}</div>}
         <div className="optimizer-actions">
-          <button type="button" onClick={optimize} disabled={running || validationError !== null || workerRef.current === null}>
+          <button type="button" onClick={() => void optimize()} disabled={running || validationError !== null || workerRef.current === null}>
             {running ? 'Searching…' : 'Optimize craft'}
           </button>
           {running && <button type="button" className="secondary" onClick={cancel}>Cancel</button>}
         </div>
       </section>
 
-      {error && <div className="error">{error}</div>}
+      {error && (
+        <div className="error">
+          {error}
+          {wallTimeExceeded && !running && (
+            <button type="button" className="secondary" onClick={retryDeeper}>Retry deeper</button>
+          )}
+        </div>
+      )}
       {running && <div className="status">The worker is exploring and valuing the candidate graph…</div>}
 
       {result && (
         <div className="optimizer-results">
+          <section className="optimizer-card optimizer-summary">
+            <h2>Recommendation summary</h2>
+            <dl>
+              <dt>Target</dt>
+              <dd>{result.target.requiredMods.map((requirement) => requirement.modId).join(' + ')} · {result.target.requiredRarity ?? 'Any rarity'}</dd>
+              <dt>Status</dt><dd>{result.recommendationStatus}</dd>
+              <dt>Selected acquisition</dt><dd>{selectedAcquisition?.label ?? result.recommended?.name ?? 'None certified'}</dd>
+              <dt>Expected cost</dt><dd>{chaos(result.expectedCostChaos)}</dd>
+              {result.expectedSaleValueChaos !== undefined && <><dt>Expected sale value</dt><dd>{chaos(result.expectedSaleValueChaos)}</dd></>}
+              {result.expectedProfitChaos !== undefined && <><dt>Expected profit</dt><dd>{chaos(result.expectedProfitChaos)}</dd></>}
+              <dt>Proof</dt><dd>{result.proof.proofLevel}</dd>
+              <dt>Runtime</dt><dd>{runtimeMs?.toFixed(0)} ms worker round trip</dd>
+            </dl>
+            {result.warningDetails.filter((warning) => warning.category === 'SELECTED_ROUTE' || warning.category === 'PROOF_SEARCH').length > 0 && (
+              <ul className="warnings">
+                {result.warningDetails
+                  .filter((warning) => warning.category === 'SELECTED_ROUTE' || warning.category === 'PROOF_SEARCH')
+                  .map((warning) => <li key={`${warning.category}-${warning.message}`}>{warning.category}: {warning.message}</li>)}
+              </ul>
+            )}
+            {(result.recommendationStatus !== 'PROVEN_OPTIMAL' || result.search.budgetExhausted) && (
+              <button type="button" className="secondary" onClick={retryDeeper}>Retry deeper</button>
+            )}
+          </section>
+
           <section className={`optimizer-proof ${result.recommendationStatus.toLowerCase()}`}>
             <strong>{STATUS_COPY[result.recommendationStatus].title}</strong>
             <span>{STATUS_COPY[result.recommendationStatus].detail}</span>
@@ -334,7 +525,9 @@ function CraftOptimizer() {
                 <dt>Engine elapsed</dt><dd>{result.search.elapsedMs.toLocaleString()} ms</dd>
                 <dt>Worker round trip</dt><dd>{runtimeMs?.toFixed(0)} ms</dd>
                 <dt>Budget exhausted</dt><dd>{result.search.budgetExhausted ? 'yes' : 'no'}</dd>
-                <dt>Harvest scope</dt><dd>{result.search.harvestActionScope.mode}: {result.search.harvestActionScope.tags.join(', ') || 'none'}</dd>
+                <dt>Raw inferred tags</dt><dd>{result.search.harvestActionScope.rawInferredTags.join(', ') || 'none'}</dd>
+                <dt>Enabled Harvest crafts</dt>
+                <dd>{result.search.harvestActionScope.enabledCrafts.map((craft) => craft.actionName).join(', ') || 'none'}</dd>
               </dl>
             </section>
             <section className="optimizer-card">
@@ -347,8 +540,21 @@ function CraftOptimizer() {
             </section>
           </div>
 
-          {result.warnings.length > 0 && (
-            <section className="optimizer-card warnings"><h2>Warnings</h2><ul>{result.warnings.map((warning) => <li key={warning}>{warning}</li>)}</ul></section>
+          {result.warningDetails.some((warning) => warning.category === 'DATA_FRESHNESS') && (
+            <section className="optimizer-card warnings">
+              <h2>Data freshness</h2>
+              <ul>{result.warningDetails.filter((warning) => warning.category === 'DATA_FRESHNESS').map((warning) => (
+                <li key={warning.message}>{warning.message}</li>
+              ))}</ul>
+            </section>
+          )}
+          {result.warningDetails.some((warning) => warning.category === 'CONSIDERED_ALTERNATIVE') && (
+            <details className="optimizer-card warnings">
+              <summary>Considered-alternative warnings</summary>
+              <ul>{result.warningDetails.filter((warning) => warning.category === 'CONSIDERED_ALTERNATIVE').map((warning) => (
+                <li key={warning.message}>{warning.message}</li>
+              ))}</ul>
+            </details>
           )}
         </div>
       )}
