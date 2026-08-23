@@ -212,15 +212,9 @@ export const CRAFT_MECHANICS: CraftMechanic[] = [
     name: 'Orb of Transmutation',
     category: 'base-prep',
     isLegal: (state) => state.rarity === 'normal',
-    getCost: (ctx) => {
-      const altRate = ctx.priceBook.toChaos(1, 'alteration');
-      return {
-        costChaos: altRate > 0 ? altRate * 0.25 : 0.03,
-        confidence: altRate > 0 ? 'known' : 'research-fallback',
-      };
-    },
+    getCost: (ctx) => ctx.priceBook.evaluateRate('transmutation', 0.03),
     getTransitions: (state, target, context) => {
-      const cost = ctxCost(context, 'alteration', 0.12) * 0.25;
+      const cost = ctxCost(context, 'transmutation', 0.03);
       return generateMagicTransitions(state, context, cost);
     },
     sampleTransition: (state, target, context, rng) => {
@@ -235,15 +229,9 @@ export const CRAFT_MECHANICS: CraftMechanic[] = [
     name: 'Orb of Augmentation',
     category: 'base-prep',
     isLegal: (state) => state.rarity === 'magic' && (canAcceptPrefix(state) || canAcceptSuffix(state)),
-    getCost: (ctx) => {
-      const altRate = ctx.priceBook.toChaos(1, 'alteration');
-      return {
-        costChaos: altRate > 0 ? altRate * 0.25 : 0.03,
-        confidence: altRate > 0 ? 'known' : 'research-fallback',
-      };
-    },
+    getCost: (ctx) => ctx.priceBook.evaluateRate('augmentation', 0.03),
     getTransitions: (state, target, context) => {
-      const cost = ctxCost(context, 'alteration', 0.12) * 0.25;
+      const cost = ctxCost(context, 'augmentation', 0.03);
       const pool = context.pool;
       if (!pool) return { outcomes: [], immediateCostChaos: cost };
 
@@ -307,13 +295,7 @@ export const CRAFT_MECHANICS: CraftMechanic[] = [
     name: 'Orb of Alteration',
     category: 'base-prep',
     isLegal: (state) => state.rarity === 'magic',
-    getCost: (ctx) => {
-      const cost = ctx.priceBook.toChaos(1, 'alteration');
-      return {
-        costChaos: cost || 0.11,
-        confidence: cost > 0 ? 'known' : 'research-fallback',
-      };
-    },
+    getCost: (ctx) => ctx.priceBook.evaluateRate('alteration', 0.11),
     getTransitions: (state, target, context) => {
       const cost = ctxCost(context, 'alteration', 0.11);
       return generateMagicTransitions(state, context, cost);
@@ -328,15 +310,9 @@ export const CRAFT_MECHANICS: CraftMechanic[] = [
     name: 'Regal Orb',
     category: 'base-prep',
     isLegal: (state) => state.rarity === 'magic' && state.prefixes.length + state.suffixes.length >= 1,
-    getCost: (ctx) => {
-      const cost = ctx.priceBook.toChaos(1, 'regal') || ctx.priceBook.toChaos(1, 'chaos') * 0.2;
-      return {
-        costChaos: cost || 0.2,
-        confidence: cost > 0 ? 'known' : 'research-fallback',
-      };
-    },
+    getCost: (ctx) => ctx.priceBook.evaluateRate('regal', 0.20),
     getTransitions: (state, target, context) => {
-      const cost = ctxCost(context, 'regal', 0.2);
+      const cost = ctxCost(context, 'regal', 0.20);
       const pool = context.pool;
       if (!pool) return { outcomes: [], immediateCostChaos: cost };
 
@@ -513,7 +489,7 @@ export const CRAFT_MECHANICS: CraftMechanic[] = [
 ];
 
 function ctxCost(context: SolverContext, currencyKey: string, fallback: number): number {
-  return context.priceBook.toChaos(1, currencyKey as any) || fallback;
+  return context.priceBook.evaluateRate(currencyKey as any, fallback).costChaos;
 }
 
 /**

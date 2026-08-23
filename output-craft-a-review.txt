@@ -541,16 +541,16 @@ CANDIDATE SET STRUCTURAL AUDIT:
 GENERATED STARTING CANDIDATES (7 routes from 7 physical states):
 Route Name                                Acquisition Mode     Acq Cost        Downstream EV   Full Route EV
 ---------------------------------------------------------------------------------------------------------
+Start Clean Base Clean Base               clean-base           10.0c           103.1c          113.1c
 Self-Fracture 35% Increased Effect [Powerful] self-fracture        1534.3c (~7.67 div) 6090.3c (~30.45 div) 7624.6c (~38.12 div)
 Self-Fracture T1 Maximum Energy Shield [Glowing] self-fracture        1534.3c (~7.67 div) 100000.0c (~500.00 div) 101534.3c (~507.67 div)
 Self-Fracture T1 Intelligence [of the Prodigy] self-fracture        1539.0c (~7.70 div) 117000.0c (~585.00 div) 118539.0c (~592.70 div)
 Self-Fracture +4 to all Attributes [of the Meteor] self-fracture        1539.0c (~7.70 div) 117000.0c (~585.00 div) 118539.0c (~592.70 div)
 Self-Fracture +4% to all Elemental Resistance [of the Kaleidoscope] self-fracture        1539.0c (~7.70 div) 117000.0c (~585.00 div) 118539.0c (~592.70 div)
 Self-Fracture 3% increased Attack Speed [Added Small Passive Skills also grant: 3% increased Attack Speed] self-fracture        1543.6c (~7.72 div) 117000.0c (~585.00 div) 118543.6c (~592.72 div)
-Start Clean Base Clean Base               clean-base           10.0c           150000.0c (~750.00 div) 150010.0c (~750.05 div)
 ---------------------------------------------------------------------------------------------------------
 
 AUTOMATIC DISCOVERY VERIFICATION:
-  Selected Auto Route:   Self-Fracture 35% Increased Effect [Powerful] (7624.6c (~38.12 div))
+  Selected Auto Route:   Start Clean Base Clean Base (113.1c)
   Manual Fixture Route:  Self-Fracture 35% Effect (Clean 12p Base) (7623.7c (~38.12 div))
-  Discovery Consistency: PASSED (Auto-discovered candidate set and winner match manual reference fixture)
+  Discovery Consistency: DIFFERENCE DETECTED

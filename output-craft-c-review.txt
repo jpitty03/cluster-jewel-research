@@ -543,14 +543,14 @@ CANDIDATE SET STRUCTURAL AUDIT:
 GENERATED STARTING CANDIDATES (5 routes from 5 physical states):
 Route Name                                Acquisition Mode     Acq Cost        Downstream EV   Full Route EV
 ---------------------------------------------------------------------------------------------------------
+Start Clean Base Clean Base               clean-base           10.0c           103.1c          113.1c
 Self-Fracture 35% Increased Effect [Powerful] self-fracture        1531.2c (~7.66 div) 41281.0c (~206.40 div) 42812.2c (~214.06 div)
 Self-Fracture T1 Maximum Life [Sanguine]  self-fracture        1531.2c (~7.66 div) 100000.0c (~500.00 div) 101531.2c (~507.66 div)
 Self-Fracture +4 to all Attributes [of the Meteor] self-fracture        1538.6c (~7.69 div) 117000.0c (~585.00 div) 118538.6c (~592.69 div)
 Self-Fracture +5% to Chaos Resistance [of Eviction] self-fracture        1538.6c (~7.69 div) 117000.0c (~585.00 div) 118538.6c (~592.69 div)
-Start Clean Base Clean Base               clean-base           10.0c           150000.0c (~750.00 div) 150010.0c (~750.05 div)
 ---------------------------------------------------------------------------------------------------------
 
 AUTOMATIC DISCOVERY VERIFICATION:
-  Selected Auto Route:   Self-Fracture 35% Increased Effect [Powerful] (42812.2c (~214.06 div))
+  Selected Auto Route:   Start Clean Base Clean Base (113.1c)
   Manual Fixture Route:  Fractured 35% Increased Effect Base (Self-Fracture) (42814.4c (~214.07 div))
-  Discovery Consistency: PASSED (Auto-discovered candidate set and winner match manual reference fixture)
+  Discovery Consistency: DIFFERENCE DETECTED

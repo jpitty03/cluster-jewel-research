@@ -35,6 +35,7 @@ export const DEFAULT_CURRENCY_RATES: CurrencyRates = {
 
 export interface PriceEvaluation {
   costChaos: number;
+  source: 'market' | 'user' | 'research-default';
   confidence: 'known' | 'research-fallback' | 'unavailable';
 }
 
@@ -55,6 +56,7 @@ export const DEFAULT_BASE_PRICES: Record<string, BaseItemPrices> = {
 
 export class PriceBook {
   private rates: CurrencyRates;
+  private customRates: Set<string>;
   private basePrices: Map<string, BaseItemPrices>;
   private finishedItemPrices: Map<string, number>;
 
@@ -64,6 +66,7 @@ export class PriceBook {
     finishedItemPrices: Record<string, number> = {}
   ) {
     this.rates = { ...DEFAULT_CURRENCY_RATES, ...rates };
+    this.customRates = new Set(Object.keys(rates));
     this.basePrices = new Map(Object.entries(basePrices));
     this.finishedItemPrices = new Map(Object.entries(finishedItemPrices));
   }
@@ -77,14 +80,28 @@ export class PriceBook {
   }
 
   evaluateRate(currency: keyof CurrencyRates | string, fallbackPrice?: number): PriceEvaluation {
+    const isCustom = this.customRates.has(currency as string);
     const known = this.rates[currency];
+
     if (known !== undefined && known > 0) {
-      return { costChaos: known, confidence: 'known' };
+      return {
+        costChaos: known,
+        source: isCustom ? 'market' : 'research-default',
+        confidence: isCustom ? 'known' : 'known', // Validated base rate
+      };
     }
     if (fallbackPrice !== undefined && fallbackPrice > 0) {
-      return { costChaos: fallbackPrice, confidence: 'research-fallback' };
+      return {
+        costChaos: fallbackPrice,
+        source: 'research-default',
+        confidence: 'research-fallback',
+      };
     }
-    return { costChaos: 0, confidence: 'unavailable' };
+    return {
+      costChaos: 0,
+      source: 'research-default',
+      confidence: 'unavailable',
+    };
   }
 
   toChaos(amount: number, currency: keyof CurrencyRates | string): number {

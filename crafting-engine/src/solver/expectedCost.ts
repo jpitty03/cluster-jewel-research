@@ -162,11 +162,11 @@ export class ExpectedCostSolver {
         downstreamCraftCost = 117000;
       } else {
         // Clean/normal base without fractured mod
-        if (this.target.requiredMods.length === 1 && (!this.target.outcomeBranches || this.target.outcomeBranches.length === 0)) {
-          const genericSearch = new GenericSearchEngine(this.context, this.target);
-          const searchResult = genericSearch.search(startState);
-          downstreamCraftCost = searchResult.totalExpectedCostChaos;
+        const genericSearch = new GenericSearchEngine(this.context, this.target);
+        const searchResult = genericSearch.search(startState);
+        downstreamCraftCost = searchResult.totalExpectedCostChaos;
 
+        if (searchResult.isTargetSatisfied && searchResult.totalExpectedCostChaos < 100000) {
           const cleanSteps: CraftPlanStep[] = [
             {
               stepNumber: 1,
@@ -191,7 +191,7 @@ export class ExpectedCostSolver {
               stepTotalCostChaos: s.continuationCostChaos,
               cumulativeCostChaos: baseCostChaos + s.continuationCostChaos,
               currencies: s.selectedAction.includes('Transmutation')
-                ? { transmutation: 1 }
+                ? { transmutation: searchResult.expectedCurrencies.transmutation ?? 1 }
                 : { alteration: searchResult.expectedCurrencies.alteration ?? 0 },
             });
           }

@@ -57,6 +57,39 @@ export const EXTERNAL_PARITY_OBSERVATIONS: ExternalParityObservation[] = [
     displayedRatio: '~1 / 11.63',
     notes: 'Observed on fractured T1 Int starting base with guaranteed Defence modifier',
   },
+  {
+    benchmarkId: 'compound_harvest_frac_int_to_es35',
+    source: 'craft-of-exile',
+    action: 'Harvest Reforge Defence (Compound)',
+    targetDescription: 'T1 ES + 35% Effect Compound Target from Fractured T1 Int',
+    attempts: 695513,
+    successes: 809,
+    observedProbability: 809 / 695513, // ~0.1163%
+    displayedRatio: '~1 / 860',
+    notes: 'Long-running simulation: 809 successes out of 695,513 attempts (95% CI: 0.109% - 0.125%)',
+  },
+  {
+    benchmarkId: 'annul_after_compound_harvest',
+    source: 'craft-of-exile',
+    action: 'Orb of Annulment (Post-Harvest)',
+    targetDescription: 'Preserve T1 ES + 35% Effect while removing junk modifiers',
+    attempts: 1031,
+    successes: 227,
+    observedProbability: 227 / 1031, // ~22.017%
+    displayedRatio: '~1 / 5.0',
+    notes: 'Long-running simulation: 227 passes out of 1,031 attempts (95% CI: 19.6% - 24.6%)',
+  },
+  {
+    benchmarkId: 'final_exalt_attr_or_attack_speed',
+    source: 'craft-of-exile',
+    action: 'Exalted Orb Slam (Final Suffix)',
+    targetDescription: 'Hit +4 All Attributes or 3% Attack Speed on 3-mod clean item',
+    attempts: 227,
+    successes: 5,
+    observedProbability: 5 / 227, // ~2.202%
+    displayedRatio: '~1 / 45.4',
+    notes: 'Interim long-running simulation sample (5 / 227); wider CI includes expected ~3.81%',
+  },
 ];
 
 export interface ParityComparisonResult {
