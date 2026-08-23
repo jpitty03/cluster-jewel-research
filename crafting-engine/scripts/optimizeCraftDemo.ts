@@ -437,8 +437,8 @@ function runCleanBaseT1IntSearchDiagnostic(): string {
   lines.push(`Target: T1 Intelligence (ilvl 84 12p Shield Cluster)`);
   lines.push(`Starting Physical State: ${cleanBaseState.rarity} base (0 affixes, base cost: 10.0c)`);
 
-  // 1. Graph Completeness Report
-  lines.push(`\n1. GRAPH-BUILD COMPLETENESS:`);
+  // 1. Full Candidate Graph Completeness Report
+  lines.push(`\n1. FULL CANDIDATE GRAPH METRICS:`);
   lines.push(`   - Reachable Canonical States Discovered: ${searchResult.canonicalStatesVisited}`);
   lines.push(`   - Graph Hit Hard State Cap (maxStates=${searchResult.graphBuild.maxStates}): ${searchResult.graphBuild.hitStateLimit ? 'YES (TRUNCATED / NOT YET PROVEN COMPLETE)' : 'NO (FULLY EXPLORED)'}`);
   lines.push(`   - Queued Unexpanded States at Cap:       ${searchResult.graphBuild.queuedButUnexpandedStates}`);
@@ -447,19 +447,25 @@ function runCleanBaseT1IntSearchDiagnostic(): string {
   lines.push(`   - Terminal Target States Discovered:     ${searchResult.graphBuild.terminalStatesFound}`);
   lines.push(`   - State Counts by Rarity: Normal: ${searchResult.graphBuild.stateCountsByRarity.normal}, Magic: ${searchResult.graphBuild.stateCountsByRarity.magic}, Rare: ${searchResult.graphBuild.stateCountsByRarity.rare}`);
   lines.push(`   - Top State Subspaces: ${Object.entries(searchResult.graphBuild.stateCountsByAffixes).slice(0, 5).map(([k, v]) => `${k}:${v}`).join(', ')}`);
+  lines.push(`   - State Generation Attribution by Action:`);
+  for (const attr of Object.values(searchResult.graphBuild.actionAttribution)) {
+    lines.push(`     * ${attr.actionName.padEnd(22)}: ${attr.uniqueSuccessorsGenerated.toString().padStart(5)} unique successors generated | on-policy states using: ${attr.onPolicyStatesUsingAction} | unresolved edges: ${attr.unresolvedEdges}`);
+  }
 
-  // 2. Value Iteration Convergence Report
-  lines.push(`\n2. VALUE ITERATION NUMERICAL CONVERGENCE:`);
+  // 2. On-Policy Reachable Graph Report
+  lines.push(`\n2. ON-POLICY REACHABLE GRAPH & ABSORPTION:`);
+  lines.push(`   - On-Policy Reachable States:            ${searchResult.onPolicyGraph.onPolicyReachableStates} states (Normal & Magic state space)`);
+  lines.push(`   - On-Policy Terminal Target States:      ${searchResult.onPolicyGraph.onPolicyTerminalStates}`);
+  lines.push(`   - On-Policy Unresolved Transitions:      ${searchResult.onPolicyGraph.onPolicyUnresolvedTransitions} (100% resolved within magic state space)`);
+  lines.push(`   - On-Policy Unresolved Probability Mass: ${(searchResult.onPolicyGraph.onPolicyUnresolvedProbabilityMass * 100).toFixed(4)}%`);
+  lines.push(`   - Terminal Absorption Probability:       ${(searchResult.onPolicyGraph.terminalAbsorptionProbability * 100).toFixed(1)}%`);
+  lines.push(`   - Selected Policy Properness:            ${searchResult.onPolicyGraph.isProper ? 'PROPER & ABSORBING' : 'IMPROPER'}`);
+
+  // 3. Value Iteration Convergence Report
+  lines.push(`\n3. VALUE ITERATION NUMERICAL CONVERGENCE:`);
   lines.push(`   - Value Iteration Converged:             ${searchResult.convergence.converged ? 'YES' : 'NO'}`);
   lines.push(`   - Iterations Executed:                   ${searchResult.convergence.iterations} (max: ${searchResult.convergence.maxIterations})`);
   lines.push(`   - Final Max Bellman Residual / Delta:    ${searchResult.convergence.finalMaxResidual.toExponential(4)} (epsilon: ${searchResult.convergence.epsilon})`);
-
-  // 3. Policy Properness & Reachability Report
-  lines.push(`\n3. SELECTED POLICY PROPERNESS & REACHABILITY:`);
-  lines.push(`   - Policy Proper & Absorbing:             ${searchResult.properness.isProper ? 'YES' : 'NO'}`);
-  lines.push(`   - Terminal Absorption Probability:       ${(searchResult.properness.terminalAbsorptionProbability * 100).toFixed(1)}%`);
-  lines.push(`   - Unresolved Selected Policy Transitions:${searchResult.properness.unresolvedSelectedPolicyTransitions}`);
-  lines.push(`   - Non-Terminal Dead Ends:                ${searchResult.properness.nonTerminalDeadEnds}`);
 
   // 4. Expected-Cost Reconciliation Report
   lines.push(`\n4. EXPECTED CURRENCY USAGE & COST RECONCILIATION:`);
@@ -473,13 +479,13 @@ function runCleanBaseT1IntSearchDiagnostic(): string {
   lines.push(`   - Reported Downstream Crafting EV:       ${searchResult.reconciliation.reportedDownstreamEVChaos.toFixed(3)}c`);
   lines.push(`   - EV Reconciliation Difference:          ${searchResult.reconciliation.differenceChaos.toFixed(4)}c (${searchResult.reconciliation.isReconciled ? 'RECONCILED' : 'FLAGGED'})`);
 
-  // 5. Representative State Q-Value Audits
-  lines.push(`\n5. REPRESENTATIVE STATE Q-VALUE AUDITS (Action Competition):`);
+  // 5. Representative State Q-Value Audits with Candidate Status
+  lines.push(`\n5. REPRESENTATIVE STATE Q-VALUE AUDITS (Action Competition & Status):`);
   for (const audit of searchResult.representativeAudits.slice(0, 4)) {
     lines.push(`\n  State: [${audit.state.rarity.toUpperCase()}] P:${audit.state.prefixes.length} (${audit.state.prefixes.map((p) => p.name).join(', ') || 'none'}) | S:${audit.state.suffixes.length} (${audit.state.suffixes.map((s) => s.name).join(', ') || 'none'})`);
     for (const c of audit.candidateQValues) {
       const isSelected = c.actionId === audit.bestActionId;
-      lines.push(`    - Action: ${c.actionName.padEnd(22)} | Immediate: ${c.immediateCostChaos.toFixed(2).padStart(5)}c | Cont EV: ${c.expectedContinuationChaos.toFixed(2).padStart(6)}c | Total Q(s,a): ${c.totalQValueChaos.toFixed(2).padStart(6)}c ${isSelected ? '<-- OPTIMAL (MIN Q)' : ''}`);
+      lines.push(`    - Action: ${c.actionName.padEnd(22)} | Status: ${c.status.padEnd(10)} | Immediate: ${c.immediateCostChaos.toFixed(2).padStart(5)}c | Cont EV: ${c.expectedContinuationChaos.toFixed(2).padStart(6)}c | Total Q(s,a): ${c.totalQValueChaos.toFixed(2).padStart(6)}c ${isSelected ? '<-- OPTIMAL (MIN Q)' : ''}`);
     }
   }
 

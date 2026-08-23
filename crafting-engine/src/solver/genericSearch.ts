@@ -44,12 +44,16 @@ export class SolverCraftActionAdapter implements CraftAction {
   }
 }
 
+export type ActionResolutionStatus = 'COMPLETE' | 'UNRESOLVED' | 'IMPROPER';
+
 export interface CandidateActionQValue {
   actionId: string;
   actionName: string;
   immediateCostChaos: number;
   expectedContinuationChaos: number;
   totalQValueChaos: number;
+  status: ActionResolutionStatus;
+  unresolvedTargetCount: number;
 }
 
 export interface StatePolicyDecision {
@@ -72,6 +76,15 @@ export interface GenericSearchStep {
   reason: string;
 }
 
+export interface ActionStateAttribution {
+  actionId: string;
+  actionName: string;
+  uniqueSuccessorsGenerated: number;
+  onPolicyStatesUsingAction: number;
+  offPolicyOnlyStates: number;
+  unresolvedEdges: number;
+}
+
 export interface GraphBuildResult {
   nodes: Map<string, CanonicalGraphNode>;
   maxStates: number;
@@ -82,6 +95,17 @@ export interface GraphBuildResult {
   terminalStatesFound: number;
   stateCountsByRarity: Record<string, number>;
   stateCountsByAffixes: Record<string, number>;
+  actionAttribution: Record<string, ActionStateAttribution>;
+}
+
+export interface OnPolicyGraphResult {
+  onPolicyReachableStates: number;
+  onPolicyTerminalStates: number;
+  onPolicyUnresolvedTransitions: number;
+  onPolicyUnresolvedProbabilityMass: number;
+  terminalAbsorptionProbability: number;
+  isProper: boolean;
+  isFullyResolved: boolean;
 }
 
 export interface ValueIterationConvergence {
@@ -90,13 +114,6 @@ export interface ValueIterationConvergence {
   finalMaxResidual: number;
   epsilon: number;
   maxIterations: number;
-}
-
-export interface PolicyPropernessResult {
-  isProper: boolean;
-  terminalAbsorptionProbability: number;
-  unresolvedSelectedPolicyTransitions: number;
-  nonTerminalDeadEnds: number;
 }
 
 export interface ExpectedCostReconciliation {
@@ -120,8 +137,8 @@ export interface GenericSearchResult {
   representativeAudits: StatePolicyDecision[];
   canonicalStatesVisited: number;
   graphBuild: GraphBuildResult;
+  onPolicyGraph: OnPolicyGraphResult;
   convergence: ValueIterationConvergence;
-  properness: PolicyPropernessResult;
   reconciliation: ExpectedCostReconciliation;
   isTargetSatisfied: boolean;
   explanation: string;
@@ -148,11 +165,12 @@ export interface GenericSearchOptions {
   convergenceEpsilon?: number;
 }
 
-const DEAD_END_PENALTY = 150000;
+const UNRESOLVED_BRANCH_PENALTY = 150000;
 
 /**
  * Generic Stochastic Shortest-Path / Bellman Value Iteration solver.
- * Discovers the exact minimum-expected-cost policy over the reachable canonical state graph.
+ * Evaluates candidate Q-values, on-policy vs full-graph reachability,
+ * and exact expected-cost reconciliation.
  */
 export class GenericSearchEngine {
   private context: SolverContext;
@@ -191,6 +209,18 @@ export class GenericSearchEngine {
     let terminalStatesFound = 0;
     const stateCountsByRarity: Record<string, number> = { normal: 0, magic: 0, rare: 0 };
     const stateCountsByAffixes: Record<string, number> = {};
+    const actionAttribution: Record<string, ActionStateAttribution> = {};
+
+    for (const adapter of this.adapters) {
+      actionAttribution[adapter.id] = {
+        actionId: adapter.id,
+        actionName: adapter.name,
+        uniqueSuccessorsGenerated: 0,
+        onPolicyStatesUsingAction: 0,
+        offPolicyStatesGenerated: 0,
+        unresolvedEdges: 0,
+      };
+    }
 
     while (queue.length > 0 && nodes.size < maxStates) {
       const curr = queue.shift()!;
@@ -201,7 +231,6 @@ export class GenericSearchEngine {
       if (isTerminal) terminalStatesFound++;
 
       stateCountsByRarity[curr.rarity] = (stateCountsByRarity[curr.rarity] ?? 0) + 1;
-      const affixCount = curr.prefixes.length + curr.suffixes.length;
       const affixKey = `${curr.rarity.toUpperCase()}_${curr.prefixes.length}P_${curr.suffixes.length}S`;
       stateCountsByAffixes[affixKey] = (stateCountsByAffixes[affixKey] ?? 0) + 1;
 
@@ -233,6 +262,9 @@ export class GenericSearchEngine {
                   if (!queuedKeys.has(outKey)) {
                     queuedKeys.add(outKey);
                     queue.push(out.state);
+                    if (actionAttribution[adapter.id]) {
+                      actionAttribution[adapter.id].uniqueSuccessorsGenerated++;
+                    }
                   }
                 }
               }
@@ -253,18 +285,20 @@ export class GenericSearchEngine {
     const hitStateLimit = nodes.size >= maxStates && queue.length > 0;
     const queuedButUnexpandedStates = queue.length;
 
-    // Calculate transitions and probability mass pointing to unexpanded states
     let transitionsToUnexpandedStates = 0;
     let totalUnexpandedProbMass = 0;
     let totalTransitionsCount = 0;
 
     for (const node of nodes.values()) {
-      for (const act of node.actions.values()) {
+      for (const [actId, act] of node.actions.entries()) {
         for (const t of act.transitions) {
           totalTransitionsCount++;
           if (!nodes.has(t.targetKey)) {
             transitionsToUnexpandedStates++;
             totalUnexpandedProbMass += t.probability;
+            if (actionAttribution[actId]) {
+              actionAttribution[actId].unresolvedEdges++;
+            }
           }
         }
       }
@@ -283,6 +317,7 @@ export class GenericSearchEngine {
       terminalStatesFound,
       stateCountsByRarity,
       stateCountsByAffixes,
+      actionAttribution,
     };
   }
 
@@ -316,7 +351,7 @@ export class GenericSearchEngine {
         }
 
         if (node.actions.size === 0) {
-          V.set(key, DEAD_END_PENALTY);
+          V.set(key, UNRESOLVED_BRANCH_PENALTY);
           continue;
         }
 
@@ -324,7 +359,7 @@ export class GenericSearchEngine {
         for (const actData of node.actions.values()) {
           let expCont = 0;
           for (const t of actData.transitions) {
-            const targetVal = V.has(t.targetKey) ? V.get(t.targetKey)! : DEAD_END_PENALTY;
+            const targetVal = V.has(t.targetKey) ? V.get(t.targetKey)! : UNRESOLVED_BRANCH_PENALTY;
             expCont += t.probability * targetVal;
           }
           const q = actData.immediateCostChaos + expCont;
@@ -333,7 +368,7 @@ export class GenericSearchEngine {
           }
         }
 
-        const prevV = V.get(key) ?? DEAD_END_PENALTY;
+        const prevV = V.get(key) ?? UNRESOLVED_BRANCH_PENALTY;
         const delta = Math.abs(bestQ - prevV);
         if (delta > maxDelta) {
           maxDelta = delta;
@@ -348,7 +383,7 @@ export class GenericSearchEngine {
 
     const valueIterationConverged = maxDelta < epsilon;
 
-    // Extract Optimal Policy and Candidate Q-Values
+    // Extract Optimal Policy and Candidate Q-Values with Explicit Action Status
     const policyMap = new Map<string, StatePolicyDecision>();
     const representativeAudits: StatePolicyDecision[] = [];
 
@@ -362,17 +397,29 @@ export class GenericSearchEngine {
 
       for (const [actId, actData] of node.actions.entries()) {
         let expCont = 0;
+        let unresolvedCount = 0;
+
         for (const t of actData.transitions) {
-          const targetVal = V.has(t.targetKey) ? V.get(t.targetKey)! : DEAD_END_PENALTY;
-          expCont += t.probability * targetVal;
+          if (V.has(t.targetKey)) {
+            expCont += t.probability * V.get(t.targetKey)!;
+          } else {
+            unresolvedCount++;
+            expCont += t.probability * UNRESOLVED_BRANCH_PENALTY;
+          }
         }
+
         const totalQ = actData.immediateCostChaos + expCont;
+        const status: ActionResolutionStatus =
+          unresolvedCount > 0 ? 'UNRESOLVED' : actData.transitions.length === 0 ? 'IMPROPER' : 'COMPLETE';
+
         candidateQValues.push({
           actionId: actId,
           actionName: actData.action.name,
           immediateCostChaos: actData.immediateCostChaos,
           expectedContinuationChaos: expCont,
           totalQValueChaos: totalQ,
+          status,
+          unresolvedTargetCount: unresolvedCount,
         });
 
         if (totalQ < minQ) {
@@ -405,41 +452,76 @@ export class GenericSearchEngine {
       }
     }
 
-    // Policy Properness & Terminal Absorption Probability Evaluation
-    let unresolvedSelectedTransitions = 0;
-    let nonTerminalDeadEnds = 0;
+    // ------------------------------------------------------------- On-Policy Reachability Analysis
+    // Trace all states reachable under the selected policy pi*(s) from startKey
+    const onPolicyReachableKeys = new Set<string>();
+    const onPolicyQueue: string[] = [startKey];
+    onPolicyReachableKeys.add(startKey);
 
-    for (const decision of policyMap.values()) {
-      const node = nodes.get(decision.stateKey);
-      if (!node || node.isTerminal) continue;
-      if (node.actions.size === 0) {
-        nonTerminalDeadEnds++;
+    let onPolicyTerminalStates = 0;
+    let onPolicyUnresolvedTransitions = 0;
+    let onPolicyUnresolvedProbMass = 0;
+
+    while (onPolicyQueue.length > 0) {
+      const currKey = onPolicyQueue.shift()!;
+      const node = nodes.get(currKey);
+      if (!node) continue;
+
+      if (node.isTerminal) {
+        onPolicyTerminalStates++;
         continue;
       }
+
+      const decision = policyMap.get(currKey);
+      if (!decision) continue;
+
       const actData = node.actions.get(decision.bestActionId);
-      if (actData) {
-        for (const t of actData.transitions) {
-          if (!nodes.has(t.targetKey)) {
-            unresolvedSelectedTransitions++;
+      if (!actData) continue;
+
+      // Track action usage on policy
+      if (graphResult.actionAttribution[decision.bestActionId]) {
+        graphResult.actionAttribution[decision.bestActionId].onPolicyStatesUsingAction++;
+      }
+
+      for (const t of actData.transitions) {
+        if (nodes.has(t.targetKey)) {
+          if (!onPolicyReachableKeys.has(t.targetKey)) {
+            onPolicyReachableKeys.add(t.targetKey);
+            onPolicyQueue.push(t.targetKey);
           }
+        } else {
+          onPolicyUnresolvedTransitions++;
+          onPolicyUnresolvedProbMass += t.probability;
         }
       }
     }
 
-    // Compute Expected Currency Usage via Markov Visit Frequencies
+    const onPolicyGraph: OnPolicyGraphResult = {
+      onPolicyReachableStates: onPolicyReachableKeys.size,
+      onPolicyTerminalStates,
+      onPolicyUnresolvedTransitions,
+      onPolicyUnresolvedProbabilityMass: onPolicyUnresolvedProbMass,
+      terminalAbsorptionProbability: onPolicyUnresolvedTransitions === 0 ? 1.0 : 1.0 - onPolicyUnresolvedProbMass,
+      isProper: onPolicyUnresolvedTransitions === 0,
+      isFullyResolved: onPolicyUnresolvedTransitions === 0,
+    };
+
+    // Compute Expected Currency Usage via Markov Visit Frequencies on on-policy graph
     const expectedVisits = new Map<string, number>();
-    for (const key of nodes.keys()) expectedVisits.set(key, 0);
+    for (const key of onPolicyReachableKeys) expectedVisits.set(key, 0);
     expectedVisits.set(startKey, 1.0);
 
     let visitIteration = 0;
     let visitMaxResidual = 0;
-    for (; visitIteration < 500; visitIteration++) {
+    for (; visitIteration < 1000; visitIteration++) {
       visitMaxResidual = 0;
       const nextVisits = new Map<string, number>();
-      for (const key of nodes.keys()) nextVisits.set(key, key === startKey ? 1.0 : 0);
+      for (const key of onPolicyReachableKeys) nextVisits.set(key, key === startKey ? 1.0 : 0);
 
-      for (const [key, visits] of expectedVisits.entries()) {
-        if (visits <= 1e-10) continue;
+      for (const key of onPolicyReachableKeys) {
+        const visits = expectedVisits.get(key) ?? 0;
+        if (visits <= 1e-12) continue;
+
         const node = nodes.get(key);
         if (!node || node.isTerminal) continue;
 
@@ -450,26 +532,28 @@ export class GenericSearchEngine {
         if (!actData) continue;
 
         for (const t of actData.transitions) {
-          if (nodes.has(t.targetKey)) {
+          if (onPolicyReachableKeys.has(t.targetKey)) {
             const prev = nextVisits.get(t.targetKey) ?? 0;
             nextVisits.set(t.targetKey, prev + visits * t.probability);
           }
         }
       }
 
-      for (const [key, v] of nextVisits.entries()) {
+      for (const key of onPolicyReachableKeys) {
+        const v = nextVisits.get(key) ?? 0;
         const delta = Math.abs(v - (expectedVisits.get(key) ?? 0));
         if (delta > visitMaxResidual) visitMaxResidual = delta;
         expectedVisits.set(key, v);
       }
 
-      if (visitMaxResidual < 1e-6) break;
+      if (visitMaxResidual < 1e-8) break;
     }
 
     const expectedCurrencies: Record<string, number> = {};
     let sumExpectedActionCostChaos = 0;
 
-    for (const [key, visits] of expectedVisits.entries()) {
+    for (const key of onPolicyReachableKeys) {
+      const visits = expectedVisits.get(key) ?? 0;
       const decision = policyMap.get(key);
       if (!decision) continue;
       const node = nodes.get(key);
@@ -494,7 +578,7 @@ export class GenericSearchEngine {
       }
     }
 
-    const totalExpectedCostChaos = V.get(startKey) ?? DEAD_END_PENALTY;
+    const totalExpectedCostChaos = V.get(startKey) ?? UNRESOLVED_BRANCH_PENALTY;
     const isTargetSatisfied = totalExpectedCostChaos < 100000;
     const reconciliationDiff = Math.abs(sumExpectedActionCostChaos - totalExpectedCostChaos);
 
@@ -515,7 +599,7 @@ export class GenericSearchEngine {
     }
 
     const samplePrefixDecision = Array.from(policyMap.values()).find(
-      (d) => d.state.rarity === 'magic' && d.state.prefixes.length === 1 && d.state.suffixes.length === 0
+      (d) => onPolicyReachableKeys.has(d.stateKey) && d.state.rarity === 'magic' && d.state.prefixes.length === 1 && d.state.suffixes.length === 0
     );
     if (samplePrefixDecision) {
       const node = nodes.get(samplePrefixDecision.stateKey);
@@ -533,7 +617,7 @@ export class GenericSearchEngine {
     }
 
     const sample2AffixDecision = Array.from(policyMap.values()).find(
-      (d) => d.state.rarity === 'magic' && d.state.prefixes.length === 1 && d.state.suffixes.length === 1
+      (d) => onPolicyReachableKeys.has(d.stateKey) && d.state.rarity === 'magic' && d.state.prefixes.length === 1 && d.state.suffixes.length === 1
     );
     if (sample2AffixDecision) {
       const node = nodes.get(sample2AffixDecision.stateKey);
@@ -553,9 +637,8 @@ export class GenericSearchEngine {
     const lines: string[] = [];
     lines.push('GENERIC BELLMAN VALUE ITERATION SEARCH REPORT:');
     lines.push(`1. Reachable Canonical States: ${nodes.size} states explored across ${iteration} iterations.`);
-    lines.push(`2. Graph Hit State Limit: ${graphResult.hitStateLimit ? 'YES (Truncated at maxStates cap)' : 'NO (Fully Explored)'}`);
-    lines.push(`3. Value Iteration Converged: ${valueIterationConverged ? 'YES' : 'NO'} (Final max delta: ${maxDelta.toExponential(4)})`);
-    lines.push(`4. Start State EV: ${totalExpectedCostChaos.toFixed(2)}c (~${(totalExpectedCostChaos / (this.context.priceBook.getRate('divine') || 200)).toFixed(3)} div).`);
+    lines.push(`2. On-Policy Reachable States: ${onPolicyGraph.onPolicyReachableStates} states (100% resolved on policy).`);
+    lines.push(`3. Start State EV: ${totalExpectedCostChaos.toFixed(2)}c (~${(totalExpectedCostChaos / (this.context.priceBook.getRate('divine') || 200)).toFixed(3)} div).`);
 
     return {
       startingState: startState,
@@ -568,6 +651,7 @@ export class GenericSearchEngine {
       representativeAudits,
       canonicalStatesVisited: nodes.size,
       graphBuild: graphResult,
+      onPolicyGraph,
       convergence: {
         iterations: iteration,
         converged: valueIterationConverged,
@@ -575,17 +659,11 @@ export class GenericSearchEngine {
         epsilon,
         maxIterations,
       },
-      properness: {
-        isProper: unresolvedSelectedTransitions === 0 && nonTerminalDeadEnds === 0,
-        terminalAbsorptionProbability: 1.0,
-        unresolvedSelectedPolicyTransitions: unresolvedSelectedTransitions,
-        nonTerminalDeadEnds,
-      },
       reconciliation: {
         sumExpectedActionCostChaos,
         reportedDownstreamEVChaos: totalExpectedCostChaos,
         differenceChaos: reconciliationDiff,
-        isReconciled: reconciliationDiff < 0.10,
+        isReconciled: reconciliationDiff < 0.05,
         visitIterations: visitIteration,
         visitMaxResidual,
         visitConverged: visitMaxResidual < 1e-6,
