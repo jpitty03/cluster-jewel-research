@@ -1,5 +1,10 @@
 import type { ItemState } from '../domain/ItemState.ts';
 import type { TargetDefinition } from '../domain/TargetDefinition.ts';
+import {
+  evaluateRollRequirement,
+  getAllTargetModRequirements,
+  matchesModRequirement,
+} from '../domain/TargetDefinition.ts';
 import type { SolverContext } from '../domain/CraftAction.ts';
 import type { PriceConfidence, PriceSource } from '../domain/PriceBook.ts';
 import type { RandomSource } from '../probability/random.ts';
@@ -126,64 +131,36 @@ function addMod(state: ItemState, mod: Mod): ItemState {
   return nextState;
 }
 
+function getHarvestCanonicalAggregationKey(state: ItemState, target: TargetDefinition): string {
+  const requirements = getAllTargetModRequirements(target);
+  const formatMod = (mod: ReturnType<typeof toRolledMod>): string => {
+    const groups = (mod.modGroups.length > 0 ? mod.modGroups : [mod.modGroup]).slice().sort().join('+');
+    const targetMatches = requirements
+      .map((requirement, index) => matchesModRequirement(mod, requirement) ? index : -1)
+      .filter((index) => index >= 0)
+      .join(',');
+    const craftTags = (mod.craftTags ?? []).slice().sort().join(',');
+    const rollSensitivity = (target.finalRollRequirements ?? [])
+      .map((requirement, index) => ({ index, evaluation: evaluateRollRequirement(mod, requirement) }))
+      .filter(({ evaluation }) => evaluation.matchesMod)
+      .map(({ index, evaluation }) => `${index}:${evaluation.passes ? 'PASS' : 'FAIL'}:${evaluation.actualValue ?? '*'}`)
+      .join(',');
+    const targetIdentity = targetMatches.length > 0 ? `:${mod.modId}` : '';
+    return `${mod.isFractured ? 'F' : 'N'}:${groups}:t${mod.tier}:name(${mod.name}):notable(${mod.isNotable}):target(${targetMatches})${targetIdentity}:tags(${craftTags}):roll(${rollSensitivity})`;
+  };
+  return `${state.rarity}|P:${state.prefixes.map(formatMod).sort().join('|')}|S:${state.suffixes.map(formatMod).sort().join('|')}`;
+}
+
 function checkTransitionDeadline(control?: TransitionGenerationControl): void {
   if (control?.deadlineMs !== undefined && Date.now() >= control.deadlineMs) {
     throw new TransitionGenerationDeadlineExceeded();
   }
 }
 
-function consolidateTransitionOutcomes(
-  outcomes: TransitionOutcome[],
-  control?: TransitionGenerationControl
-): TransitionOutcome[] {
-  const consolidated = new Map<string, TransitionOutcome>();
-  for (let index = 0; index < outcomes.length; index++) {
-    if ((index & 255) === 0) checkTransitionDeadline(control);
-    const outcome = outcomes[index];
-    const key = getPhysicalStateSignature(outcome.state);
-    const existing = consolidated.get(key);
-    if (existing) existing.probability += outcome.probability;
-    else consolidated.set(key, outcome);
-  }
-  return [...consolidated.values()];
-}
-
-function expandHarvestExtras(
-  state: ItemState,
-  remaining: number,
-  probability: number,
-  allMods: Mod[],
-  outcomes: TransitionOutcome[],
-  label: string,
-  control?: TransitionGenerationControl
-): void {
-  checkTransitionDeadline(control);
-  if (remaining === 0) {
-    outcomes.push({ state, probability, label });
-    return;
-  }
-  const eligible = getEligibleMods(state, allMods);
-  const totalWeight = calculateTotalWeight(eligible);
-  if (totalWeight <= 0) {
-    outcomes.push({ state, probability, label: `${label}; no additional affix available` });
-    return;
-  }
-  for (const mod of eligible) {
-    expandHarvestExtras(
-      addMod(state, mod),
-      remaining - 1,
-      probability * (mod.weight / totalWeight),
-      allMods,
-      outcomes,
-      `${label}; added ${mod.name}`,
-      control
-    );
-  }
-}
-
 function generateHarvestTransitions(
   state: ItemState,
   tag: string,
+  target: TargetDefinition,
   context: SolverContext,
   costChaos: number,
   control?: TransitionGenerationControl
@@ -204,27 +181,64 @@ function generateHarvestTransitions(
   const taggedWeight = calculateTotalWeight(tagged);
   if (taggedWeight <= 0) return { outcomes: [], immediateCostChaos: costChaos };
 
-  const outcomes: TransitionOutcome[] = [];
-  for (const guaranteed of tagged) {
-    checkTransitionDeadline(control);
-    const guaranteedState = addMod(baseState, guaranteed);
-    const guaranteedProbability = guaranteed.weight / taggedWeight;
-    for (const desiredTotalAffixes of [3, 4]) {
-      const currentAffixCount = getAllAffixes(guaranteedState).length;
-      const extras = Math.max(0, desiredTotalAffixes - currentAffixCount);
-      expandHarvestExtras(
-        guaranteedState,
-        extras,
-        guaranteedProbability * 0.5,
-        allMods,
-        outcomes,
-        `Guaranteed ${tag}: ${guaranteed.name}; approximate ${desiredTotalAffixes}-total-affix branch`,
-        control
-      );
+  const outcomes = new Map<string, TransitionOutcome>();
+  for (const desiredTotalAffixes of [3, 4]) {
+    // Aggregate after every roll, not only after enumerating the complete
+    // Cartesian tree. The key retains every property that affects target
+    // satisfaction or downstream pool eligibility, so this is a probability-
+    // preserving canonical quotient rather than a sampled approximation.
+    let frontier = new Map<string, TransitionOutcome>();
+    for (const guaranteed of tagged) {
+      checkTransitionDeadline(control);
+      const guaranteedState = addMod(baseState, guaranteed);
+      const key = getHarvestCanonicalAggregationKey(guaranteedState, target);
+      const probability = guaranteed.weight / taggedWeight * 0.5;
+      const existing = frontier.get(key);
+      if (existing) existing.probability += probability;
+      else frontier.set(key, {
+        state: guaranteedState,
+        probability,
+        label: `Guaranteed ${tag}: ${guaranteed.name}; approximate ${desiredTotalAffixes}-total-affix branch`,
+      });
+    }
+    const initialAffixCount = getAllAffixes(baseState).length + 1;
+    const extras = Math.max(0, desiredTotalAffixes - initialAffixCount);
+    for (let extraIndex = 0; extraIndex < extras; extraIndex++) {
+      const nextFrontier = new Map<string, TransitionOutcome>();
+      for (const outcome of frontier.values()) {
+        checkTransitionDeadline(control);
+        const eligibleExtras = getEligibleMods(outcome.state, allMods);
+        const totalWeight = calculateTotalWeight(eligibleExtras);
+        if (totalWeight <= 0) {
+          const key = getHarvestCanonicalAggregationKey(outcome.state, target);
+          const existing = nextFrontier.get(key);
+          if (existing) existing.probability += outcome.probability;
+          else nextFrontier.set(key, outcome);
+          continue;
+        }
+        for (const mod of eligibleExtras) {
+          const nextState = addMod(outcome.state, mod);
+          const key = getHarvestCanonicalAggregationKey(nextState, target);
+          const probability = outcome.probability * (mod.weight / totalWeight);
+          const existing = nextFrontier.get(key);
+          if (existing) existing.probability += probability;
+          else nextFrontier.set(key, {
+            state: nextState,
+            probability,
+            label: `${outcome.label}; added ${mod.name}`,
+          });
+        }
+      }
+      frontier = nextFrontier;
+    }
+    for (const [key, outcome] of frontier) {
+      const existing = outcomes.get(key);
+      if (existing) existing.probability += outcome.probability;
+      else outcomes.set(key, outcome);
     }
   }
   return {
-    outcomes: consolidateTransitionOutcomes(outcomes, control),
+    outcomes: [...outcomes.values()],
     immediateCostChaos: costChaos,
   };
 }
@@ -930,9 +944,9 @@ export function createHarvestReforgeMechanics(
         mechanicsConfidence: 'APPROXIMATE / EXTERNALLY CLOSE',
         mechanicsProvenance: 'Current engine approximation: preserve fractures, guarantee one tagged mod, then roll to 3 or 4 total explicit affixes with 50% probability each',
         parameters: { harvestTag: tag, lifeforceType: def.lifeforceType, lifeforceAmount: def.lifeforceAmount },
-        getTransitions: (state, _target, ctx, control) => {
+        getTransitions: (state, target, ctx, control) => {
           const cost = getHarvestCraftCost(tag, ctx.priceBook);
-          return generateHarvestTransitions(state, tag, ctx, cost.costChaos, control);
+          return generateHarvestTransitions(state, tag, target, ctx, cost.costChaos, control);
         },
         sampleTransition: (state, _target, ctx, rng) =>
           sampleHarvestTransition(state, tag, ctx, rng),

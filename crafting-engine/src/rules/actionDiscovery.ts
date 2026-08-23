@@ -134,7 +134,7 @@ export function getCanonicalStateKey(
 
     // Always preserve full sorted modGroups exclusion set to ensure mod-group blocking and eligibility are preserved
     const allGroups = (m.modGroups && m.modGroups.length > 0 ? m.modGroups : [m.modGroup ?? m.modId]).slice().sort().join('+');
-    return `${isFrac}groups(${allGroups}):t${m.tier}${targetSuffix}${fractureRequirement ? ':fracture-sensitive' : ''}${tagsSuffix}${rollSuffix}`;
+    return `${isFrac}groups(${allGroups}):t${m.tier}:name(${m.name}):notable(${m.isNotable})${targetSuffix}${fractureRequirement ? ':fracture-sensitive' : ''}${tagsSuffix}${rollSuffix}`;
   };
 
   const pKeys = state.prefixes.map(formatMod).sort().join('|');
@@ -147,5 +147,13 @@ export function getCanonicalStateKey(
       `acquisitionMenu=${state.flags?.acquisitionMenu === true}):`
     : '';
 
-  return `${contextPrefix}${state.rarity}|P:[${pKeys}]|S:[${sKeys}]`;
+  const finalConstraints = target?.finalStateConstraints;
+  const targetConstraintScope = finalConstraints
+    ? `targetFinal(maxTotal=${finalConstraints.maxTotalExplicitAffixes ?? '*'},` +
+      `maxUnmatched=${finalConstraints.maxUnmatchedAffixes ?? '*'},` +
+      `openP=${finalConstraints.minOpenPrefixes ?? '*'},` +
+      `openS=${finalConstraints.minOpenSuffixes ?? '*'}):`
+    : '';
+
+  return `${contextPrefix}${targetConstraintScope}${state.rarity}|P:[${pKeys}]|S:[${sKeys}]`;
 }

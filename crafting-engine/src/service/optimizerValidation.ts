@@ -10,6 +10,7 @@ export type OptimizerValidationField =
   | 'itemLevel'
   | 'target.requiredMods'
   | 'target.requiredRarity'
+  | 'target.finalStateConstraints'
   | 'searchBudget'
   | 'searchIntent';
 
@@ -134,6 +135,47 @@ export function validateOptimizeCraftInput(
   }
   if (normalizedInput.target.requiredRarity === 'normal' && modCount > 0) {
     errors.push({ code: 'RARITY_INFEASIBLE', field: 'target.requiredRarity', message: 'A normal item cannot satisfy explicit modifier requirements.' });
+  }
+
+  const finalConstraints = normalizedInput.target.finalStateConstraints;
+  if (finalConstraints) {
+    const constraintValues = [
+      finalConstraints.maxTotalExplicitAffixes,
+      finalConstraints.maxUnmatchedAffixes,
+      finalConstraints.minOpenPrefixes,
+      finalConstraints.minOpenSuffixes,
+    ];
+    if (constraintValues.some(
+      (value) => value !== undefined && (!Number.isInteger(value) || value < 0)
+    )) {
+      errors.push({
+        code: 'INVALID_FINAL_STATE_CONSTRAINT',
+        field: 'target.finalStateConstraints',
+        message: 'Final-state affix and open-slot constraints must be non-negative integers.',
+      });
+    }
+    const maxPrefixes = getMaxPrefixes(rarity);
+    const maxSuffixes = getMaxSuffixes(rarity);
+    if (
+      finalConstraints.maxTotalExplicitAffixes !== undefined &&
+      finalConstraints.maxTotalExplicitAffixes < modCount
+    ) {
+      errors.push({
+        code: 'FINAL_AFFIX_CAP_BELOW_TARGET_COUNT',
+        field: 'target.finalStateConstraints',
+        message: 'Maximum final explicit affixes cannot be lower than the number of requested modifiers.',
+      });
+    }
+    if (
+      (finalConstraints.minOpenPrefixes ?? 0) + prefixCount > maxPrefixes ||
+      (finalConstraints.minOpenSuffixes ?? 0) + suffixCount > maxSuffixes
+    ) {
+      errors.push({
+        code: 'FINAL_OPEN_SLOT_REQUIREMENT_INFEASIBLE',
+        field: 'target.finalStateConstraints',
+        message: `${rarity} items cannot hold the requested modifiers and preserve the requested open slots.`,
+      });
+    }
   }
   if (autoRare) {
     notices.push({

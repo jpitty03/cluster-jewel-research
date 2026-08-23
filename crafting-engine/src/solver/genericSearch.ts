@@ -24,6 +24,10 @@ import {
 } from '../rules/actionRegistry.ts';
 import { getCanonicalStateKey } from '../rules/actionDiscovery.ts';
 import type { SearchIntent } from '../service/searchRuntime.ts';
+import {
+  deriveMinimumFeasibleRarity,
+  type MinimumFeasibleRarityResult,
+} from './targetFeasibility.ts';
 
 /**
  * Adapter bridging the authoritative CraftMechanic registry into the solver action interface.
@@ -315,6 +319,50 @@ export interface SearchSummary {
   optimisticLowerBoundIterations: number;
   optimisticLowerBoundConverged: boolean;
   optimisticLowerBoundMethod: 'KNOWN_PARTIAL_GRAPH_WITH_ZERO_COST_UNKNOWN_SUCCESSORS';
+  minimumFeasibleRarity: MinimumFeasibleRarityResult;
+  acquisitionFeasibility: AcquisitionFeasibilitySummary;
+  deepenProgress: DeepenProgressSummary;
+}
+
+export interface SearchProgressSnapshot {
+  canonicalStates: number;
+  acquisitionFeasibleUpperBounds: number;
+  unresolvedAcquisitionCandidates: number;
+  bestUnresolvedAcquisitionLowerBoundChaos?: number;
+  incumbentUpperBoundChaos?: number;
+  candidatesDominatedByBound: number;
+  optimalityGapChaos?: number;
+}
+
+export interface DeepenProgressSummary {
+  before: SearchProgressSnapshot;
+  after: SearchProgressSnapshot;
+  newCanonicalStates: number;
+  newAcquisitionFeasibleUpperBounds: number;
+  newlyDominatedByBound: number;
+  meaningfulProgress: boolean;
+  stoppedEarlyNoMeaningfulProgress: boolean;
+  message?: string;
+}
+
+export interface AcquisitionFeasibilityAttempt {
+  candidateId: string;
+  label: string;
+  stateKey: string;
+  statesExpanded: number;
+  elapsedMs: number;
+  certified: boolean;
+  interrupted: boolean;
+  downstreamUpperBoundChaos?: number;
+  totalUpperBoundChaos?: number;
+}
+
+export interface AcquisitionFeasibilitySummary {
+  attemptedCandidates: number;
+  certifiedCandidates: number;
+  distinctPhysicalStates: number;
+  fairStateBudgetPerCandidate: number;
+  attempts: AcquisitionFeasibilityAttempt[];
 }
 
 export interface CanonicalGraphNode {
@@ -352,6 +400,8 @@ export interface GenericSearchOptions {
   deferExpensiveProofActions?: boolean;
   /** Internal seed control; creates a minimal result without generating any successor distribution. */
   deferAllActions?: boolean;
+  /** Internal feasibility control; prevents a physical-state probe from abandoning into another acquisition. */
+  excludeAcquisitionActions?: boolean;
 }
 
 class StateExpansionQueue {
@@ -473,6 +523,277 @@ function addStageTiming(target: SearchStageTiming, source: SearchStageTiming): v
   target.resultAssemblyMs += source.resultAssemblyMs;
 }
 
+interface LinearPolicySolveResult {
+  values: Map<string, number>;
+  iterations: number;
+  residual: number;
+  converged: boolean;
+}
+
+/**
+ * Solves (I - P)x=b or (I - P^T)x=b for a fixed selected policy.
+ * Transition arrays are shared aggressively by reset mechanics, so both matrix
+ * products preserve that grouping rather than materializing a dense matrix.
+ */
+function solveSelectedPolicyLinearSystem(
+  nodes: Map<string, CanonicalGraphNode>,
+  policyMap: Map<string, StatePolicyDecision>,
+  includedKeys: ReadonlySet<string>,
+  rhsForKey: (key: string, action: CanonicalGraphNode['actions'] extends Map<string, infer T> ? T : never) => number,
+  transpose = false,
+  initialValues?: ReadonlyMap<string, number>,
+  tolerance = 1e-9,
+  maxIterations = 2000,
+  deadlineMs?: number
+): LinearPolicySolveResult {
+  const keys = [...includedKeys];
+  const indexByKey = new Map(keys.map((key, index) => [key, index]));
+  const size = keys.length;
+  if (size === 0) {
+    return { values: new Map(), iterations: 0, residual: 0, converged: true };
+  }
+  const actions = keys.map((key) => {
+    const node = nodes.get(key);
+    const decision = policyMap.get(key);
+    return node && decision ? node.actions.get(decision.bestActionId) : undefined;
+  });
+  if (actions.some((action) => action === undefined)) {
+    return { values: new Map(), iterations: 0, residual: Infinity, converged: false };
+  }
+
+  const multiply = (input: Float64Array): Float64Array => {
+    if (deadlineMs !== undefined && Date.now() >= deadlineMs) {
+      throw new SearchRoundDeadlineExceeded();
+    }
+    const output = new Float64Array(input);
+    if (!transpose) {
+      const continuationByTransitions = new Map<
+        NonNullable<(typeof actions)[number]>['transitions'],
+        number
+      >();
+      for (let row = 0; row < size; row++) {
+        const action = actions[row]!;
+        let continuation = continuationByTransitions.get(action.transitions);
+        if (continuation === undefined) {
+          continuation = 0;
+          for (const transition of action.transitions) {
+            const targetIndex = indexByKey.get(transition.targetKey);
+            if (targetIndex !== undefined) continuation += transition.probability * input[targetIndex];
+          }
+          continuationByTransitions.set(action.transitions, continuation);
+        }
+        output[row] -= continuation;
+      }
+      return output;
+    }
+
+    const sourceMassByTransitions = new Map<
+      NonNullable<(typeof actions)[number]>['transitions'],
+      number
+    >();
+    for (let row = 0; row < size; row++) {
+      const transitions = actions[row]!.transitions;
+      sourceMassByTransitions.set(
+        transitions,
+        (sourceMassByTransitions.get(transitions) ?? 0) + input[row]
+      );
+    }
+    for (const [transitions, sourceMass] of sourceMassByTransitions) {
+      for (const transition of transitions) {
+        const targetIndex = indexByKey.get(transition.targetKey);
+        if (targetIndex !== undefined) {
+          output[targetIndex] -= transition.probability * sourceMass;
+        }
+      }
+    }
+    return output;
+  };
+
+  const dot = (left: Float64Array, right: Float64Array): number => {
+    let result = 0;
+    for (let index = 0; index < size; index++) result += left[index] * right[index];
+    return result;
+  };
+  const maxAbs = (values: Float64Array): number => {
+    let result = 0;
+    for (const value of values) result = Math.max(result, Math.abs(value));
+    return result;
+  };
+
+  const x = new Float64Array(size);
+  const b = new Float64Array(size);
+  for (let index = 0; index < size; index++) {
+    if (initialValues?.has(keys[index])) x[index] = initialValues.get(keys[index])!;
+    b[index] = rhsForKey(keys[index], actions[index]!);
+  }
+  const initialProduct = multiply(x);
+  let residualVector = new Float64Array(size);
+  for (let index = 0; index < size; index++) residualVector[index] = b[index] - initialProduct[index];
+  const shadowResidual = new Float64Array(residualVector);
+  let residual = maxAbs(residualVector);
+  if (residual <= tolerance) {
+    return {
+      values: new Map(keys.map((key, index) => [key, x[index]])),
+      iterations: 0,
+      residual,
+      converged: true,
+    };
+  }
+
+  let rhoPrevious = 1;
+  let alpha = 1;
+  let omega = 1;
+  let p: Float64Array<ArrayBufferLike> = new Float64Array(size);
+  let v: Float64Array<ArrayBufferLike> = new Float64Array(size);
+  let iterations = 0;
+  for (; iterations < maxIterations; iterations++) {
+    if ((iterations & 15) === 0 && deadlineMs !== undefined && Date.now() >= deadlineMs) {
+      throw new SearchRoundDeadlineExceeded();
+    }
+    const rho = dot(shadowResidual, residualVector);
+    if (!Number.isFinite(rho) || Math.abs(rho) < 1e-30) break;
+    const beta = (rho / rhoPrevious) * (alpha / omega);
+    for (let index = 0; index < size; index++) {
+      p[index] = residualVector[index] + beta * (p[index] - omega * v[index]);
+    }
+    v = multiply(p);
+    const shadowDotV = dot(shadowResidual, v);
+    if (!Number.isFinite(shadowDotV) || Math.abs(shadowDotV) < 1e-30) break;
+    alpha = rho / shadowDotV;
+    const s = new Float64Array(size);
+    for (let index = 0; index < size; index++) s[index] = residualVector[index] - alpha * v[index];
+    if (maxAbs(s) <= tolerance) {
+      for (let index = 0; index < size; index++) x[index] += alpha * p[index];
+      residualVector = s;
+      iterations++;
+      residual = maxAbs(residualVector);
+      break;
+    }
+    const t = multiply(s);
+    const tDotT = dot(t, t);
+    if (!Number.isFinite(tDotT) || Math.abs(tDotT) < 1e-30) break;
+    omega = dot(t, s) / tDotT;
+    if (!Number.isFinite(omega) || Math.abs(omega) < 1e-30) break;
+    for (let index = 0; index < size; index++) {
+      x[index] += alpha * p[index] + omega * s[index];
+      residualVector[index] = s[index] - omega * t[index];
+    }
+    residual = maxAbs(residualVector);
+    if (residual <= tolerance) {
+      iterations++;
+      break;
+    }
+    rhoPrevious = rho;
+  }
+
+  let finalResidualVector = multiply(x);
+  residual = 0;
+  for (let index = 0; index < size; index++) {
+    residual = Math.max(residual, Math.abs(b[index] - finalResidualVector[index]));
+  }
+  let converged = Number.isFinite(residual) && residual <= Math.max(tolerance * 10, 1e-8);
+
+  // BiCGSTAB can break down on highly symmetric reset-policy matrices. A
+  // small restarted GMRES fallback is robust for those same grouped products.
+  if (!converged) {
+    const restart = Math.min(40, size);
+    const gmresLimit = Math.min(maxIterations, 800);
+    const norm2 = (values: Float64Array): number => Math.sqrt(dot(values, values));
+    let gmresIterations = 0;
+    while (gmresIterations < gmresLimit) {
+      if (deadlineMs !== undefined && Date.now() >= deadlineMs) {
+        throw new SearchRoundDeadlineExceeded();
+      }
+      finalResidualVector = multiply(x);
+      const initialResidual = new Float64Array(size);
+      for (let index = 0; index < size; index++) {
+        initialResidual[index] = b[index] - finalResidualVector[index];
+      }
+      const betaNorm = norm2(initialResidual);
+      if (betaNorm <= tolerance) break;
+      const basis: Float64Array[] = [
+        Float64Array.from(initialResidual, (value) => value / betaNorm),
+      ];
+      const h = Array.from({ length: restart + 1 }, () => new Float64Array(restart));
+      const cosines = new Float64Array(restart);
+      const sines = new Float64Array(restart);
+      const g = new Float64Array(restart + 1);
+      g[0] = betaNorm;
+      let usedColumns = 0;
+
+      for (let column = 0; column < restart && gmresIterations < gmresLimit; column++) {
+        let w = multiply(basis[column]);
+        for (let row = 0; row <= column; row++) {
+          h[row][column] = dot(w, basis[row]);
+          for (let index = 0; index < size; index++) {
+            w[index] -= h[row][column] * basis[row][index];
+          }
+        }
+        h[column + 1][column] = norm2(w);
+        if (h[column + 1][column] > 1e-30) {
+          basis.push(Float64Array.from(
+            w,
+            (value) => value / h[column + 1][column]
+          ));
+        } else {
+          basis.push(new Float64Array(size));
+        }
+        for (let row = 0; row < column; row++) {
+          const upper = h[row][column];
+          const lower = h[row + 1][column];
+          h[row][column] = cosines[row] * upper + sines[row] * lower;
+          h[row + 1][column] = -sines[row] * upper + cosines[row] * lower;
+        }
+        const diagonal = h[column][column];
+        const subdiagonal = h[column + 1][column];
+        const rotationNorm = Math.hypot(diagonal, subdiagonal);
+        cosines[column] = rotationNorm > 0 ? diagonal / rotationNorm : 1;
+        sines[column] = rotationNorm > 0 ? subdiagonal / rotationNorm : 0;
+        h[column][column] = cosines[column] * diagonal + sines[column] * subdiagonal;
+        h[column + 1][column] = 0;
+        const priorG = g[column];
+        g[column] = cosines[column] * priorG;
+        g[column + 1] = -sines[column] * priorG;
+        usedColumns = column + 1;
+        gmresIterations++;
+        if (Math.abs(g[column + 1]) <= tolerance) break;
+      }
+
+      const y = new Float64Array(usedColumns);
+      for (let row = usedColumns - 1; row >= 0; row--) {
+        let value = g[row];
+        for (let column = row + 1; column < usedColumns; column++) {
+          value -= h[row][column] * y[column];
+        }
+        if (Math.abs(h[row][row]) < 1e-30) break;
+        y[row] = value / h[row][row];
+      }
+      for (let column = 0; column < usedColumns; column++) {
+        for (let index = 0; index < size; index++) {
+          x[index] += y[column] * basis[column][index];
+        }
+      }
+      finalResidualVector = multiply(x);
+      residual = 0;
+      for (let index = 0; index < size; index++) {
+        residual = Math.max(residual, Math.abs(b[index] - finalResidualVector[index]));
+      }
+      if (residual <= Math.max(tolerance * 10, 1e-8)) {
+        converged = true;
+        break;
+      }
+      if (usedColumns === 0) break;
+    }
+    iterations += gmresIterations;
+  }
+  return {
+    values: new Map(keys.map((key, index) => [key, x[index]])),
+    iterations,
+    residual,
+    converged,
+  };
+}
+
 /**
  * Generic Stochastic Shortest-Path / Bellman Value Iteration solver.
  * Evaluates candidate Q-values, on-policy vs full-graph reachability,
@@ -484,12 +805,14 @@ export class GenericSearchEngine {
   private adapters: SolverCraftActionAdapter[];
   private allowFallbackPrices: boolean;
   private defaultOptions: GenericSearchOptions;
+  private minimumFeasibleRarity: MinimumFeasibleRarityResult;
 
   constructor(context: SolverContext, target: TargetDefinition, options: GenericSearchOptions = {}) {
     this.context = context;
     this.target = target;
     this.allowFallbackPrices = options.allowResearchFallbackPrices ?? true;
     this.defaultOptions = options;
+    this.minimumFeasibleRarity = deriveMinimumFeasibleRarity(target, context.pool);
 
     const mechanics = [...CRAFT_MECHANICS];
     if (options.includeHarvest) {
@@ -517,13 +840,24 @@ export class GenericSearchEngine {
     }).map((m) => new SolverCraftActionAdapter(m, context, target));
   }
 
-  private expansionPriority(state: ItemState, prioritizedStateKeys?: ReadonlySet<string>): number {
+  private expansionPriority(
+    state: ItemState,
+    prioritizedStateKeys?: ReadonlySet<string>,
+    searchIntent: SearchIntent = 'RECOMMEND'
+  ): number {
     const key = getCanonicalStateKey(state, this.target);
     const competitiveBonus = prioritizedStateKeys?.has(key) ? 1_000_000 : 0;
     if (!this.defaultOptions.prioritizeTargetProgress) return competitiveBonus;
     const affixes = [...state.prefixes, ...state.suffixes];
     const requirements = getAllTargetModRequirements(this.target);
-    let score = state.rarity === 'rare' ? 20 : state.rarity === 'magic' ? 10 : 0;
+    let score: number;
+    if (searchIntent === 'RECOMMEND' && this.minimumFeasibleRarity.rarity === 'magic') {
+      score = state.rarity === 'magic' ? 20 : state.rarity === 'normal' ? 10 : 0;
+    } else if (searchIntent === 'RECOMMEND' && this.minimumFeasibleRarity.rarity === 'normal') {
+      score = state.rarity === 'normal' ? 20 : 0;
+    } else {
+      score = state.rarity === 'rare' ? 20 : state.rarity === 'magic' ? 10 : 0;
+    }
     score += affixes.length;
     for (const requirement of requirements) {
       if (affixes.some((mod) => matchesModRequirement(mod, requirement))) {
@@ -549,14 +883,16 @@ export class GenericSearchEngine {
     maxStates = 5000,
     prioritizedStateKeys?: ReadonlySet<string>,
     deadlineMs?: number,
-    deferredActionIds?: ReadonlySet<string>
+    deferredActionIds?: ReadonlySet<string>,
+    searchIntent: SearchIntent = 'RECOMMEND',
+    excludedActionIds?: ReadonlySet<string>
   ): GraphBuildResult {
     const graphBuildStarted = Date.now();
     let transitionGenerationMs = 0;
     const normalizedStartState = normalizeItemState(startState);
     const nodes = new Map<string, CanonicalGraphNode>();
     const queue = new StateExpansionQueue();
-    queue.push(normalizedStartState, this.expansionPriority(normalizedStartState, prioritizedStateKeys));
+    queue.push(normalizedStartState, this.expansionPriority(normalizedStartState, prioritizedStateKeys, searchIntent));
     const queuedKeys = new Set<string>();
     queuedKeys.add(getCanonicalStateKey(normalizedStartState, this.target));
 
@@ -608,6 +944,7 @@ export class GenericSearchEngine {
 
       if (!isTerminal) {
         for (const adapter of this.adapters) {
+          if (excludedActionIds?.has(adapter.id)) continue;
           if (adapter.applicable(curr)) {
             if (deferredActionIds?.has(adapter.id)) {
               const deferredKey = `__deferred_action__:${adapter.id}:${key}`;
@@ -679,7 +1016,7 @@ export class GenericSearchEngine {
                   });
                   if (!queuedKeys.has(outKey)) {
                     queuedKeys.add(outKey);
-                    queue.push(out.state, this.expansionPriority(out.state, prioritizedStateKeys));
+                    queue.push(out.state, this.expansionPriority(out.state, prioritizedStateKeys, searchIntent));
                     if (actionAttribution[adapter.id]) {
                       actionAttribution[adapter.id].newGlobalStatesFirstDiscovered++;
                     }
@@ -834,6 +1171,15 @@ export class GenericSearchEngine {
     let timeToFirstUsefulRecommendationMs: number | undefined;
     let priorCompletedRoundWorkMs = 0;
     let lastCompletedRoundWorkMs = 0;
+    const acquisitionCandidates = effectiveOptions.acquisitionPortfolio ?? [];
+    const fairStateBudgetPerCandidate = acquisitionCandidates.length > 0
+      ? Math.max(1, Math.floor(maxStates / acquisitionCandidates.length))
+      : 0;
+    const acquisitionFeasibilityAttempts: AcquisitionFeasibilityAttempt[] = [];
+    let firstRoundProgress: SearchProgressSnapshot | undefined;
+    let previousRoundProgress: SearchProgressSnapshot | undefined;
+    let finalRoundProgress: SearchProgressSnapshot | undefined;
+    let stoppedEarlyNoMeaningfulProgress = false;
 
     const hasCertifiedPolicy = (candidateResult: GenericSearchResult): boolean =>
       candidateResult.optimalityProof.selectedPolicyStatus ===
@@ -851,27 +1197,160 @@ export class GenericSearchEngine {
           candidate.couldBeatResolvedIncumbent
       );
     };
+    const progressSnapshot = (candidateResult: GenericSearchResult): SearchProgressSnapshot => {
+      const startKey = getCanonicalStateKey(candidateResult.startingState, this.target);
+      const acquisitionCandidatesAtStart = candidateResult.policyMap.get(startKey)?.candidateQValues
+        .filter((candidate) => candidate.actionId.startsWith('acquire_')) ?? [];
+      const resolved = acquisitionCandidatesAtStart.filter(
+        (candidate) => candidate.status === 'RESOLVED' && Number.isFinite(candidate.totalQValueChaos)
+      );
+      const unresolved = acquisitionCandidatesAtStart.filter(
+        (candidate) => candidate.status === 'UNRESOLVED' || candidate.couldBeatResolvedIncumbent
+      );
+      const incumbent = resolved.reduce(
+        (minimum, candidate) => Math.min(minimum, candidate.totalQValueChaos),
+        Infinity
+      );
+      const lowerBound = unresolved.reduce(
+        (minimum, candidate) => Math.min(minimum, candidate.lowerBoundChaos),
+        Infinity
+      );
+      const dominated = [...candidateResult.policyMap.values()].reduce(
+        (sum, decision) => sum + decision.candidateQValues.filter(
+          (candidate) => candidate.status === 'DOMINATED_BY_BOUND'
+        ).length,
+        0
+      );
+      return {
+        canonicalStates: candidateResult.graphBuild.nodes.size,
+        acquisitionFeasibleUpperBounds: resolved.length,
+        unresolvedAcquisitionCandidates: unresolved.length,
+        bestUnresolvedAcquisitionLowerBoundChaos: Number.isFinite(lowerBound) ? lowerBound : undefined,
+        incumbentUpperBoundChaos: Number.isFinite(incumbent) ? incumbent : undefined,
+        candidatesDominatedByBound: dominated,
+        optimalityGapChaos: Number.isFinite(incumbent) && Number.isFinite(lowerBound)
+          ? Math.max(0, incumbent - lowerBound)
+          : undefined,
+      };
+    };
+    const madeMeaningfulProgress = (
+      before: SearchProgressSnapshot,
+      after: SearchProgressSnapshot
+    ): boolean =>
+      after.canonicalStates > before.canonicalStates ||
+      after.acquisitionFeasibleUpperBounds > before.acquisitionFeasibleUpperBounds ||
+      after.unresolvedAcquisitionCandidates < before.unresolvedAcquisitionCandidates ||
+      (after.bestUnresolvedAcquisitionLowerBoundChaos ?? -Infinity) >
+        (before.bestUnresolvedAcquisitionLowerBoundChaos ?? -Infinity) + 1e-9 ||
+      (after.incumbentUpperBoundChaos ?? Infinity) <
+        (before.incumbentUpperBoundChaos ?? Infinity) - 1e-9 ||
+      after.candidatesDominatedByBound > before.candidatesDominatedByBound;
+
+    // Give every distinct physical acquisition a bounded feasibility attempt
+    // before global proof competition. Certified on-policy states become the
+    // first global expansion frontier; unresolved probes remain explicit.
+    if (startState.flags?.acquisitionMenu === true && acquisitionCandidates.length > 0) {
+      const feasibilityDeadline = deadlineMs === undefined
+        ? undefined
+        : startTime + Math.max(1, Math.floor((deadlineMs - startTime) * 0.4));
+      for (let candidateIndex = 0; candidateIndex < acquisitionCandidates.length; candidateIndex++) {
+        if (feasibilityDeadline !== undefined && Date.now() >= feasibilityDeadline) break;
+        const candidate = acquisitionCandidates[candidateIndex];
+        const attemptStarted = Date.now();
+        const attemptsRemaining = acquisitionCandidates.length - candidateIndex;
+        const candidateDeadline = feasibilityDeadline === undefined
+          ? undefined
+          : Math.min(
+              feasibilityDeadline,
+              Date.now() + Math.max(1, Math.floor((feasibilityDeadline - Date.now()) / attemptsRemaining))
+            );
+        try {
+          const feasibilityResult = this.searchOnce(
+            candidate.physicalState,
+            {
+              ...effectiveOptions,
+              maxStates: fairStateBudgetPerCandidate,
+              maxExpansionRounds: 1,
+              deferExpensiveProofActions: true,
+              excludeAcquisitionActions: true,
+            },
+            undefined,
+            candidateDeadline
+          );
+          cumulativeExpansionWork += feasibilityResult.graphBuild.nodes.size;
+          addStageTiming(aggregateTiming, feasibilityResult.stageTiming);
+          const certified = hasCertifiedPolicy(feasibilityResult);
+          if (certified) {
+            for (const rule of feasibilityResult.onPolicyRules) {
+              prioritizedStateKeys.add(rule.stateKey);
+            }
+          }
+          const downstreamUpperBound = certified && Number.isFinite(feasibilityResult.totalExpectedCostChaos)
+            ? feasibilityResult.totalExpectedCostChaos
+            : undefined;
+          const minimumAcquisitionCost = candidate.methods.reduce(
+            (minimum, method) => Math.min(minimum, method.acquisitionCostChaos),
+            Infinity
+          );
+          acquisitionFeasibilityAttempts.push({
+            candidateId: candidate.id,
+            label: candidate.label,
+            stateKey: getCanonicalStateKey(candidate.physicalState, this.target),
+            statesExpanded: feasibilityResult.graphBuild.nodes.size,
+            elapsedMs: Date.now() - attemptStarted,
+            certified,
+            interrupted: false,
+            downstreamUpperBoundChaos: downstreamUpperBound,
+            totalUpperBoundChaos: downstreamUpperBound === undefined || !Number.isFinite(minimumAcquisitionCost)
+              ? undefined
+              : downstreamUpperBound + minimumAcquisitionCost,
+          });
+        } catch (error) {
+          if (!(error instanceof SearchRoundDeadlineExceeded)) throw error;
+          acquisitionFeasibilityAttempts.push({
+            candidateId: candidate.id,
+            label: candidate.label,
+            stateKey: getCanonicalStateKey(candidate.physicalState, this.target),
+            statesExpanded: 0,
+            elapsedMs: Date.now() - attemptStarted,
+            certified: false,
+            interrupted: true,
+          });
+        }
+      }
+    }
 
     for (let round = 0; round < maxExpansionRounds; round++) {
       if (deadlineMs !== undefined && Date.now() >= deadlineMs) break;
       let completedRound: GenericSearchResult;
       const roundStarted = Date.now();
+      const deferredThisRound = !certifiedRecommendationFound &&
+        (intent === 'RECOMMEND' || round < stagedRecommendationRounds);
+      const roundsRemainingIncludingThis = maxExpansionRounds - round;
+      const roundDeadlineMs = intent === 'DEEPEN' && previousRoundProgress !== undefined && deadlineMs !== undefined
+        ? Math.min(
+            deadlineMs,
+            Date.now() + Math.max(1, Math.floor((deadlineMs - Date.now()) / roundsRemainingIncludingThis))
+          )
+        : deadlineMs;
       try {
         completedRound = this.searchOnce(
           startState,
           {
             ...effectiveOptions,
             maxStates: roundStateBudget,
-            deferExpensiveProofActions:
-              !certifiedRecommendationFound &&
-              (intent === 'RECOMMEND' || round < stagedRecommendationRounds),
+            deferExpensiveProofActions: deferredThisRound,
           },
           prioritizedStateKeys,
-          deadlineMs
+          roundDeadlineMs
         );
       } catch (error) {
         if (error instanceof SearchRoundDeadlineExceeded) {
-          wallTimeInterrupted = true;
+          if (deadlineMs !== undefined && Date.now() >= deadlineMs) {
+            wallTimeInterrupted = true;
+          } else if (intent === 'DEEPEN') {
+            stoppedEarlyNoMeaningfulProgress = true;
+          }
           break;
         }
         throw error;
@@ -884,6 +1363,18 @@ export class GenericSearchEngine {
       lastCompletedRoundWorkMs = roundWorkMs;
       addStageTiming(aggregateTiming, result.stageTiming);
       timeToFirstCompletedRoundMs ??= Date.now() - startTime;
+      const currentProgress = progressSnapshot(result);
+      firstRoundProgress ??= currentProgress;
+      finalRoundProgress = currentProgress;
+      if (
+        intent === 'DEEPEN' &&
+        previousRoundProgress !== undefined &&
+        !madeMeaningfulProgress(previousRoundProgress, currentProgress)
+      ) {
+        stoppedEarlyNoMeaningfulProgress = true;
+        break;
+      }
+      previousRoundProgress = currentProgress;
 
       if (hasCertifiedPolicy(result)) {
         timeToFirstCertifiedPolicyMs ??= Date.now() - startTime;
@@ -919,7 +1410,7 @@ export class GenericSearchEngine {
       if (
         competitiveKeys.size === 0 ||
         !result.optimalityProof.unresolvedCandidatesCouldBeatIncumbent ||
-        (!result.graphBuild.hitStateLimit && !result.graphBuild.hitWallTimeLimit)
+        (!deferredThisRound && !result.graphBuild.hitStateLimit && !result.graphBuild.hitWallTimeLimit)
       ) {
         prioritizedStateKeys = competitiveKeys;
         break;
@@ -950,6 +1441,10 @@ export class GenericSearchEngine {
       aggregateTiming.resultAssemblyMs;
     aggregateTiming.unattributedOrInterruptedMs = Math.max(0, elapsedMs - attributedMs);
     result.stageTiming = aggregateTiming;
+    const fallbackProgress = progressSnapshot(result);
+    const beforeProgress = firstRoundProgress ?? fallbackProgress;
+    const afterProgress = finalRoundProgress ?? fallbackProgress;
+    const meaningfulDeepenProgress = madeMeaningfulProgress(beforeProgress, afterProgress);
     result.searchSummary = {
       intent,
       statesExpanded: result.graphBuild.nodes.size,
@@ -973,6 +1468,32 @@ export class GenericSearchEngine {
       optimisticLowerBoundIterations: result.searchSummary.optimisticLowerBoundIterations,
       optimisticLowerBoundConverged: result.searchSummary.optimisticLowerBoundConverged,
       optimisticLowerBoundMethod: 'KNOWN_PARTIAL_GRAPH_WITH_ZERO_COST_UNKNOWN_SUCCESSORS',
+      minimumFeasibleRarity: this.minimumFeasibleRarity,
+      acquisitionFeasibility: {
+        attemptedCandidates: acquisitionFeasibilityAttempts.length,
+        certifiedCandidates: acquisitionFeasibilityAttempts.filter((attempt) => attempt.certified).length,
+        distinctPhysicalStates: acquisitionCandidates.length,
+        fairStateBudgetPerCandidate,
+        attempts: acquisitionFeasibilityAttempts,
+      },
+      deepenProgress: {
+        before: beforeProgress,
+        after: afterProgress,
+        newCanonicalStates: Math.max(0, afterProgress.canonicalStates - beforeProgress.canonicalStates),
+        newAcquisitionFeasibleUpperBounds: Math.max(
+          0,
+          afterProgress.acquisitionFeasibleUpperBounds - beforeProgress.acquisitionFeasibleUpperBounds
+        ),
+        newlyDominatedByBound: Math.max(
+          0,
+          afterProgress.candidatesDominatedByBound - beforeProgress.candidatesDominatedByBound
+        ),
+        meaningfulProgress: meaningfulDeepenProgress,
+        stoppedEarlyNoMeaningfulProgress,
+        message: stoppedEarlyNoMeaningfulProgress
+          ? 'No meaningful additional progress in this deeper budget.'
+          : undefined,
+      },
     };
     return result;
   }
@@ -1065,16 +1586,32 @@ export class GenericSearchEngine {
       }
     };
 
+    const deferredActionIds = effectiveOptions.deferAllActions === true
+      ? new Set(this.adapters.map((adapter) => adapter.id))
+      : effectiveOptions.deferExpensiveProofActions === true
+        ? new Set(this.adapters
+            .filter((adapter) =>
+              adapter.mechanic.actionType === 'HARVEST_REFORGE' ||
+              (
+                adapter.id === 'regal_orb' &&
+                this.minimumFeasibleRarity.rarity !== 'rare' &&
+                !getAllTargetModRequirements(this.target).some(
+                  (requirement) => requirement.mustBeFractured === true
+                )
+              )
+            )
+            .map((adapter) => adapter.id))
+        : undefined;
     const graphResult = this.buildGraph(
       normalizedStartState,
       effectiveOptions.maxStates ?? 5000,
       prioritizedStateKeys,
       deadlineMs,
-      effectiveOptions.deferAllActions === true
-        ? new Set(this.adapters.map((adapter) => adapter.id))
-        : effectiveOptions.deferExpensiveProofActions === true
+      deferredActionIds,
+      effectiveOptions.searchIntent ?? 'RECOMMEND',
+      effectiveOptions.excludeAcquisitionActions === true
         ? new Set(this.adapters
-            .filter((adapter) => adapter.mechanic.actionType === 'HARVEST_REFORGE')
+            .filter((adapter) => adapter.mechanic.actionType === 'RESTART_REACQUIRE')
             .map((adapter) => adapter.id))
         : undefined
     );
@@ -1151,13 +1688,11 @@ export class GenericSearchEngine {
       }
     }
 
-    const valueIterationConverged =
+    let valueIterationConverged =
       valueIterationSweepExecuted && maxDelta < epsilon && Number.isFinite(V.get(startKey));
-    const bellmanMs = Date.now() - bellmanStarted;
     assertWithinDeadline();
 
     // Extract the selected policy and candidate Q-values with explicit resolution status.
-    const candidateClassificationStarted = Date.now();
     const policyMap = new Map<string, StatePolicyDecision>();
     const representativeAudits: StatePolicyDecision[] = [];
     const extractedContinuationCache = new Map<
@@ -1233,6 +1768,95 @@ export class GenericSearchEngine {
       policyMap.set(key, decision);
     }
 
+    // Low-probability cyclic policies converge painfully slowly under plain
+    // Bellman sweeps. Evaluate and improve the selected policy with a grouped
+    // sparse linear solve; unresolved actions remain excluded from selection
+    // and continue to participate only through their admissible lower bounds.
+    let linearPolicyStable = false;
+    let linearPolicyIterations = 0;
+    for (let policyPass = 0; policyPass < 20; policyPass++) {
+      assertWithinDeadline();
+      const includedKeys = new Set<string>();
+      let selectedPolicyDirectlyClosed = true;
+      for (const [key, node] of nodes) {
+        if (node.isTerminal) continue;
+        const decision = policyMap.get(key);
+        const action = decision ? node.actions.get(decision.bestActionId) : undefined;
+        if (
+          !action ||
+          !action.isDirectlyResolved ||
+          action.transitions.some((transition) => !nodes.has(transition.targetKey))
+        ) {
+          selectedPolicyDirectlyClosed = false;
+          break;
+        }
+        includedKeys.add(key);
+      }
+      if (!selectedPolicyDirectlyClosed) break;
+      const solve = solveSelectedPolicyLinearSystem(
+        nodes,
+        policyMap,
+        includedKeys,
+        (_key, action) => action.immediateCostChaos,
+        false,
+        V,
+        Math.min(epsilon, 1e-9),
+        2000,
+        deadlineMs
+      );
+      linearPolicyIterations += solve.iterations;
+      if (!solve.converged) break;
+      for (const [key, value] of solve.values) V.set(key, value);
+
+      let policyChanged = false;
+      for (const [key, decision] of policyMap) {
+        const node = nodes.get(key)!;
+        let bestActionId = '';
+        let bestActionName = '';
+        let bestQ = Infinity;
+        for (const candidate of decision.candidateQValues) {
+          const action = node.actions.get(candidate.actionId)!;
+          if (!action.isDirectlyResolved) continue;
+          let continuation = 0;
+          for (const transition of action.transitions) {
+            const targetValue = V.get(transition.targetKey);
+            if (targetValue === undefined) {
+              continuation = Infinity;
+              break;
+            }
+            continuation += transition.probability * targetValue;
+          }
+          candidate.expectedContinuationChaos = continuation;
+          candidate.totalQValueChaos = action.immediateCostChaos + continuation;
+          if (candidate.totalQValueChaos < bestQ) {
+            bestQ = candidate.totalQValueChaos;
+            bestActionId = candidate.actionId;
+            bestActionName = candidate.actionName;
+          }
+        }
+        if (bestActionId && bestActionId !== decision.bestActionId) {
+          decision.bestActionId = bestActionId;
+          decision.bestActionName = bestActionName;
+          policyChanged = true;
+        }
+        if (bestActionId) decision.optimalValueChaos = bestQ;
+        decision.candidateQValues.sort((left, right) =>
+          left.totalQValueChaos - right.totalQValueChaos
+        );
+      }
+      maxDelta = solve.residual;
+      if (!policyChanged) {
+        linearPolicyStable = true;
+        break;
+      }
+    }
+    if (linearPolicyStable) {
+      valueIterationConverged = Number.isFinite(V.get(startKey));
+      valueIterationSweeps += linearPolicyIterations;
+    }
+    const bellmanMs = Date.now() - bellmanStarted;
+    const candidateClassificationStarted = Date.now();
+
     const computePolicyTrust = (): {
       downstreamUnresolved: Map<string, boolean>;
       absorption: Map<string, number>;
@@ -1293,6 +1917,52 @@ export class GenericSearchEngine {
       let absorptionResidual = Infinity;
       const maxMarkovIterations = effectiveOptions.maxMarkovIterations ?? 5000;
       const absorptionStarted = Date.now();
+      const canReachTerminal = new Set<string>();
+      const reverseQueue = [...nodes.values()]
+        .filter((node) => node.isTerminal)
+        .map((node) => node.key);
+      for (const key of reverseQueue) canReachTerminal.add(key);
+      for (let queueIndex = 0; queueIndex < reverseQueue.length; queueIndex++) {
+        const targetKey = reverseQueue[queueIndex];
+        for (const parentKey of selectedParentsByTarget.get(targetKey) ?? []) {
+          if (canReachTerminal.has(parentKey)) continue;
+          canReachTerminal.add(parentKey);
+          reverseQueue.push(parentKey);
+        }
+      }
+      const linearKeys = new Set(
+        [...nodes.entries()]
+          .filter(([, node]) => !node.isTerminal)
+          .map(([key]) => key)
+          .filter((key) => canReachTerminal.has(key) && !downstreamUnresolved.get(key))
+      );
+      const linearAbsorption = solveSelectedPolicyLinearSystem(
+        nodes,
+        policyMap,
+        linearKeys,
+        (_key, action) => action.transitions.reduce(
+          (sum, transition) => sum + (nodes.get(transition.targetKey)?.isTerminal ? transition.probability : 0),
+          0
+        ),
+        false,
+        undefined,
+        1e-10,
+        2000,
+        deadlineMs
+      );
+      if (linearAbsorption.converged) {
+        for (const [key, value] of linearAbsorption.values) {
+          absorption.set(key, Math.max(0, Math.min(1, value)));
+        }
+        absorptionMs += Date.now() - absorptionStarted;
+        return {
+          downstreamUnresolved,
+          absorption,
+          iterations: linearAbsorption.iterations,
+          residual: linearAbsorption.residual,
+          converged: true,
+        };
+      }
       for (
         ;
         absorptionIterations < maxMarkovIterations &&
@@ -1683,54 +2353,80 @@ export class GenericSearchEngine {
     let visitMaxResidual = 0;
     let visitSweepExecuted = false;
     let visitSweeps = 0;
-    for (
-      ;
-      visitIteration < (effectiveOptions.maxMarkovIterations ?? 1000) &&
-      (deadlineMs === undefined || Date.now() < deadlineMs);
-      visitIteration++
-    ) {
+    const occupancyKeys = new Set(
+      [...onPolicyReachableKeys].filter((key) => !nodes.get(key)?.isTerminal)
+    );
+    const linearOccupancy = isProper
+      ? solveSelectedPolicyLinearSystem(
+          nodes,
+          policyMap,
+          occupancyKeys,
+          (key) => key === startKey ? 1 : 0,
+          true,
+          undefined,
+          1e-9,
+          2000,
+          deadlineMs
+        )
+      : undefined;
+    if (linearOccupancy?.converged) {
+      for (const key of onPolicyReachableKeys) expectedVisits.set(key, 0);
+      for (const [key, value] of linearOccupancy.values) {
+        expectedVisits.set(key, Math.max(0, value));
+      }
       visitSweepExecuted = true;
-      visitSweeps++;
-      visitMaxResidual = 0;
-      const nextVisits = new Map<string, number>();
-      for (const key of onPolicyReachableKeys) nextVisits.set(key, key === startKey ? 1.0 : 0);
-      const groupedVisitMass = new Map<
-        ReadonlyArray<{ targetKey: string; probability: number; nextState: ItemState; label?: string }>,
-        number
-      >();
+      visitSweeps = linearOccupancy.iterations;
+      visitMaxResidual = linearOccupancy.residual;
+    } else {
+      for (
+        ;
+        visitIteration < (effectiveOptions.maxMarkovIterations ?? 1000) &&
+        (deadlineMs === undefined || Date.now() < deadlineMs);
+        visitIteration++
+      ) {
+        visitSweepExecuted = true;
+        visitSweeps++;
+        visitMaxResidual = 0;
+        const nextVisits = new Map<string, number>();
+        for (const key of onPolicyReachableKeys) nextVisits.set(key, key === startKey ? 1.0 : 0);
+        const groupedVisitMass = new Map<
+          ReadonlyArray<{ targetKey: string; probability: number; nextState: ItemState; label?: string }>,
+          number
+        >();
 
-      for (const key of onPolicyReachableKeys) {
-        const visits = expectedVisits.get(key) ?? 0;
-        if (visits <= 1e-12) continue;
+        for (const key of onPolicyReachableKeys) {
+          const visits = expectedVisits.get(key) ?? 0;
+          if (visits <= 1e-12) continue;
 
-        const node = nodes.get(key);
-        if (!node || node.isTerminal) continue;
+          const node = nodes.get(key);
+          if (!node || node.isTerminal) continue;
 
-        const decision = policyMap.get(key);
-        if (!decision) continue;
+          const decision = policyMap.get(key);
+          if (!decision) continue;
 
-        const actData = node.actions.get(decision.bestActionId);
-        if (!actData) continue;
+          const actData = node.actions.get(decision.bestActionId);
+          if (!actData) continue;
 
-        groupedVisitMass.set(actData.transitions, (groupedVisitMass.get(actData.transitions) ?? 0) + visits);
-      }
-
-      for (const [transitions, visits] of groupedVisitMass) {
-        for (const t of transitions) {
-          if (!onPolicyReachableKeys.has(t.targetKey)) continue;
-          const prev = nextVisits.get(t.targetKey) ?? 0;
-          nextVisits.set(t.targetKey, prev + visits * t.probability);
+          groupedVisitMass.set(actData.transitions, (groupedVisitMass.get(actData.transitions) ?? 0) + visits);
         }
-      }
 
-      for (const key of onPolicyReachableKeys) {
-        const v = nextVisits.get(key) ?? 0;
-        const delta = Math.abs(v - (expectedVisits.get(key) ?? 0));
-        if (delta > visitMaxResidual) visitMaxResidual = delta;
-        expectedVisits.set(key, v);
-      }
+        for (const [transitions, visits] of groupedVisitMass) {
+          for (const t of transitions) {
+            if (!onPolicyReachableKeys.has(t.targetKey)) continue;
+            const prev = nextVisits.get(t.targetKey) ?? 0;
+            nextVisits.set(t.targetKey, prev + visits * t.probability);
+          }
+        }
 
-      if (visitMaxResidual < 1e-8) break;
+        for (const key of onPolicyReachableKeys) {
+          const v = nextVisits.get(key) ?? 0;
+          const delta = Math.abs(v - (expectedVisits.get(key) ?? 0));
+          if (delta > visitMaxResidual) visitMaxResidual = delta;
+          expectedVisits.set(key, v);
+        }
+
+        if (visitMaxResidual < 1e-8) break;
+      }
     }
     const occupancyMs = Date.now() - occupancyStarted;
     const resultAssemblyStarted = Date.now();
@@ -2039,6 +2735,33 @@ export class GenericSearchEngine {
         optimisticLowerBoundIterations,
         optimisticLowerBoundConverged,
         optimisticLowerBoundMethod: 'KNOWN_PARTIAL_GRAPH_WITH_ZERO_COST_UNKNOWN_SUCCESSORS',
+        minimumFeasibleRarity: this.minimumFeasibleRarity,
+        acquisitionFeasibility: {
+          attemptedCandidates: 0,
+          certifiedCandidates: 0,
+          distinctPhysicalStates: 0,
+          fairStateBudgetPerCandidate: 0,
+          attempts: [],
+        },
+        deepenProgress: {
+          before: {
+            canonicalStates: nodes.size,
+            acquisitionFeasibleUpperBounds: 0,
+            unresolvedAcquisitionCandidates: 0,
+            candidatesDominatedByBound: 0,
+          },
+          after: {
+            canonicalStates: nodes.size,
+            acquisitionFeasibleUpperBounds: 0,
+            unresolvedAcquisitionCandidates: 0,
+            candidatesDominatedByBound: 0,
+          },
+          newCanonicalStates: 0,
+          newAcquisitionFeasibleUpperBounds: 0,
+          newlyDominatedByBound: 0,
+          meaningfulProgress: false,
+          stoppedEarlyNoMeaningfulProgress: false,
+        },
       },
       stageTiming,
       isTargetSatisfied,

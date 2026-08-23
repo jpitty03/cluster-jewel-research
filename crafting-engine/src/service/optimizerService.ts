@@ -166,6 +166,10 @@ export interface AcquisitionSummary {
   candidates: AcquisitionCandidateSummary[];
   methodCount: number;
   distinctPhysicalStateCount: number;
+  selectionSafe: boolean;
+  resolvedIncumbentUpperBoundChaos?: number;
+  bestUnresolvedLowerBoundChaos?: number;
+  potentialGapChaos?: number;
 }
 
 export interface PriceConfidenceSummary {
@@ -205,7 +209,8 @@ export interface ScopedMechanicsConfidenceSummary {
 
 export type RecommendationStatus =
   | 'PROVEN_OPTIMAL'
-  | 'BEST_RESOLVED'
+  | 'BEST_RESOLVED_ACQUISITION_SAFE'
+  | 'PROVISIONAL_RESOLVED'
   | 'NO_RESOLVED_ROUTE';
 
 export interface OptimizationProofSummary {
@@ -245,6 +250,9 @@ export interface OptimizationSearchSummary {
   optimisticLowerBoundIterations: number;
   optimisticLowerBoundConverged: boolean;
   optimisticLowerBoundMethod: 'KNOWN_PARTIAL_GRAPH_WITH_ZERO_COST_UNKNOWN_SUCCESSORS';
+  minimumFeasibleRarity: GenericSearchResult['searchSummary']['minimumFeasibleRarity'];
+  acquisitionFeasibility: GenericSearchResult['searchSummary']['acquisitionFeasibility'];
+  deepenProgress: GenericSearchResult['searchSummary']['deepenProgress'];
   stageTimingMs: GenericSearchResult['stageTiming'] & { serializationMs: number };
   harvestActionScope: {
     mode: 'DISABLED' | 'TARGET_INFERRED' | 'EXPLICIT';
@@ -550,6 +558,19 @@ export class OptimizerService {
         ) ?? null
       : null;
     const selectedParts = recommended ? portfolioActionParts(recommended.actionId) : {};
+    const incumbentUpperBound = recommended?.expectedTotalCostChaos ?? undefined;
+    const unresolvedAcquisitionRoutes = acquisitionRoutes.filter(
+      (route) => route.status === 'UNRESOLVED' || route.couldBeatResolvedIncumbent
+    );
+    const bestUnresolvedLowerBound = unresolvedAcquisitionRoutes.reduce(
+      (minimum, route) => Math.min(minimum, route.lowerBoundChaos),
+      Infinity
+    );
+    const acquisitionSelectionSafe = incumbentUpperBound !== undefined &&
+      !unresolvedAcquisitionRoutes.some((route) => route.lowerBoundChaos < incumbentUpperBound);
+    const acquisitionPotentialGap = incumbentUpperBound !== undefined && Number.isFinite(bestUnresolvedLowerBound)
+      ? Math.max(0, incumbentUpperBound - bestUnresolvedLowerBound)
+      : undefined;
 
     const policyRules: PolicyRule[] = result.onPolicyRules.map((rule) => ({
       stateKey: rule.stateKey,
@@ -575,13 +596,20 @@ export class OptimizerService {
         ? 'Search budget exhausted before every competitive candidate was resolved or bounded.'
         : undefined,
       recommended === null ? 'No fully resolved acquisition route was found within this search budget.' : undefined,
+      recommended !== null && !acquisitionSelectionSafe
+        ? `ACQUISITION SELECTION IS PROVISIONAL: resolved incumbent ${incumbentUpperBound!.toFixed(3)}c; ` +
+          `best unresolved acquisition lower bound ${bestUnresolvedLowerBound.toFixed(3)}c; ` +
+          `potential gap ${acquisitionPotentialGap!.toFixed(3)}c.`
+        : undefined,
     ].filter((warning): warning is string => warning !== undefined);
 
     const recommendationStatus: RecommendationStatus = recommended === null
       ? 'NO_RESOLVED_ROUTE'
       : result.optimalityProof.modeledActionOptimalityProven
         ? 'PROVEN_OPTIMAL'
-        : 'BEST_RESOLVED';
+        : acquisitionSelectionSafe
+          ? 'BEST_RESOLVED_ACQUISITION_SAFE'
+          : 'PROVISIONAL_RESOLVED';
     const selectedMechanicsEvidence = result.mechanicsConfidence.evidence.filter(
       (entry) => entry.onPolicySelections > 0
     );
@@ -659,6 +687,12 @@ export class OptimizerService {
         distinctPhysicalStateCount: new Set(
           portfolio.map((candidate) => getPhysicalStateSignature(candidate.physicalState))
         ).size,
+        selectionSafe: acquisitionSelectionSafe,
+        resolvedIncumbentUpperBoundChaos: incumbentUpperBound,
+        bestUnresolvedLowerBoundChaos: Number.isFinite(bestUnresolvedLowerBound)
+          ? bestUnresolvedLowerBound
+          : undefined,
+        potentialGapChaos: acquisitionPotentialGap,
       },
       expectedCostChaos,
       expectedSaleValueChaos: input.expectedSaleValueChaos,

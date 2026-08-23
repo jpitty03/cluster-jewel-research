@@ -27,9 +27,13 @@ const STATUS_COPY: Record<RecommendationStatus, { title: string; detail: string 
     title: 'Optimal over modeled action/state space',
     detail: 'Every modeled competitor was resolved or safely bounded for this search.',
   },
-  BEST_RESOLVED: {
-    title: 'Best resolved route found',
-    detail: 'Unresolved routes may still be cheaper.',
+  BEST_RESOLVED_ACQUISITION_SAFE: {
+    title: 'Best resolved acquisition-safe route found',
+    detail: 'No unresolved acquisition has a lower bound below this incumbent; broader action proof may remain incomplete.',
+  },
+  PROVISIONAL_RESOLVED: {
+    title: 'Provisional resolved route',
+    detail: 'A cheaper acquisition route remains unresolved, so this incumbent is executable but not yet an economic recommendation.',
   },
   NO_RESOLVED_ROUTE: {
     title: 'No fully resolved route found within this search budget',
@@ -72,6 +76,7 @@ function CraftOptimizer() {
   );
   const [targetModIds, setTargetModIds] = useState(['']);
   const [finalRarity, setFinalRarity] = useState<'any' | 'magic' | 'rare'>('any');
+  const [finishCondition, setFinishCondition] = useState<'allow-extra' | 'no-unwanted'>('allow-extra');
   const [modSearch, setModSearch] = useState('');
   const [cleanBaseCost, setCleanBaseCost] = useState('');
   const [fracturedMarketPrices, setFracturedMarketPrices] = useState<Record<string, string>>({});
@@ -131,6 +136,9 @@ function CraftOptimizer() {
       target: {
         requiredMods: selectedTargetIds.map((modId) => ({ modId })),
         requiredRarity: effectiveRarity === 'any' ? undefined : effectiveRarity,
+        finalStateConstraints: finishCondition === 'no-unwanted'
+          ? { maxUnmatchedAffixes: 0 }
+          : undefined,
       },
       prices: {
         ...marketPricing?.priceContext,
@@ -161,6 +169,7 @@ function CraftOptimizer() {
     cleanBaseCost,
     clusterType,
     effectiveRarity,
+    finishCondition,
     fracturedMarketPrices,
     itemLevel,
     marketPricing,
@@ -335,6 +344,13 @@ function CraftOptimizer() {
             <span>Expected sale value (chaos, optional)</span>
             <input type="number" min="0" step="1" value={saleValue} onChange={(event) => setSaleValue(event.target.value)} />
           </label>
+          <label>
+            <span>Extra affixes</span>
+            <select value={finishCondition} onChange={(event) => setFinishCondition(event.target.value as typeof finishCondition)}>
+              <option value="allow-extra">Allow extra affixes</option>
+              <option value="no-unwanted">No unwanted affixes</option>
+            </select>
+          </label>
         </div>
 
         <p className="muted">
@@ -417,6 +433,7 @@ function CraftOptimizer() {
           <h3>Target summary</h3>
           <p>{baseType} · {clusterType} · ilvl {itemLevel} · {passiveCount} passives</p>
           <p>Final rarity: {validation.normalizedInput.target.requiredRarity ?? 'Any'}</p>
+          <p>Extra affixes: {validation.normalizedInput.target.finalStateConstraints?.maxUnmatchedAffixes === 0 ? 'No unwanted affixes' : 'Allowed'}</p>
           <ul>
             {validation.normalizedInput.target.requiredMods.map((requirement) => (
               <li key={requirement.modId}>
@@ -485,9 +502,15 @@ function CraftOptimizer() {
               <dd>{result.target.requiredMods.map((requirement) =>
                 eligibleMods.find((mod) => mod.modId === requirement.modId)?.displayName ?? requirement.modId
               ).join(' + ')} · {result.target.requiredRarity ?? 'Any rarity'}</dd>
+              <dt>Finish condition</dt>
+              <dd>{result.target.finalStateConstraints?.maxUnmatchedAffixes === 0 ? 'No unwanted affixes' : 'Extra affixes allowed'}</dd>
               <dt>Status</dt><dd>{result.recommendationStatus}</dd>
               <dt>Selected acquisition</dt><dd>{selectedAcquisition?.label ?? result.recommended?.name ?? 'None certified'}</dd>
               <dt>Expected cost</dt><dd>{chaos(result.expectedCostChaos)}</dd>
+              <dt>Acquisition safe</dt><dd>{result.acquisition.selectionSafe ? 'yes' : 'no'}</dd>
+              {result.acquisition.resolvedIncumbentUpperBoundChaos !== undefined && <><dt>Resolved incumbent U</dt><dd>{chaos(result.acquisition.resolvedIncumbentUpperBoundChaos)}</dd></>}
+              {result.acquisition.bestUnresolvedLowerBoundChaos !== undefined && <><dt>Best unresolved acquisition L</dt><dd>{chaos(result.acquisition.bestUnresolvedLowerBoundChaos)}</dd></>}
+              {result.acquisition.potentialGapChaos !== undefined && <><dt>Potential acquisition gap</dt><dd>{chaos(result.acquisition.potentialGapChaos)}</dd></>}
               {result.expectedSaleValueChaos !== undefined && <><dt>Expected sale value</dt><dd>{chaos(result.expectedSaleValueChaos)}</dd></>}
               {result.expectedProfitChaos !== undefined && <><dt>Expected profit</dt><dd>{chaos(result.expectedProfitChaos)}</dd></>}
               <dt>Proof</dt><dd>{result.proof.proofLevel}</dd>
@@ -512,7 +535,7 @@ function CraftOptimizer() {
 
           <div className="optimizer-result-grid">
             <section className="optimizer-card">
-              <h2>Recommended acquisition</h2>
+              <h2>{result.recommendationStatus === 'PROVISIONAL_RESOLVED' ? 'Resolved incumbent acquisition' : 'Recommended acquisition'}</h2>
               {result.recommended ? (
                 <>
                   <p><strong>{selectedAcquisition?.label ?? result.recommended.name}</strong></p>
@@ -592,12 +615,14 @@ function CraftOptimizer() {
                 <dt>Engine elapsed</dt><dd>{result.search.elapsedMs.toLocaleString()} ms</dd>
                 <dt>Worker round trip</dt><dd>{runtimeMs?.toFixed(0)} ms</dd>
                 <dt>Engine / host deadline</dt><dd>{result.search.engineDeadlineMs} / {result.search.hostGuardDeadlineMs} ms</dd>
-                <dt>First completed round</dt><dd>{result.search.timeToFirstCompletedRoundMs ?? 'not reached'} ms</dd>
-                <dt>First certified policy</dt><dd>{result.search.timeToFirstCertifiedPolicyMs ?? 'not reached'} ms</dd>
-                <dt>First acquisition-safe recommendation</dt><dd>{result.search.timeToFirstUsefulRecommendationMs ?? 'not reached'} ms</dd>
+                <dt>First completed round</dt><dd>{result.search.timeToFirstCompletedRoundMs === undefined ? 'not reached' : `${result.search.timeToFirstCompletedRoundMs} ms`}</dd>
+                <dt>First certified policy</dt><dd>{result.search.timeToFirstCertifiedPolicyMs === undefined ? 'not reached' : `${result.search.timeToFirstCertifiedPolicyMs} ms`}</dd>
+                <dt>First acquisition-safe recommendation</dt><dd>{result.search.timeToFirstUsefulRecommendationMs === undefined ? 'not reached' : `${result.search.timeToFirstUsefulRecommendationMs} ms`}</dd>
+                <dt>Minimum feasible rarity</dt><dd>{result.search.minimumFeasibleRarity.rarity} — {result.search.minimumFeasibleRarity.reason}</dd>
                 <dt>Returned at budget</dt><dd>{result.search.returnedAtBudget ? 'yes' : 'no'}</dd>
                 <dt>Host guard triggered</dt><dd>{result.search.hostGuardTriggered ? 'yes' : 'no'}</dd>
                 <dt>Expansion architecture</dt><dd>{result.search.expansionMode}; {result.search.repeatedStatesExpanded.toLocaleString()} repeated states</dd>
+                <dt>Fair acquisition probes</dt><dd>{result.search.acquisitionFeasibility.certifiedCandidates}/{result.search.acquisitionFeasibility.attemptedCandidates} certified</dd>
                 <dt>Budget exhausted</dt><dd>{result.search.budgetExhausted ? 'yes' : 'no'}</dd>
                 <dt>Raw inferred tags</dt><dd>{result.search.harvestActionScope.rawInferredTags.join(', ') || 'none'}</dd>
                 <dt>Enabled Harvest crafts</dt>
@@ -609,6 +634,21 @@ function CraftOptimizer() {
                   <tr key={stage}><th>{stage}</th><td>{milliseconds} ms</td></tr>
                 ))}</tbody></table>
               </details>
+              {result.search.intent === 'DEEPEN' && (
+                <details>
+                  <summary>DEEPEN progress</summary>
+                  <dl>
+                    <dt>New canonical states</dt><dd>{result.search.deepenProgress.newCanonicalStates}</dd>
+                    <dt>New acquisition upper bounds</dt><dd>{result.search.deepenProgress.newAcquisitionFeasibleUpperBounds}</dd>
+                    <dt>Unresolved acquisitions</dt><dd>{result.search.deepenProgress.before.unresolvedAcquisitionCandidates} → {result.search.deepenProgress.after.unresolvedAcquisitionCandidates}</dd>
+                    <dt>Best unresolved lower bound</dt><dd>{chaos(result.search.deepenProgress.before.bestUnresolvedAcquisitionLowerBoundChaos)} → {chaos(result.search.deepenProgress.after.bestUnresolvedAcquisitionLowerBoundChaos)}</dd>
+                    <dt>Incumbent upper bound</dt><dd>{chaos(result.search.deepenProgress.before.incumbentUpperBoundChaos)} → {chaos(result.search.deepenProgress.after.incumbentUpperBoundChaos)}</dd>
+                    <dt>Newly dominated</dt><dd>{result.search.deepenProgress.newlyDominatedByBound}</dd>
+                    <dt>Optimality gap</dt><dd>{chaos(result.search.deepenProgress.before.optimalityGapChaos)} → {chaos(result.search.deepenProgress.after.optimalityGapChaos)}</dd>
+                  </dl>
+                  {result.search.deepenProgress.message && <p>{result.search.deepenProgress.message}</p>}
+                </details>
+              )}
             </section>
             <section className="optimizer-card">
               <h2>Confidence</h2>
