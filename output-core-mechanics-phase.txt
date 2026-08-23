@@ -43,8 +43,8 @@ KEY EXTERNAL OBSERVATIONS SUMMARY (2.6M+ Cumulative Attempt Evidence):
 1. Alteration -> T1 Int: CoE observed 1.5215% (~1 / 65.7) vs Engine 1.4377% (1 / 69.6). Status: ALIGNED.
 2. Fracturing Orb: shared analytical 25.0000%; seeded shared MC 24.9550% (20,000 trials). Status: ALIGNED.
 3. Compound Harvest Defence: CoE observed 0.1225% (~1 / 816.1) across 2,601,014 attempts.
-   Tracked assessment: CLOSE / APPROXIMATE — ENGINE ~19% OPTIMISTIC. Non-blocking REFERENCE EXPECTATION until shared Harvest execution exists.
-4. Post-Harvest Annul: CoE observed 21.4730% (~1 / 4.66) across 4,019 attempts. Status: REFERENCE EXPECTATION (propagated shared Harvest state distribution not yet executable).
+   Tracked assessment: CLOSE / APPROXIMATE — ENGINE ~19% OPTIMISTIC. Non-blocking REFERENCE EXPECTATION; this compound fixture is not an end-to-end check of the shared generic approximation.
+4. Post-Harvest Annul: CoE observed 21.4730% (~1 / 4.66) across 4,019 attempts. Status: REFERENCE EXPECTATION (the compound fixture is not propagated through this parity harness).
 5. Final Exalt (+4 Attr / 3% AS): shared analytical 3.8062%; seeded shared MC 3.8350% (20,000 trials). External 3.5921%. Status: ALIGNED.
 
 FULL-POOL CLEAN-BASE T1 INTELLIGENCE POLICY PRESERVATION:
@@ -75,6 +75,7 @@ FULL-POOL CLEAN-BASE T1 INTELLIGENCE POLICY PRESERVATION:
   Action Fracturing Orb: local successors=0, first discoveries=0, on-policy selections=0, unresolved edges=0
 
 FULL GENERIC MULTI-STAGE ROUTE:
+  BOUNDED MECHANICS FIXTURE — NOT PRODUCTION ECONOMICS
   Target: magic item with fractured T1 Intelligence + T1 Maximum Energy Shield
   Modeled pool: bounded five-mod fixture using real cluster-jewel mods/weights; route logic remains generic.
   Generated physical starting states: 3
@@ -117,6 +118,7 @@ FULL GENERIC MULTI-STAGE ROUTE:
   Policy family includes normal -> magic -> rare -> fracture -> scour/reset -> continue -> finish: YES
 
 CRAFT B GENERIC CLEAN-BASE DISCOVERY:
+  BOUNDED MECHANICS FIXTURE — NOT PRODUCTION ECONOMICS
   Target only: Blanketed Snow + Prismatic Heart + Widespread Destruction
   Modeled pool: bounded three-notable fixture using real Cold-cluster mods/weights; no Craft-B solver branch.
     Craft B solve:

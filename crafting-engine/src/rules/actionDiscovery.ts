@@ -2,7 +2,11 @@ import type { ItemState } from '../domain/ItemState.ts';
 import type { TargetDefinition } from '../domain/TargetDefinition.ts';
 import type { SolverContext } from '../domain/CraftAction.ts';
 import type { RolledMod } from '../domain/Mod.ts';
-import { matchesModRequirement, evaluateRollRequirement } from '../domain/TargetDefinition.ts';
+import {
+  matchesModRequirement,
+  evaluateRollRequirement,
+  getAllTargetModRequirements,
+} from '../domain/TargetDefinition.ts';
 
 import {
   CRAFT_MECHANICS,
@@ -96,10 +100,14 @@ export function getCanonicalStateKey(
   target?: TargetDefinition,
   options: CanonicalStateKeyOptions = { includeContextScope: true }
 ): string {
-  const reqs = target ? [...target.requiredMods, ...(target.outcomeBranches?.flatMap((b) => b.requiredMods) ?? [])] : [];
+  const reqs = target ? getAllTargetModRequirements(target) : [];
 
   const formatMod = (m: RolledMod): string => {
-    const isTarget = reqs.some((r) => matchesModRequirement(m, r));
+    const matchingTargetRequirements = reqs
+      .map((requirement, index) => matchesModRequirement(m, requirement) ? index : -1)
+      .filter((index) => index >= 0);
+    const isTarget = matchingTargetRequirements.length > 0;
+    const targetSuffix = isTarget ? `:target(${matchingTargetRequirements.join(',')})` : '';
     const fractureRequirement = reqs.some(
       (r) => r.mustBeFractured !== undefined &&
         (r.modId ? r.modId === m.modId : true) &&
@@ -126,14 +134,17 @@ export function getCanonicalStateKey(
 
     // Always preserve full sorted modGroups exclusion set to ensure mod-group blocking and eligibility are preserved
     const allGroups = (m.modGroups && m.modGroups.length > 0 ? m.modGroups : [m.modGroup ?? m.modId]).slice().sort().join('+');
-    return `${isFrac}groups(${allGroups}):t${m.tier}${fractureRequirement ? ':fracture-sensitive' : ''}${tagsSuffix}${rollSuffix}`;
+    return `${isFrac}groups(${allGroups}):t${m.tier}${targetSuffix}${fractureRequirement ? ':fracture-sensitive' : ''}${tagsSuffix}${rollSuffix}`;
   };
 
   const pKeys = state.prefixes.map(formatMod).sort().join('|');
   const sKeys = state.suffixes.map(formatMod).sort().join('|');
 
   const contextPrefix = options.includeContextScope
-    ? `${state.baseType ?? 'Large Cluster Jewel'}:${state.clusterType ?? 'generic'}:${state.itemLevel ?? 84}:${state.passiveCount ?? 12}:`
+    ? `${state.baseType ?? 'Large Cluster Jewel'}:${state.clusterType ?? 'generic'}:${state.itemLevel ?? 84}:${state.passiveCount ?? 12}:` +
+      `flags(influenced=${state.flags?.influenced === true || state.metadata?.influenced === true},` +
+      `synthesised=${state.flags?.synthesised === true || state.metadata?.synthesised === true},` +
+      `acquisitionMenu=${state.flags?.acquisitionMenu === true}):`
     : '';
 
   return `${contextPrefix}${state.rarity}|P:[${pKeys}]|S:[${sKeys}]`;

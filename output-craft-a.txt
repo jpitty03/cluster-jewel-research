@@ -17754,31 +17754,4 @@ Exalted Orb Slam                116.53             115.45            0.92%      
 STABILITY CONCLUSION:
   Status:                MULTI-SEED STABLE
   Assessment:            Pooled action counts <=10% and completion >=99% across all deterministic seeds.
-
-================================================================================
-AUTOMATIC STARTING-STATE DISCOVERY DIAGNOSTIC: Craft A (Shield Cluster)
-================================================================================
-Target Definition: 3 base required mods (3 outcome branches)
-
-CANDIDATE SET STRUCTURAL AUDIT:
-  Clean Physical Base Generated (Rarity: normal): YES
-  Required-Mod Fractured Starts Generated:        YES
-  Duplicate Physical State Solves:               0 (Memoized by canonical state key)
-
-GENERATED STARTING CANDIDATES (7 routes from 7 physical states):
-Route Name                                Acquisition Mode     Acq Cost        Downstream EV   Full Route EV
----------------------------------------------------------------------------------------------------------
-Self-Fracture 35% Increased Effect [Powerful] self-fracture        1534.3c (~7.67 div) 6090.3c (~30.45 div) 7624.6c (~38.12 div)
-Start Clean Base Clean Base               clean-base           10.0c           UNRESOLVED      UNRESOLVED
-Self-Fracture T1 Maximum Energy Shield [Glowing] self-fracture        1534.3c (~7.67 div) UNRESOLVED      UNRESOLVED
-Self-Fracture T1 Intelligence [of the Prodigy] self-fracture        1539.0c (~7.70 div) UNRESOLVED      UNRESOLVED
-Self-Fracture +4 to all Attributes [of the Meteor] self-fracture        1539.0c (~7.70 div) UNRESOLVED      UNRESOLVED
-Self-Fracture 3% increased Attack Speed [Added Small Passive Skills also grant: 3% increased Attack Speed] self-fracture        1543.6c (~7.72 div) UNRESOLVED      UNRESOLVED
-Self-Fracture +4% to all Elemental Resistance [of the Kaleidoscope] self-fracture        1539.0c (~7.70 div) UNRESOLVED      UNRESOLVED
----------------------------------------------------------------------------------------------------------
-
-AUTOMATIC DISCOVERY VERIFICATION:
-  Best Fully Resolved Route: Self-Fracture 35% Increased Effect [Powerful] (7624.6c (~38.12 div))
-  Reference Fixture Route:   Self-Fracture 35% Effect (Clean 12p Base) (7623.7c (~38.12 div))
-  Resolved-Route Consistency: PASSED (auto-discovered resolved route matches manual reference fixture)
-  Global Route Optimality:    NOT YET PROVEN (6 alternatives unresolved)
+AUTO-DISCOVERY DIAGNOSTIC: SKIPPED IN --regressions-only MODE (covered by the budgeted pre-UI generic diagnostic).

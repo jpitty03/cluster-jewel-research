@@ -34855,29 +34855,4 @@ Exalted Orb Slam                371.51             392.80            5.73%      
 STABILITY CONCLUSION:
   Status:                MULTI-SEED STABLE
   Assessment:            Pooled action counts <=10% and completion >=99% across all deterministic seeds.
-
-================================================================================
-AUTOMATIC STARTING-STATE DISCOVERY DIAGNOSTIC: Craft C (Minion Cluster)
-================================================================================
-Target Definition: 4 base required mods (0 outcome branches)
-
-CANDIDATE SET STRUCTURAL AUDIT:
-  Clean Physical Base Generated (Rarity: normal): YES
-  Required-Mod Fractured Starts Generated:        YES
-  Duplicate Physical State Solves:               0 (Memoized by canonical state key)
-
-GENERATED STARTING CANDIDATES (5 routes from 5 physical states):
-Route Name                                Acquisition Mode     Acq Cost        Downstream EV   Full Route EV
----------------------------------------------------------------------------------------------------------
-Self-Fracture 35% Increased Effect [Powerful] self-fracture        1531.2c (~7.66 div) 41281.0c (~206.40 div) 42812.2c (~214.06 div)
-Start Clean Base Clean Base               clean-base           10.0c           UNRESOLVED      UNRESOLVED
-Self-Fracture T1 Maximum Life [Sanguine]  self-fracture        1531.2c (~7.66 div) UNRESOLVED      UNRESOLVED
-Self-Fracture +4 to all Attributes [of the Meteor] self-fracture        1538.6c (~7.69 div) UNRESOLVED      UNRESOLVED
-Self-Fracture +5% to Chaos Resistance [of Eviction] self-fracture        1538.6c (~7.69 div) UNRESOLVED      UNRESOLVED
----------------------------------------------------------------------------------------------------------
-
-AUTOMATIC DISCOVERY VERIFICATION:
-  Best Fully Resolved Route: Self-Fracture 35% Increased Effect [Powerful] (42812.2c (~214.06 div))
-  Reference Fixture Route:   Fractured 35% Increased Effect Base (Self-Fracture) (42814.4c (~214.07 div))
-  Resolved-Route Consistency: PASSED (auto-discovered resolved route matches manual reference fixture)
-  Global Route Optimality:    NOT YET PROVEN (4 alternatives unresolved)
+AUTO-DISCOVERY DIAGNOSTIC: SKIPPED IN --regressions-only MODE (covered by the budgeted pre-UI generic diagnostic).

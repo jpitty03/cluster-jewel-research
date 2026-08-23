@@ -1,15 +1,23 @@
 import type { ItemState } from '../domain/ItemState.ts';
-import { cloneItemState } from '../domain/ItemState.ts';
+import { cloneItemState, isFracturedMod, normalizeItemState } from '../domain/ItemState.ts';
 import type { TargetDefinition } from '../domain/TargetDefinition.ts';
 import type { SolverContext } from '../domain/CraftAction.ts';
 import type { PriceConfidence, PriceSource } from '../domain/PriceBook.ts';
 import type { RandomSource } from '../probability/random.ts';
-import { matchesModRequirement, satisfiesTarget } from '../domain/TargetDefinition.ts';
+import {
+  getAllTargetModRequirements,
+  matchesModRequirement,
+  satisfiesTarget,
+} from '../domain/TargetDefinition.ts';
 import {
   CRAFT_MECHANICS,
+  createAcquisitionPortfolioMechanics,
+  createHarvestReforgeMechanics,
   createRestartReacquireMechanic,
+  type AcquisitionPortfolioCandidate,
   type CraftMechanic,
   type CraftCost,
+  type MechanicsConfidence,
   type RestartReacquireDefinition,
   type TransitionDistribution,
 } from '../rules/actionRegistry.ts';
@@ -36,6 +44,12 @@ export class SolverCraftActionAdapter {
   }
 
   applicable(state: ItemState): boolean {
+    if (
+      state.flags?.acquisitionMenu === true &&
+      this.mechanic.actionType !== 'RESTART_REACQUIRE'
+    ) {
+      return false;
+    }
     return this.mechanic.isLegal(state, this.target, this.context);
   }
 
@@ -48,11 +62,29 @@ export class SolverCraftActionAdapter {
     if (this.mechanic.id === 'alteration_orb') {
       const resetState = cloneItemState(state);
       resetState.prefixes = resetState.prefixes.filter(
-        (mod) => mod.isFractured || state.fracturedModIds.includes(mod.modId)
+        (mod) => isFracturedMod(state, mod)
       );
       resetState.suffixes = resetState.suffixes.filter(
-        (mod) => mod.isFractured || state.fracturedModIds.includes(mod.modId)
+        (mod) => isFracturedMod(state, mod)
       );
+      const cacheKey = getCanonicalStateKey(resetState, this.target);
+      const cached = this.transitionCache.get(cacheKey);
+      if (cached) return cached;
+      const distribution = this.mechanic.getTransitions(state, this.target, this.context);
+      this.transitionCache.set(cacheKey, distribution);
+      return distribution;
+    }
+    if (this.mechanic.actionType === 'HARVEST_REFORGE') {
+      // A Harvest reforge removes every non-fractured explicit before rolling.
+      // Cache by that post-removal physical input so a full-pool graph does not
+      // regenerate the same large analytical distribution for every rare miss.
+      const resetState = cloneItemState(state);
+      resetState.rarity = 'rare';
+      resetState.prefixes = resetState.prefixes.filter((mod) => isFracturedMod(state, mod));
+      resetState.suffixes = resetState.suffixes.filter((mod) => isFracturedMod(state, mod));
+      resetState.fracturedModIds = [...resetState.prefixes, ...resetState.suffixes]
+        .filter((mod) => mod.isFractured)
+        .map((mod) => mod.modId);
       const cacheKey = getCanonicalStateKey(resetState, this.target);
       const cached = this.transitionCache.get(cacheKey);
       if (cached) return cached;
@@ -116,6 +148,7 @@ export interface GraphBuildResult {
   nodes: Map<string, CanonicalGraphNode>;
   maxStates: number;
   hitStateLimit: boolean;
+  hitWallTimeLimit: boolean;
   queuedButUnexpandedStates: number;
   transitionsToUnexpandedStates: number;
   transitionProbabilityMassToUnexpandedStates: number;
@@ -164,6 +197,17 @@ export interface PriceConfidenceResult {
   warnings: string[];
 }
 
+export interface MechanicsConfidenceResult {
+  evidence: Array<{
+    actionId: string;
+    actionName: string;
+    confidence: MechanicsConfidence;
+    provenance?: string;
+    onPolicySelections: number;
+  }>;
+  warnings: string[];
+}
+
 export interface ValueIterationConvergence {
   iterations: number;
   converged: boolean;
@@ -198,8 +242,25 @@ export interface GenericSearchResult {
   reconciliation: ExpectedCostReconciliation;
   optimalityProof: OptimalityProofResult;
   priceConfidence: PriceConfidenceResult;
+  mechanicsConfidence: MechanicsConfidenceResult;
+  searchSummary: SearchSummary;
   isTargetSatisfied: boolean;
   explanation: string;
+}
+
+export interface SearchSummary {
+  statesExpanded: number;
+  cumulativeExpansionWork: number;
+  elapsedMs: number;
+  expansionRounds: number;
+  maxStates: number;
+  maxWallTimeMs?: number;
+  maxExpansionRounds: number;
+  prioritizedCompetitiveStateKeys: number;
+  stateBudgetExhausted: boolean;
+  wallTimeBudgetExhausted: boolean;
+  roundBudgetExhausted: boolean;
+  budgetExhausted: boolean;
 }
 
 export interface CanonicalGraphNode {
@@ -224,9 +285,14 @@ export interface GenericSearchOptions {
   maxIterations?: number;
   convergenceEpsilon?: number;
   restartReacquire?: RestartReacquireDefinition;
+  acquisitionPortfolio?: AcquisitionPortfolioCandidate[];
+  includeHarvest?: boolean;
+  harvestTags?: string[];
   enabledActionIds?: string[];
   prioritizeTargetProgress?: boolean;
   maxMarkovIterations?: number;
+  maxWallTimeMs?: number;
+  maxExpansionRounds?: number;
 }
 
 class StateExpansionQueue {
@@ -321,6 +387,12 @@ export class GenericSearchEngine {
     this.defaultOptions = options;
 
     const mechanics = [...CRAFT_MECHANICS];
+    if (options.includeHarvest) {
+      mechanics.push(...createHarvestReforgeMechanics(context, options.harvestTags));
+    }
+    if (options.acquisitionPortfolio) {
+      mechanics.push(...createAcquisitionPortfolioMechanics(options.acquisitionPortfolio));
+    }
     if (options.restartReacquire) {
       mechanics.push(createRestartReacquireMechanic(options.restartReacquire));
     }
@@ -340,14 +412,12 @@ export class GenericSearchEngine {
     }).map((m) => new SolverCraftActionAdapter(m, context, target));
   }
 
-  private expansionPriority(state: ItemState): number {
-    if (!this.defaultOptions.prioritizeTargetProgress) return 0;
+  private expansionPriority(state: ItemState, prioritizedStateKeys?: ReadonlySet<string>): number {
+    const key = getCanonicalStateKey(state, this.target);
+    const competitiveBonus = prioritizedStateKeys?.has(key) ? 1_000_000 : 0;
+    if (!this.defaultOptions.prioritizeTargetProgress) return competitiveBonus;
     const affixes = [...state.prefixes, ...state.suffixes];
-    const requirements = [
-      ...this.target.requiredMods,
-      ...(this.target.outcomeBranches?.flatMap((branch) => branch.requiredMods) ?? []),
-      ...(this.target.acceptableAnyOf?.flat() ?? []),
-    ];
+    const requirements = getAllTargetModRequirements(this.target);
     let score = state.rarity === 'rare' ? 20 : state.rarity === 'magic' ? 10 : 0;
     score += affixes.length;
     for (const requirement of requirements) {
@@ -362,19 +432,25 @@ export class GenericSearchEngine {
         }
       }
     }
-    return score;
+    return score + competitiveBonus;
   }
 
   /**
    * Builds the reachable canonical state graph starting from startState.
    * Tracks exact graph-build completeness metadata, unexpanded states, and missing probability mass.
    */
-  public buildGraph(startState: ItemState, maxStates = 5000): GraphBuildResult {
+  public buildGraph(
+    startState: ItemState,
+    maxStates = 5000,
+    prioritizedStateKeys?: ReadonlySet<string>,
+    deadlineMs?: number
+  ): GraphBuildResult {
+    const normalizedStartState = normalizeItemState(startState);
     const nodes = new Map<string, CanonicalGraphNode>();
     const queue = new StateExpansionQueue();
-    queue.push(startState, this.expansionPriority(startState));
+    queue.push(normalizedStartState, this.expansionPriority(normalizedStartState, prioritizedStateKeys));
     const queuedKeys = new Set<string>();
-    queuedKeys.add(getCanonicalStateKey(startState, this.target));
+    queuedKeys.add(getCanonicalStateKey(normalizedStartState, this.target));
 
     let terminalStatesFound = 0;
     const stateCountsByRarity: Record<string, number> = { normal: 0, magic: 0, rare: 0 };
@@ -398,7 +474,11 @@ export class GenericSearchEngine {
       actionLocalSuccessorKeys.set(adapter.id, new Set());
     }
 
-    while (queue.length > 0 && nodes.size < maxStates) {
+    while (
+      queue.length > 0 &&
+      nodes.size < maxStates &&
+      (deadlineMs === undefined || Date.now() < deadlineMs)
+    ) {
       const curr = queue.shift()!;
       const key = getCanonicalStateKey(curr, this.target);
       if (nodes.has(key)) continue;
@@ -435,6 +515,9 @@ export class GenericSearchEngine {
               }
               const aggMap = new Map<string, { targetKey: string; probability: number; nextState: ItemState; label?: string }>();
               for (const out of dist.outcomes) {
+                // Zero-mass analytical entries are not graph edges. Keeping one
+                // can poison continuation arithmetic through 0 * Infinity = NaN.
+                if (!Number.isFinite(out.probability) || out.probability <= 0) continue;
                 const outKey = getCanonicalStateKey(out.state, this.target);
                 actionLocalSuccessorKeys.get(adapter.id)?.add(outKey);
                 const existing = aggMap.get(outKey);
@@ -449,7 +532,7 @@ export class GenericSearchEngine {
                   });
                   if (!queuedKeys.has(outKey)) {
                     queuedKeys.add(outKey);
-                    queue.push(out.state, this.expansionPriority(out.state));
+                    queue.push(out.state, this.expansionPriority(out.state, prioritizedStateKeys));
                     if (actionAttribution[adapter.id]) {
                       actionAttribution[adapter.id].newGlobalStatesFirstDiscovered++;
                     }
@@ -458,6 +541,7 @@ export class GenericSearchEngine {
               }
 
               const transitions = Array.from(aggMap.values());
+              if (transitions.length === 0) continue;
               aggregatedDistributionCache.set(dist, transitions);
               node.actions.set(adapter.id, {
                 action: adapter,
@@ -475,6 +559,7 @@ export class GenericSearchEngine {
     }
 
     const hitStateLimit = nodes.size >= maxStates && queue.length > 0;
+    const hitWallTimeLimit = deadlineMs !== undefined && Date.now() >= deadlineMs && queue.length > 0;
     const queuedButUnexpandedStates = queue.length;
 
     let transitionsToUnexpandedStates = 0;
@@ -520,6 +605,7 @@ export class GenericSearchEngine {
       nodes,
       maxStates,
       hitStateLimit,
+      hitWallTimeLimit,
       queuedButUnexpandedStates,
       transitionsToUnexpandedStates,
       transitionProbabilityMassToUnexpandedStates,
@@ -536,12 +622,150 @@ export class GenericSearchEngine {
    */
   public search(startState: ItemState, options: GenericSearchOptions = {}): GenericSearchResult {
     const effectiveOptions = { ...this.defaultOptions, ...options };
+    const maxStates = effectiveOptions.maxStates ?? 5000;
+    const maxExpansionRounds = Math.max(1, effectiveOptions.maxExpansionRounds ?? 1);
+    const startTime = Date.now();
+    const deadlineMs = effectiveOptions.maxWallTimeMs === undefined
+      ? undefined
+      : startTime + Math.max(1, effectiveOptions.maxWallTimeMs);
+    const statesPerRound = Math.max(1, Math.ceil(maxStates / maxExpansionRounds));
+    let roundStateBudget = Math.min(maxStates, statesPerRound);
+    let prioritizedStateKeys = new Set<string>();
+    let cumulativeExpansionWork = 0;
+    let roundsExecuted = 0;
+    let result: GenericSearchResult | undefined;
+
+    for (let round = 0; round < maxExpansionRounds; round++) {
+      if (deadlineMs !== undefined && Date.now() >= deadlineMs) break;
+      result = this.searchOnce(
+        startState,
+        { ...effectiveOptions, maxStates: roundStateBudget },
+        prioritizedStateKeys,
+        deadlineMs
+      );
+      roundsExecuted++;
+      cumulativeExpansionWork += result.graphBuild.nodes.size;
+
+      const competitiveKeys = this.collectCompetitiveMissingStateKeys(result);
+      if (
+        competitiveKeys.size === 0 ||
+        !result.optimalityProof.unresolvedCandidatesCouldBeatIncumbent ||
+        (!result.graphBuild.hitStateLimit && !result.graphBuild.hitWallTimeLimit)
+      ) {
+        prioritizedStateKeys = competitiveKeys;
+        break;
+      }
+      prioritizedStateKeys = competitiveKeys;
+      if (roundStateBudget >= maxStates) break;
+      roundStateBudget = Math.min(maxStates, roundStateBudget + statesPerRound);
+    }
+
+    if (!result) {
+      // A tiny expired wall budget still receives one minimal, proof-honest solve.
+      result = this.searchOnce(startState, { ...effectiveOptions, maxStates: 1 });
+      roundsExecuted = 1;
+      cumulativeExpansionWork = result.graphBuild.nodes.size;
+    }
+
+    const elapsedMs = Date.now() - startTime;
+    const competitiveRemain = result.optimalityProof.unresolvedCandidatesCouldBeatIncumbent;
+    const stateBudgetExhausted = competitiveRemain && result.graphBuild.hitStateLimit && roundStateBudget >= maxStates;
+    const wallTimeBudgetExhausted = competitiveRemain && (
+      result.graphBuild.hitWallTimeLimit ||
+      (effectiveOptions.maxWallTimeMs !== undefined && elapsedMs >= effectiveOptions.maxWallTimeMs)
+    );
+    const roundBudgetExhausted = competitiveRemain && roundsExecuted >= maxExpansionRounds;
+    result.searchSummary = {
+      statesExpanded: result.graphBuild.nodes.size,
+      cumulativeExpansionWork,
+      elapsedMs,
+      expansionRounds: roundsExecuted,
+      maxStates,
+      maxWallTimeMs: effectiveOptions.maxWallTimeMs,
+      maxExpansionRounds,
+      prioritizedCompetitiveStateKeys: prioritizedStateKeys.size,
+      stateBudgetExhausted,
+      wallTimeBudgetExhausted,
+      roundBudgetExhausted,
+      budgetExhausted: stateBudgetExhausted || wallTimeBudgetExhausted || roundBudgetExhausted,
+    };
+    return result;
+  }
+
+  private collectCompetitiveMissingStateKeys(result: GenericSearchResult): Set<string> {
+    const prioritized = new Set<string>();
+    const nodes = result.graphBuild.nodes;
+    const onPolicyKeys = new Set<string>();
+    const onPolicyQueue = [getCanonicalStateKey(result.startingState, this.target)];
+    while (onPolicyQueue.length > 0) {
+      const key = onPolicyQueue.shift()!;
+      if (onPolicyKeys.has(key)) continue;
+      onPolicyKeys.add(key);
+      const node = nodes.get(key);
+      const decision = result.policyMap.get(key);
+      const action = node && decision ? node.actions.get(decision.bestActionId) : undefined;
+      for (const transition of action?.transitions ?? []) {
+        if (nodes.has(transition.targetKey)) onPolicyQueue.push(transition.targetKey);
+      }
+    }
+    const traceSelectedDescendants = (startKey: string): void => {
+      const queue = [startKey];
+      const visited = new Set<string>();
+      while (queue.length > 0) {
+        const key = queue.shift()!;
+        if (visited.has(key)) continue;
+        visited.add(key);
+        // Rebuilt rounds must retain the complete path to a competitive
+        // missing descendant, not only the leaf that was absent last round.
+        prioritized.add(key);
+        const node = nodes.get(key);
+        const decision = result.policyMap.get(key);
+        const action = node && decision ? node.actions.get(decision.bestActionId) : undefined;
+        if (!action) continue;
+        for (const transition of action.transitions) {
+          if (!nodes.has(transition.targetKey)) prioritized.add(transition.targetKey);
+          else queue.push(transition.targetKey);
+        }
+      }
+    };
+
+    for (const decision of result.policyMap.values()) {
+      if (!onPolicyKeys.has(decision.stateKey)) continue;
+      for (const candidate of decision.candidateQValues) {
+        if (candidate.status !== 'UNRESOLVED' || !candidate.couldBeatResolvedIncumbent) continue;
+        const action = nodes.get(decision.stateKey)?.actions.get(candidate.actionId);
+        if (!action) continue;
+        for (const transition of action.transitions) {
+          if (!nodes.has(transition.targetKey)) prioritized.add(transition.targetKey);
+          else {
+            prioritized.add(transition.targetKey);
+            traceSelectedDescendants(transition.targetKey);
+          }
+        }
+      }
+    }
+    return prioritized;
+  }
+
+  private searchOnce(
+    startState: ItemState,
+    options: GenericSearchOptions = {},
+    prioritizedStateKeys?: ReadonlySet<string>,
+    deadlineMs?: number
+  ): GenericSearchResult {
+    const normalizedStartState = normalizeItemState(startState);
+    const effectiveOptions = { ...this.defaultOptions, ...options };
     const maxIterations = effectiveOptions.maxIterations ?? 500;
     const epsilon = effectiveOptions.convergenceEpsilon ?? 1e-5;
 
-    const graphResult = this.buildGraph(startState, effectiveOptions.maxStates ?? 5000);
+    const graphResult = this.buildGraph(
+      normalizedStartState,
+      effectiveOptions.maxStates ?? 5000,
+      prioritizedStateKeys,
+      deadlineMs
+    );
     const nodes = graphResult.nodes;
-    const startKey = getCanonicalStateKey(startState, this.target);
+    const startKey = getCanonicalStateKey(normalizedStartState, this.target);
 
     // Initialize Value Function V(s): terminal = 0, non-terminal = initial estimate
     const V = new Map<string, number>();
@@ -552,7 +776,15 @@ export class GenericSearchEngine {
     // Value Iteration Loop (solves stochastic shortest path with cycles)
     let iteration = 0;
     let maxDelta = 0;
-    for (; iteration < maxIterations; iteration++) {
+    let valueIterationSweepExecuted = false;
+    let valueIterationSweeps = 0;
+    for (
+      ;
+      iteration < maxIterations && (deadlineMs === undefined || Date.now() < deadlineMs);
+      iteration++
+    ) {
+      valueIterationSweepExecuted = true;
+      valueIterationSweeps++;
       maxDelta = 0;
 
       for (const [key, node] of nodes.entries()) {
@@ -593,7 +825,8 @@ export class GenericSearchEngine {
       }
     }
 
-    const valueIterationConverged = maxDelta < epsilon && Number.isFinite(V.get(startKey));
+    const valueIterationConverged =
+      valueIterationSweepExecuted && maxDelta < epsilon && Number.isFinite(V.get(startKey));
 
     // Extract the selected policy and candidate Q-values with explicit resolution status.
     const policyMap = new Map<string, StatePolicyDecision>();
@@ -694,9 +927,16 @@ export class GenericSearchEngine {
       const absorption = new Map<string, number>();
       for (const [key, node] of nodes) absorption.set(key, node.isTerminal ? 1 : 0);
       let absorptionIterations = 0;
+      let absorptionSweeps = 0;
       let absorptionResidual = Infinity;
       const maxMarkovIterations = effectiveOptions.maxMarkovIterations ?? 5000;
-      for (; absorptionIterations < maxMarkovIterations; absorptionIterations++) {
+      for (
+        ;
+        absorptionIterations < maxMarkovIterations &&
+        (deadlineMs === undefined || Date.now() < deadlineMs);
+        absorptionIterations++
+      ) {
+        absorptionSweeps++;
         absorptionResidual = 0;
         const next = new Map(absorption);
         const absorptionContinuationCache = new Map<
@@ -728,7 +968,7 @@ export class GenericSearchEngine {
       return {
         downstreamUnresolved,
         absorption,
-        iterations: Math.min(absorptionIterations + 1, maxMarkovIterations),
+        iterations: absorptionSweeps,
         residual: absorptionResidual,
         converged: absorptionResidual < 1e-10,
       };
@@ -772,7 +1012,11 @@ export class GenericSearchEngine {
 
     let policyTrust = computePolicyTrust();
     let candidateResolutionConverged = false;
-    for (let pass = 0; pass < nodes.size; pass++) {
+    for (
+      let pass = 0;
+      pass < nodes.size && (deadlineMs === undefined || Date.now() < deadlineMs);
+      pass++
+    ) {
       const changed = classifyCandidates(policyTrust);
       if (!changed) {
         candidateResolutionConverged = true;
@@ -895,7 +1139,16 @@ export class GenericSearchEngine {
 
     let visitIteration = 0;
     let visitMaxResidual = 0;
-    for (; visitIteration < (effectiveOptions.maxMarkovIterations ?? 1000); visitIteration++) {
+    let visitSweepExecuted = false;
+    let visitSweeps = 0;
+    for (
+      ;
+      visitIteration < (effectiveOptions.maxMarkovIterations ?? 1000) &&
+      (deadlineMs === undefined || Date.now() < deadlineMs);
+      visitIteration++
+    ) {
+      visitSweepExecuted = true;
+      visitSweeps++;
       visitMaxResidual = 0;
       const nextVisits = new Map<string, number>();
       for (const key of onPolicyReachableKeys) nextVisits.set(key, key === startKey ? 1.0 : 0);
@@ -966,8 +1219,16 @@ export class GenericSearchEngine {
       const actCost = actData.immediateCostChaos;
       sumExpectedActionCostChaos += visits * actCost;
 
-      const currency = currencyByActionId[decision.bestActionId] ?? decision.bestActionId;
-      expectedCurrencies[currency] = (expectedCurrencies[currency] ?? 0) + visits;
+      if (actData.action.mechanic.actionType === 'HARVEST_REFORGE') {
+        const lifeforceType = String(actData.action.mechanic.parameters?.lifeforceType ?? 'lifeforce');
+        const amount = Number(actData.action.mechanic.parameters?.lifeforceAmount ?? 0);
+        expectedCurrencies[lifeforceType] = (expectedCurrencies[lifeforceType] ?? 0) + visits * amount;
+      } else {
+        const currency = actData.action.mechanic.actionType === 'RESTART_REACQUIRE'
+          ? 'reacquisition'
+          : currencyByActionId[decision.bestActionId] ?? decision.bestActionId;
+        expectedCurrencies[currency] = (expectedCurrencies[currency] ?? 0) + visits;
+      }
       selectedPriceEvidence.set(decision.bestActionId, {
         actionId: decision.bestActionId,
         actionName: decision.bestActionName,
@@ -981,7 +1242,7 @@ export class GenericSearchEngine {
     const totalExpectedCostChaos = policyMap.get(startKey)?.optimalValueChaos ?? V.get(startKey) ?? Infinity;
     const isTargetSatisfied = Number.isFinite(totalExpectedCostChaos) && onPolicyGraph.isProper;
     const reconciliationDiff = Math.abs(sumExpectedActionCostChaos - totalExpectedCostChaos);
-    const visitConverged = visitMaxResidual < 1e-6;
+    const visitConverged = visitSweepExecuted && visitMaxResidual < 1e-6;
     const isReconciled = onPolicyGraph.isProper && visitConverged && reconciliationDiff < 0.05;
 
     const onPolicyDecisions = [...policyMap.values()].filter((decision) => onPolicyReachableKeys.has(decision.stateKey));
@@ -993,6 +1254,7 @@ export class GenericSearchEngine {
     );
     const modeledOptimalityProven =
       !graphResult.hitStateLimit &&
+      !graphResult.hitWallTimeLimit &&
       graphResult.transitionsToUnexpandedStates === 0 &&
       valueIterationConverged &&
       candidateResolutionConverged &&
@@ -1033,13 +1295,35 @@ export class GenericSearchEngine {
       evidence: priceEvidence,
       warnings: priceWarnings,
     };
+    const mechanicsEvidence: MechanicsConfidenceResult['evidence'] = this.adapters
+      .filter((adapter) => {
+        const attribution = graphResult.actionAttribution[adapter.id];
+        return (attribution?.actionLocalUniqueSuccessorKeysProduced ?? 0) > 0 ||
+          (attribution?.onPolicyStatesSelectingAction ?? 0) > 0;
+      })
+      .map((adapter) => ({
+        actionId: adapter.id,
+        actionName: adapter.name,
+        confidence: adapter.mechanic.mechanicsConfidence ?? 'VALIDATED',
+        provenance: adapter.mechanic.mechanicsProvenance,
+        onPolicySelections: graphResult.actionAttribution[adapter.id]?.onPolicyStatesSelectingAction ?? 0,
+      }));
+    const mechanicsConfidence: MechanicsConfidenceResult = {
+      evidence: mechanicsEvidence,
+      warnings: mechanicsEvidence
+        .filter((evidence) => evidence.confidence !== 'VALIDATED')
+        .map((evidence) =>
+          `${evidence.actionName}: ${evidence.confidence}` +
+          (evidence.provenance ? ` (${evidence.provenance})` : '')
+        ),
+    };
 
     const steps: GenericSearchStep[] = [];
     const startDecision = policyMap.get(startKey);
     if (startDecision) {
       const startNode = nodes.get(startKey);
       steps.push({
-        stateDescription: `${startState.rarity.toUpperCase()} jewel (0 affixes)`,
+        stateDescription: `${normalizedStartState.rarity.toUpperCase()} jewel (0 affixes)`,
         legalActionsConsidered: startNode ? Array.from(startNode.actions.values()).map((a) => a.action.name) : [],
         candidateQValues: startDecision.candidateQValues,
         selectedAction: startDecision.bestActionName,
@@ -1088,14 +1372,14 @@ export class GenericSearchEngine {
 
     const lines: string[] = [];
     lines.push('GENERIC BELLMAN VALUE ITERATION SEARCH REPORT:');
-    lines.push(`1. Reachable Canonical States: ${nodes.size} states explored across ${iteration} iterations.`);
+    lines.push(`1. Reachable Canonical States: ${nodes.size} states explored across ${valueIterationSweeps} Bellman sweeps.`);
     lines.push(`2. On-Policy Reachable States: ${onPolicyGraph.onPolicyReachableStates} states (${onPolicyGraph.isFullyResolved ? 'fully resolved' : 'unresolved'} on policy).`);
     lines.push(`3. Start State EV: ${totalExpectedCostChaos.toFixed(2)}c (~${(totalExpectedCostChaos / (this.context.priceBook.getRate('divine') || 200)).toFixed(3)} div).`);
     lines.push(`4. Selected policy: ${optimalityProof.selectedPolicyStatus}.`);
     lines.push(`5. Proof level: ${optimalityProof.proofLevel}; GLOBAL OPTIMALITY: ${optimalityProof.globalOptimality}.`);
 
     return {
-      startingState: startState,
+      startingState: normalizedStartState,
       target: this.target,
       totalExpectedCostChaos,
       expectedCurrencies,
@@ -1109,7 +1393,7 @@ export class GenericSearchEngine {
       graphBuild: graphResult,
       onPolicyGraph,
       convergence: {
-        iterations: Math.min(iteration, maxIterations),
+        iterations: valueIterationSweeps,
         converged: valueIterationConverged,
         finalMaxResidual: maxDelta,
         epsilon,
@@ -1120,12 +1404,27 @@ export class GenericSearchEngine {
         reportedDownstreamEVChaos: totalExpectedCostChaos,
         differenceChaos: reconciliationDiff,
         isReconciled,
-        visitIterations: Math.min(visitIteration, effectiveOptions.maxMarkovIterations ?? 1000),
+        visitIterations: visitSweeps,
         visitMaxResidual,
         visitConverged,
       },
       optimalityProof,
       priceConfidence,
+      mechanicsConfidence,
+      searchSummary: {
+        statesExpanded: nodes.size,
+        cumulativeExpansionWork: nodes.size,
+        elapsedMs: 0,
+        expansionRounds: 1,
+        maxStates: effectiveOptions.maxStates ?? 5000,
+        maxWallTimeMs: effectiveOptions.maxWallTimeMs,
+        maxExpansionRounds: effectiveOptions.maxExpansionRounds ?? 1,
+        prioritizedCompetitiveStateKeys: prioritizedStateKeys?.size ?? 0,
+        stateBudgetExhausted: graphResult.hitStateLimit,
+        wallTimeBudgetExhausted: graphResult.hitWallTimeLimit,
+        roundBudgetExhausted: false,
+        budgetExhausted: graphResult.hitStateLimit || graphResult.hitWallTimeLimit,
+      },
       isTargetSatisfied,
       explanation: lines.join('\n'),
     };

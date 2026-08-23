@@ -1,0 +1,112 @@
+==============================================================================================================
+PRE-UI PRODUCTION SEARCH HARDENING RUNTIME DIAGNOSTIC
+==============================================================================================================
+
+STATE IDENTITY AND NORMALIZATION:
+  influenced key differs from ordinary: YES
+  synthesised key differs from ordinary: YES
+  Fracturing legality ordinary/influenced/synthesised: true/false/false
+  physical signature respects influenced flag: YES
+  contradictory fracture input normalized: ids=[AfflictionJewelSmallPassivesGrantES3] authoritative flag=YES
+  normalized flattened target requirements: 3 (expected 3)
+
+ACQUISITION / REACQUISITION PORTFOLIO — BOUNDED MECHANICS FIXTURE — NOT PRODUCTION ECONOMICS:
+  Clean Base -> Buy Clean Base=0.1c (known) | Self-Acquire Clean Base=0.2c (research-fallback)
+  Fractured T1 Int -> Buy Fractured T1 Int=2.0c (known)
+  methods / distinct physical destinations: 3 / 2
+  virtual initial selection: Restart/Reacquire: Buy Clean Base (0.333c)
+  restart-to-A winning state selection: Restart/Reacquire: Buy Clean Base
+  continue-winning state selection: Orb of Transmutation
+  solver-entry fracture normalization ignored stale id: YES
+
+SHARED EXECUTABLE HARVEST:
+  action: Harvest Reforge Defences
+  analytical outcomes: 3; probability sum=1.00000000
+  analytical target probability: 100.0000%
+  seeded target probability: 100.0000% (5000 trials)
+  seeded sampled distribution: 3 unique physical outcomes across 5000 trials
+  price: 1.5625c (research-fallback; 75 primalLifeforce (harvest_reforge_defences))
+  mechanics confidence: APPROXIMATE / EXTERNALLY CLOSE
+  mechanics provenance: Current engine approximation: one guaranteed tagged mod plus 50% one / 50% two weighted extra affixes
+  candidate Restart/Reacquire: Buy Clean Base: RESOLVED, Q=0.255c, LB=0.100c
+  candidate Restart/Reacquire: Self-Acquire Clean Base: RESOLVED, Q=0.355c, LB=0.200c
+  candidate Orb of Scouring: RESOLVED, Q=0.755c, LB=0.500c
+  candidate Exalted Orb Slam: RESOLVED, Q=1.328c, LB=1.200c
+  candidate Harvest Reforge Defences: RESOLVED, Q=1.563c, LB=1.563c
+  candidate Restart/Reacquire: Buy Fractured T1 Int: RESOLVED, Q=2.140c, LB=2.000c
+  candidate Orb of Annulment: RESOLVED, Q=9.255c, LB=9.000c
+
+FULL-POOL GENERIC TWO-MOD SMOKE TEST - PRODUCTION POOL:
+  target: {"requiredRarity":"rare","requiredMods":[{"modId":"AfflictionJewelSmallPassivesGrantInt3"},{"modId":"AfflictionJewelSmallPassivesGrantES3"}]}
+  full real pool size: 72
+  starting candidates: Clean Base[clean-base:10.0c] | T1 Intelligence [of the Prodigy][self-fracture:1539.0c] | T1 Maximum Energy Shield [Glowing][self-fracture:1534.3c]
+  enabled actions: Orb of Transmutation | Orb of Augmentation | Orb of Alteration | Regal Orb | Orb of Scouring | Orb of Annulment | Exalted Orb Slam | Fracturing Orb | Harvest Reforge Defences | Restart/Reacquire: clean-base: Clean Base | Restart/Reacquire: self-fracture: T1 Intelligence [of the Prodigy] | Restart/Reacquire: self-fracture: T1 Maximum Energy Shield [Glowing]
+    solve:
+    states expanded: 3000/3000
+    cumulative expansion work: 6000
+    elapsed: 5722ms; rounds: 3/3
+    budget exhausted: YES (state=true, wall=false, rounds=true)
+    on-policy states: 107
+    unresolved on-policy probability: 0.000000%
+    terminal absorption: 99.999999%
+    Bellman: CONVERGED in 292 iterations
+    occupancy: CONVERGED in 786 iterations
+    EV action sum / Bellman: 1540.158c / 1540.159c
+    EV reconciliation: 0.000c (RECONCILED)
+    unresolved competitive candidates: 39
+    selected policy: FULLY RESOLVED / PROPER / ABSORBING / COST-RECONCILED
+    proof: BEST FULLY RESOLVED POLICY FOUND
+    GLOBAL OPTIMALITY: NOT YET PROVEN
+    expected currencies: {"reacquisition":1,"augmentation":1,"alteration":51.16665377506429,"regal":0.9999997480468589}
+    price warnings: Restart/Reacquire: self-fracture: T1 Maximum Energy Shield [Glowing]: 1534.300c uses research-fallback pricing (self-fracture acquisition (approximate)) | Orb of Augmentation: 0.030c uses research-fallback pricing | Orb of Alteration: 0.110c uses research-fallback pricing | Regal Orb: 0.200c uses research-fallback pricing
+    mechanics warnings: Harvest Reforge Defences: APPROXIMATE / EXTERNALLY CLOSE (Current engine approximation: one guaranteed tagged mod plus 50% one / 50% two weighted extra affixes)
+  terminal states found / graph cycles: 1466 / YES
+  missing graph edges / queued unexpanded: 11109762 / 15291
+  best resolved acquisition route: Restart/Reacquire: self-fracture: T1 Maximum Energy Shield [Glowing] at 1540.159c
+  alternative acquisition routes: Restart/Reacquire: self-fracture: T1 Maximum Energy Shield [Glowing] [RESOLVED; Q=1540.159c; LB=1534.300c] | Restart/Reacquire: self-fracture: T1 Intelligence [of the Prodigy] [RESOLVED; Q=1543.704c; LB=1539.000c] | Restart/Reacquire: clean-base: Clean Base [UNRESOLVED; Q=UNRESOLVED; LB=10.000c]
+  downstream Clean Base (node=false, menu-edge=true): NO POLICY
+  downstream T1 Intelligence [of the Prodigy] (node=true, menu-edge=true): Orb of Augmentation[RESOLVED;missing=0;Q=4.704c] | Orb of Alteration[RESOLVED;missing=0;Q=4.784c] | Regal Orb[RESOLVED;missing=0;Q=5.346c] | Restart/Reacquire: self-fracture: T1 Maximum Energy Shield [Glowing][RESOLVED;missing=0;Q=1540.159c] | Restart/Reacquire: clean-base: Clean Base[DOMINATED_BY_BOUND;missing=1;Q=UNRESOLVED]
+  downstream T1 Maximum Energy Shield [Glowing] (node=true, menu-edge=true): Orb of Augmentation[RESOLVED;missing=0;Q=5.859c] | Orb of Alteration[RESOLVED;missing=0;Q=5.939c] | Regal Orb[RESOLVED;missing=0;Q=6.488c] | Restart/Reacquire: self-fracture: T1 Intelligence [of the Prodigy][RESOLVED;missing=0;Q=1543.704c] | Restart/Reacquire: clean-base: Clean Base[DOMINATED_BY_BOUND;missing=1;Q=UNRESOLVED]
+  generic Harvest on-policy selections: 0
+
+SERIALIZABLE OPTIMIZER SERVICE CONTRACT:
+  JSON round trip: PASS
+  raw Map fields exposed: NO
+  result fields: recommended, alternatives, expectedCurrencies, policyRules, acquisition, expectedCostChaos, expectedSaleValueChaos, expectedProfitChaos, risk, priceConfidence, mechanicsConfidence, proof, search, warnings
+  recommendation / proof: Restart/Reacquire: self-fracture: T1 Maximum Energy Shield [Glowing] / BEST FULLY RESOLVED POLICY FOUND
+  price warnings survive: 2
+  mechanics warnings survive: 1
+
+CRAFT B FULL-POOL GENERIC DISCOVERY - NOT BOUNDED FIXTURE ECONOMICS:
+  target: {"requiredMods":[{"name":"Blanketed Snow"},{"name":"Prismatic Heart"},{"name":"Widespread Destruction"}]}
+  full real pool size: 70
+  starting candidates: Clean Base[clean-base:10.0c]
+  enabled actions: Orb of Transmutation | Orb of Augmentation | Orb of Alteration | Regal Orb | Orb of Scouring | Orb of Annulment | Exalted Orb Slam | Fracturing Orb | Harvest Reforge Cold | Restart/Reacquire: clean-base: Clean Base
+    solve:
+    states expanded: 3000/3000
+    cumulative expansion work: 6000
+    elapsed: 8152ms; rounds: 3/3
+    budget exhausted: YES (state=true, wall=false, rounds=true)
+    on-policy states: 1
+    unresolved on-policy probability: 100.000000%
+    terminal absorption: 0.000000%
+    Bellman: NOT CONVERGED in 3 iterations
+    occupancy: CONVERGED in 1 iterations
+    EV action sum / Bellman: 0.000c / UNRESOLVED
+    EV reconciliation: UNRESOLVED (NOT RECONCILED)
+    unresolved competitive candidates: 1
+    selected policy: NOT CERTIFIED
+    proof: NO FULLY RESOLVED POLICY FOUND
+    GLOBAL OPTIMALITY: NOT YET PROVEN
+    expected currencies: {}
+    price warnings: NONE
+    mechanics warnings: Harvest Reforge Cold: APPROXIMATE / EXTERNALLY CLOSE (Current engine approximation: one guaranteed tagged mod plus 50% one / 50% two weighted extra affixes)
+  terminal states found / graph cycles: 75 / YES
+  missing graph edges / queued unexpanded: 12042052 / 138920
+  best resolved acquisition route: NONE at UNRESOLVED
+  alternative acquisition routes: Restart/Reacquire: clean-base: Clean Base [UNRESOLVED; Q=UNRESOLVED; LB=10.000c]
+  downstream Clean Base (node=true, menu-edge=true): Orb of Transmutation[UNRESOLVED;missing=699;Q=UNRESOLVED]
+  generic Harvest on-policy selections: 0
+
+BOUNDED FIXTURE POLICY:
+  All reduced-pool diagnostics are labeled BOUNDED MECHANICS FIXTURE — NOT PRODUCTION ECONOMICS.

@@ -1,11 +1,11 @@
-import type { TargetDefinition, ModRequirement } from '../domain/TargetDefinition.ts';
+import type { TargetDefinition } from '../domain/TargetDefinition.ts';
 import type { BaseType, ItemState } from '../domain/ItemState.ts';
 import type { ModPool } from '../domain/ModPool.ts';
 import type { PriceBook } from '../domain/PriceBook.ts';
 import type { StartingCraftOption } from '../index.ts';
 import type { AcquisitionOption, AcquisitionBreakdown } from './expectedCost.ts';
 import { toRolledMod } from '../domain/Mod.ts';
-import { matchesModRequirement } from '../domain/TargetDefinition.ts';
+import { getAllTargetModRequirements, matchesModRequirement } from '../domain/TargetDefinition.ts';
 import { calculateTotalWeight } from '../rules/modEligibility.ts';
 import { formatModDisplayName } from '../reporting/explainPath.ts';
 
@@ -79,12 +79,7 @@ export function generateStartingStateCandidates(
   const allMods = pool.getAllMods().filter((m) => m.ilvl <= itemLevel);
   const consideredGroups = new Set<string>();
 
-  const targetReqs: ModRequirement[] = [...target.requiredMods];
-  if (target.outcomeBranches) {
-    for (const branch of target.outcomeBranches) {
-      targetReqs.push(...branch.requiredMods);
-    }
-  }
+  const targetReqs = getAllTargetModRequirements(target);
 
   for (const req of targetReqs) {
     const groupKey = req.modGroup ?? req.modId;

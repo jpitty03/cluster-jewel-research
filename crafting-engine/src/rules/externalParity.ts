@@ -384,8 +384,8 @@ export function runExternalParityDiagnostics(context: SolverContext): {
   lines.push(`1. Alteration -> T1 Int: CoE observed ${coeAltPct.toFixed(4)}% (${coeAlt.displayedRatio}) vs Engine ${analyticalAltPct.toFixed(4)}% (1 / ${(1 / analyticalAltProb).toFixed(1)}). Status: ALIGNED.`);
   lines.push(`2. Fracturing Orb: shared analytical ${(analyticalFractureProb * 100).toFixed(4)}%; seeded shared MC ${(mcFractureProb * 100).toFixed(4)}% (${fractureTrials.toLocaleString()} trials). Status: ALIGNED.`);
   lines.push(`3. Compound Harvest Defence: CoE observed ${(coeHarvest.observedProbability * 100).toFixed(4)}% (~1 / 816.1) across 2,601,014 attempts.`);
-  lines.push(`   Tracked assessment: CLOSE / APPROXIMATE — ENGINE ~19% OPTIMISTIC. Non-blocking REFERENCE EXPECTATION until shared Harvest execution exists.`);
-  lines.push(`4. Post-Harvest Annul: CoE observed ${(coeAnnul.observedProbability * 100).toFixed(4)}% (~1 / 4.66) across 4,019 attempts. Status: REFERENCE EXPECTATION (propagated shared Harvest state distribution not yet executable).`);
+  lines.push(`   Tracked assessment: CLOSE / APPROXIMATE — ENGINE ~19% OPTIMISTIC. Non-blocking REFERENCE EXPECTATION; this compound fixture is not an end-to-end check of the shared generic approximation.`);
+  lines.push(`4. Post-Harvest Annul: CoE observed ${(coeAnnul.observedProbability * 100).toFixed(4)}% (~1 / 4.66) across 4,019 attempts. Status: REFERENCE EXPECTATION (the compound fixture is not propagated through this parity harness).`);
   lines.push(`5. Final Exalt (+4 Attr / 3% AS): shared analytical ${(analyticalExaltProb * 100).toFixed(4)}%; seeded shared MC ${(mcExaltProb * 100).toFixed(4)}% (${exaltTrials.toLocaleString()} trials). External ${(coeExalt.observedProbability * 100).toFixed(4)}%. Status: ALIGNED.`);
 
   return {

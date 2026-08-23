@@ -6,7 +6,13 @@ import type { RandomSource } from '../probability/random.ts';
 import type { Mod } from '../domain/Mod.ts';
 import { toRolledMod } from '../domain/Mod.ts';
 import { canAcceptPrefix, canAcceptSuffix } from './affixRules.ts';
-import { getAllAffixes, getRemovableAffixes, cloneItemState } from '../domain/ItemState.ts';
+import {
+  getAllAffixes,
+  getPhysicalStateSignature,
+  getRemovableAffixes,
+  isFracturedMod,
+  cloneItemState,
+} from '../domain/ItemState.ts';
 import { getEligibleMods, calculateTotalWeight } from './modEligibility.ts';
 import { HARVEST_CRAFT_DEFINITIONS, getHarvestCraftCost } from './harvestCrafts.ts';
 import { getTaggedModsForCluster } from './clusterPoolHelpers.ts';
@@ -44,6 +50,8 @@ export interface TransitionDistribution {
   immediateCostChaos: number;
 }
 
+export type MechanicsConfidence = 'VALIDATED' | 'APPROXIMATE / EXTERNALLY CLOSE';
+
 export interface CraftMechanic {
   id: string;
   actionType: DiscoveredActionType;
@@ -52,6 +60,8 @@ export interface CraftMechanic {
   isLegal(state: ItemState, target: TargetDefinition, context: SolverContext): boolean;
   getCost(context: SolverContext): CraftCost;
   parameters?: Record<string, any>;
+  mechanicsConfidence?: MechanicsConfidence;
+  mechanicsProvenance?: string;
   getTransitions?(state: ItemState, target: TargetDefinition, context: SolverContext): TransitionDistribution;
   sampleTransition?(state: ItemState, target: TargetDefinition, context: SolverContext, rng: RandomSource): ItemState;
 }
@@ -62,6 +72,21 @@ export interface RestartReacquireDefinition {
   confidence: PriceConfidence;
   provenance: string;
   label?: string;
+}
+
+export interface AcquisitionMethodDefinition {
+  id: string;
+  label: string;
+  acquisitionCostChaos: number;
+  confidence: PriceConfidence;
+  provenance: string;
+}
+
+export interface AcquisitionPortfolioCandidate {
+  id: string;
+  label: string;
+  physicalState: ItemState;
+  methods: AcquisitionMethodDefinition[];
 }
 
 function selectWeightedMod(mods: Mod[], rng: RandomSource): Mod | undefined {
@@ -78,32 +103,137 @@ function selectWeightedMod(mods: Mod[], rng: RandomSource): Mod | undefined {
   return mods[mods.length - 1];
 }
 
+function addMod(state: ItemState, mod: Mod): ItemState {
+  const nextState = cloneItemState(state);
+  if (mod.genType === 'Prefix') nextState.prefixes.push(toRolledMod(mod));
+  else nextState.suffixes.push(toRolledMod(mod));
+  return nextState;
+}
+
+function consolidateTransitionOutcomes(outcomes: TransitionOutcome[]): TransitionOutcome[] {
+  const consolidated = new Map<string, TransitionOutcome>();
+  for (const outcome of outcomes) {
+    const key = getPhysicalStateSignature(outcome.state);
+    const existing = consolidated.get(key);
+    if (existing) existing.probability += outcome.probability;
+    else consolidated.set(key, outcome);
+  }
+  return [...consolidated.values()];
+}
+
+function expandHarvestExtras(
+  state: ItemState,
+  remaining: number,
+  probability: number,
+  allMods: Mod[],
+  outcomes: TransitionOutcome[],
+  label: string
+): void {
+  if (remaining === 0) {
+    outcomes.push({ state, probability, label });
+    return;
+  }
+  const eligible = getEligibleMods(state, allMods);
+  const totalWeight = calculateTotalWeight(eligible);
+  if (totalWeight <= 0) {
+    outcomes.push({ state, probability, label: `${label}; no additional affix available` });
+    return;
+  }
+  for (const mod of eligible) {
+    expandHarvestExtras(
+      addMod(state, mod),
+      remaining - 1,
+      probability * (mod.weight / totalWeight),
+      allMods,
+      outcomes,
+      `${label}; added ${mod.name}`
+    );
+  }
+}
+
+function generateHarvestTransitions(
+  state: ItemState,
+  tag: string,
+  context: SolverContext,
+  costChaos: number
+): TransitionDistribution {
+  const baseState = cloneItemState(state);
+  baseState.prefixes = baseState.prefixes.filter((mod) => isFracturedMod(baseState, mod));
+  baseState.suffixes = baseState.suffixes.filter((mod) => isFracturedMod(baseState, mod));
+  baseState.fracturedModIds = getAllAffixes(baseState).filter((mod) => mod.isFractured).map((mod) => mod.modId);
+  baseState.rarity = 'rare';
+
+  const allMods = context.pool.getAllMods();
+  const eligible = getEligibleMods(baseState, allMods, { filterBySlotCapacity: false });
+  const tagged = eligible.filter((mod) =>
+    mod.craftTags.some((candidate) => candidate.toLowerCase() === tag) ||
+    mod.tags.some((candidate) => candidate.toLowerCase() === tag)
+  );
+  const taggedWeight = calculateTotalWeight(tagged);
+  if (taggedWeight <= 0) return { outcomes: [], immediateCostChaos: costChaos };
+
+  const outcomes: TransitionOutcome[] = [];
+  for (const guaranteed of tagged) {
+    const guaranteedState = addMod(baseState, guaranteed);
+    const guaranteedProbability = guaranteed.weight / taggedWeight;
+    expandHarvestExtras(
+      guaranteedState,
+      1,
+      guaranteedProbability * 0.5,
+      allMods,
+      outcomes,
+      `Guaranteed ${tag}: ${guaranteed.name}; approximate 1-extra branch`
+    );
+    expandHarvestExtras(
+      guaranteedState,
+      2,
+      guaranteedProbability * 0.5,
+      allMods,
+      outcomes,
+      `Guaranteed ${tag}: ${guaranteed.name}; approximate 2-extra branch`
+    );
+  }
+  return {
+    outcomes: consolidateTransitionOutcomes(outcomes),
+    immediateCostChaos: costChaos,
+  };
+}
+
+function sampleHarvestTransition(
+  state: ItemState,
+  tag: string,
+  context: SolverContext,
+  rng: RandomSource
+): ItemState {
+  let nextState = cloneItemState(state);
+  nextState.prefixes = nextState.prefixes.filter((mod) => isFracturedMod(nextState, mod));
+  nextState.suffixes = nextState.suffixes.filter((mod) => isFracturedMod(nextState, mod));
+  nextState.fracturedModIds = getAllAffixes(nextState).filter((mod) => mod.isFractured).map((mod) => mod.modId);
+  nextState.rarity = 'rare';
+  const allMods = context.pool.getAllMods();
+  const tagged = getEligibleMods(nextState, allMods, { filterBySlotCapacity: false }).filter((mod) =>
+    mod.craftTags.some((candidate) => candidate.toLowerCase() === tag) ||
+    mod.tags.some((candidate) => candidate.toLowerCase() === tag)
+  );
+  const guaranteed = selectWeightedMod(tagged, rng);
+  if (!guaranteed) return nextState;
+  nextState = addMod(nextState, guaranteed);
+  const extraCount = rng.next() < 0.5 ? 1 : 2;
+  for (let index = 0; index < extraCount; index++) {
+    const extra = selectWeightedMod(getEligibleMods(nextState, allMods), rng);
+    if (!extra) break;
+    nextState = addMod(nextState, extra);
+  }
+  return nextState;
+}
+
 function scouredRarity(state: ItemState): ItemState['rarity'] {
   const fracturedCount = getAllAffixes(state).filter(
-    (mod) => mod.isFractured || state.fracturedModIds.includes(mod.modId)
+    (mod) => isFracturedMod(state, mod)
   ).length;
   if (fracturedCount === 0) return 'normal';
   if (fracturedCount === 1) return 'magic';
   return 'rare';
-}
-
-function physicalStateSignature(state: ItemState): string {
-  const modKey = (mod: ItemState['prefixes'][number]): string => [
-    mod.genType,
-    mod.modId,
-    mod.tier,
-    mod.isFractured || state.fracturedModIds.includes(mod.modId) ? 'F' : 'N',
-    mod.currentRoll?.join(',') ?? '',
-  ].join(':');
-  return [
-    state.baseType,
-    state.clusterType,
-    state.itemLevel,
-    state.passiveCount ?? '',
-    state.rarity,
-    ...state.prefixes.map(modKey).sort(),
-    ...state.suffixes.map(modKey).sort(),
-  ].join('|');
 }
 
 /**
@@ -112,13 +242,13 @@ function physicalStateSignature(state: ItemState): string {
  */
 export function createRestartReacquireMechanic(definition: RestartReacquireDefinition): CraftMechanic {
   const destination = cloneItemState(definition.destination);
-  const destinationSignature = physicalStateSignature(destination);
+  const destinationSignature = getPhysicalStateSignature(destination);
   return {
     id: 'restart_reacquire',
     actionType: 'RESTART_REACQUIRE',
     name: definition.label ?? 'Abandon + Reacquire',
     category: 'base-prep',
-    isLegal: (state) => physicalStateSignature(state) !== destinationSignature,
+    isLegal: (state) => getPhysicalStateSignature(state) !== destinationSignature,
     getCost: () => ({
       costChaos: definition.acquisitionCostChaos,
       confidence: definition.confidence,
@@ -131,6 +261,48 @@ export function createRestartReacquireMechanic(definition: RestartReacquireDefin
     }),
     sampleTransition: () => cloneItemState(destination),
   };
+}
+
+/**
+ * Creates one Bellman action per acquisition method. Multiple methods may point
+ * at the same physical state; canonical graph identity solves that state once.
+ */
+export function createAcquisitionPortfolioMechanics(
+  candidates: AcquisitionPortfolioCandidate[]
+): CraftMechanic[] {
+  return candidates.flatMap((candidate) => {
+    const destination = cloneItemState(candidate.physicalState);
+    const destinationSignature = getPhysicalStateSignature(destination);
+    return candidate.methods.map((method) => ({
+      id: `acquire_${candidate.id}_${method.id}`,
+      actionType: 'RESTART_REACQUIRE' as const,
+      name: `Restart/Reacquire: ${method.label}`,
+      category: 'base-prep' as const,
+      isLegal: (state: ItemState) =>
+        state.flags?.acquisitionMenu === true ||
+        getPhysicalStateSignature(state) !== destinationSignature,
+      getCost: (): CraftCost => ({
+        costChaos: method.acquisitionCostChaos,
+        confidence: method.confidence,
+        source: 'solver-context',
+        provenance: method.provenance,
+      }),
+      parameters: {
+        acquisitionCandidateId: candidate.id,
+        acquisitionCandidateLabel: candidate.label,
+        acquisitionMethodId: method.id,
+      },
+      getTransitions: (): TransitionDistribution => ({
+        outcomes: [{
+          state: cloneItemState(destination),
+          probability: 1,
+          label: method.provenance,
+        }],
+        immediateCostChaos: method.acquisitionCostChaos,
+      }),
+      sampleTransition: (): ItemState => cloneItemState(destination),
+    }));
+  });
 }
 
 function generateMagicTransitions(
@@ -486,17 +658,14 @@ export const CRAFT_MECHANICS: CraftMechanic[] = [
     getTransitions: (state, _target, context) => {
       const nextState = cloneItemState(state);
       nextState.prefixes = nextState.prefixes.filter(
-        (mod) => mod.isFractured || state.fracturedModIds.includes(mod.modId)
+        (mod) => isFracturedMod(state, mod)
       );
       nextState.suffixes = nextState.suffixes.filter(
-        (mod) => mod.isFractured || state.fracturedModIds.includes(mod.modId)
+        (mod) => isFracturedMod(state, mod)
       );
       nextState.fracturedModIds = [...nextState.prefixes, ...nextState.suffixes]
-        .filter((mod) => mod.isFractured || state.fracturedModIds.includes(mod.modId))
+        .filter((mod) => isFracturedMod(nextState, mod))
         .map((mod) => mod.modId);
-      for (const mod of [...nextState.prefixes, ...nextState.suffixes]) {
-        if (nextState.fracturedModIds.includes(mod.modId)) mod.isFractured = true;
-      }
       nextState.rarity = scouredRarity(nextState);
       return {
         outcomes: [{ state: nextState, probability: 1, label: 'Removed every non-fractured explicit modifier' }],
@@ -617,15 +786,14 @@ export const CRAFT_MECHANICS: CraftMechanic[] = [
     name: 'Fracturing Orb',
     category: 'base-prep',
     isLegal: (state) => {
-      const metadata = state.metadata ?? {};
       const alreadyFractured = getAllAffixes(state).some(
-        (mod) => mod.isFractured || state.fracturedModIds.includes(mod.modId)
+        (mod) => isFracturedMod(state, mod)
       );
       return state.rarity === 'rare' &&
         getAllAffixes(state).length >= 4 &&
         !alreadyFractured &&
-        metadata.influenced !== true &&
-        metadata.synthesised !== true;
+        state.flags?.influenced !== true &&
+        state.flags?.synthesised !== true;
     },
     getCost: (ctx) => ctx.priceBook.evaluateRate('fracturing', 359),
     getTransitions: (state, _target, context) => {
@@ -676,27 +844,48 @@ export function getHarvestMechanicsForState(
   context: SolverContext
 ): CraftMechanic[] {
   if (state.rarity !== 'rare') return [];
+  return createHarvestReforgeMechanics(context);
+}
+
+/** Creates shared executable Harvest mechanics, optionally restricted to selected tags. */
+export function createHarvestReforgeMechanics(
+  context: SolverContext,
+  selectedTags?: string[]
+): CraftMechanic[] {
   const pool = context.pool;
-  const ilvl = state.itemLevel ?? 84;
+  const selected = selectedTags ? new Set(selectedTags.map((tag) => tag.toLowerCase())) : undefined;
   const mechanics: CraftMechanic[] = [];
 
   for (const [tag, def] of Object.entries(HARVEST_CRAFT_DEFINITIONS)) {
-    const taggedMods = pool ? getTaggedModsForCluster(pool, tag, ilvl) : [];
+    if (selected && !selected.has(tag)) continue;
+    const taggedMods = pool ? getTaggedModsForCluster(pool, tag, 100) : [];
     if (taggedMods.length > 0) {
       mechanics.push({
         id: def.craftId,
         actionType: 'HARVEST_REFORGE',
         name: def.name,
         category: 'core-reforge',
-        isLegal: (s) => s.rarity === 'rare',
+        isLegal: (state) =>
+          state.rarity === 'rare' &&
+          getTaggedModsForCluster(context.pool, tag, state.itemLevel).length > 0,
         getCost: (ctx) => {
           const res = getHarvestCraftCost(tag, ctx.priceBook);
           return {
             costChaos: res.costChaos,
             confidence: res.confidence,
+            source: res.source,
+            provenance: res.provenance,
           };
         },
+        mechanicsConfidence: 'APPROXIMATE / EXTERNALLY CLOSE',
+        mechanicsProvenance: 'Current engine approximation: one guaranteed tagged mod plus 50% one / 50% two weighted extra affixes',
         parameters: { harvestTag: tag, lifeforceType: def.lifeforceType, lifeforceAmount: def.lifeforceAmount },
+        getTransitions: (state, _target, ctx) => {
+          const cost = getHarvestCraftCost(tag, ctx.priceBook);
+          return generateHarvestTransitions(state, tag, ctx, cost.costChaos);
+        },
+        sampleTransition: (state, _target, ctx, rng) =>
+          sampleHarvestTransition(state, tag, ctx, rng),
       });
     }
   }

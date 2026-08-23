@@ -545,14 +545,20 @@ function runCleanBaseT1IntSearchDiagnostic(): string {
   return lines.join('\n');
 }
 
-// Run General Diagnostics
-console.log(runCanonicalKeyDiagnostics());
-console.log(runAnnulSharedMechanicDiagnostic());
-console.log(runTransmutationSharedMechanicDiagnostic());
-console.log(runAugmentationAndRegalSharedMechanicDiagnostic());
+// The A/C Monte Carlo regression pass can skip the separate 5,000-state
+// generic graph diagnostic, which has its own dedicated runtime script.
+const regressionsOnly = process.argv.includes('--regressions-only');
 const poolA = ModPool.forCluster(repo, 'Large Cluster Jewel', '12% increased Attack Damage while holding a Shield');
-console.log(runExternalParityDiagnostics({ pool: poolA, priceBook }).explanation);
-console.log(runCleanBaseT1IntSearchDiagnostic());
+if (!regressionsOnly) {
+  console.log(runCanonicalKeyDiagnostics());
+  console.log(runAnnulSharedMechanicDiagnostic());
+  console.log(runTransmutationSharedMechanicDiagnostic());
+  console.log(runAugmentationAndRegalSharedMechanicDiagnostic());
+  console.log(runExternalParityDiagnostics({ pool: poolA, priceBook }).explanation);
+  console.log(runCleanBaseT1IntSearchDiagnostic());
+} else {
+  console.error('[optimizer diagnostic] regressions-only: skipping standalone generic graph diagnostics');
+}
 
 console.log('='.repeat(80));
 console.log('END-TO-END CRAFTING OPTIMIZER: DEMONSTRATION & BENCHMARKS');
@@ -681,7 +687,9 @@ const craftARequest: OptimizeCraftRequest = {
 
 const craftAResponse = optimizer.optimizeCraft(craftARequest);
 const multiSeedSummaryA = runMultiSeedValidation('Craft A (Shield Cluster)', optimizer, craftARequest, [42, 1337, 2026, 9001, 123456]);
-const autoDiscoveryDiagA = runAutoDiscoveryDiagnostic('Craft A (Shield Cluster)', optimizer, craftARequest, craftAResponse);
+const autoDiscoveryDiagA = regressionsOnly
+  ? 'AUTO-DISCOVERY DIAGNOSTIC: SKIPPED IN --regressions-only MODE (covered by the budgeted pre-UI generic diagnostic).'
+  : runAutoDiscoveryDiagnostic('Craft A (Shield Cluster)', optimizer, craftARequest, craftAResponse);
 
 console.log(craftAResponse.explanation);
 console.log(multiSeedSummaryA.explanation);
@@ -691,49 +699,53 @@ writeCraftOutput('output-craft-a.txt', craftAResponse.explanation + '\n' + multi
 writeCraftReview('output-craft-a-review.txt', craftAResponse.explanation + '\n' + multiSeedSummaryA.explanation + '\n' + autoDiscoveryDiagA);
 
 // ------------------------------------------------------------- DEMO 2: Reference Craft B
-console.log('\n>>> OPTIMIZING REFERENCE CRAFT B: 8-Passive Cold Cluster (ilvl 83)');
-const coldCleanState: ItemState = {
-  baseType: 'Large Cluster Jewel',
-  clusterType: '12% increased Cold Damage',
-  itemLevel: 83,
-  passiveCount: 8,
-  rarity: 'rare',
-  prefixes: [],
-  suffixes: [],
-  fracturedModIds: [],
-};
+if (!regressionsOnly) {
+  console.log('\n>>> OPTIMIZING REFERENCE CRAFT B: 8-Passive Cold Cluster (ilvl 83)');
+  const coldCleanState: ItemState = {
+    baseType: 'Large Cluster Jewel',
+    clusterType: '12% increased Cold Damage',
+    itemLevel: 83,
+    passiveCount: 8,
+    rarity: 'rare',
+    prefixes: [],
+    suffixes: [],
+    fracturedModIds: [],
+  };
 
-const craftBResponse = optimizer.optimizeCraft({
-  baseType: 'Large Cluster Jewel',
-  clusterType: '12% increased Cold Damage',
-  itemLevel: 83,
-  passiveCount: 8,
-  target: {
-    requiredMods: [
-      { modGroup: 'Blanketed Snow' },
-      { modGroup: 'Prismatic Heart' },
-      { modGroup: 'Widespread Destruction' },
-    ],
-  },
-  startingStates: [
-    {
-      name: 'Clean 8-Passive Cold Cluster Base',
-      state: coldCleanState,
-      acquisition: {
-        type: 'clean-base',
-        costChaos: 100, // 0.5 div base
-        confidence: 'deterministic',
-      },
+  const craftBResponse = optimizer.optimizeCraft({
+    baseType: 'Large Cluster Jewel',
+    clusterType: '12% increased Cold Damage',
+    itemLevel: 83,
+    passiveCount: 8,
+    target: {
+      requiredMods: [
+        { modGroup: 'Blanketed Snow' },
+        { modGroup: 'Prismatic Heart' },
+        { modGroup: 'Widespread Destruction' },
+      ],
     },
-  ],
-  saleValueChaos: 800, // 4 div finished sale price
-  priceBook,
-});
+    startingStates: [
+      {
+        name: 'Clean 8-Passive Cold Cluster Base',
+        state: coldCleanState,
+        acquisition: {
+          type: 'clean-base',
+          costChaos: 100, // 0.5 div base
+          confidence: 'deterministic',
+        },
+      },
+    ],
+    saleValueChaos: 800, // 4 div finished sale price
+    priceBook,
+  });
 
-console.log(craftBResponse.explanation);
-verifyRepresentativeMinEv('Craft B', craftBResponse);
-writeCraftOutput('output-craft-b.txt', craftBResponse.explanation);
-writeCraftReview('output-craft-b-review.txt', craftBResponse.explanation);
+  console.log(craftBResponse.explanation);
+  verifyRepresentativeMinEv('Craft B', craftBResponse);
+  writeCraftOutput('output-craft-b.txt', craftBResponse.explanation);
+  writeCraftReview('output-craft-b-review.txt', craftBResponse.explanation);
+} else {
+  console.error('[optimizer diagnostic] regressions-only: skipping legacy Craft B generic solve');
+}
 
 // ------------------------------------------------------------- DEMO 3: Reference Craft C (Minion Cluster)
 console.log('\n>>> OPTIMIZING REFERENCE CRAFT C: 12-Passive Minion Cluster (ilvl 84)');
@@ -881,7 +893,9 @@ const craftCRequest: OptimizeCraftRequest = {
 
 const craftCResponse = optimizer.optimizeCraft(craftCRequest);
 const multiSeedSummaryC = runMultiSeedValidation('Craft C (Minion Cluster)', optimizer, craftCRequest, [42, 1337, 2026, 9001, 123456]);
-const autoDiscoveryDiagC = runAutoDiscoveryDiagnostic('Craft C (Minion Cluster)', optimizer, craftCRequest, craftCResponse);
+const autoDiscoveryDiagC = regressionsOnly
+  ? 'AUTO-DISCOVERY DIAGNOSTIC: SKIPPED IN --regressions-only MODE (covered by the budgeted pre-UI generic diagnostic).'
+  : runAutoDiscoveryDiagnostic('Craft C (Minion Cluster)', optimizer, craftCRequest, craftCResponse);
 
 console.log(craftCResponse.explanation);
 console.log(multiSeedSummaryC.explanation);

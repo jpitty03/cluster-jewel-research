@@ -35,6 +35,29 @@ export interface TargetDefinition {
   saleValueChaos?: number;
 }
 
+/** Flatten all mod-shaped target requirements once for identity, discovery, and heuristics. */
+export function getAllTargetModRequirements(target: TargetDefinition): ModRequirement[] {
+  const requirements = [
+    ...target.requiredMods,
+    ...(target.outcomeBranches?.flatMap((branch) => branch.requiredMods) ?? []),
+    ...(target.acceptableAnyOf?.flat() ?? []),
+  ];
+  const seen = new Set<string>();
+  return requirements.filter((requirement) => {
+    const key = [
+      requirement.modId ?? '',
+      requirement.modGroup ?? '',
+      requirement.name ?? '',
+      requirement.minTierNumber ?? '',
+      requirement.maxTierNumber ?? '',
+      requirement.mustBeFractured ?? '',
+    ].join('|');
+    if (seen.has(key)) return false;
+    seen.add(key);
+    return true;
+  });
+}
+
 export function matchesModRequirement(mod: RolledMod | Mod, req: ModRequirement): boolean {
   if (req.modId && mod.modId !== req.modId) return false;
   if (req.modGroup && mod.modGroup !== req.modGroup) return false;

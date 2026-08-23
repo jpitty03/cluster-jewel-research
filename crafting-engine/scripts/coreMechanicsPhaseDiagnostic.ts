@@ -187,6 +187,7 @@ lines.push(`  Restart price evidence preserved: ${restartWinsResult.priceConfide
 
 lines.push('\n' + runExternalParityDiagnostics(context).explanation);
 
+console.error('[core diagnostic] full-pool clean-base T1 Intelligence solve');
 const cleanPolicyResult = new GenericSearchEngine(context, simpleTarget).search(cleanBase, {
   maxIterations: 1_500,
 });
@@ -231,6 +232,7 @@ const multiStageOptions = {
   maxMarkovIterations: 20000,
   prioritizeTargetProgress: true,
 };
+console.error('[core diagnostic] bounded multi-stage clean-base solve');
 const multiStageResult = new GenericSearchEngine(multiStageContext, multiStageTarget, multiStageOptions).search(cleanBase);
 const generatedStarts = generateStartingStateCandidates(
   multiStageTarget,
@@ -246,6 +248,7 @@ const evaluatedStartingRoutes = generatedStarts
     const acquisition = candidate.acquisitions
       .slice()
       .sort((left, right) => left.costChaos - right.costChaos)[0];
+    console.error(`[core diagnostic] bounded starting route: ${candidate.label}`);
     const result = getCanonicalStateKey(candidate.state, multiStageTarget) === cleanStateKey
       ? multiStageResult
       : new GenericSearchEngine(multiStageContext, multiStageTarget, multiStageOptions).search(candidate.state);
@@ -259,6 +262,7 @@ const evaluatedStartingRoutes = generatedStarts
   .sort((left, right) => left.fullCostChaos - right.fullCostChaos);
 const selectedStartingRoute = evaluatedStartingRoutes[0];
 lines.push('\nFULL GENERIC MULTI-STAGE ROUTE:');
+lines.push('  BOUNDED MECHANICS FIXTURE — NOT PRODUCTION ECONOMICS');
 lines.push('  Target: magic item with fractured T1 Intelligence + T1 Maximum Energy Shield');
 lines.push('  Modeled pool: bounded five-mod fixture using real cluster-jewel mods/weights; route logic remains generic.');
 lines.push(`  Generated physical starting states: ${generatedStarts.length}`);
@@ -307,6 +311,7 @@ const coldCleanBase: ItemState = {
   passiveCount: 8,
   itemLevel: 83,
 };
+console.error('[core diagnostic] bounded Craft B solve');
 const craftBResult = new GenericSearchEngine(
   { pool: boundedColdPool, priceBook },
   craftBTarget,
@@ -325,6 +330,7 @@ const craftBResult = new GenericSearchEngine(
   }
 ).search(coldCleanBase);
 lines.push('\nCRAFT B GENERIC CLEAN-BASE DISCOVERY:');
+lines.push('  BOUNDED MECHANICS FIXTURE — NOT PRODUCTION ECONOMICS');
 lines.push('  Target only: Blanketed Snow + Prismatic Heart + Widespread Destruction');
 lines.push('  Modeled pool: bounded three-notable fixture using real Cold-cluster mods/weights; no Craft-B solver branch.');
 lines.push(...resultSummary('  Craft B solve', craftBResult).map((line) => `  ${line}`));

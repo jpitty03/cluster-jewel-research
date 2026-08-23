@@ -150,3 +150,21 @@ export class CraftingOptimizer {
 }
 
 export const optimizer = new CraftingOptimizer();
+
+export {
+  OptimizerService,
+  optimizerService,
+} from './service/optimizerService.ts';
+export type {
+  AcquisitionSummary,
+  MechanicsConfidenceSummary,
+  OptimizationProofSummary,
+  OptimizationSearchSummary,
+  OptimizeCraftInput as GenericOptimizeCraftInput,
+  OptimizeCraftPriceContext,
+  OptimizeCraftResult as GenericOptimizeCraftResult,
+  PolicyRule,
+  PriceConfidenceSummary,
+  RouteSummary,
+  SearchBudget,
+} from './service/optimizerService.ts';

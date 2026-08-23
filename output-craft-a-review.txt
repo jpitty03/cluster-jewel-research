@@ -450,9 +450,35 @@ Trial #1 (198 steps) -> Total Cost: 1927.9c (~9.64 div)
     [Step 71] Harvest Reforge Defences: Reforged item (guaranteed defences: Veteran Defender) (+1.56c) -> P:[Powerful (t1), Veteran Defender (t1)], S:[of the Crystal (t3)]
 
 ======================================================================
-REVIEW FILE NOTE: 17233 verbose middle lines omitted from this compact artifact.
+REVIEW FILE NOTE: 17207 verbose middle lines omitted from this compact artifact.
 See the corresponding full output-craft-*.txt file for complete Monte Carlo traces/details.
 ======================================================================
+
+    [Step 282] Harvest Reforge Defences: Reforged item (guaranteed defences: Veteran Defender) (+1.56c) -> P:[Powerful (t1), Veteran Defender (t1)], S:[of the Lynx (t2), of the Inuit (t3)]
+    [Step 283] Harvest Reforge Defences: Reforged item (guaranteed defences: Glimmering) (+1.56c) -> P:[Powerful (t1), Glimmering (t2)], S:[of the Flatworm (t1)]
+    [Step 284] Harvest Reforge Defences: Reforged item (guaranteed defences: Veteran Defender) (+1.56c) -> P:[Powerful (t1), Veteran Defender (t1)], S:[of the Inuit (t3), of the Cloud (t3)]
+    [Step 285] Harvest Reforge Defences: Reforged item (guaranteed defences: Lacquered) (+1.56c) -> P:[Powerful (t1), Lacquered (t3)], S:[of the Pupil (t3), of the Whelpling (t3)]
+    [Step 286] Harvest Reforge Defences: Reforged item (guaranteed defences: Dancer's) (+1.56c) -> P:[Powerful (t1), Dancer's (t2)], S:[of Excitement (t3)]
+    [Step 287] Harvest Reforge Defences: Reforged item (guaranteed defences: Glowing) (+1.56c) -> P:[Powerful (t1), Glowing (t1)], S:[of the Sky (t2), of the Prodigy (t1)]
+    [Step 288] Orb of Annulment: Annul removed of the Sky (Suffix) [Step 3 Cleanup] (+9.00c) -> P:[Powerful (t1), Glowing (t1)], S:[of the Prodigy (t1)]
+    [Step 289] Exalted Orb Slam (Suffix: T1 Intelligence [of the Prodigy] / +4 All Attributes (T1) / 3% Attack Speed (T1) / +4% All Elemental Resistance (T1)): Slammed of Elation (+1.20c) -> P:[Powerful (t1), Glowing (t1)], S:[of the Prodigy (t1), of Elation (t1)]
+    [Step 290] Orb of Annulment: Annul removed of the Prodigy (Suffix) [Step 4 Cleanup] (+9.00c) -> P:[Powerful (t1), Glowing (t1)], S:[of Elation (t1)]
+    [Step 291] Orb of Annulment: Annul removed Glowing (Prefix) [Step 4 Cleanup] (+9.00c) -> P:[Powerful (t1)], S:[of Elation (t1)]
+    [Step 292] Harvest Reforge Defences: Reforged item (guaranteed defences: Lacquered) (+1.56c) -> P:[Powerful (t1), Lacquered (t3)], S:[of the Lost (t3)]
+    [Step 293] Harvest Reforge Defences: Reforged item (guaranteed defences: Acrobat's) (+1.56c) -> P:[Powerful (t1), Acrobat's (t1)], S:[of the Storm (t1), of the Inuit (t3)]
+    [Step 294] Harvest Reforge Defences: Reforged item (guaranteed defences: Shining) (+1.56c) -> P:[Powerful (t1), Shining (t3)], S:[of the Flatworm (t1), of the Storm (t1)]
+    [Step 295] Harvest Reforge Defences: Reforged item (guaranteed defences: Veteran Defender) (+1.56c) -> P:[Powerful (t1), Veteran Defender (t1)], S:[of the Inuit (t3)]
+    [Step 296] Harvest Reforge Defences: Reforged item (guaranteed defences: Dancer's) (+1.56c) -> P:[Powerful (t1), Dancer's (t2)], S:[of Joy (t2)]
+    [Step 297] Harvest Reforge Defences: Reforged item (guaranteed defences: Agile) (+1.56c) -> P:[Powerful (t1), Agile (t3)], S:[of Eviction (t1), of the Prism (t2)]
+    [Step 298] Harvest Reforge Defences: Reforged item (guaranteed defences: Dancer's) (+1.56c) -> P:[Powerful (t1), Dancer's (t2)], S:[of the Brute (t3), of the Cloud (t3)]
+    [Step 299] Harvest Reforge Defences: Reforged item (guaranteed defences: Lacquered) (+1.56c) -> P:[Powerful (t1), Lacquered (t3)], S:[of the Kaleidoscope (t1)]
+    [Step 300] Harvest Reforge Defences: Reforged item (guaranteed defences: Glimmering) (+1.56c) -> P:[Powerful (t1), Glimmering (t2)], S:[of the Drake (t1), of the Prodigy (t1)]
+    [Step 301] Harvest Reforge Defences: Reforged item (guaranteed defences: Veteran Defender) (+1.56c) -> P:[Powerful (t1), Veteran Defender (t1)], S:[of the Storm (t1), of the Brute (t3)]
+    [Step 302] Harvest Reforge Defences: Reforged item (guaranteed defences: Agile) (+1.56c) -> P:[Powerful (t1), Agile (t3)], S:[of the Seal (t2)]
+    [Step 303] Harvest Reforge Defences: Reforged item (guaranteed defences: Agile) (+1.56c) -> P:[Powerful (t1), Agile (t3)], S:[of Eviction (t1)]
+    [Step 304] Harvest Reforge Defences: Reforged item (guaranteed defences: Glimmering) (+1.56c) -> P:[Powerful (t1), Glimmering (t2)], S:[of the Prism (t2), of the Pupil (t3)]
+    [Step 305] Harvest Reforge Defences: Reforged item (guaranteed defences: Glowing) (+1.56c) -> P:[Powerful (t1), Glowing (t1)], S:[of the Kaleidoscope (t1)]
+    [Step 306] Exalted Orb Slam (Suffix: T1 Intelligence [of the Prodigy] / +4 All Attributes (T1) / 3% Attack Speed (T1) / +4% All Elemental Resistance (T1)): Slammed of the Prodigy (+1.20c) -> P:[Powerful (t1), Glowing (t1)], S:[of the Kaleidoscope (t1), of the Prodigy (t1)]
 
 ======================================================================
 STARTING FRACTURE ROUTE COMPARISON
@@ -527,31 +553,4 @@ Exalted Orb Slam                116.53             115.45            0.92%      
 STABILITY CONCLUSION:
   Status:                MULTI-SEED STABLE
   Assessment:            Pooled action counts <=10% and completion >=99% across all deterministic seeds.
-
-================================================================================
-AUTOMATIC STARTING-STATE DISCOVERY DIAGNOSTIC: Craft A (Shield Cluster)
-================================================================================
-Target Definition: 3 base required mods (3 outcome branches)
-
-CANDIDATE SET STRUCTURAL AUDIT:
-  Clean Physical Base Generated (Rarity: normal): YES
-  Required-Mod Fractured Starts Generated:        YES
-  Duplicate Physical State Solves:               0 (Memoized by canonical state key)
-
-GENERATED STARTING CANDIDATES (7 routes from 7 physical states):
-Route Name                                Acquisition Mode     Acq Cost        Downstream EV   Full Route EV
----------------------------------------------------------------------------------------------------------
-Self-Fracture 35% Increased Effect [Powerful] self-fracture        1534.3c (~7.67 div) 6090.3c (~30.45 div) 7624.6c (~38.12 div)
-Start Clean Base Clean Base               clean-base           10.0c           UNRESOLVED      UNRESOLVED
-Self-Fracture T1 Maximum Energy Shield [Glowing] self-fracture        1534.3c (~7.67 div) UNRESOLVED      UNRESOLVED
-Self-Fracture T1 Intelligence [of the Prodigy] self-fracture        1539.0c (~7.70 div) UNRESOLVED      UNRESOLVED
-Self-Fracture +4 to all Attributes [of the Meteor] self-fracture        1539.0c (~7.70 div) UNRESOLVED      UNRESOLVED
-Self-Fracture 3% increased Attack Speed [Added Small Passive Skills also grant: 3% increased Attack Speed] self-fracture        1543.6c (~7.72 div) UNRESOLVED      UNRESOLVED
-Self-Fracture +4% to all Elemental Resistance [of the Kaleidoscope] self-fracture        1539.0c (~7.70 div) UNRESOLVED      UNRESOLVED
----------------------------------------------------------------------------------------------------------
-
-AUTOMATIC DISCOVERY VERIFICATION:
-  Best Fully Resolved Route: Self-Fracture 35% Increased Effect [Powerful] (7624.6c (~38.12 div))
-  Reference Fixture Route:   Self-Fracture 35% Effect (Clean 12p Base) (7623.7c (~38.12 div))
-  Resolved-Route Consistency: PASSED (auto-discovered resolved route matches manual reference fixture)
-  Global Route Optimality:    NOT YET PROVEN (6 alternatives unresolved)
+AUTO-DISCOVERY DIAGNOSTIC: SKIPPED IN --regressions-only MODE (covered by the budgeted pre-UI generic diagnostic).

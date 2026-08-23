@@ -1,4 +1,4 @@
-import type { PriceBook } from '../domain/PriceBook.ts';
+import type { PriceBook, PriceSource } from '../domain/PriceBook.ts';
 
 export type LifeforceType = 'wildLifeforce' | 'vividLifeforce' | 'primalLifeforce';
 
@@ -97,6 +97,8 @@ export const HARVEST_CRAFT_DEFINITIONS: Record<string, HarvestCraftDefinition> =
 export interface CraftCostResult {
   costChaos: number;
   confidence: 'known' | 'research-fallback' | 'unavailable';
+  source: PriceSource;
+  provenance: string;
 }
 
 export function getHarvestCraftCost(
@@ -105,11 +107,18 @@ export function getHarvestCraftCost(
 ): CraftCostResult {
   const def = HARVEST_CRAFT_DEFINITIONS[tag.toLowerCase()];
   if (!def) {
-    return { costChaos: 0, confidence: 'unavailable' };
+    return {
+      costChaos: 0,
+      confidence: 'unavailable',
+      source: 'unavailable',
+      provenance: `No Harvest craft definition for tag ${tag}`,
+    };
   }
-  const cost = priceBook.toChaos(def.lifeforceAmount, def.lifeforceType);
+  const evaluation = priceBook.evaluateRate(def.lifeforceType);
   return {
-    costChaos: cost,
-    confidence: cost > 0 ? 'known' : 'unavailable',
+    costChaos: evaluation.costChaos * def.lifeforceAmount,
+    confidence: evaluation.confidence,
+    source: evaluation.source,
+    provenance: `${def.lifeforceAmount} ${def.lifeforceType} (${def.craftId})`,
   };
 }
