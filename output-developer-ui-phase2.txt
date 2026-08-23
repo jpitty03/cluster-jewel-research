@@ -9,7 +9,7 @@ ROOT CAUSE OF THE BASELINE ~1534c RECOMMENDATION:
 
 ACQUISITION MENU:
   selected: Restart/Reacquire: clean-base: Clean Base; V=14.817009c
-    Restart/Reacquire: clean-base: Clean Base: RESOLVED; Q=14.817009c; LB=10.000000c; unresolved=0; could beat incumbent=NO
+    Restart/Reacquire: clean-base: Clean Base: RESOLVED; Q=14.817009c; LB=10.226476c; unresolved=0; could beat incumbent=NO
     Restart/Reacquire: Approximate self-fracture: Glowing (T1): RESOLVED; Q=1534.300000c; LB=1534.300000c; unresolved=0; could beat incumbent=NO
 
 CLEAN-BASE DOWNSTREAM STATE KEY:
@@ -17,7 +17,7 @@ CLEAN-BASE DOWNSTREAM STATE KEY:
 
 CLEAN NORMAL STATE:
   selected: Orb of Transmutation; V=4.817000c
-    Orb of Transmutation: RESOLVED; Q=4.817000c; LB=0.030000c; unresolved=0; could beat incumbent=NO
+    Orb of Transmutation: RESOLVED; Q=4.817000c; LB=0.226476c; unresolved=0; could beat incumbent=NO
     Restart/Reacquire: Approximate self-fracture: Glowing (T1): RESOLVED; Q=1534.300000c; LB=1534.300000c; unresolved=0; could beat incumbent=NO
 
 TRANSMUTATION BRANCH:
@@ -27,15 +27,15 @@ TRANSMUTATION BRANCH:
 
 REPRESENTATIVE MAGIC MISS:
   selected: Orb of Alteration; V=4.897000c
-    Orb of Alteration: RESOLVED; Q=4.897000c; LB=0.110000c; unresolved=0; could beat incumbent=NO
-    Orb of Augmentation: RESOLVED; Q=4.927009c; LB=0.030000c; unresolved=0; could beat incumbent=YES
-    Orb of Scouring: RESOLVED; Q=5.317009c; LB=0.500000c; unresolved=0; could beat incumbent=YES
-    Restart/Reacquire: clean-base: Clean Base: RESOLVED; Q=14.817009c; LB=10.000000c; unresolved=0; could beat incumbent=NO
+    Orb of Alteration: RESOLVED; Q=4.897000c; LB=0.306476c; unresolved=0; could beat incumbent=NO
+    Orb of Augmentation: RESOLVED; Q=4.927009c; LB=0.230000c; unresolved=0; could beat incumbent=YES
+    Orb of Scouring: RESOLVED; Q=5.317009c; LB=0.726476c; unresolved=0; could beat incumbent=YES
+    Restart/Reacquire: clean-base: Clean Base: RESOLVED; Q=14.817009c; LB=10.226476c; unresolved=0; could beat incumbent=NO
     Restart/Reacquire: Approximate self-fracture: Glowing (T1): RESOLVED; Q=1534.300000c; LB=1534.300000c; unresolved=0; could beat incumbent=NO
     Regal Orb: UNRESOLVED; Q=UNRESOLVED; LB=0.200000c; unresolved=70; could beat incumbent=YES
 
 SEARCH RESULT:
-  elapsed: 30002ms
+  elapsed: 3677ms
   graph states: 3334
   selected route: Restart/Reacquire: clean-base: Clean Base -> Best Fully Resolved Policy
   downstream EV: 14.817009c
@@ -46,7 +46,7 @@ SEARCH RESULT:
   unresolved on-policy probability: 0.000000%
   Bellman / occupancy: 435 / 712
   reconciliation delta: 0.000397c
-  budget exhausted: YES
+  budget exhausted: NO
 
 FULL-POOL ONE-MOD SANITY — T1 INTELLIGENCE:
   selected acquisition: Restart/Reacquire: clean-base: Clean Base
@@ -58,7 +58,7 @@ FULL-POOL ONE-MOD SANITY — T1 INTELLIGENCE:
   occupancy: CONVERGED in 893
   reconciliation: 0.000505c (PASS)
   unresolved competitors may be cheaper: YES (2721)
-  runtime: 10021ms
+  runtime: 4127ms
 
 FULL-POOL ONE-MOD SANITY — PRECISE RETALIATION:
   selected acquisition: Restart/Reacquire: clean-base: Clean Base
@@ -70,7 +70,7 @@ FULL-POOL ONE-MOD SANITY — PRECISE RETALIATION:
   occupancy: CONVERGED in 712
   reconciliation: 0.000397c (PASS)
   unresolved competitors may be cheaper: YES (2709)
-  runtime: 10012ms
+  runtime: 3474ms
 
 HARVEST TOTAL-AFFIX APPROXIMATION:
   model: preserve fractures + guaranteed tagged mod + roll to 3/4 total explicit affixes (50% each)

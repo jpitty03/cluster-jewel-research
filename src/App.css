@@ -783,6 +783,25 @@ td a {
   margin-top: 10px;
 }
 
+.market-evidence,
+.policy-explanation {
+  margin-top: 10px;
+}
+
+.market-evidence dl {
+  display: grid;
+  grid-template-columns: minmax(130px, auto) 1fr;
+  gap: 4px 14px;
+}
+
+.policy-explanation li {
+  margin-bottom: 8px;
+}
+
+.target-summary li details {
+  margin-top: 3px;
+}
+
 .target-row {
   display: flex;
   gap: 8px;

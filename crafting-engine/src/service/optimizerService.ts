@@ -7,7 +7,7 @@ import {
   type PriceSource,
 } from '../domain/PriceBook.ts';
 import type { BaseType, ItemState } from '../domain/ItemState.ts';
-import { getPhysicalStateSignature, normalizeItemState } from '../domain/ItemState.ts';
+import { getAllAffixes, getPhysicalStateSignature, normalizeItemState } from '../domain/ItemState.ts';
 import type { TargetDefinition } from '../domain/TargetDefinition.ts';
 import { getAllTargetModRequirements, matchesModRequirement } from '../domain/TargetDefinition.ts';
 import type {
@@ -32,6 +32,7 @@ import {
   validateOptimizeCraftInput,
   type OptimizerValidationIssue,
 } from './optimizerValidation.ts';
+import { getSearchRuntimeBudget, type SearchIntent } from './searchRuntime.ts';
 
 export interface OptimizeCraftPriceContext {
   currencyRates?: Partial<CurrencyRates>;
@@ -44,16 +45,30 @@ export interface OptimizeCraftPriceContext {
 export interface OptimizerMarketContext {
   league: string;
   snapshotAt: string;
+  snapshotAgeMs?: number;
+  snapshotStale: boolean;
   currencyRatesAt?: string;
+  currencyRatesAgeMs?: number;
+  currencyRatesStale: boolean;
   stale: boolean;
   cleanBaseQuote: {
     status: 'AVAILABLE' | 'UNAVAILABLE';
     costChaos?: number;
+    lowChaos?: number;
+    midChaos?: number;
     listed?: number;
     sampled?: number;
+    at?: string;
+    ageMs?: number;
+    stale?: boolean;
     provenance: string;
   };
   currencyMappings: Record<string, string>;
+  currencyCoverage: {
+    mappedAndPresent: string[];
+    mappedButMissing: string[];
+    unmappedEngineCurrencies: string[];
+  };
 }
 
 export interface SearchBudget {
@@ -74,6 +89,7 @@ export interface OptimizeCraftInput {
   allowResearchFallbackPrices?: boolean;
   expectedSaleValueChaos?: number;
   marketContext?: OptimizerMarketContext;
+  searchIntent?: SearchIntent;
 }
 
 export interface SerializableCandidateQValue {
@@ -83,6 +99,8 @@ export interface SerializableCandidateQValue {
   continuationCostChaos: number | null;
   totalCostChaos: number | null;
   lowerBoundChaos: number;
+  incumbentUpperBoundChaos: number | null;
+  optimalityGapChaos: number | null;
   status: ActionResolutionStatus;
   couldBeatResolvedIncumbent: boolean;
 }
@@ -104,6 +122,15 @@ export interface ExpectedActionUsage {
   expectedCostChaos: number;
 }
 
+export interface PolicyExplanationRule {
+  condition: string;
+  actionId: string;
+  action: string;
+  representedStateCount: number;
+  expectedVisits: number;
+  exampleState: string;
+}
+
 export interface RouteSummary {
   actionId: string;
   name: string;
@@ -111,6 +138,8 @@ export interface RouteSummary {
   acquisitionMethodId?: string;
   expectedTotalCostChaos: number | null;
   lowerBoundChaos: number;
+  incumbentUpperBoundChaos: number | null;
+  optimalityGapChaos: number | null;
   status: ActionResolutionStatus;
   couldBeatResolvedIncumbent: boolean;
 }
@@ -189,6 +218,7 @@ export interface OptimizationProofSummary {
 }
 
 export interface OptimizationSearchSummary {
+  intent: SearchIntent;
   statesExpanded: number;
   cumulativeExpansionWork: number;
   elapsedMs: number;
@@ -201,6 +231,21 @@ export interface OptimizationSearchSummary {
   wallTimeBudgetExhausted: boolean;
   roundBudgetExhausted: boolean;
   budgetExhausted: boolean;
+  returnedAtBudget: boolean;
+  requestedWallTimeMs: number;
+  engineDeadlineMs: number;
+  hostGuardDeadlineMs: number;
+  shutdownReserveMs: number;
+  hostGuardTriggered: boolean;
+  timeToFirstCompletedRoundMs?: number;
+  timeToFirstCertifiedPolicyMs?: number;
+  timeToFirstUsefulRecommendationMs?: number;
+  expansionMode: 'REBUILT_EACH_ROUND';
+  repeatedStatesExpanded: number;
+  optimisticLowerBoundIterations: number;
+  optimisticLowerBoundConverged: boolean;
+  optimisticLowerBoundMethod: 'KNOWN_PARTIAL_GRAPH_WITH_ZERO_COST_UNKNOWN_SUCCESSORS';
+  stageTimingMs: GenericSearchResult['stageTiming'] & { serializationMs: number };
   harvestActionScope: {
     mode: 'DISABLED' | 'TARGET_INFERRED' | 'EXPLICIT';
     tags: string[];
@@ -228,6 +273,7 @@ export interface OptimizeCraftResult {
   alternatives: RouteSummary[];
   expectedCurrencies: Record<string, number | null>;
   expectedActionUsage: ExpectedActionUsage[];
+  policyExplanation: PolicyExplanationRule[];
   policyRules: PolicyRule[];
   acquisition: AcquisitionSummary;
   expectedCostChaos: number | null;
@@ -269,6 +315,8 @@ function serializeCandidate(candidate: CandidateActionQValue): SerializableCandi
     continuationCostChaos: finiteOrNull(candidate.expectedContinuationChaos),
     totalCostChaos: finiteOrNull(candidate.totalQValueChaos),
     lowerBoundChaos: candidate.lowerBoundChaos,
+    incumbentUpperBoundChaos: finiteOrNull(candidate.incumbentUpperBoundChaos),
+    optimalityGapChaos: finiteOrNull(candidate.optimalityGapChaos),
     status: candidate.status,
     couldBeatResolvedIncumbent: candidate.couldBeatResolvedIncumbent,
   };
@@ -348,6 +396,8 @@ function routeSummary(candidate: CandidateActionQValue): RouteSummary {
     acquisitionMethodId: parts.methodId,
     expectedTotalCostChaos: finiteOrNull(candidate.totalQValueChaos),
     lowerBoundChaos: candidate.lowerBoundChaos,
+    incumbentUpperBoundChaos: finiteOrNull(candidate.incumbentUpperBoundChaos),
+    optimalityGapChaos: finiteOrNull(candidate.optimalityGapChaos),
     status: candidate.status,
     couldBeatResolvedIncumbent: candidate.couldBeatResolvedIncumbent,
   };
@@ -360,6 +410,46 @@ function describePolicyState(state: ItemState): string {
   const prefixes = state.prefixes.map(describeAffix).join('; ') || 'none';
   const suffixes = state.suffixes.map(describeAffix).join('; ') || 'none';
   return `${state.rarity.toUpperCase()} — prefixes: ${prefixes} — suffixes: ${suffixes}`;
+}
+
+function describePolicyCondition(state: ItemState, target: TargetDefinition): string {
+  if (state.flags?.acquisitionMenu) return 'Start: choose an acquisition route';
+  const requirements = getAllTargetModRequirements(target);
+  const matchedTargets = requirements.filter((requirement) =>
+    getAllAffixes(state).some((mod) => matchesModRequirement(mod, requirement))
+  ).length;
+  return `${state.rarity} item with ${state.prefixes.length} prefix(es), ` +
+    `${state.suffixes.length} suffix(es), and ${matchedTargets}/${requirements.length} target modifier(s)`;
+}
+
+function buildPolicyExplanation(
+  rules: GenericSearchResult['onPolicyRules'],
+  target: TargetDefinition
+): PolicyExplanationRule[] {
+  const grouped = new Map<string, PolicyExplanationRule>();
+  for (const rule of rules) {
+    const condition = describePolicyCondition(rule.state, target);
+    const key = `${condition}\u0000${rule.selectedActionId}`;
+    const existing = grouped.get(key);
+    if (existing) {
+      existing.representedStateCount++;
+      existing.expectedVisits += rule.expectedVisits;
+      continue;
+    }
+    grouped.set(key, {
+      condition,
+      actionId: rule.selectedActionId,
+      action: rule.selectedActionName,
+      representedStateCount: 1,
+      expectedVisits: rule.expectedVisits,
+      exampleState: describePolicyState(rule.state),
+    });
+  }
+  return [...grouped.values()].sort((left, right) => {
+    if (left.condition.startsWith('Start:')) return -1;
+    if (right.condition.startsWith('Start:')) return 1;
+    return right.expectedVisits - left.expectedVisits;
+  });
 }
 
 function mechanicsScope(
@@ -422,6 +512,7 @@ export class OptimizerService {
           }))
       : [];
     const startState = virtualAcquisitionState(input);
+    const runtimeBudget = getSearchRuntimeBudget(input.searchBudget?.maxWallTimeMs);
     const result = new GenericSearchEngine(
       { pool, priceBook },
       input.target,
@@ -432,8 +523,9 @@ export class OptimizerService {
         prioritizeTargetProgress: true,
         allowResearchFallbackPrices: input.allowResearchFallbackPrices ?? true,
         maxStates: input.searchBudget?.maxStates ?? 5000,
-        maxWallTimeMs: input.searchBudget?.maxWallTimeMs ?? 30_000,
+        maxWallTimeMs: runtimeBudget.engineDeadlineMs,
         maxExpansionRounds: input.searchBudget?.maxExpansionRounds ?? 3,
+        searchIntent: input.searchIntent ?? 'RECOMMEND',
       }
     ).search(startState);
 
@@ -504,10 +596,22 @@ export class OptimizerService {
       ...result.mechanicsConfidence.warnings
         .filter((message) => !selectedMechanicsWarnings.includes(message))
         .map((message): OptimizationWarning => ({ category: 'CONSIDERED_ALTERNATIVE', message })),
-      ...(input.marketContext?.stale
+      ...(input.marketContext?.snapshotStale
         ? [{
             category: 'DATA_FRESHNESS' as const,
-            message: `Market snapshot for ${input.marketContext.league} is stale (${input.marketContext.snapshotAt}).`,
+            message: `Market snapshot file for ${input.marketContext.league} is stale (${input.marketContext.snapshotAt}).`,
+          }]
+        : []),
+      ...(input.marketContext?.currencyRatesStale
+        ? [{
+            category: 'DATA_FRESHNESS' as const,
+            message: `Currency rates for ${input.marketContext.league} are stale or unavailable (${input.marketContext.currencyRatesAt ?? 'no timestamp'}).`,
+          }]
+        : []),
+      ...(input.marketContext?.cleanBaseQuote.status === 'AVAILABLE' && input.marketContext.cleanBaseQuote.stale
+        ? [{
+            category: 'DATA_FRESHNESS' as const,
+            message: `The selected clean-base sampled-low quote is stale (${input.marketContext.cleanBaseQuote.at ?? 'no timestamp'}).`,
           }]
         : []),
       ...(input.marketContext?.cleanBaseQuote.status === 'UNAVAILABLE'
@@ -533,6 +637,7 @@ export class OptimizerService {
         Object.entries(result.expectedCurrencies).map(([currency, amount]) => [currency, finiteOrNull(amount)])
       ),
       expectedActionUsage: result.expectedActionUsage.map((usage) => ({ ...usage })),
+      policyExplanation: buildPolicyExplanation(result.onPolicyRules, input.target),
       policyRules,
       acquisition: {
         selectedCandidateId: selectedParts.candidateId,
@@ -592,6 +697,13 @@ export class OptimizerService {
       },
       search: {
         ...result.searchSummary,
+        maxWallTimeMs: runtimeBudget.requestedWallTimeMs,
+        requestedWallTimeMs: runtimeBudget.requestedWallTimeMs,
+        engineDeadlineMs: runtimeBudget.engineDeadlineMs,
+        hostGuardDeadlineMs: runtimeBudget.hostGuardDeadlineMs,
+        shutdownReserveMs: runtimeBudget.shutdownReserveMs,
+        hostGuardTriggered: false,
+        stageTimingMs: { ...result.stageTiming, serializationMs: 0 },
         harvestActionScope: {
           mode: harvestTags.length === 0
             ? 'DISABLED'
@@ -618,6 +730,9 @@ export class OptimizerService {
 
     // This assertion belongs at the boundary: an accidental Map/Infinity must
     // never become a frontend integration surprise.
+    const serializationStarted = Date.now();
+    JSON.stringify(output);
+    output.search.stageTimingMs.serializationMs = Date.now() - serializationStarted;
     JSON.stringify(output);
     return output;
   }

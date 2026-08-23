@@ -10,7 +10,8 @@ export type OptimizerValidationField =
   | 'itemLevel'
   | 'target.requiredMods'
   | 'target.requiredRarity'
-  | 'searchBudget';
+  | 'searchBudget'
+  | 'searchIntent';
 
 export interface OptimizerValidationIssue {
   code: string;
@@ -147,6 +148,12 @@ export function validateOptimizeCraftInput(
     (value) => value !== undefined && (!Number.isInteger(value) || value < 1)
   )) {
     errors.push({ code: 'INVALID_SEARCH_BUDGET', field: 'searchBudget', message: 'Search budgets must be positive integers.' });
+  }
+  if (
+    input.searchIntent !== undefined &&
+    !['RECOMMEND', 'DEEPEN', 'PROVE'].includes(input.searchIntent)
+  ) {
+    errors.push({ code: 'INVALID_SEARCH_INTENT', field: 'searchIntent', message: 'Choose Recommend, Deepen, or Prove search intent.' });
   }
 
   return { valid: errors.length === 0, errors, notices, normalizedInput };

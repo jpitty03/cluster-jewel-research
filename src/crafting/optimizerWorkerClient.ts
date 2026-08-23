@@ -1,5 +1,9 @@
 import type { OptimizeCraftInput, OptimizeCraftResult } from '../../crafting-engine/src/service/optimizerService.ts';
 import {
+  getSearchRuntimeBudget,
+  HOST_SEARCH_GUARD_GRACE_MS,
+} from '../../crafting-engine/src/service/searchRuntime.ts';
+import {
   isOptimizerWorkerResponse,
   type OptimizerWorkerRequest,
 } from './optimizerWorkerProtocol.ts';
@@ -10,7 +14,7 @@ interface PendingRequest {
   timeoutId: ReturnType<typeof setTimeout>;
 }
 
-export const SEARCH_WALL_TIME_GRACE_MS = 250;
+export const SEARCH_WALL_TIME_GRACE_MS = HOST_SEARCH_GUARD_GRACE_MS;
 
 export class SearchWallTimeExceededError extends Error {
   readonly code = 'SEARCH_WALL_TIME_EXCEEDED';
@@ -41,12 +45,13 @@ export class OptimizerWorkerClient {
   optimize(input: OptimizeCraftInput): Promise<OptimizeCraftResult> {
     const requestId = `optimizer_${this.nextRequestId++}`;
     const request: OptimizerWorkerRequest = { type: 'OPTIMIZE', requestId, input };
-    const budgetMs = Math.max(1, input.searchBudget?.maxWallTimeMs ?? 30_000);
+    const runtimeBudget = getSearchRuntimeBudget(input.searchBudget?.maxWallTimeMs);
+    const budgetMs = runtimeBudget.requestedWallTimeMs;
     return new Promise((resolve, reject) => {
       const timeoutId = setTimeout(() => {
         if (!this.pending.has(requestId)) return;
         this.replaceWorker(new SearchWallTimeExceededError(budgetMs));
-      }, budgetMs + SEARCH_WALL_TIME_GRACE_MS);
+      }, runtimeBudget.hostGuardDeadlineMs);
       this.pending.set(requestId, { resolve, reject, timeoutId });
       this.worker.postMessage(request);
     });

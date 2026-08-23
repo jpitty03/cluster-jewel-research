@@ -5,6 +5,7 @@ import type {
   OptimizeCraftResult,
   RecommendationStatus,
 } from '../crafting-engine/src/service/optimizerService.ts';
+import type { SearchIntent } from '../crafting-engine/src/service/searchRuntime.ts';
 import {
   browserCraftingCatalog,
   validateBrowserOptimizeInput,
@@ -44,6 +45,12 @@ function count(value: number): string {
   return value < 0.01 ? value.toExponential(2) : value.toFixed(3);
 }
 
+function age(value: number | undefined): string {
+  if (value === undefined || !Number.isFinite(value)) return 'unknown';
+  const days = value / 86_400_000;
+  return days < 1 ? `${(value / 3_600_000).toFixed(1)} hours` : `${days.toFixed(1)} days`;
+}
+
 function CraftOptimizer() {
   const baseTypes = useMemo(() => browserCraftingCatalog.getBaseTypes(), []);
   const initialBase = baseTypes[0] ?? 'Large Cluster Jewel';
@@ -75,6 +82,7 @@ function CraftOptimizer() {
   const [maxStates, setMaxStates] = useState(DEFAULT_BUDGET.maxStates);
   const [maxWallTimeMs, setMaxWallTimeMs] = useState(DEFAULT_BUDGET.maxWallTimeMs);
   const [maxExpansionRounds, setMaxExpansionRounds] = useState(DEFAULT_BUDGET.maxExpansionRounds);
+  const [searchIntent, setSearchIntent] = useState<SearchIntent>('RECOMMEND');
   const [result, setResult] = useState<OptimizeCraftResult | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [wallTimeExceeded, setWallTimeExceeded] = useState(false);
@@ -145,6 +153,7 @@ function CraftOptimizer() {
         : undefined,
       allowResearchFallbackPrices: allowFallback,
       searchBudget: { maxStates, maxWallTimeMs, maxExpansionRounds },
+      searchIntent,
     };
   }, [
     allowFallback,
@@ -160,6 +169,7 @@ function CraftOptimizer() {
     maxWallTimeMs,
     passiveCount,
     saleValue,
+    searchIntent,
     selectedTargetIds,
   ]);
   const validation = useMemo(() => validateBrowserOptimizeInput(draftInput), [draftInput]);
@@ -195,9 +205,16 @@ function CraftOptimizer() {
     setTargetModIds((current) => current.map((value, i) => (i === index ? modId : value)));
   };
 
-  const optimize = async (budget = { maxStates, maxWallTimeMs, maxExpansionRounds }) => {
+  const optimize = async (
+    budget = { maxStates, maxWallTimeMs, maxExpansionRounds },
+    intent: SearchIntent = searchIntent
+  ) => {
     if (validationError || !workerRef.current) return;
-    const requestValidation = validateBrowserOptimizeInput({ ...draftInput, searchBudget: budget });
+    const requestValidation = validateBrowserOptimizeInput({
+      ...draftInput,
+      searchBudget: budget,
+      searchIntent: intent,
+    });
     if (!requestValidation.valid) {
       setError(requestValidation.errors.map((issue) => issue.message).join(' '));
       return;
@@ -239,7 +256,8 @@ function CraftOptimizer() {
     setMaxStates(budget.maxStates);
     setMaxWallTimeMs(budget.maxWallTimeMs);
     setMaxExpansionRounds(budget.maxExpansionRounds);
-    void optimize(budget);
+    setSearchIntent('DEEPEN');
+    void optimize(budget, 'DEEPEN');
   };
 
   const cancel = () => workerRef.current?.cancel();
@@ -322,6 +340,21 @@ function CraftOptimizer() {
         <p className="muted">
           {marketPricing?.marketContext.cleanBaseQuote.provenance ?? 'No league price snapshot is available.'}
         </p>
+        {marketPricing && (
+          <details className="market-evidence">
+            <summary>Market evidence</summary>
+            <dl>
+              <dt>Sampled low</dt><dd>{chaos(marketPricing.marketContext.cleanBaseQuote.lowChaos)}</dd>
+              <dt>Sample midpoint</dt><dd>{chaos(marketPricing.marketContext.cleanBaseQuote.midChaos)}</dd>
+              <dt>Listings/sample</dt>
+              <dd>{marketPricing.marketContext.cleanBaseQuote.listed ?? 0} / {marketPricing.marketContext.cleanBaseQuote.sampled ?? 0}</dd>
+              <dt>Quote timestamp</dt><dd>{marketPricing.marketContext.cleanBaseQuote.at ?? 'unavailable'}</dd>
+              <dt>Quote age</dt><dd>{age(marketPricing.marketContext.cleanBaseQuote.ageMs)}{marketPricing.marketContext.cleanBaseQuote.stale ? ' (stale)' : ''}</dd>
+              <dt>Currency-rate age</dt><dd>{age(marketPricing.marketContext.currencyRatesAgeMs)}{marketPricing.marketContext.currencyRatesStale ? ' (stale)' : ''}</dd>
+              <dt>Snapshot age</dt><dd>{age(marketPricing.marketContext.snapshotAgeMs)}{marketPricing.marketContext.snapshotStale ? ' (stale)' : ''}</dd>
+            </dl>
+          </details>
+        )}
 
         <div className="target-list">
           <h3>Desired exact modifiers ({targetModIds.length}/4)</h3>
@@ -386,7 +419,17 @@ function CraftOptimizer() {
           <p>Final rarity: {validation.normalizedInput.target.requiredRarity ?? 'Any'}</p>
           <ul>
             {validation.normalizedInput.target.requiredMods.map((requirement) => (
-              <li key={requirement.modId}>{requirement.modId}</li>
+              <li key={requirement.modId}>
+                {(() => {
+                  const mod = eligibleMods.find((candidate) => candidate.modId === requirement.modId);
+                  return mod ? (
+                    <>
+                      <strong>{mod.displayName}</strong> — {mod.statText} · {mod.genType}, ilvl {mod.requiredItemLevel}
+                      <details><summary>Exact modifier ID</summary><code>{mod.modId}</code></details>
+                    </>
+                  ) : requirement.modId;
+                })()}
+              </li>
             ))}
           </ul>
           {validation.notices.map((notice) => <p className="muted" key={notice.code}>{notice.message}</p>)}
@@ -396,6 +439,14 @@ function CraftOptimizer() {
           <summary>Advanced search budgets</summary>
           <p>Defaults: 5,000 states, 30,000 ms, 3 lazy-expansion rounds.</p>
           <div className="optimizer-grid">
+            <label>
+              <span>Search intent</span>
+              <select value={searchIntent} onChange={(event) => setSearchIntent(event.target.value as SearchIntent)}>
+                <option value="RECOMMEND">Recommend quickly</option>
+                <option value="DEEPEN">Deepen competitors</option>
+                <option value="PROVE">Attempt proof</option>
+              </select>
+            </label>
             <label><span>Max states</span><input type="number" min="1" step="100" value={maxStates} onChange={(event) => setMaxStates(event.target.valueAsNumber)} /></label>
             <label><span>Max wall time (ms)</span><input type="number" min="1" step="1000" value={maxWallTimeMs} onChange={(event) => setMaxWallTimeMs(event.target.valueAsNumber)} /></label>
             <label><span>Expansion rounds</span><input type="number" min="1" max="20" value={maxExpansionRounds} onChange={(event) => setMaxExpansionRounds(event.target.valueAsNumber)} /></label>
@@ -431,7 +482,9 @@ function CraftOptimizer() {
             <h2>Recommendation summary</h2>
             <dl>
               <dt>Target</dt>
-              <dd>{result.target.requiredMods.map((requirement) => requirement.modId).join(' + ')} · {result.target.requiredRarity ?? 'Any rarity'}</dd>
+              <dd>{result.target.requiredMods.map((requirement) =>
+                eligibleMods.find((mod) => mod.modId === requirement.modId)?.displayName ?? requirement.modId
+              ).join(' + ')} · {result.target.requiredRarity ?? 'Any rarity'}</dd>
               <dt>Status</dt><dd>{result.recommendationStatus}</dd>
               <dt>Selected acquisition</dt><dd>{selectedAcquisition?.label ?? result.recommended?.name ?? 'None certified'}</dd>
               <dt>Expected cost</dt><dd>{chaos(result.expectedCostChaos)}</dd>
@@ -501,10 +554,23 @@ function CraftOptimizer() {
           </section>
 
           <section className="optimizer-card">
+            <h2>Branching craft policy</h2>
+            <p className="muted">Grouped from the selected Bellman policy; this is not a fabricated linear recipe.</p>
+            <ol className="policy-explanation">
+              {result.policyExplanation.map((rule) => (
+                <li key={`${rule.condition}-${rule.actionId}`}>
+                  <strong>{rule.condition}</strong> → {rule.action}
+                  <span className="muted"> ({rule.representedStateCount} states; {count(rule.expectedVisits)} expected visits)</span>
+                </li>
+              ))}
+            </ol>
+          </section>
+
+          <section className="optimizer-card">
             <h2>Alternative acquisitions</h2>
             {result.alternatives.length > 0 ? (
-              <table><thead><tr><th>Route</th><th>Status</th><th>Expected total</th><th>Could beat incumbent</th></tr></thead>
-                <tbody>{result.alternatives.map((route) => <tr key={route.actionId}><td>{route.name}</td><td>{route.status}</td><td>{chaos(route.expectedTotalCostChaos)}</td><td>{route.couldBeatResolvedIncumbent ? 'yes' : 'no'}</td></tr>)}</tbody>
+              <table><thead><tr><th>Route</th><th>Status</th><th>Expected total</th><th>Lower bound</th><th>Gap to incumbent</th><th>Could beat</th></tr></thead>
+                <tbody>{result.alternatives.map((route) => <tr key={route.actionId}><td>{route.name}</td><td>{route.status}</td><td>{chaos(route.expectedTotalCostChaos)}</td><td>{chaos(route.lowerBoundChaos)}</td><td>{chaos(route.optimalityGapChaos)}</td><td>{route.couldBeatResolvedIncumbent ? 'yes' : 'no'}</td></tr>)}</tbody>
               </table>
             ) : <p>No alternative acquisition routes were generated.</p>}
           </section>
@@ -522,13 +588,27 @@ function CraftOptimizer() {
               <dl>
                 <dt>States expanded</dt><dd>{result.search.statesExpanded.toLocaleString()}</dd>
                 <dt>Expansion rounds</dt><dd>{result.search.expansionRounds}/{result.search.maxExpansionRounds}</dd>
+                <dt>Search intent</dt><dd>{result.search.intent}</dd>
                 <dt>Engine elapsed</dt><dd>{result.search.elapsedMs.toLocaleString()} ms</dd>
                 <dt>Worker round trip</dt><dd>{runtimeMs?.toFixed(0)} ms</dd>
+                <dt>Engine / host deadline</dt><dd>{result.search.engineDeadlineMs} / {result.search.hostGuardDeadlineMs} ms</dd>
+                <dt>First completed round</dt><dd>{result.search.timeToFirstCompletedRoundMs ?? 'not reached'} ms</dd>
+                <dt>First certified policy</dt><dd>{result.search.timeToFirstCertifiedPolicyMs ?? 'not reached'} ms</dd>
+                <dt>First acquisition-safe recommendation</dt><dd>{result.search.timeToFirstUsefulRecommendationMs ?? 'not reached'} ms</dd>
+                <dt>Returned at budget</dt><dd>{result.search.returnedAtBudget ? 'yes' : 'no'}</dd>
+                <dt>Host guard triggered</dt><dd>{result.search.hostGuardTriggered ? 'yes' : 'no'}</dd>
+                <dt>Expansion architecture</dt><dd>{result.search.expansionMode}; {result.search.repeatedStatesExpanded.toLocaleString()} repeated states</dd>
                 <dt>Budget exhausted</dt><dd>{result.search.budgetExhausted ? 'yes' : 'no'}</dd>
                 <dt>Raw inferred tags</dt><dd>{result.search.harvestActionScope.rawInferredTags.join(', ') || 'none'}</dd>
                 <dt>Enabled Harvest crafts</dt>
                 <dd>{result.search.harvestActionScope.enabledCrafts.map((craft) => craft.actionName).join(', ') || 'none'}</dd>
               </dl>
+              <details>
+                <summary>Stage timing</summary>
+                <table><tbody>{Object.entries(result.search.stageTimingMs).map(([stage, milliseconds]) => (
+                  <tr key={stage}><th>{stage}</th><td>{milliseconds} ms</td></tr>
+                ))}</tbody></table>
+              </details>
             </section>
             <section className="optimizer-card">
               <h2>Confidence</h2>
@@ -539,6 +619,15 @@ function CraftOptimizer() {
               <p><strong>Broader mechanics:</strong> {result.mechanicsConfidence.consideredSearchSpace.warnings.length} approximation warnings</p>
             </section>
           </div>
+
+          {result.marketContext && (
+            <details className="optimizer-card">
+              <summary>Currency mapping coverage</summary>
+              <p><strong>Mapped and present:</strong> {result.marketContext.currencyCoverage.mappedAndPresent.join(', ') || 'none'}</p>
+              <p><strong>Mapped but missing:</strong> {result.marketContext.currencyCoverage.mappedButMissing.join(', ') || 'none'}</p>
+              <p><strong>Unmapped engine currencies:</strong> {result.marketContext.currencyCoverage.unmappedEngineCurrencies.join(', ') || 'none'}</p>
+            </details>
+          )}
 
           {result.warningDetails.some((warning) => warning.category === 'DATA_FRESHNESS') && (
             <section className="optimizer-card warnings">
