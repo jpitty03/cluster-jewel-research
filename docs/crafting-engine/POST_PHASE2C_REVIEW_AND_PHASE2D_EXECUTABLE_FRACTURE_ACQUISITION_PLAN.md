@@ -1,4 +1,4 @@
-# Post Phase 2C Review and Phase 2D Executable Fracture Acquisition Plan
+# Post Phase 2C Review and Phase 2D Executable Self-Fracture Acquisition Plan
 
 ## Status / Source of Truth
 
@@ -7,6 +7,12 @@ Current implementation reviewed at:
 - `a14fde35dbd68ae1f26b50ea33c85b123f214530` — `feat: complete phase 2c search hardening`
 
 This document is the source of truth for the next implementation pass. It supersedes the earlier Phase 2C planning documents for future work.
+
+**Important product decision added after the original Phase 2D review:**
+
+> **Core strategy discovery must treat a fractured route as a self-manufactured fractured base. The optimizer does not need to compare that route against buying a pre-fractured base.**
+
+This deliberately removes fractured-base market availability from the core crafting strategy problem.
 
 Primary implementation and diagnostics reviewed:
 
@@ -55,68 +61,129 @@ The product is now substantially stronger for ordinary one- and two-mod targets.
 
 ## Next major limitation
 
-The largest remaining product-economics approximation is now fracture acquisition:
+The largest remaining product-economics approximation is fracture acquisition:
 
 > **Self-fracture acquisition is still a research formula rather than an executable policy discovered through the shared crafting mechanics.**
 
-Fractured starting states are central to the expensive multi-stage crafts this optimizer is intended to solve. The next phase should therefore replace that approximation with actual search-derived fracture acquisition economics.
+Fractured starting states are central to the expensive multi-stage crafts this optimizer is intended to solve. Phase 2D should replace that approximation with actual search-derived fracture acquisition economics.
 
 ## Recommended next phase
 
-> **Developer UI Phase 2D — Executable Fracture Acquisition, Buy-vs-Self Comparison, and Persistent Search Extension**
+> **Developer UI Phase 2D — Executable Self-Fracture Acquisition and Persistent Search Extension**
 
 Do not spend this phase primarily on visual polish or unrelated mechanics.
 
 ---
 
-# User-Directed Fracture Acquisition Invariant
+# Permanent Product Invariant — Fractured Routes Are Self-Fractured
 
-This is a permanent product requirement.
+This is a user-directed permanent product requirement.
 
-Whenever the optimizer considers a route that uses a fractured modifier—whether as a starting acquisition or as an intermediate strategic milestone—it must compare:
+When strategy discovery determines that a fractured modifier may be useful, the canonical acquisition method is:
 
 ```text
 SELF-FRACTURE THE MODIFIER
-vs
-BUY THE FRACTURED BASE
 ```
 
-whenever a valid market quote for the fractured base is available.
+The optimizer should **not require a pre-fractured market listing** in order for that route to exist.
 
-This comparison is mandatory. A market-purchase option must never suppress generation/evaluation of the self-fracture option, and a self-fracture option must never suppress a valid market-purchase option.
-
-In practice, self-fracturing is expected to be cheaper in many or most cases. **Do not encode that expectation as a solver rule.** The engine must calculate both routes and let expected cost decide.
-
-For every plausible fracture target generated from the requested final target, compare the complete route families. Example:
+The core optimizer should not spend search/product complexity comparing:
 
 ```text
-clean / no fracture
-self-fracture T1 ES
-buy fractured T1 ES
-self-fracture T1 Intelligence
-buy fractured T1 Intelligence
-self-fracture 35% Effect
-buy fractured 35% Effect
+self-fracture target X
+vs
+buy fractured target X
+```
+
+Instead:
+
+```text
+fractured target X route
+=
+executable self-fracture acquisition policy
++
+downstream crafting policy
+```
+
+## Why this is the product rule
+
+A pre-fractured base may:
+
+- not exist on trade;
+- have only one listing;
+- have an unrealistic or manipulated price;
+- have the wrong passive count;
+- have the wrong item level;
+- have the wrong cluster enchantment;
+- disappear between pricing and execution;
+- have stale or incomplete pricing evidence.
+
+Self-fracturing is a reproducible crafting route. If the required base and crafting materials exist, the optimizer can describe an executable path.
+
+A valuable product property is therefore:
+
+> **Every core recommended route should be reproducible from an ordinary supported base rather than depend on a specific pre-fractured item existing on trade.**
+
+## Important distinction
+
+This does **not** mean:
+
+```text
+hardcode self-fracture cost = some fixed number
+```
+
+and it does **not** mean:
+
+```text
+assume the historical approximate self-fracture formula is correct
+```
+
+It means:
+
+> **Assume self-fracture is the acquisition method for fractured strategy families, but calculate the cost of self-fracturing through executable shared mechanics.**
+
+The strategy-selection question remains fully dynamic:
+
+```text
+clean/no-fracture route
+vs
+self-fracture target A route
+vs
+self-fracture target B route
+vs
+self-fracture target C route
 ...
 ```
 
-Only include fracture targets that are mechanically relevant and legally modeled; do not enumerate arbitrary irrelevant pool mods merely to create more candidates.
+The solver must still determine:
 
-If an exact market quote is unavailable:
+- whether fracturing is useful at all;
+- which modifier is best to fracture;
+- how to prepare the fracture attempt;
+- how to recover from a wrong fracture;
+- whether a clean/no-fracture strategy is cheaper.
 
-- keep the self-fracture route;
-- mark market purchase unavailable;
-- never invent a market price.
+Do not hardcode the “obvious” fracture target.
 
-If the self-fracture route remains unresolved and a market route is resolved, acquisition selection is only safe if the unresolved self-fracture lower bound cannot beat the market incumbent. Otherwise return a provisional acquisition result.
+## Market purchase status
 
-This invariant applies to the generic solver, not only Craft A/C fixtures.
+Existing fractured-market-price infrastructure does not need to be aggressively deleted in Phase 2D if removal creates unnecessary churn.
+
+However:
+
+- it must not be required by normal strategy discovery;
+- it must not block a self-fracture route when no quote exists;
+- it should not participate in core route ranking after the executable self-fracture path is established;
+- UI controls that exist only to supply fractured-base prices should be removed or hidden from the normal product path when practical;
+- the capability may remain dormant for a possible future advanced `Allow buying pre-fractured bases` feature.
+
+Do not spend Phase 2D implementing or polishing that future advanced feature.
 
 ---
 
-# Verified Phase 2C Results
+# Verified Phase 2C Results To Preserve
 
-## 1. Live-equivalent two-mod `Any` target is now acquisition-safe
+## 1. Live-equivalent two-mod `Any` target is acquisition-safe
 
 Controlled diagnostic:
 
@@ -141,15 +208,6 @@ YES
 Fair acquisition probes:
 3 / 3 certified
 
-Clean Base:
-~1080 states
-
-Fractured T1 ES:
-~40 states
-
-Fractured T1 Int:
-~27 states
-
 On-policy unresolved probability:
 0%
 
@@ -169,17 +227,17 @@ Runtime: ~1.3s
 Status: BEST_RESOLVED_ACQUISITION_SAFE
 ```
 
-This is a strong permanent regression.
+This is a permanent regression.
 
 ## 2. One-mod regression remains healthy
 
-The browser path continues to choose the clean-base rolling family for T1 ES instead of the former ~1500c approximate fracture route.
+The browser path chooses the clean-base rolling family for T1 ES instead of the former ~1500c approximate fracture route.
 
 Keep this as the cheapest and fastest mandatory browser regression.
 
-## 3. Final-state constraints are correctly separated from raw target presence
+## 3. Final-state constraints remain authoritative
 
-The engine now models:
+The engine models:
 
 ```ts
 FinalStateConstraints {
@@ -190,35 +248,19 @@ FinalStateConstraints {
 }
 ```
 
-`maxUnmatchedAffixes: 0` correctly distinguishes:
+`maxUnmatchedAffixes: 0` correctly distinguishes a clean target from target+junk without Craft-specific cleanup logic.
 
-```text
-T1 ES + T1 Int
-```
+## 4. Minimum feasible rarity remains search staging only
 
-from:
-
-```text
-T1 ES + T1 Int + junk
-```
-
-without adding Craft-specific cleanup logic.
-
-Preserve this architecture.
-
-## 4. Minimum feasible rarity now improves recommendation staging
-
-For one Prefix + one Suffix and `requiredRarity = Any`, the engine derives:
+For one Prefix + one Suffix with `requiredRarity = Any`:
 
 ```text
 minimum feasible rarity = Magic
 ```
 
-This prevents recommendation-stage rare/Regal expansion from starving the clean Magic completion family.
+Preserve this as a search-priority fact, never a legality restriction.
 
-Keep minimum rarity as a search-priority fact, never a legality restriction.
-
-## 5. External Alteration parity is strong
+## 5. External Alteration parity remains aligned
 
 Craft of Exile:
 
@@ -241,17 +283,15 @@ Seeded MC:
 500,000 trials
 ```
 
-The analytical value lies inside the supplied external confidence interval.
-
 Status:
 
 ```text
 ALIGNED
 ```
 
-Do not tune Alteration mechanics toward the observation.
+Do not tune mechanics to the observation.
 
-## 6. Exact Harvest fixture is now correctly represented
+## 6. Exact Harvest fixture semantics remain unchanged
 
 Confirmed external physical fixture:
 
@@ -287,25 +327,13 @@ Seeded MC:  0.1219000%
 Relative difference: ~19.91% optimistic
 ```
 
-All three remain correctly labeled:
+All three remain:
 
 ```text
 CLOSE / APPROXIMATE
 ```
 
-The combined one-Annul fixture means only:
-
-```text
-both targets remain after exactly one Annul
-```
-
-and does **not** mean:
-
-```text
-fully clean two-mod final item
-```
-
-Preserve this interpretation.
+The combined one-Annul fixture means only that both targets remain after exactly one Annul. It is not a clean-finished-item benchmark.
 
 ## 7. Craft A/C remain healthy
 
@@ -345,8 +373,7 @@ The current shape is effectively:
 ```text
 estimate target-mod hit rate from one affix-generation pool
 -> expected Alterations
--> expectedAlts * hardcoded Alteration rate
--> add preparation allowance
+-> hardcoded/approximate preparation cost
 -> add Fracturing Orb cost
 -> multiply by four attempts for 25% desired fracture
 ```
@@ -359,7 +386,7 @@ const prepCostPerAttempt = expectedAlts * 0.11 + 10;
 const totalSelfFracCost = 4 * (cleanBaseCost + prepCostPerAttempt + fractureCost);
 ```
 
-This was useful as an early estimate, but it is no longer acceptable as the primary ranking mechanism for fractured acquisition.
+This was useful as an early research estimate but must not remain the primary ranking mechanism for fractured routes.
 
 The engine already owns:
 
@@ -375,7 +402,7 @@ The engine already owns:
 - price provenance;
 - Bellman recovery logic.
 
-Therefore self-fracture economics should now emerge from those shared mechanics.
+Self-fracture economics should emerge from shared mechanics.
 
 ---
 
@@ -383,15 +410,18 @@ Therefore self-fracture economics should now emerge from those shared mechanics.
 
 ## Goal
 
-A desired fractured starting state must be obtainable through distinct acquisition methods:
+A desired reusable fractured starting state must be obtained by an executable self-fracture policy.
+
+Conceptually:
 
 ```text
-market purchase, when quoted
-executable self-fracture route
-approximate research estimate only as a temporary fallback/reference
+requested fractured physical state
+-> synthesize cheapest executable self-fracture policy
+-> return acquisition EV + policy/proof
+-> feed resulting physical state into downstream optimizer
 ```
 
-The executable self-fracture route must be solved from shared mechanics, not encoded as a Craft-specific sequence.
+The old approximate research estimate may remain temporarily as diagnostics/reference, but it should leave normal ranking once the executable replacement is healthy.
 
 ## Recommended architecture
 
@@ -418,25 +448,26 @@ interface AcquisitionSynthesisResult {
 }
 ```
 
-For a desired single-fractured base, the terminal physical requirement should represent the reusable post-reset state, for example:
+For a desired single-fractured base, terminal semantics should represent a reusable post-reset physical state such as:
 
 ```text
 required target mod is fractured
 no removable junk remains
-physical state is legal for subsequent crafting
+physical state is legal for downstream crafting
 ```
 
-Do not hardcode modifier IDs or reference Craft A/C in the generic acquisition solver.
+Do not hardcode modifier IDs or reference Craft A/C inside the generic acquisition solver.
 
 ## Required modeled policy family
 
-The shared engine should be able to discover behavior such as:
+The shared engine should be capable of discovering behavior such as:
 
 ```text
 clean base
 -> Transmutation / Alteration / Augmentation
 -> obtain desired target mod
--> Regal / Exalt as needed to reach legal Fracturing state
+-> Regal / Exalt / other modeled legal actions as needed
+-> reach legal Fracturing state
 -> Fracturing Orb
     -> desired mod fractured
         -> Scour/reset removable junk
@@ -445,104 +476,109 @@ clean base
         -> abandon/restart with a clean base
 ```
 
-Exact actions must emerge from legality, weights, prices, and continuation EV.
+Exact preparation actions must emerge from legality, weights, prices, and continuation EV.
 
-If four explicit modifiers are the cheapest legal fracturing preparation, the solver should discover that. If another legal modeled state is cheaper, it should be allowed to choose it.
+Do not manually encode a fixed retry multiplier. Let Fracturing transitions and restart cycles generate expected cost.
 
-Do not manually encode a fixed 25% retry multiplier into the executable route; let Fracturing transitions and restart loops create the expectation.
+## Fracturing legality must be authoritative
+
+Do not assume a preparation shape solely because the historical research estimate did so.
+
+The synthesis solver must use actual modeled Fracturing Orb legality and state transitions.
+
+If game data/mechanics require an exact four-mod rare before fracturing, enforce that through the shared mechanic.
+
+If the authoritative mechanic permits something else, use the authoritative rule.
 
 ## Missing mechanics coverage
 
-The historical approximate preparation model assumes capabilities such as a cheap preparation/filler step.
+The historical estimate assumes cheap filler/preparation capabilities.
 
-If a required preparation mechanic is not yet modeled, do not silently hide that gap behind a hardcoded allowance.
+If a required preparation mechanic is not modeled, do not hide that gap behind a magic numeric allowance.
 
-Use only shared mechanics that actually exist and report the coverage limitation.
+Use only executable shared mechanics and report missing coverage.
 
-If later evidence shows a missing core mechanic—such as an authoritative Crafting Bench filler—is materially necessary for realistic self-fracture economics, plan and implement it separately from authoritative data rather than inventing its behavior in this phase.
-
----
-
-# Phase 2D Priority 2 — Always Compare Executable Self-Fracture Against Market Purchase
-
-This priority implements the permanent fracture acquisition invariant.
-
-For each relevant fractured physical candidate:
-
-```text
-candidate physical state: fractured target X
-
-method A:
-EXECUTABLE SELF-FRACTURE
-
-method B:
-MARKET PURCHASE, if exact quote exists
-```
-
-Both methods lead to the same downstream physical state and should therefore share the downstream crafting value.
-
-The economic comparison should be:
-
-```text
-self-fracture acquisition EV + downstream EV
-vs
-market purchase price + downstream EV
-```
-
-Because downstream physical state is identical, the acquisition-cost difference is sufficient for ranking those two methods, but retain full-route reporting for clarity.
-
-## Multiple fracture targets
-
-If a final target contains multiple plausible fracture candidates, evaluate each relevant candidate independently.
-
-For example:
-
-```text
-fracture 35% Effect:
-  self vs buy
-
-fracture T1 Intelligence:
-  self vs buy
-
-fracture T1 ES:
-  self vs buy
-```
-
-Then compare those complete route families against each other and against clean/no-fracture acquisition.
-
-Do not assume the “obvious” fracture target is best.
-
-## Market data semantics
-
-A market method exists only when an exact, user-supplied, or otherwise supported quote exists for that fractured physical target.
-
-Do not fabricate fractured-base prices.
-
-If no market quote exists:
-
-```text
-Market purchase: UNAVAILABLE
-Self-fracture: still evaluate
-```
-
-The UI already has per-target fractured-price override infrastructure; preserve and use it.
+If Crafting Bench filler becomes materially necessary, model it later from authoritative data rather than inventing its behavior.
 
 ---
 
-# Phase 2D Priority 3 — Acquisition Method Proof And Provenance
+# Phase 2D Priority 2 — Compare Fracture Targets, Not Fractured-Base Sellers
 
-The service/UI must clearly distinguish:
+The economic portfolio should compare strategic physical families:
 
 ```text
-MARKET PURCHASE
-EXECUTABLE SEARCH-DERIVED SELF-FRACTURE
-APPROXIMATE RESEARCH ESTIMATE
+Clean / no fracture
+Self-fracture target A
+Self-fracture target B
+Self-fracture target C
+...
 ```
 
-For executable self-fracture expose at least:
+For example, a four-mod target might produce:
 
 ```text
+Clean / no fracture
+Fracture T1 ES yourself
+Fracture T1 Intelligence yourself
+Fracture 35% Effect yourself
+Fracture +4 Attributes yourself
+```
+
+Only include fracture targets that are mechanically relevant and legally generated from the requested target.
+
+Do not enumerate arbitrary pool modifiers merely to increase search breadth.
+
+## What remains dynamic
+
+The solver must derive independently for every relevant fracture candidate:
+
+```text
+self-fracture acquisition EV
++
+downstream crafting EV
+=
+complete route EV
+```
+
+Then compare complete routes.
+
+Therefore this Phase 2D rule does **not** mean:
+
+```text
+always fracture something
+```
+
+It means:
+
+```text
+if considering fractured target X,
+manufacture X yourself
+```
+
+A clean/no-fracture family remains a normal competitor.
+
+## No fractured-market dependency
+
+A route must not become unavailable because:
+
+```text
+no fractured market quote exists
+```
+
+Core discovery should no longer need per-target fractured purchase prices.
+
+Any legacy market-purchase acquisition candidate should be removed from core ranking once doing so is safe and low-risk.
+
+---
+
+# Phase 2D Priority 3 — Self-Fracture Proof And Provenance
+
+For executable self-fracture, expose at least:
+
+```text
+fractured target
 expected acquisition cost
+preparation policy
 expected action usage
 price confidence
 mechanics confidence
@@ -552,37 +588,54 @@ cost reconciliation
 search budget / exhaustion
 unresolved competitors
 proof status
+wrong-fracture restart behavior
 ```
+
+The UI/service should clearly distinguish:
+
+```text
+EXECUTABLE SEARCH-DERIVED SELF-FRACTURE
+```
+
+from:
+
+```text
+LEGACY APPROXIMATE RESEARCH ESTIMATE
+```
+
+The latter may remain in diagnostic output temporarily but should not masquerade as executable proof.
 
 ## Approximate fallback
 
-The old research estimate may remain temporarily for comparison/debugging.
+If executable synthesis is unresolved, do not silently use the research estimate as though it were a certified acquisition route.
 
-However:
+Prefer:
 
-- when an executable self-fracture route resolves, do not silently substitute the research estimate for it;
-- do not label the research estimate as equivalent to a solved route;
-- preferably remove the estimate from normal ranking once the executable replacement passes regressions;
-- if an unresolved executable self-fracture lower bound can beat a resolved market purchase, acquisition selection remains provisional.
+```text
+SELF-FRACTURE ACQUISITION: UNRESOLVED / PROVISIONAL
+```
+
+with a bound/proof status.
+
+A legacy estimate may be displayed separately as research reference only.
 
 ---
 
-# Phase 2D Priority 4 — Remove Hardcoded Currency Economics From Remaining Self-Fracture Estimates
+# Phase 2D Priority 4 — Remove Hardcoded Currency Economics From Self-Fracture Ranking
 
-While any research estimate remains, it must use the same evaluated `PriceBook` economics/provenance as normal actions.
-
-Do not retain silent values such as:
+No normal recommendation should rank fracture candidates using silent constants such as:
 
 ```text
 Alteration = 0.11c
 Fracturing Orb = fallback numeric literal
+prep allowance = 10c
 ```
 
-for route ranking when the active price context differs.
+Executable synthesis should obtain costs from the same active `PriceBook` used by normal actions.
 
-Unknown or unavailable prices must remain unavailable rather than silently receiving a ranking value.
+Unknown/unavailable prices must remain unavailable or be explicitly labeled research fallback according to existing price-confidence rules.
 
-The preferred end state is that executable synthesis removes the need for this formula from normal recommendations.
+The preferred end state is that the old formula is not used in normal recommendations at all.
 
 ---
 
@@ -608,11 +661,11 @@ two-mod:
 ~1148 final states / ~2296 cumulative expansion work
 ```
 
-This is manageable for current simple targets, but executable fracture acquisition introduces longer cyclic policies and additional rare states.
+This is manageable for simple targets but executable fracture acquisition introduces longer cyclic policies and additional rare states.
 
 ## Required Phase 2D direction
 
-Implement persistent graph extension within a single optimizer request.
+Implement persistent graph extension within a single optimizer request where it can be done without weakening canonical correctness.
 
 Desired behavior:
 
@@ -622,14 +675,14 @@ round 1 graph
 -> retain value/policy seeds where valid
 -> prioritize unresolved frontier
 -> expand only new states
--> re-evaluate on the enlarged graph
+-> re-evaluate on enlarged graph
 ```
 
-Do not rebuild every known state from the starting state each round.
+Do not repeatedly rebuild every known state from the beginning.
 
 ### Correctness requirements
 
-Persistent state must preserve every identity dimension already established, including:
+Persistent state must preserve all relevant identity dimensions:
 
 ```text
 base / enchant / ilvl / passives
@@ -638,64 +691,48 @@ target and final-state constraints
 fracture state
 mod exclusions / target roll sensitivity
 enabled mechanics / Harvest scope
-acquisition portfolio
+acquisition scope
 ```
 
 Do not trade canonical correctness for speed.
 
 ## Cross-request DEEPEN reuse
 
-Reusing a compatible graph across a later UI `Retry deeper` request is desirable but secondary.
+Cross-request graph reuse remains secondary.
 
-If implemented, its cache key must also include price context/fallback policy because values and action eligibility can change even when transitions do not.
-
-It is acceptable to implement persistent extension only within one request in this phase and defer safe cross-request reuse.
+It is acceptable to implement persistence only within a single optimizer request and defer safe cross-request reuse.
 
 ---
 
-# Finding 3 — Route Proof Language Is Correct But Can Be More Understandable
+# Finding 3 — Proof Language Should Keep Two Dimensions Separate
 
-The UI may currently show both:
-
-```text
-BEST_RESOLVED_ACQUISITION_SAFE
-```
-
-and:
+Continue distinguishing:
 
 ```text
-UNRESOLVED COMPETITORS MAY BE CHEAPER
-```
-
-These are mathematically compatible:
-
-- acquisition family selection is safe;
-- exact action-policy optimality is still not proven.
-
-For normal users, make these separate dimensions visible:
-
-```text
-Acquisition choice:
+Acquisition / starting-family choice:
 SAFE / PROVISIONAL
 
 Crafting policy optimality:
 PROVEN / NOT PROVEN
 ```
 
-Suggested copy when acquisition is safe but action proof is incomplete:
+For fracture families, acquisition safety now means the solver has sufficiently compared:
 
 ```text
-The starting/acquisition choice is safe among modeled acquisition methods.
-The exact crafting policy may still improve because unresolved action alternatives remain.
+clean/no-fracture
+vs
+relevant executable self-fracture families
 ```
 
-Do not collapse these two concepts back into one generic confidence label.
+It does **not** require checking whether some seller might list an equivalent fractured base cheaper.
+
+That question is intentionally outside core Phase 2D strategy discovery.
 
 ---
 
-# Finding 4 — Rare Two-Mod Search Remains A Useful Scalability Regression
+# Finding 4 — Forced-Rare Two-Mod Search Remains A Scalability Regression
 
-Phase 2C still reports the forced-Rare two-mod target as approximately:
+Phase 2C reports the forced-Rare two-mod target approximately as:
 
 ```text
 PROVISIONAL_RESOLVED
@@ -705,28 +742,22 @@ acquisition safe: NO
 5000 states / 15000 cumulative work
 ```
 
-This is acceptable for the completed Phase 2C gates because the normal `Any` target is solved correctly.
+This remains useful for measuring:
 
-However, executable fracture synthesis plus persistent graph extension should be measured against this fixture.
+- executable self-fracture economics;
+- persistent graph extension;
+- clean rare-route feasibility;
+- repeated work;
+- acquisition-family safety;
+- runtime.
 
-Do not hardcode a solution.
-
-Report whether Phase 2D changes:
-
-```text
-clean-base feasibility
-fractured acquisition economics
-state count
-repeated work
-acquisition safety
-runtime
-```
+Do not hardcode its solution.
 
 ---
 
 # Phase 2D Required Fracture Diagnostics
 
-## Diagnostic A — Single Target Fracture Synthesis
+## Diagnostic A — Single Target Executable Self-Fracture
 
 Choose one ordinary target modifier on the known 12-passive shield cluster and request the reusable physical state:
 
@@ -747,7 +778,7 @@ expected Exalts, if used
 expected Fracturing Orbs
 expected Scours
 expected clean-base restarts
-fracture success / failure transition behavior
+fracture success/failure transition behavior
 expected acquisition EV
 properness
 absorption
@@ -755,49 +786,56 @@ reconciliation
 proof status
 ```
 
-Use a fixed diagnostic price context, but derive all action costs through `PriceBook`.
+Use a fixed diagnostic price context but derive costs through `PriceBook`.
 
-## Diagnostic B — Self vs Market Same Physical State
+## Diagnostic B — Wrong Fracture Recovery
 
-Supply a market price for the same fractured target and prove both methods are evaluated.
+Prove that a wrong fractured modifier does not magically reset in-place.
 
-Run at least two price fixtures:
+The policy must naturally pay for abandoning/reacquiring a legal clean attempt according to modeled restart semantics.
 
-```text
-Market price intentionally above self-fracture EV
--> self-fracture should win
-
-Market price intentionally below self-fracture EV
--> market purchase should win
-```
-
-This validates comparison logic without hardcoding which method is normally cheaper.
+Report expected restarts and their EV contribution.
 
 ## Diagnostic C — Multiple Target Fractures
 
-Use a target containing at least two legally fracturable requested mods.
+Use a target containing at least two legally fracturable requested modifiers.
 
-Show that the portfolio contains, where quotes are supplied:
+Show that the portfolio contains:
 
 ```text
-clean
+clean/no fracture
 self-fracture A
-buy fracture A
 self-fracture B
-buy fracture B
 ```
 
-and ranks the complete route families generically.
+and, for a richer fixture when appropriate:
 
-## Diagnostic D — Wrong Fracture Recovery
+```text
+self-fracture C
+self-fracture D
+```
 
-Show that a wrong fractured modifier does not magically reset in-place.
+Show complete-route EV for each candidate.
 
-The policy must naturally pay for abandoning/reacquiring a legal clean attempt according to the modeled restart semantics.
+Do not include fractured-base market purchase in the core comparison.
 
-## Diagnostic E — Existing External Fracture Parity
+## Diagnostic D — No Market Quote Required
 
-Preserve the known 4-mod Fracturing Orb benchmark:
+Run the self-fracture portfolio with **zero fractured-base market overrides**.
+
+Required result:
+
+```text
+fractured strategy families still exist
+```
+
+This is a critical product gate.
+
+No self-fracture route may depend on a buy quote being present.
+
+## Diagnostic E — Existing External Fracturing Parity
+
+Preserve the known four-mod Fracturing Orb benchmark:
 
 ```text
 250 / 1000 desired fractures
@@ -806,30 +844,53 @@ Preserve the known 4-mod Fracturing Orb benchmark:
 
 Shared analytical and seeded sampling should remain aligned.
 
-Do not tune acquisition economics to this observation; use it only to validate the mechanic.
+Do not hardcode acquisition economics to this observation; use it to validate the mechanic.
+
+## Diagnostic F — Legacy Estimate Comparison
+
+For at least one fracture target, report:
+
+```text
+old approximate self-fracture estimate
+new executable self-fracture EV
+difference
+reason for difference
+```
+
+Do not force agreement.
+
+Potential legitimate differences include:
+
+```text
+current prices
+actual preparation policy
+real restart loop
+missing Bench filler
+alternative legal actions
+state-dependent continuation
+```
 
 ---
 
-# Craft A As The Main Acquisition-Synthesis Integration Fixture
+# Craft A As Main Fracture-Discovery Integration Fixture
 
-After standalone fracture acquisition passes, use Craft A as the strongest integration check because it has multiple plausible fracture choices and known historical purchase references.
+After standalone self-fracture synthesis passes, use Craft A as the strongest integration check because it has multiple plausible fracture choices.
 
-Do **not** replace the mature Craft A policy implementation in one large rewrite.
+Do **not** replace the mature Craft A policy in one large rewrite.
 
-Instead compare the new generic acquisition synthesis against its acquisition assumptions.
+Compare the new generic acquisition synthesis against the mature acquisition assumptions.
 
-Required route families should include, when prices are supplied:
+Required strategic families should include relevant candidates such as:
 
 ```text
 clean/no-fracture family where legal
 self-fracture 35% Effect
-buy fractured 35% Effect
 self-fracture T1 Intelligence
-buy fractured T1 Intelligence
-other relevant requested fracture candidates if generated
+self-fracture T1 ES, if the generic target/discovery marks it relevant
+other requested fracture candidates if legally generated
 ```
 
-The generic optimizer must decide the acquisition family.
+The generic optimizer must decide which fractured target, if any, produces the lowest total route EV.
 
 It must not contain:
 
@@ -839,25 +900,15 @@ if (craftA) choose fracture35
 
 or equivalent behavior.
 
-If executable self-fracture economics differ materially from the old approximate ~1533c reference, report why rather than tuning the new solver back to the historical estimate.
+Historical fractured-base purchase references may remain in old diagnostic reports for context, but they are **not part of the Phase 2D core strategy comparison**.
 
-Possible valid causes include:
-
-```text
-current currency prices
-actual shared preparation policy
-missing modeled Bench filler
-alternative action choice
-retry/recovery policy
-```
+If executable self-fracture economics differ materially from the old approximate ~1533c reference, report why rather than tuning back to the reference.
 
 ---
 
 # Persistent Search Acceptance Targets
 
-The purpose of persistent extension is reduced repeated work, not a specific magic performance number.
-
-For fixtures that require more than one round, report:
+For fixtures requiring multiple rounds, report:
 
 ```text
 final canonical states
@@ -869,15 +920,15 @@ rebuild-equivalent work avoided
 Bellman/policy reevaluation time
 ```
 
-A successful implementation should no longer describe normal multi-round search as:
+Successful persistent extension should no longer describe normal multi-round search as:
 
 ```text
 REBUILT_EACH_ROUND
 ```
 
-unless a fallback path was explicitly used.
+unless an explicit fallback path is used.
 
-If persistent extension risks incorrect identity or stale transition reuse, preserve correctness and document the limitation instead of forcing the optimization.
+If persistent extension risks incorrect identity or stale reuse, preserve correctness and document the blocker.
 
 ---
 
@@ -899,6 +950,9 @@ CLOSE / APPROXIMATE
 
 Harvest -> exactly one Annul target presence:
 CLOSE / APPROXIMATE
+
+Fracturing Orb 4-mod target selection:
+~25% / ALIGNED
 ```
 
 Do not relabel the combined Harvest+Annul observation as a clean-finished result.
@@ -909,42 +963,29 @@ No new Craft of Exile simulation is required solely for Phase 2D unless a mechan
 
 # UI Scope For Phase 2D
 
-Keep UI changes functional and small.
+Keep UI work functional and small.
 
-The UI should expose fracture acquisition evidence in the result when relevant:
-
-```text
-Fractured target X
-
-Self-fracture:
-  expected acquisition: ...
-  status/proof: ...
-
-Buy fractured:
-  market price: ...
-  quote provenance: ...
-
-Selected method:
-  ...
-```
-
-If no market quote exists:
+When a self-fracture family is relevant, result evidence should communicate something like:
 
 ```text
-Buy fractured: price unavailable
+Fractured target: 35% Effect
+Acquisition method: Self-fracture
+Expected acquisition: ...
+Preparation/retry policy: ...
+Status/proof: ...
 ```
 
-Do not hide the self-fracture calculation.
+Do **not** require the user to provide a fractured-base price for normal optimization.
 
-If executable self-fracture is unresolved but potentially cheaper than buy, mark the acquisition choice provisional.
+Remove or de-emphasize per-target fractured-market override controls from the normal UI path when practical.
+
+It is acceptable to leave underlying market-purchase plumbing dormant if deleting it would add risk with no Phase 2D benefit.
 
 Do not spend this phase on broad visual redesign.
 
 ---
 
 # Regression Matrix
-
-The next implementation must preserve or report changes for all of the following.
 
 ## R1 — One-mod T1 ES browser
 
@@ -992,13 +1033,21 @@ Preserve ~25% analytical/MC behavior on the known four-mod fixture.
 
 ## R7 — Craft A
 
-Preserve mature regression health and compare new acquisition synthesis separately.
+Preserve mature regression health and compare new self-fracture synthesis separately.
 
 ## R8 — Craft C
 
 Preserve mature regression health.
 
-## R9 — Build / browser
+## R9 — Fractured route without market quote
+
+Required:
+
+```text
+self-fracture family still discovered and evaluated
+```
+
+## R10 — Build / browser
 
 Run:
 
@@ -1017,25 +1066,28 @@ No unit tests are requested.
 Phase 2D is complete when all of the following are true:
 
 - [ ] self-fracture acquisition can be computed from executable shared mechanics;
-- [ ] self-fracture retry cost arises from actual fracture/restart transitions, not a fixed 4x multiplier;
-- [ ] every relevant fractured candidate compares self-fracture vs market purchase when a market quote exists;
-- [ ] self-fracture is still evaluated when market price is unavailable;
-- [ ] no valid market purchase suppresses self-fracture evaluation;
-- [ ] no hardcoded assumption forces self-fracture to win;
+- [ ] retry cost arises from actual Fracturing/restart transitions, not a fixed 4x multiplier;
+- [ ] fractured strategy families exist without any fractured-base market quote;
+- [ ] normal fractured-route ranking no longer depends on buying a pre-fractured base;
+- [ ] relevant fracture targets are compared generically against each other and clean/no-fracture;
+- [ ] the optimizer does not hardcode which target should be fractured;
 - [ ] acquisition methods expose proof/provenance/confidence distinctly;
-- [ ] old hardcoded self-fracture currency rates no longer affect normal ranking;
-- [ ] at least one self-vs-buy fixture proves each side can win when prices justify it;
-- [ ] multiple possible fracture targets are compared generically;
+- [ ] legacy approximate self-fracture values do not drive normal route ranking once executable synthesis resolves;
+- [ ] hidden hardcoded self-fracture currency constants no longer affect normal ranking;
 - [ ] wrong-fracture recovery pays actual restart/reacquisition economics;
+- [ ] at least one standalone self-fracture fixture is fully resolved/proper/absorbing/reconciled;
+- [ ] multiple possible fracture targets are compared generically;
+- [ ] dormant fractured-market plumbing, if retained, is outside the normal discovery/ranking path;
 - [ ] persistent graph extension is implemented within a request, or a clearly justified correctness blocker is documented;
 - [ ] one-mod regression remains healthy;
 - [ ] two-mod `Any` regression remains healthy;
+- [ ] no-unwanted semantics remain healthy;
 - [ ] Harvest parity semantics remain unchanged;
 - [ ] Fracturing parity remains healthy;
 - [ ] Craft A remains healthy;
 - [ ] Craft C remains healthy;
 - [ ] `npm run build` passes;
-- [ ] `npm run lint` passes apart from any explicitly documented pre-existing warning;
+- [ ] `npm run lint` passes apart from explicitly documented pre-existing warnings;
 - [ ] production browser/worker smoke passes;
 - [ ] no unit tests were added.
 
@@ -1055,24 +1107,26 @@ When implementation is complete, report:
 8. shared actions used by self-fracture synthesis;
 9. expected action usage for the standalone fracture fixture;
 10. expected self-fracture acquisition EV;
-11. wrong-fracture recovery behavior;
-12. self-vs-buy high-market-price fixture result;
-13. self-vs-buy low-market-price fixture result;
-14. behavior when market price is unavailable;
-15. multiple-fracture-target portfolio result;
-16. whether any approximate self-fracture formula remains in normal ranking;
+11. wrong-fracture recovery behavior and expected restarts;
+12. result with no fractured-base market quote supplied;
+13. multiple-fracture-target portfolio result;
+14. clean/no-fracture vs each self-fracture complete-route EV;
+15. whether any approximate self-fracture formula remains in normal ranking;
+16. old approximate estimate vs new executable EV for at least one target;
 17. any remaining missing mechanic that materially biases self-fracture economics;
-18. persistent graph extension architecture/status;
-19. repeated expansion work before/after;
-20. forced-Rare two-mod result;
-21. one-mod regression;
-22. two-mod `Any` regression;
-23. Harvest parity regression;
-24. Fracturing Orb parity regression;
-25. Craft A regression;
-26. Craft C regression;
-27. whether fracture acquisition is now safe for normal product recommendations;
-28. remaining blockers before broader UI polish / productization.
+18. whether fractured-market purchase code remains and, if so, confirmation that it is outside normal ranking;
+19. persistent graph extension architecture/status;
+20. repeated expansion work before/after;
+21. forced-Rare two-mod result;
+22. one-mod regression;
+23. two-mod `Any` regression;
+24. no-unwanted regression;
+25. Harvest parity regression;
+26. Fracturing Orb parity regression;
+27. Craft A regression;
+28. Craft C regression;
+29. whether fracture acquisition is now safe for normal product recommendations;
+30. remaining blockers before broader UI polish/productization.
 
 ---
 
@@ -1081,15 +1135,15 @@ When implementation is complete, report:
 Do not:
 
 - add unit tests;
-- reintroduce Allflame;
+- reintroduce Allflame mechanics;
 - add Craft-specific solver branches;
-- assume self-fracture is cheaper without calculating it;
-- skip self-fracture merely because a market fractured base is available;
-- skip market purchase when an exact supported quote is available;
+- require a fractured-base market quote for a fractured strategy family;
+- make buying a pre-fractured base part of normal Phase 2D strategy ranking;
 - invent missing fractured-base market prices;
-- hardcode a 25% fracture success result into acquisition EV instead of using shared transitions;
+- hardcode which target modifier should be fractured;
+- hardcode a 25% result directly into acquisition EV instead of using shared Fracturing transitions;
 - hardcode a 4x retry multiplier into executable self-fracture;
-- use hidden fixed currency prices in acquisition ranking;
+- use hidden fixed currency prices in self-fracture ranking;
 - silently treat approximate research acquisition as executable proof;
 - broadly rewrite mature Craft A/C policy code;
 - sacrifice canonical-state correctness for persistent-cache performance;
@@ -1102,16 +1156,17 @@ Do not:
 ```text
 1. executable physical-state acquisition synthesis
 2. executable self-fracture route
-3. mandatory self-fracture vs market comparison
-4. acquisition proof/provenance service contract
-5. remove/de-rank legacy approximate fracture formula
+3. remove fractured-market dependency from core discovery/ranking
+4. self-fracture proof/provenance service contract
+5. remove/de-rank legacy approximate self-fracture formula
 6. persistent graph extension within one request
-7. standalone fracture diagnostics
-8. multiple-fracture candidate comparison
-9. Craft A acquisition-synthesis integration
-10. Rare two-mod scalability regression
-11. browser fracture-acquisition presentation
-12. full A/C + parity regression
+7. standalone self-fracture + wrong-fracture diagnostics
+8. multiple-fracture-target comparison
+9. no-market-quote regression
+10. Craft A self-fracture-discovery integration
+11. Rare two-mod scalability regression
+12. browser self-fracture presentation cleanup
+13. full A/C + parity regression
 ```
 
 After these gates pass, broader UI polish and productization can proceed on a substantially more trustworthy economic foundation.
