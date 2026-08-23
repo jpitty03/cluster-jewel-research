@@ -81,7 +81,11 @@ FULL GENERIC MULTI-STAGE ROUTE:
     - Clean Base: clean-base 10.0c (deterministic)
     - T1 Intelligence [of the Prodigy]: self-fracture 1539.0c (approximate)
     - T1 Maximum Energy Shield [Glowing]: self-fracture 1534.3c (approximate)
-  Selected acquisition: clean base at 10.0c (restart destination and economic transition)
+  Evaluated starting routes:
+    - Clean Base: acquisition=10.0c (deterministic), downstream=1473.987c, full=1483.987c, proof=OPTIMAL OVER MODELED ACTIONS: PROVEN
+    - T1 Intelligence [of the Prodigy]: acquisition=1539.0c (approximate), downstream=0.140c, full=1539.140c, proof=OPTIMAL OVER MODELED ACTIONS: PROVEN
+    - T1 Maximum Energy Shield [Glowing]: acquisition=1534.3c (approximate), downstream=1483.987c, full=3018.287c, proof=OPTIMAL OVER MODELED ACTIONS: PROVEN
+  Selected acquisition: Clean Base at 10.0c
   Expected currencies: transmutation=4.000, augmentation=6.333, alteration=14.333, regal=4.000, exalt=4.000, fracturing=4.000, reacquisition=3.000, scour=1.000
   Expected downstream cost: 1473.987c; acquisition-inclusive: 1483.987c
   Action Orb of Transmutation: local successors=11, first discoveries=11, on-policy selections=1, unresolved edges=0

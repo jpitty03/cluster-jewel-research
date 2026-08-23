@@ -101,7 +101,9 @@ export function generateStartingStateCandidates(
       clusterType,
       itemLevel,
       passiveCount,
-      rarity: 'rare',
+      // The reusable fractured base is the post-Scour physical state: one
+      // fractured explicit remains, so the item is magic.
+      rarity: 'magic',
       prefixes: matchedMod.genType === 'Prefix' ? [toRolledMod(matchedMod, { isFractured: true })] : [],
       suffixes: matchedMod.genType === 'Suffix' ? [toRolledMod(matchedMod, { isFractured: true })] : [],
       fracturedModIds: [matchedMod.modId],

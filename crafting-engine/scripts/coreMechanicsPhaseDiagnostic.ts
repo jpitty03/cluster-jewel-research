@@ -240,6 +240,24 @@ const generatedStarts = generateStartingStateCandidates(
   { pool, priceBook, cleanBaseCostChaos: 10 },
   12
 );
+const cleanStateKey = getCanonicalStateKey(cleanBase, multiStageTarget);
+const evaluatedStartingRoutes = generatedStarts
+  .map((candidate) => {
+    const acquisition = candidate.acquisitions
+      .slice()
+      .sort((left, right) => left.costChaos - right.costChaos)[0];
+    const result = getCanonicalStateKey(candidate.state, multiStageTarget) === cleanStateKey
+      ? multiStageResult
+      : new GenericSearchEngine(multiStageContext, multiStageTarget, multiStageOptions).search(candidate.state);
+    return {
+      label: candidate.label,
+      acquisition,
+      result,
+      fullCostChaos: acquisition.costChaos + result.totalExpectedCostChaos,
+    };
+  })
+  .sort((left, right) => left.fullCostChaos - right.fullCostChaos);
+const selectedStartingRoute = evaluatedStartingRoutes[0];
 lines.push('\nFULL GENERIC MULTI-STAGE ROUTE:');
 lines.push('  Target: magic item with fractured T1 Intelligence + T1 Maximum Energy Shield');
 lines.push('  Modeled pool: bounded five-mod fixture using real cluster-jewel mods/weights; route logic remains generic.');
@@ -247,7 +265,15 @@ lines.push(`  Generated physical starting states: ${generatedStarts.length}`);
 for (const start of generatedStarts) {
   lines.push(`    - ${start.label}: ${start.acquisitions.map((acquisition) => `${acquisition.type} ${acquisition.costChaos.toFixed(1)}c (${acquisition.confidence})`).join(' | ')}`);
 }
-lines.push(`  Selected acquisition: clean base at 10.0c (restart destination and economic transition)`);
+lines.push(`  Evaluated starting routes:`);
+for (const route of evaluatedStartingRoutes) {
+  lines.push(
+    `    - ${route.label}: acquisition=${route.acquisition.costChaos.toFixed(1)}c `
+    + `(${route.acquisition.confidence}), downstream=${route.result.totalExpectedCostChaos.toFixed(3)}c, `
+    + `full=${route.fullCostChaos.toFixed(3)}c, proof=${route.result.optimalityProof.proofLevel}`
+  );
+}
+lines.push(`  Selected acquisition: ${selectedStartingRoute.label} at ${selectedStartingRoute.acquisition.costChaos.toFixed(1)}c`);
 lines.push(`  Expected currencies: ${Object.entries(multiStageResult.expectedCurrencies).map(([currency, count]) => `${currency}=${count.toFixed(3)}`).join(', ') || 'NONE'}`);
 lines.push(`  Expected downstream cost: ${multiStageResult.totalExpectedCostChaos.toFixed(3)}c; acquisition-inclusive: ${(multiStageResult.totalExpectedCostChaos + 10).toFixed(3)}c`);
 for (const attr of Object.values(multiStageResult.graphBuild.actionAttribution)) {
