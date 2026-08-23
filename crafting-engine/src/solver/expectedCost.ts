@@ -12,6 +12,7 @@ import {
   type RepresentativeStateAudit,
   type SuffixPoolAuditState,
 } from './policyEngine.ts';
+import { GenericSearchEngine } from './genericSearch.ts';
 
 export interface AcquisitionBreakdown {
   cleanBaseCostChaos: number;
@@ -160,8 +161,60 @@ export class ExpectedCostSolver {
       } else if (hasFracSuffix) {
         downstreamCraftCost = 117000;
       } else {
-        // Clean/normal base without fractured 35 requires full Alt/Aug/Regal base preparation
-        downstreamCraftCost = 150000;
+        // Clean/normal base without fractured mod
+        if (this.target.requiredMods.length === 1 && (!this.target.outcomeBranches || this.target.outcomeBranches.length === 0)) {
+          const genericSearch = new GenericSearchEngine(this.context, this.target);
+          const searchResult = genericSearch.search(startState);
+          downstreamCraftCost = searchResult.totalExpectedCostChaos;
+
+          const cleanSteps: CraftPlanStep[] = [
+            {
+              stepNumber: 1,
+              title: 'Base Acquisition: Clean Normal Jewel',
+              actionName: 'Acquire Clean Base',
+              description: 'Starting clean normal base with 0 affixes',
+              rawCostChaos: baseCostChaos,
+              stepTotalCostChaos: baseCostChaos,
+              cumulativeCostChaos: baseCostChaos,
+              currencies: {},
+            },
+          ];
+
+          for (let i = 0; i < searchResult.steps.length; i++) {
+            const s = searchResult.steps[i];
+            cleanSteps.push({
+              stepNumber: i + 2,
+              title: s.selectedAction,
+              actionName: s.selectedAction,
+              description: s.reason,
+              rawCostChaos: s.immediateCostChaos,
+              stepTotalCostChaos: s.continuationCostChaos,
+              cumulativeCostChaos: baseCostChaos + s.continuationCostChaos,
+              currencies: s.selectedAction.includes('Transmutation')
+                ? { transmutation: 1 }
+                : { alteration: searchResult.expectedCurrencies.alteration ?? 0 },
+            });
+          }
+
+          return {
+            stateKey: key,
+            state: startState,
+            expectedCostChaos: downstreamCraftCost,
+            bestAction: this.actions[0],
+            bestActionCostChaos: downstreamCraftCost,
+            expectedCurrencies: searchResult.expectedCurrencies,
+            isTerminal: false,
+            isRestart: false,
+            steps: cleanSteps,
+            step1Options: [],
+            outcomeDistribution: [{ name: 'Target Satisfied', probability: 1.0, saleValueChaos: this.target.saleValueChaos ?? 0 }],
+            expectedSaleValueChaos: this.target.saleValueChaos ?? 0,
+            policyEngine: this.policyEngine,
+            pool,
+          };
+        } else {
+          downstreamCraftCost = 150000;
+        }
       }
     }
 

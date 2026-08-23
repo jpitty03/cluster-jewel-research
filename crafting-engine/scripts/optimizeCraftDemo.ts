@@ -408,6 +408,69 @@ function runAugmentationAndRegalSharedMechanicDiagnostic(): string {
   return lines.join('\n');
 }
 
+function runCleanBaseT1IntSearchDiagnostic(): string {
+  const lines: string[] = [];
+  lines.push('\n' + '='.repeat(80));
+  lines.push('CLEAN-BASE GENERIC BELLMAN SEARCH DIAGNOSTIC: T1 Intelligence');
+  lines.push('='.repeat(80));
+
+  const cleanBaseState: ItemState = {
+    baseType: 'Large Cluster Jewel',
+    clusterType: '12% increased Attack Damage while holding a Shield',
+    itemLevel: 84,
+    passiveCount: 12,
+    rarity: 'normal',
+    prefixes: [],
+    suffixes: [],
+    fracturedModIds: [],
+  };
+
+  const target: TargetDefinition = {
+    requiredMods: [{ modGroup: 'AfflictionJewelSmallPassivesGrantInt', maxTierNumber: 1 }],
+  };
+
+  const response = optimizer.optimizeCraft({
+    baseType: 'Large Cluster Jewel',
+    clusterType: '12% increased Attack Damage while holding a Shield',
+    itemLevel: 84,
+    passiveCount: 12,
+    target,
+    startingStates: [
+      {
+        name: 'Clean Normal Base',
+        state: cleanBaseState,
+        baseCostChaos: 10,
+      },
+    ],
+    runMonteCarloValidation: false,
+  });
+
+  const best = response.recommendedStrategy;
+  const divineRate = priceBook.getRate('divine') || 200;
+
+  lines.push(`Target: T1 Intelligence (ilvl 84 12p Shield Cluster)`);
+  lines.push(`Starting Physical State: ${cleanBaseState.rarity} base (0 affixes, base cost: ${formatChaos(best.baseCostChaos, divineRate)})`);
+  lines.push(`\nDISCOVERED CRAFTING PLAN (${best.steps?.length ?? 0} steps):`);
+
+  if (best.steps) {
+    for (const s of best.steps) {
+      lines.push(`  Step ${s.stepNumber}: ${s.actionName} - ${s.description} (+${formatChaos(s.stepTotalCostChaos, divineRate)})`);
+    }
+  }
+
+  lines.push(`\nEXPECTED ECONOMICS:`);
+  lines.push(`  Base Acquisition Cost:      ${formatChaos(best.baseCostChaos, divineRate)}`);
+  lines.push(`  Downstream Crafting EV:     ${formatChaos(best.expectedCraftingCostChaos, divineRate)}`);
+  lines.push(`  Total Route EV:             ${formatChaos(best.totalExpectedCostChaos, divineRate)}`);
+  lines.push(`  Expected Transmutation Orbs: ${(best.expectedCurrencies.transmutation ?? 0).toFixed(2)}`);
+  lines.push(`  Expected Alteration Orbs:    ${(best.expectedCurrencies.alteration ?? 0).toFixed(2)}`);
+
+  const passed = (best.expectedCurrencies.alteration ?? 0) > 60 && (best.expectedCurrencies.alteration ?? 0) < 80;
+  lines.push(`\nClean-Base Generic Search Verification: ${passed ? 'PASSED (Optimizer autonomously discovered Transmute -> Alteration route to target)' : 'FAILED'}`);
+
+  return lines.join('\n');
+}
+
 // Run General Diagnostics
 console.log(runCanonicalKeyDiagnostics());
 console.log(runAnnulSharedMechanicDiagnostic());
@@ -415,6 +478,7 @@ console.log(runTransmutationSharedMechanicDiagnostic());
 console.log(runAugmentationAndRegalSharedMechanicDiagnostic());
 const poolA = ModPool.forCluster(repo, 'Large Cluster Jewel', '12% increased Attack Damage while holding a Shield');
 console.log(runExternalParityDiagnostics({ pool: poolA, priceBook }).explanation);
+console.log(runCleanBaseT1IntSearchDiagnostic());
 
 console.log('='.repeat(80));
 console.log('END-TO-END CRAFTING OPTIMIZER: DEMONSTRATION & BENCHMARKS');

@@ -5,6 +5,10 @@ export interface CurrencyRates {
   annul: number;
   exalt: number;
   scour: number;
+  alteration: number;
+  transmutation: number;
+  augmentation: number;
+  regal: number;
   wildLifeforce: number;
   vividLifeforce: number;
   primalLifeforce: number;
@@ -19,11 +23,20 @@ export const DEFAULT_CURRENCY_RATES: CurrencyRates = {
   annul: 9,
   exalt: 1.2,
   scour: 0.5,
+  alteration: 0.11,
+  transmutation: 0.03,
+  augmentation: 0.03,
+  regal: 0.2,
   wildLifeforce: 1 / 13, // Yellow lifeforce (1/13c each)
   vividLifeforce: 1 / 26, // Blue lifeforce (1/26c each)
   primalLifeforce: 1 / 48, // Red lifeforce (1/48c each)
   crystallisedRancour: 10,
 };
+
+export interface PriceEvaluation {
+  costChaos: number;
+  confidence: 'known' | 'research-fallback' | 'unavailable';
+}
 
 export interface BaseItemPrices {
   cleanBaseChaos: number;
@@ -55,11 +68,30 @@ export class PriceBook {
     this.finishedItemPrices = new Map(Object.entries(finishedItemPrices));
   }
 
+  getKnownRate(currency: keyof CurrencyRates | string): number | undefined {
+    return this.rates[currency];
+  }
+
   getRate(currency: keyof CurrencyRates | string): number {
     return this.rates[currency] ?? 1;
   }
 
+  evaluateRate(currency: keyof CurrencyRates | string, fallbackPrice?: number): PriceEvaluation {
+    const known = this.rates[currency];
+    if (known !== undefined && known > 0) {
+      return { costChaos: known, confidence: 'known' };
+    }
+    if (fallbackPrice !== undefined && fallbackPrice > 0) {
+      return { costChaos: fallbackPrice, confidence: 'research-fallback' };
+    }
+    return { costChaos: 0, confidence: 'unavailable' };
+  }
+
   toChaos(amount: number, currency: keyof CurrencyRates | string): number {
+    const known = this.rates[currency];
+    if (known !== undefined) {
+      return amount * known;
+    }
     return amount * this.getRate(currency);
   }
 
