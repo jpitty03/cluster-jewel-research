@@ -375,8 +375,10 @@ lines.push(`  JSON round trip: ${JSON.stringify(JSON.parse(serializedServiceResu
 lines.push(`  raw Map fields exposed: ${serializedServiceResult.includes('policyMap') ? 'YES' : 'NO'}`);
 lines.push(`  result fields: ${Object.keys(serviceResult).join(', ')}`);
 lines.push(`  recommendation / proof: ${serviceResult.recommended?.name ?? 'NONE'} / ${serviceResult.proof.proofLevel}`);
-lines.push(`  price warnings survive: ${serviceResult.priceConfidence.warnings.length}`);
-lines.push(`  mechanics warnings survive: ${serviceResult.mechanicsConfidence.warnings.length}`);
+lines.push(`  selected price warnings survive: ${serviceResult.priceConfidence.selectedPolicy.warnings.length}`);
+lines.push(`  considered price warnings survive: ${serviceResult.priceConfidence.consideredSearchSpace.warnings.length}`);
+lines.push(`  selected mechanics warnings survive: ${serviceResult.mechanicsConfidence.selectedPolicy.warnings.length}`);
+lines.push(`  considered mechanics warnings survive: ${serviceResult.mechanicsConfidence.consideredSearchSpace.warnings.length}`);
 
 const coldCluster = '12% increased Cold Damage';
 const coldPool = ModPool.forCluster(repo, 'Large Cluster Jewel', coldCluster);

@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import ClusterJewels from './ClusterJewels'
+import CraftOptimizer from './CraftOptimizer'
 import { DEFAULT_LEAGUE } from '../league'
 import './App.css'
 
@@ -41,7 +42,7 @@ const snapshotLeagues = Object.values(streamersByLeague)
   .map((d) => d.league)
 
 function App() {
-  const [tab, setTab] = useState<'jewels' | 'characters'>('jewels')
+  const [tab, setTab] = useState<'jewels' | 'characters' | 'optimizer'>('jewels')
   const [data, setData] = useState<StreamerData | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [loading, setLoading] = useState(true)
@@ -131,10 +132,18 @@ function App() {
           >
             Characters
           </button>
+          <button
+            className={tab === 'optimizer' ? 'active' : ''}
+            onClick={() => setTab('optimizer')}
+          >
+            Craft Optimizer
+          </button>
         </nav>
       </header>
 
       {tab === 'jewels' && <ClusterJewels />}
+
+      {tab === 'optimizer' && <CraftOptimizer />}
 
       {tab === 'characters' && (
         <>

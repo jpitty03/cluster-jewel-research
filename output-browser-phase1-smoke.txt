@@ -1,0 +1,13 @@
+DEVELOPER UI PHASE 1 — HEADLESS BROWSER SMOKE
+URL: http://127.0.0.1:4173/
+tabs before optimizer selection: Cluster Jewels | Characters | Craft Optimizer
+one-mod quick result: BEST_RESOLVED rendered
+one-mod fallback warning visible: YES
+one-mod mechanics warning visible: YES
+full-pool two-mod result: BEST_RESOLVED rendered
+full-pool two-mod policy proper: YES
+long-search cancellation: PASS (AbortError rendered after terminate/recreate)
+budget exhaustion outcome: PASS
+budget exhaustion shown as normal result: PASS
+exact target selector count: 2
+page remained responsive after cancellation: YES

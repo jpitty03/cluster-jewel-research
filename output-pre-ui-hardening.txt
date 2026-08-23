@@ -39,12 +39,12 @@ SHARED EXECUTABLE HARVEST:
 FULL-POOL GENERIC TWO-MOD SMOKE TEST - PRODUCTION POOL:
   target: {"requiredRarity":"rare","requiredMods":[{"modId":"AfflictionJewelSmallPassivesGrantInt3"},{"modId":"AfflictionJewelSmallPassivesGrantES3"}]}
   full real pool size: 72
-  starting candidates: Clean Base[clean-base:10.0c] | T1 Intelligence [of the Prodigy][self-fracture:1539.0c] | T1 Maximum Energy Shield [Glowing][self-fracture:1534.3c]
-  enabled actions: Orb of Transmutation | Orb of Augmentation | Orb of Alteration | Regal Orb | Orb of Scouring | Orb of Annulment | Exalted Orb Slam | Fracturing Orb | Harvest Reforge Defences | Restart/Reacquire: clean-base: Clean Base | Restart/Reacquire: self-fracture: T1 Intelligence [of the Prodigy] | Restart/Reacquire: self-fracture: T1 Maximum Energy Shield [Glowing]
+  starting candidates: Clean Base[clean-base:10.0c] | of the Prodigy (T1)[self-fracture:1539.0c] | Glowing (T1)[self-fracture:1534.3c]
+  enabled actions: Orb of Transmutation | Orb of Augmentation | Orb of Alteration | Regal Orb | Orb of Scouring | Orb of Annulment | Exalted Orb Slam | Fracturing Orb | Harvest Reforge Defences | Restart/Reacquire: clean-base: Clean Base | Restart/Reacquire: self-fracture: of the Prodigy (T1) | Restart/Reacquire: self-fracture: Glowing (T1)
     solve:
     states expanded: 3000/3000
     cumulative expansion work: 6000
-    elapsed: 5722ms; rounds: 3/3
+    elapsed: 5333ms; rounds: 3/3
     budget exhausted: YES (state=true, wall=false, rounds=true)
     on-policy states: 107
     unresolved on-policy probability: 0.000000%
@@ -58,24 +58,26 @@ FULL-POOL GENERIC TWO-MOD SMOKE TEST - PRODUCTION POOL:
     proof: BEST FULLY RESOLVED POLICY FOUND
     GLOBAL OPTIMALITY: NOT YET PROVEN
     expected currencies: {"reacquisition":1,"augmentation":1,"alteration":51.16665377506429,"regal":0.9999997480468589}
-    price warnings: Restart/Reacquire: self-fracture: T1 Maximum Energy Shield [Glowing]: 1534.300c uses research-fallback pricing (self-fracture acquisition (approximate)) | Orb of Augmentation: 0.030c uses research-fallback pricing | Orb of Alteration: 0.110c uses research-fallback pricing | Regal Orb: 0.200c uses research-fallback pricing
+    price warnings: Restart/Reacquire: self-fracture: Glowing (T1): 1534.300c uses research-fallback pricing (self-fracture acquisition (approximate)) | Orb of Augmentation: 0.030c uses research-fallback pricing | Orb of Alteration: 0.110c uses research-fallback pricing | Regal Orb: 0.200c uses research-fallback pricing
     mechanics warnings: Harvest Reforge Defences: APPROXIMATE / EXTERNALLY CLOSE (Current engine approximation: one guaranteed tagged mod plus 50% one / 50% two weighted extra affixes)
   terminal states found / graph cycles: 1466 / YES
   missing graph edges / queued unexpanded: 11109762 / 15291
-  best resolved acquisition route: Restart/Reacquire: self-fracture: T1 Maximum Energy Shield [Glowing] at 1540.159c
-  alternative acquisition routes: Restart/Reacquire: self-fracture: T1 Maximum Energy Shield [Glowing] [RESOLVED; Q=1540.159c; LB=1534.300c] | Restart/Reacquire: self-fracture: T1 Intelligence [of the Prodigy] [RESOLVED; Q=1543.704c; LB=1539.000c] | Restart/Reacquire: clean-base: Clean Base [UNRESOLVED; Q=UNRESOLVED; LB=10.000c]
+  best resolved acquisition route: Restart/Reacquire: self-fracture: Glowing (T1) at 1540.159c
+  alternative acquisition routes: Restart/Reacquire: self-fracture: Glowing (T1) [RESOLVED; Q=1540.159c; LB=1534.300c] | Restart/Reacquire: self-fracture: of the Prodigy (T1) [RESOLVED; Q=1543.704c; LB=1539.000c] | Restart/Reacquire: clean-base: Clean Base [UNRESOLVED; Q=UNRESOLVED; LB=10.000c]
   downstream Clean Base (node=false, menu-edge=true): NO POLICY
-  downstream T1 Intelligence [of the Prodigy] (node=true, menu-edge=true): Orb of Augmentation[RESOLVED;missing=0;Q=4.704c] | Orb of Alteration[RESOLVED;missing=0;Q=4.784c] | Regal Orb[RESOLVED;missing=0;Q=5.346c] | Restart/Reacquire: self-fracture: T1 Maximum Energy Shield [Glowing][RESOLVED;missing=0;Q=1540.159c] | Restart/Reacquire: clean-base: Clean Base[DOMINATED_BY_BOUND;missing=1;Q=UNRESOLVED]
-  downstream T1 Maximum Energy Shield [Glowing] (node=true, menu-edge=true): Orb of Augmentation[RESOLVED;missing=0;Q=5.859c] | Orb of Alteration[RESOLVED;missing=0;Q=5.939c] | Regal Orb[RESOLVED;missing=0;Q=6.488c] | Restart/Reacquire: self-fracture: T1 Intelligence [of the Prodigy][RESOLVED;missing=0;Q=1543.704c] | Restart/Reacquire: clean-base: Clean Base[DOMINATED_BY_BOUND;missing=1;Q=UNRESOLVED]
+  downstream of the Prodigy (T1) (node=true, menu-edge=true): Orb of Augmentation[RESOLVED;missing=0;Q=4.704c] | Orb of Alteration[RESOLVED;missing=0;Q=4.784c] | Regal Orb[RESOLVED;missing=0;Q=5.346c] | Restart/Reacquire: self-fracture: Glowing (T1)[RESOLVED;missing=0;Q=1540.159c] | Restart/Reacquire: clean-base: Clean Base[DOMINATED_BY_BOUND;missing=1;Q=UNRESOLVED]
+  downstream Glowing (T1) (node=true, menu-edge=true): Orb of Augmentation[RESOLVED;missing=0;Q=5.859c] | Orb of Alteration[RESOLVED;missing=0;Q=5.939c] | Regal Orb[RESOLVED;missing=0;Q=6.488c] | Restart/Reacquire: self-fracture: of the Prodigy (T1)[RESOLVED;missing=0;Q=1543.704c] | Restart/Reacquire: clean-base: Clean Base[DOMINATED_BY_BOUND;missing=1;Q=UNRESOLVED]
   generic Harvest on-policy selections: 0
 
 SERIALIZABLE OPTIMIZER SERVICE CONTRACT:
   JSON round trip: PASS
   raw Map fields exposed: NO
-  result fields: recommended, alternatives, expectedCurrencies, policyRules, acquisition, expectedCostChaos, expectedSaleValueChaos, expectedProfitChaos, risk, priceConfidence, mechanicsConfidence, proof, search, warnings
-  recommendation / proof: Restart/Reacquire: self-fracture: T1 Maximum Energy Shield [Glowing] / BEST FULLY RESOLVED POLICY FOUND
-  price warnings survive: 2
-  mechanics warnings survive: 1
+  result fields: recommendationStatus, recommended, alternatives, expectedCurrencies, expectedActionUsage, policyRules, acquisition, expectedCostChaos, expectedSaleValueChaos, expectedProfitChaos, risk, priceConfidence, mechanicsConfidence, proof, search, solver, warnings
+  recommendation / proof: Restart/Reacquire: Approximate self-fracture: Glowing (T1) / BEST FULLY RESOLVED POLICY FOUND
+  selected price warnings survive: 1
+  considered price warnings survive: 7
+  selected mechanics warnings survive: 0
+  considered mechanics warnings survive: 1
 
 CRAFT B FULL-POOL GENERIC DISCOVERY - NOT BOUNDED FIXTURE ECONOMICS:
   target: {"requiredMods":[{"name":"Blanketed Snow"},{"name":"Prismatic Heart"},{"name":"Widespread Destruction"}]}
@@ -85,7 +87,7 @@ CRAFT B FULL-POOL GENERIC DISCOVERY - NOT BOUNDED FIXTURE ECONOMICS:
     solve:
     states expanded: 3000/3000
     cumulative expansion work: 6000
-    elapsed: 8152ms; rounds: 3/3
+    elapsed: 7106ms; rounds: 3/3
     budget exhausted: YES (state=true, wall=false, rounds=true)
     on-policy states: 1
     unresolved on-policy probability: 100.000000%

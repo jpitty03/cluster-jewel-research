@@ -1,6 +1,6 @@
 import type { Mod, GenType } from './Mod.ts';
 import type { BaseType } from './ItemState.ts';
-import { ClusterModRepository } from '../data/loadClusterMods.ts';
+import type { ClusterModRepository } from '../data/clusterModRepository.ts';
 
 export class ModPool {
   private mods: Mod[];

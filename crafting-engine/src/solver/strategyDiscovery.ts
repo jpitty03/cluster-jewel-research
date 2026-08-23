@@ -2,12 +2,10 @@ import type { TargetDefinition } from '../domain/TargetDefinition.ts';
 import type { BaseType, ItemState } from '../domain/ItemState.ts';
 import type { ModPool } from '../domain/ModPool.ts';
 import type { PriceBook } from '../domain/PriceBook.ts';
-import type { StartingCraftOption } from '../index.ts';
 import type { AcquisitionOption, AcquisitionBreakdown } from './expectedCost.ts';
 import { toRolledMod } from '../domain/Mod.ts';
 import { getAllTargetModRequirements, matchesModRequirement } from '../domain/TargetDefinition.ts';
 import { calculateTotalWeight } from '../rules/modEligibility.ts';
-import { formatModDisplayName } from '../reporting/explainPath.ts';
 
 export interface StrategyDiscoveryContext {
   pool?: ModPool;
@@ -20,6 +18,17 @@ export interface StartingStateCandidate {
   state: ItemState;
   label: string;
   acquisitions: AcquisitionOption[];
+}
+
+export interface StartingCraftOption {
+  name: string;
+  state: ItemState;
+  acquisition?: AcquisitionOption;
+  baseCostChaos?: number;
+}
+
+function formatStartingModDisplayName(mod: { name: string; tier: number; tierCount: number }): string {
+  return `${mod.name}${mod.tierCount > 1 ? ` (T${mod.tier})` : ''}`;
 }
 
 /**
@@ -104,7 +113,7 @@ export function generateStartingStateCandidates(
       fracturedModIds: [matchedMod.modId],
     };
 
-    const modDisplayName = formatModDisplayName(matchedMod);
+    const modDisplayName = formatStartingModDisplayName(matchedMod);
 
     // Calculate self-fracture preparation cost based on mod pool weight
     const sameGenMods = allMods.filter((m) => m.genType === matchedMod.genType);

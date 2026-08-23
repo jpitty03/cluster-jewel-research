@@ -208,6 +208,23 @@ export interface MechanicsConfidenceResult {
   warnings: string[];
 }
 
+export interface OnPolicyRuleResult {
+  stateKey: string;
+  state: ItemState;
+  selectedActionId: string;
+  selectedActionName: string;
+  expectedVisits: number;
+  totalCostChaos: number;
+  candidateQValues: CandidateActionQValue[];
+}
+
+export interface ExpectedActionUsageResult {
+  actionId: string;
+  actionName: string;
+  expectedCount: number;
+  expectedCostChaos: number;
+}
+
 export interface ValueIterationConvergence {
   iterations: number;
   converged: boolean;
@@ -242,7 +259,10 @@ export interface GenericSearchResult {
   reconciliation: ExpectedCostReconciliation;
   optimalityProof: OptimalityProofResult;
   priceConfidence: PriceConfidenceResult;
+  consideredPriceConfidence: PriceConfidenceResult;
   mechanicsConfidence: MechanicsConfidenceResult;
+  onPolicyRules: OnPolicyRuleResult[];
+  expectedActionUsage: ExpectedActionUsageResult[];
   searchSummary: SearchSummary;
   isTargetSatisfied: boolean;
   explanation: string;
@@ -1205,6 +1225,7 @@ export class GenericSearchEngine {
       restart_reacquire: 'reacquisition',
     };
     const selectedPriceEvidence = new Map<string, PriceConfidenceResult['evidence'][number]>();
+    const expectedActionUsageById = new Map<string, ExpectedActionUsageResult>();
 
     for (const key of onPolicyReachableKeys) {
       const visits = expectedVisits.get(key) ?? 0;
@@ -1218,6 +1239,13 @@ export class GenericSearchEngine {
 
       const actCost = actData.immediateCostChaos;
       sumExpectedActionCostChaos += visits * actCost;
+      const priorUsage = expectedActionUsageById.get(decision.bestActionId);
+      expectedActionUsageById.set(decision.bestActionId, {
+        actionId: decision.bestActionId,
+        actionName: decision.bestActionName,
+        expectedCount: (priorUsage?.expectedCount ?? 0) + visits,
+        expectedCostChaos: (priorUsage?.expectedCostChaos ?? 0) + visits * actCost,
+      });
 
       if (actData.action.mechanic.actionType === 'HARVEST_REFORGE') {
         const lifeforceType = String(actData.action.mechanic.parameters?.lifeforceType ?? 'lifeforce');
@@ -1295,6 +1323,31 @@ export class GenericSearchEngine {
       evidence: priceEvidence,
       warnings: priceWarnings,
     };
+    const consideredPriceEvidenceById = new Map<string, PriceConfidenceResult['evidence'][number]>();
+    for (const node of nodes.values()) {
+      for (const [actionId, actionData] of node.actions) {
+        if (consideredPriceEvidenceById.has(actionId)) continue;
+        consideredPriceEvidenceById.set(actionId, {
+          actionId,
+          actionName: actionData.action.name,
+          costChaos: actionData.cost.costChaos,
+          confidence: actionData.cost.confidence,
+          source: actionData.cost.source,
+          provenance: actionData.cost.provenance,
+        });
+      }
+    }
+    const consideredEvidence = [...consideredPriceEvidenceById.values()];
+    const consideredPriceConfidence: PriceConfidenceResult = {
+      complete: consideredEvidence.every((evidence) => evidence.confidence !== 'unavailable'),
+      evidence: consideredEvidence,
+      warnings: consideredEvidence
+        .filter((evidence) => evidence.confidence !== 'known')
+        .map((evidence) =>
+          `${evidence.actionName}: ${evidence.costChaos.toFixed(3)}c uses ${evidence.confidence} pricing` +
+          (evidence.provenance ? ` (${evidence.provenance})` : '')
+        ),
+    };
     const mechanicsEvidence: MechanicsConfidenceResult['evidence'] = this.adapters
       .filter((adapter) => {
         const attribution = graphResult.actionAttribution[adapter.id];
@@ -1317,6 +1370,19 @@ export class GenericSearchEngine {
           (evidence.provenance ? ` (${evidence.provenance})` : '')
         ),
     };
+    const onPolicyRules: OnPolicyRuleResult[] = onPolicyDecisions
+      .map((decision) => ({
+        stateKey: decision.stateKey,
+        state: decision.state,
+        selectedActionId: decision.bestActionId,
+        selectedActionName: decision.bestActionName,
+        expectedVisits: expectedVisits.get(decision.stateKey) ?? 0,
+        totalCostChaos: decision.optimalValueChaos,
+        candidateQValues: decision.candidateQValues,
+      }))
+      .sort((left, right) => right.expectedVisits - left.expectedVisits);
+    const expectedActionUsage = [...expectedActionUsageById.values()]
+      .sort((left, right) => right.expectedCostChaos - left.expectedCostChaos);
 
     const steps: GenericSearchStep[] = [];
     const startDecision = policyMap.get(startKey);
@@ -1410,7 +1476,10 @@ export class GenericSearchEngine {
       },
       optimalityProof,
       priceConfidence,
+      consideredPriceConfidence,
       mechanicsConfidence,
+      onPolicyRules,
+      expectedActionUsage,
       searchSummary: {
         statesExpanded: nodes.size,
         cumulativeExpansionWork: nodes.size,

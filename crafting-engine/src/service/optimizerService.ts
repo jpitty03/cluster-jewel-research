@@ -1,4 +1,4 @@
-import { ClusterModRepository } from '../data/loadClusterMods.ts';
+import type { ClusterModRepository } from '../data/clusterModRepository.ts';
 import { ModPool } from '../domain/ModPool.ts';
 import {
   PriceBook,
@@ -47,6 +47,7 @@ export interface OptimizeCraftInput {
   prices?: OptimizeCraftPriceContext;
   searchBudget?: SearchBudget;
   harvestTags?: string[];
+  allowResearchFallbackPrices?: boolean;
   expectedSaleValueChaos?: number;
 }
 
@@ -62,10 +63,20 @@ export interface SerializableCandidateQValue {
 }
 
 export interface PolicyRule {
+  stateKey: string;
   state: string;
+  selectedActionId: string;
   selectedAction: string;
+  expectedVisits: number;
   totalCostChaos: number | null;
   candidates: SerializableCandidateQValue[];
+}
+
+export interface ExpectedActionUsage {
+  actionId: string;
+  actionName: string;
+  expectedCount: number;
+  expectedCostChaos: number;
 }
 
 export interface RouteSummary {
@@ -85,6 +96,7 @@ export interface AcquisitionMethodSummary {
   costChaos: number;
   confidence: PriceConfidence;
   provenance: string;
+  approximate: boolean;
 }
 
 export interface AcquisitionCandidateSummary {
@@ -116,7 +128,6 @@ export interface PriceConfidenceSummary {
 }
 
 export interface MechanicsConfidenceSummary {
-  gameMechanicsFidelity: 'PARTIAL';
   evidence: Array<{
     actionId: string;
     actionName: string;
@@ -126,6 +137,22 @@ export interface MechanicsConfidenceSummary {
   }>;
   warnings: string[];
 }
+
+export interface ScopedPriceConfidenceSummary {
+  selectedPolicy: PriceConfidenceSummary;
+  consideredSearchSpace: PriceConfidenceSummary;
+}
+
+export interface ScopedMechanicsConfidenceSummary {
+  gameMechanicsFidelity: 'PARTIAL';
+  selectedPolicy: MechanicsConfidenceSummary;
+  consideredSearchSpace: MechanicsConfidenceSummary;
+}
+
+export type RecommendationStatus =
+  | 'PROVEN_OPTIMAL'
+  | 'BEST_RESOLVED'
+  | 'NO_RESOLVED_ROUTE';
 
 export interface OptimizationProofSummary {
   selectedPolicyStatus: GenericSearchResult['optimalityProof']['selectedPolicyStatus'];
@@ -149,26 +176,42 @@ export interface OptimizationSearchSummary {
   wallTimeBudgetExhausted: boolean;
   roundBudgetExhausted: boolean;
   budgetExhausted: boolean;
+  harvestActionScope: {
+    mode: 'DISABLED' | 'TARGET_INFERRED' | 'EXPLICIT';
+    tags: string[];
+  };
 }
 
 export interface OptimizeCraftResult {
+  recommendationStatus: RecommendationStatus;
   recommended: RouteSummary | null;
   alternatives: RouteSummary[];
   expectedCurrencies: Record<string, number | null>;
+  expectedActionUsage: ExpectedActionUsage[];
   policyRules: PolicyRule[];
   acquisition: AcquisitionSummary;
   expectedCostChaos: number | null;
   expectedSaleValueChaos?: number;
   expectedProfitChaos?: number | null;
   risk: {
+    onPolicyReachableStates: number;
+    onPolicyTerminalStates: number;
     terminalAbsorptionProbability: number;
     selectedPolicyProper: boolean;
     unresolvedOnPolicyProbability: number;
   };
-  priceConfidence: PriceConfidenceSummary;
-  mechanicsConfidence: MechanicsConfidenceSummary;
+  priceConfidence: ScopedPriceConfidenceSummary;
+  mechanicsConfidence: ScopedMechanicsConfidenceSummary;
   proof: OptimizationProofSummary;
   search: OptimizationSearchSummary;
+  solver: {
+    bellmanIterations: number;
+    bellmanConverged: boolean;
+    occupancyIterations: number;
+    occupancyConverged: boolean;
+    reconciliationDifferenceChaos: number;
+    costReconciled: boolean;
+  };
   warnings: string[];
 }
 
@@ -206,14 +249,18 @@ function buildAcquisitionPortfolio(
     physicalState: normalizeItemState(start.state),
     methods: start.acquisitions.map((method, methodIndex): AcquisitionMethodDefinition => ({
       id: `${method.type}_${methodIndex}`,
-      label: `${method.type}: ${start.label}`,
+      label: method.type === 'self-fracture'
+        ? `Approximate self-fracture: ${start.label}`
+        : `${method.type}: ${start.label}`,
       acquisitionCostChaos: method.costChaos,
       confidence: methodConfidence(start, methodIndex, input),
       provenance: method.type === 'market'
         ? 'user-supplied fractured-base market price'
         : method.type === 'clean-base' && input.prices?.cleanBaseCostChaos !== undefined
           ? 'user-supplied clean-base price'
-          : `${method.type} research estimate`,
+          : method.type === 'self-fracture'
+            ? 'Approximate self-fracture acquisition estimate; preparation is a research model, not an executable solver route'
+            : `${method.type} research estimate`,
     })),
   }));
 }
@@ -261,11 +308,35 @@ function routeSummary(candidate: CandidateActionQValue): RouteSummary {
   };
 }
 
+function describePolicyState(state: ItemState): string {
+  if (state.flags?.acquisitionMenu) return 'Choose an acquisition route';
+  const describeAffix = (mod: ItemState['prefixes'][number]): string =>
+    `${mod.isFractured ? '[fractured] ' : ''}${mod.name}`;
+  const prefixes = state.prefixes.map(describeAffix).join('; ') || 'none';
+  const suffixes = state.suffixes.map(describeAffix).join('; ') || 'none';
+  return `${state.rarity.toUpperCase()} — prefixes: ${prefixes} — suffixes: ${suffixes}`;
+}
+
+function mechanicsScope(
+  evidence: GenericSearchResult['mechanicsConfidence']['evidence']
+): MechanicsConfidenceSummary {
+  const warnings = evidence
+    .filter((entry) => entry.confidence !== 'VALIDATED')
+    .map((entry) =>
+      `${entry.actionName}: ${entry.confidence}` +
+      (entry.provenance ? ` (${entry.provenance})` : '')
+    );
+  return {
+    evidence: evidence.map((entry) => ({ ...entry })),
+    warnings,
+  };
+}
+
 /** Serializable optimizer boundary intended for the thin Developer UI. */
 export class OptimizerService {
   private readonly repo: ClusterModRepository;
 
-  constructor(repo = new ClusterModRepository()) {
+  constructor(repo: ClusterModRepository) {
     this.repo = repo;
   }
 
@@ -296,6 +367,7 @@ export class OptimizerService {
         includeHarvest: harvestTags.length > 0,
         harvestTags,
         prioritizeTargetProgress: true,
+        allowResearchFallbackPrices: input.allowResearchFallbackPrices ?? true,
         maxStates: input.searchBudget?.maxStates ?? 5000,
         maxWallTimeMs: input.searchBudget?.maxWallTimeMs ?? 30_000,
         maxExpansionRounds: input.searchBudget?.maxExpansionRounds ?? 3,
@@ -324,18 +396,15 @@ export class OptimizerService {
       : null;
     const selectedParts = recommended ? portfolioActionParts(recommended.actionId) : {};
 
-    const policyRules: PolicyRule[] = result.steps.map((step) => ({
-      state: step.stateDescription,
-      selectedAction: step.selectedAction,
-      totalCostChaos: finiteOrNull(step.totalQValueChaos),
-      candidates: step.candidateQValues.map(serializeCandidate),
+    const policyRules: PolicyRule[] = result.onPolicyRules.map((rule) => ({
+      stateKey: rule.stateKey,
+      state: describePolicyState(rule.state),
+      selectedActionId: rule.selectedActionId,
+      selectedAction: rule.selectedActionName,
+      expectedVisits: rule.expectedVisits,
+      totalCostChaos: finiteOrNull(rule.totalCostChaos),
+      candidates: rule.candidateQValues.map(serializeCandidate),
     }));
-    const portfolioPriceWarnings = portfolio
-      .flatMap((candidate) => candidate.methods)
-      .filter((method) => method.confidence !== 'known')
-      .map((method) =>
-        `${method.label}: ${method.acquisitionCostChaos.toFixed(3)}c uses ${method.confidence} pricing (${method.provenance})`
-      );
     const expectedCostChaos = recommended?.expectedTotalCostChaos ?? null;
     const expectedProfitChaos = input.expectedSaleValueChaos === undefined || expectedCostChaos === null
       ? undefined
@@ -353,12 +422,23 @@ export class OptimizerService {
       recommended === null ? 'No fully resolved acquisition route was found within this search budget.' : undefined,
     ].filter((warning): warning is string => warning !== undefined);
 
+    const recommendationStatus: RecommendationStatus = recommended === null
+      ? 'NO_RESOLVED_ROUTE'
+      : result.optimalityProof.modeledActionOptimalityProven
+        ? 'PROVEN_OPTIMAL'
+        : 'BEST_RESOLVED';
+    const selectedMechanicsEvidence = result.mechanicsConfidence.evidence.filter(
+      (entry) => entry.onPolicySelections > 0
+    );
+
     const output: OptimizeCraftResult = {
+      recommendationStatus,
       recommended,
       alternatives: acquisitionRoutes.filter((route) => route.actionId !== recommended?.actionId),
       expectedCurrencies: Object.fromEntries(
         Object.entries(result.expectedCurrencies).map(([currency, amount]) => [currency, finiteOrNull(amount)])
       ),
+      expectedActionUsage: result.expectedActionUsage.map((usage) => ({ ...usage })),
       policyRules,
       acquisition: {
         selectedCandidateId: selectedParts.candidateId,
@@ -373,6 +453,7 @@ export class OptimizerService {
             costChaos: method.acquisitionCostChaos,
             confidence: method.confidence,
             provenance: method.provenance,
+            approximate: method.confidence !== 'known' && method.id.startsWith('self-fracture_'),
           })),
         })),
         methodCount: portfolio.reduce((sum, candidate) => sum + candidate.methods.length, 0),
@@ -384,19 +465,28 @@ export class OptimizerService {
       expectedSaleValueChaos: input.expectedSaleValueChaos,
       expectedProfitChaos,
       risk: {
+        onPolicyReachableStates: result.onPolicyGraph.onPolicyReachableStates,
+        onPolicyTerminalStates: result.onPolicyGraph.onPolicyTerminalStates,
         terminalAbsorptionProbability: result.onPolicyGraph.terminalAbsorptionProbability,
         selectedPolicyProper: result.onPolicyGraph.isProper,
         unresolvedOnPolicyProbability: result.onPolicyGraph.onPolicyUnresolvedProbabilityMass,
       },
       priceConfidence: {
-        complete: result.priceConfidence.complete,
-        evidence: result.priceConfidence.evidence.map((evidence) => ({ ...evidence })),
-        warnings: [...new Set([...result.priceConfidence.warnings, ...portfolioPriceWarnings])],
+        selectedPolicy: {
+          complete: result.priceConfidence.complete,
+          evidence: result.priceConfidence.evidence.map((evidence) => ({ ...evidence })),
+          warnings: [...result.priceConfidence.warnings],
+        },
+        consideredSearchSpace: {
+          complete: result.consideredPriceConfidence.complete,
+          evidence: result.consideredPriceConfidence.evidence.map((evidence) => ({ ...evidence })),
+          warnings: [...result.consideredPriceConfidence.warnings],
+        },
       },
       mechanicsConfidence: {
         gameMechanicsFidelity: 'PARTIAL',
-        evidence: result.mechanicsConfidence.evidence.map((evidence) => ({ ...evidence })),
-        warnings: [...result.mechanicsConfidence.warnings],
+        selectedPolicy: mechanicsScope(selectedMechanicsEvidence),
+        consideredSearchSpace: mechanicsScope(result.mechanicsConfidence.evidence),
       },
       proof: {
         selectedPolicyStatus: result.optimalityProof.selectedPolicyStatus,
@@ -406,11 +496,28 @@ export class OptimizerService {
         unresolvedCompetitiveCandidates: result.optimalityProof.potentiallyCompetitiveUnresolvedCount,
         unresolvedCompetitorsMayBeCheaper: result.optimalityProof.unresolvedCandidatesCouldBeatIncumbent,
       },
-      search: { ...result.searchSummary },
+      search: {
+        ...result.searchSummary,
+        harvestActionScope: {
+          mode: harvestTags.length === 0
+            ? 'DISABLED'
+            : input.harvestTags === undefined
+              ? 'TARGET_INFERRED'
+              : 'EXPLICIT',
+          tags: [...harvestTags],
+        },
+      },
+      solver: {
+        bellmanIterations: result.convergence.iterations,
+        bellmanConverged: result.convergence.converged,
+        occupancyIterations: result.reconciliation.visitIterations,
+        occupancyConverged: result.reconciliation.visitConverged,
+        reconciliationDifferenceChaos: result.reconciliation.differenceChaos,
+        costReconciled: result.reconciliation.isReconciled,
+      },
       warnings: [...new Set([
         ...proofWarnings,
         ...result.priceConfidence.warnings,
-        ...portfolioPriceWarnings,
         ...result.mechanicsConfidence.warnings,
       ])],
     };
@@ -421,5 +528,3 @@ export class OptimizerService {
     return output;
   }
 }
-
-export const optimizerService = new OptimizerService();
