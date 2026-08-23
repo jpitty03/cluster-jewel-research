@@ -101,7 +101,7 @@ STEP 1 -- Acquire Starting Fracture
 Target Starting Base: Clean Base
 
 FULL-ROUTE ACQUISITION EVALUATION (Clean Base):
-  Downstream Crafting EV:     150000.0c (~750.00 div)
+  Downstream Crafting EV:     Infinityc (~Infinity div)
 
 ----------------------------------------------------------------------
 Base Acquisition
@@ -117,9 +117,9 @@ Non-Fractured 35% Route: Sequential Exalt & Annul Completion
 ----------------------------------------------------------------------
 Action: Exalted Orb Slam & Annul Recovery
 Note: Exalt slam prefixes/suffixes with Annul recovery on non-Fractured 35% Effect base.
-Raw step cost:                150000.0c (~750.00 div)
-Expected step total:          150000.0c (~750.00 div)
-Expected cumulative cost:     150100.0c (~750.50 div)
+Raw step cost:                Infinityc (~Infinity div)
+Expected step total:          Infinityc (~Infinity div)
+Expected cumulative cost:     Infinityc (~Infinity div)
 
 ======================================================================
 RECOMMENDED CRAFTING PLAN
@@ -131,12 +131,12 @@ Base Acquisition:
   Cumulative:                 100.0c
 
 Non-Fractured 35% Route: Sequential Exalt & Annul Completion:
-  Expected step cost:         150000.0c (~750.00 div)
-  Cumulative:                 150100.0c (~750.50 div)
+  Expected step cost:         Infinityc (~Infinity div)
+  Cumulative:                 Infinityc (~Infinity div)
 
 ----------------------------------------------------------------------
 EXPECTED TOTAL CRAFT COST:
-  150100.0c (~750.50 div)
+  Infinityc (~Infinity div)
 
 FINAL OUTCOME VALUE DISTRIBUTION:
   100.00%  Target Satisfied                     (0.0c)
@@ -145,10 +145,10 @@ EXPECTED SALE VALUE:
   800.0c (~4.00 div)
 
 EXPECTED PROFIT:
-  -149300.0c (~-746.50 div)
+  -Infinityc (~-Infinity div)
 
 EXPECTED ROI:
-  -99.47%
+  NaN%
 
 ======================================================================
 LABELED GAME MECHANICS ASSUMPTIONS

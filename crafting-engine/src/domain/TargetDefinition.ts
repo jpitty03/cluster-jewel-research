@@ -1,5 +1,5 @@
 import type { Mod, RolledMod } from './Mod.ts';
-import type { ItemState } from './ItemState.ts';
+import type { ItemRarity, ItemState } from './ItemState.ts';
 
 export interface ModRequirement {
   modId?: string;
@@ -7,6 +7,7 @@ export interface ModRequirement {
   name?: string;
   minTierNumber?: number; // 1 = T1, 2 = T2, etc.
   maxTierNumber?: number; // e.g. 1 means must be T1
+  mustBeFractured?: boolean;
 }
 
 export interface RollRequirement {
@@ -27,6 +28,7 @@ export interface TargetOutcomeBranch {
 
 export interface TargetDefinition {
   requiredMods: ModRequirement[];
+  requiredRarity?: ItemRarity;
   outcomeBranches?: TargetOutcomeBranch[];
   acceptableAnyOf?: ModRequirement[][];
   finalRollRequirements?: RollRequirement[];
@@ -39,6 +41,10 @@ export function matchesModRequirement(mod: RolledMod | Mod, req: ModRequirement)
   if (req.name && mod.name !== req.name) return false;
   if (req.minTierNumber !== undefined && mod.tier < req.minTierNumber) return false;
   if (req.maxTierNumber !== undefined && mod.tier > req.maxTierNumber) return false;
+  if (req.mustBeFractured !== undefined) {
+    const isFractured = 'isFractured' in mod && mod.isFractured;
+    if (isFractured !== req.mustBeFractured) return false;
+  }
   return true;
 }
 
@@ -75,6 +81,7 @@ export function evaluateRollRequirement(
 }
 
 export function satisfiesTarget(state: ItemState, target: TargetDefinition): boolean {
+  if (target.requiredRarity && state.rarity !== target.requiredRarity) return false;
   const affixes = [...state.prefixes, ...state.suffixes];
 
   // 1. Check all base required mods
@@ -119,6 +126,7 @@ export function getMatchingOutcomeBranch(
   if (!target.outcomeBranches || target.outcomeBranches.length === 0) {
     return undefined;
   }
+  if (target.requiredRarity && state.rarity !== target.requiredRarity) return undefined;
   const affixes = [...state.prefixes, ...state.suffixes];
 
   // 1. All base requiredMods must be present first

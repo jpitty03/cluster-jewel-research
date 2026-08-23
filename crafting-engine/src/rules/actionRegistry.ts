@@ -1,12 +1,12 @@
 import type { ItemState } from '../domain/ItemState.ts';
 import type { TargetDefinition } from '../domain/TargetDefinition.ts';
 import type { SolverContext } from '../domain/CraftAction.ts';
-import type { PriceBook } from '../domain/PriceBook.ts';
+import type { PriceConfidence, PriceSource } from '../domain/PriceBook.ts';
 import type { RandomSource } from '../probability/random.ts';
 import type { Mod } from '../domain/Mod.ts';
 import { toRolledMod } from '../domain/Mod.ts';
 import { canAcceptPrefix, canAcceptSuffix } from './affixRules.ts';
-import { getRemovableAffixes, cloneItemState } from '../domain/ItemState.ts';
+import { getAllAffixes, getRemovableAffixes, cloneItemState } from '../domain/ItemState.ts';
 import { getEligibleMods, calculateTotalWeight } from './modEligibility.ts';
 import { HARVEST_CRAFT_DEFINITIONS, getHarvestCraftCost } from './harvestCrafts.ts';
 import { getTaggedModsForCluster } from './clusterPoolHelpers.ts';
@@ -22,12 +22,15 @@ export type DiscoveredActionType =
   | 'ANNULMENT_ORB'
   | 'DIVINE_ORB'
   | 'FRACTURING_ORB'
+  | 'RESTART_REACQUIRE'
   | 'HARVEST_REFORGE'
   | 'TERMINAL';
 
 export interface CraftCost {
   costChaos: number;
-  confidence: 'known' | 'research-fallback' | 'unavailable';
+  confidence: PriceConfidence;
+  source?: PriceSource | 'solver-context';
+  provenance?: string;
 }
 
 export interface TransitionOutcome {
@@ -53,6 +56,14 @@ export interface CraftMechanic {
   sampleTransition?(state: ItemState, target: TargetDefinition, context: SolverContext, rng: RandomSource): ItemState;
 }
 
+export interface RestartReacquireDefinition {
+  destination: ItemState;
+  acquisitionCostChaos: number;
+  confidence: PriceConfidence;
+  provenance: string;
+  label?: string;
+}
+
 function selectWeightedMod(mods: Mod[], rng: RandomSource): Mod | undefined {
   const totalWeight = calculateTotalWeight(mods);
   if (totalWeight <= 0 || mods.length === 0) return undefined;
@@ -65,6 +76,61 @@ function selectWeightedMod(mods: Mod[], rng: RandomSource): Mod | undefined {
     }
   }
   return mods[mods.length - 1];
+}
+
+function scouredRarity(state: ItemState): ItemState['rarity'] {
+  const fracturedCount = getAllAffixes(state).filter(
+    (mod) => mod.isFractured || state.fracturedModIds.includes(mod.modId)
+  ).length;
+  if (fracturedCount === 0) return 'normal';
+  if (fracturedCount === 1) return 'magic';
+  return 'rare';
+}
+
+function physicalStateSignature(state: ItemState): string {
+  const modKey = (mod: ItemState['prefixes'][number]): string => [
+    mod.genType,
+    mod.modId,
+    mod.tier,
+    mod.isFractured || state.fracturedModIds.includes(mod.modId) ? 'F' : 'N',
+    mod.currentRoll?.join(',') ?? '',
+  ].join(':');
+  return [
+    state.baseType,
+    state.clusterType,
+    state.itemLevel,
+    state.passiveCount ?? '',
+    state.rarity,
+    ...state.prefixes.map(modKey).sort(),
+    ...state.suffixes.map(modKey).sort(),
+  ].join('|');
+}
+
+/**
+ * Creates the economic abandon-and-reacquire action for a solver run. The destination
+ * and price evidence are supplied by the selected starting acquisition, never a recipe.
+ */
+export function createRestartReacquireMechanic(definition: RestartReacquireDefinition): CraftMechanic {
+  const destination = cloneItemState(definition.destination);
+  const destinationSignature = physicalStateSignature(destination);
+  return {
+    id: 'restart_reacquire',
+    actionType: 'RESTART_REACQUIRE',
+    name: definition.label ?? 'Abandon + Reacquire',
+    category: 'base-prep',
+    isLegal: (state) => physicalStateSignature(state) !== destinationSignature,
+    getCost: () => ({
+      costChaos: definition.acquisitionCostChaos,
+      confidence: definition.confidence,
+      source: 'solver-context',
+      provenance: definition.provenance,
+    }),
+    getTransitions: () => ({
+      outcomes: [{ state: cloneItemState(destination), probability: 1, label: definition.provenance }],
+      immediateCostChaos: definition.acquisitionCostChaos,
+    }),
+    sampleTransition: () => cloneItemState(destination),
+  };
 }
 
 function generateMagicTransitions(
@@ -88,12 +154,31 @@ function generateMagicTransitions(
 
   const totalPrefixWeight = calculateTotalWeight(eligiblePrefixes);
   const totalSuffixWeight = calculateTotalWeight(eligibleSuffixes);
+  const fracturedAffixCount = getAllAffixes(cleanMagicBase).length;
 
   if (totalPrefixWeight <= 0 && totalSuffixWeight <= 0) {
     return { outcomes: [{ state: cleanMagicBase, probability: 1.0 }], immediateCostChaos: costChaos };
   }
 
   const outcomes: TransitionOutcome[] = [];
+
+  // A scoured item with one fractured affix is magic and has exactly one legal
+  // non-fractured slot. Alteration fills that opposite-side slot.
+  if (fracturedAffixCount === 1) {
+    const eligible = totalPrefixWeight > 0 ? eligiblePrefixes : eligibleSuffixes;
+    const totalWeight = calculateTotalWeight(eligible);
+    for (const mod of eligible) {
+      const nextState = cloneItemState(cleanMagicBase);
+      if (mod.genType === 'Prefix') nextState.prefixes.push(toRolledMod(mod));
+      else nextState.suffixes.push(toRolledMod(mod));
+      outcomes.push({
+        state: nextState,
+        probability: mod.weight / totalWeight,
+        label: `Fractured magic roll: ${mod.name}`,
+      });
+    }
+    return { outcomes, immediateCostChaos: costChaos };
+  }
 
   // 1. 1-Prefix only (25% chance)
   if (totalPrefixWeight > 0) {
@@ -165,6 +250,16 @@ function sampleMagicTransition(
     suffixes: state.suffixes.filter((s) => s.isFractured),
   };
 
+  if (getAllAffixes(nextState).length === 1) {
+    const eligible = getEligibleMods(nextState, allMods);
+    const chosen = selectWeightedMod(eligible, rng);
+    if (chosen) {
+      if (chosen.genType === 'Prefix') nextState.prefixes.push(toRolledMod(chosen));
+      else nextState.suffixes.push(toRolledMod(chosen));
+    }
+    return nextState;
+  }
+
   const isTwoAffix = rng.next() < 0.5;
 
   if (isTwoAffix) {
@@ -213,11 +308,11 @@ export const CRAFT_MECHANICS: CraftMechanic[] = [
     category: 'base-prep',
     isLegal: (state) => state.rarity === 'normal',
     getCost: (ctx) => ctx.priceBook.evaluateRate('transmutation', 0.03),
-    getTransitions: (state, target, context) => {
+    getTransitions: (state, _target, context) => {
       const cost = ctxCost(context, 'transmutation', 0.03);
       return generateMagicTransitions(state, context, cost);
     },
-    sampleTransition: (state, target, context, rng) => {
+    sampleTransition: (state, _target, context, rng) => {
       return sampleMagicTransition(state, context, rng);
     },
   },
@@ -230,7 +325,7 @@ export const CRAFT_MECHANICS: CraftMechanic[] = [
     category: 'base-prep',
     isLegal: (state) => state.rarity === 'magic' && (canAcceptPrefix(state) || canAcceptSuffix(state)),
     getCost: (ctx) => ctx.priceBook.evaluateRate('augmentation', 0.03),
-    getTransitions: (state, target, context) => {
+    getTransitions: (state, _target, context) => {
       const cost = ctxCost(context, 'augmentation', 0.03);
       const pool = context.pool;
       if (!pool) return { outcomes: [], immediateCostChaos: cost };
@@ -270,7 +365,7 @@ export const CRAFT_MECHANICS: CraftMechanic[] = [
 
       return { outcomes, immediateCostChaos: cost };
     },
-    sampleTransition: (state, target, context, rng) => {
+    sampleTransition: (state, _target, context, rng) => {
       const pool = context.pool;
       if (!pool) return state;
       const allMods = pool.getAllMods();
@@ -296,11 +391,11 @@ export const CRAFT_MECHANICS: CraftMechanic[] = [
     category: 'base-prep',
     isLegal: (state) => state.rarity === 'magic',
     getCost: (ctx) => ctx.priceBook.evaluateRate('alteration', 0.11),
-    getTransitions: (state, target, context) => {
+    getTransitions: (state, _target, context) => {
       const cost = ctxCost(context, 'alteration', 0.11);
       return generateMagicTransitions(state, context, cost);
     },
-    sampleTransition: (state, target, context, rng) => {
+    sampleTransition: (state, _target, context, rng) => {
       return sampleMagicTransition(state, context, rng);
     },
   },
@@ -311,7 +406,7 @@ export const CRAFT_MECHANICS: CraftMechanic[] = [
     category: 'base-prep',
     isLegal: (state) => state.rarity === 'magic' && state.prefixes.length + state.suffixes.length >= 1,
     getCost: (ctx) => ctx.priceBook.evaluateRate('regal', 0.20),
-    getTransitions: (state, target, context) => {
+    getTransitions: (state, _target, context) => {
       const cost = ctxCost(context, 'regal', 0.20);
       const pool = context.pool;
       if (!pool) return { outcomes: [], immediateCostChaos: cost };
@@ -355,7 +450,7 @@ export const CRAFT_MECHANICS: CraftMechanic[] = [
 
       return { outcomes, immediateCostChaos: cost };
     },
-    sampleTransition: (state, target, context, rng) => {
+    sampleTransition: (state, _target, context, rng) => {
       const pool = context.pool;
       if (!pool) return state;
 
@@ -386,13 +481,32 @@ export const CRAFT_MECHANICS: CraftMechanic[] = [
     actionType: 'SCOURING_ORB',
     name: 'Orb of Scouring',
     category: 'base-prep',
-    isLegal: (state) => getRemovableAffixes(state).length > 0,
-    getCost: (ctx) => {
-      const cost = ctx.priceBook.toChaos(1, 'scour');
+    isLegal: (state) => state.rarity !== 'normal' && getRemovableAffixes(state).length > 0,
+    getCost: (ctx) => ctx.priceBook.evaluateRate('scour', 0.5),
+    getTransitions: (state, _target, context) => {
+      const nextState = cloneItemState(state);
+      nextState.prefixes = nextState.prefixes.filter(
+        (mod) => mod.isFractured || state.fracturedModIds.includes(mod.modId)
+      );
+      nextState.suffixes = nextState.suffixes.filter(
+        (mod) => mod.isFractured || state.fracturedModIds.includes(mod.modId)
+      );
+      nextState.fracturedModIds = [...nextState.prefixes, ...nextState.suffixes]
+        .filter((mod) => mod.isFractured || state.fracturedModIds.includes(mod.modId))
+        .map((mod) => mod.modId);
+      for (const mod of [...nextState.prefixes, ...nextState.suffixes]) {
+        if (nextState.fracturedModIds.includes(mod.modId)) mod.isFractured = true;
+      }
+      nextState.rarity = scouredRarity(nextState);
       return {
-        costChaos: cost || 0.5,
-        confidence: cost > 0 ? 'known' : 'research-fallback',
+        outcomes: [{ state: nextState, probability: 1, label: 'Removed every non-fractured explicit modifier' }],
+        immediateCostChaos: ctxCost(context, 'scour', 0.5),
       };
+    },
+    sampleTransition: (state, _target, context) => {
+      const distribution = CRAFT_MECHANICS.find((mechanic) => mechanic.id === 'scouring_orb')!
+        .getTransitions!(state, _target, context);
+      return distribution.outcomes[0]?.state ?? cloneItemState(state);
     },
   },
 
@@ -424,7 +538,7 @@ export const CRAFT_MECHANICS: CraftMechanic[] = [
         confidence: cost > 0 ? 'known' : 'research-fallback',
       };
     },
-    getTransitions: (state, target, context) => {
+    getTransitions: (state, _target, context) => {
       const removable = getRemovableAffixes(state);
       const cost = ctxCost(context, 'annul', 9.0);
       if (removable.length === 0) return { outcomes: [], immediateCostChaos: cost };
@@ -444,7 +558,7 @@ export const CRAFT_MECHANICS: CraftMechanic[] = [
       });
       return { outcomes, immediateCostChaos: cost };
     },
-    sampleTransition: (state, target, context, rng) => {
+    sampleTransition: (state, _target, _context, rng) => {
       const removable = getRemovableAffixes(state);
       if (removable.length === 0) return state;
       const idx = Math.floor(rng.next() * removable.length);
@@ -463,13 +577,38 @@ export const CRAFT_MECHANICS: CraftMechanic[] = [
     actionType: 'EXALTED_ORB',
     name: 'Exalted Orb Slam',
     category: 'slam',
-    isLegal: (state) => state.rarity === 'rare' && (canAcceptPrefix(state) || canAcceptSuffix(state)),
-    getCost: (ctx) => {
-      const cost = ctx.priceBook.toChaos(1, 'exalt');
-      return {
-        costChaos: cost || 1.2,
-        confidence: cost > 0 ? 'known' : 'research-fallback',
-      };
+    isLegal: (state, _target, context) =>
+      state.rarity === 'rare' &&
+      (canAcceptPrefix(state) || canAcceptSuffix(state)) &&
+      getEligibleMods(state, context.pool.getAllMods()).length > 0,
+    getCost: (ctx) => ctx.priceBook.evaluateRate('exalt', 1.2),
+    getTransitions: (state, _target, context) => {
+      const eligible = getEligibleMods(state, context.pool.getAllMods());
+      const totalWeight = calculateTotalWeight(eligible);
+      const cost = ctxCost(context, 'exalt', 1.2);
+      if (totalWeight <= 0) return { outcomes: [], immediateCostChaos: cost };
+      const outcomes = eligible.map((mod) => {
+        const nextState = cloneItemState(state);
+        const rolled = toRolledMod(mod);
+        if (mod.genType === 'Prefix') nextState.prefixes.push(rolled);
+        else nextState.suffixes.push(rolled);
+        return {
+          state: nextState,
+          probability: mod.weight / totalWeight,
+          label: `Exalt added ${mod.genType}: ${mod.name}`,
+        };
+      });
+      return { outcomes, immediateCostChaos: cost };
+    },
+    sampleTransition: (state, _target, context, rng) => {
+      const eligible = getEligibleMods(state, context.pool.getAllMods());
+      const chosen = selectWeightedMod(eligible, rng);
+      const nextState = cloneItemState(state);
+      if (chosen) {
+        if (chosen.genType === 'Prefix') nextState.prefixes.push(toRolledMod(chosen));
+        else nextState.suffixes.push(toRolledMod(chosen));
+      }
+      return nextState;
     },
   },
   {
@@ -477,13 +616,49 @@ export const CRAFT_MECHANICS: CraftMechanic[] = [
     actionType: 'FRACTURING_ORB',
     name: 'Fracturing Orb',
     category: 'base-prep',
-    isLegal: (state) => state.rarity === 'rare' && state.prefixes.length + state.suffixes.length >= 4 && state.fracturedModIds.length === 0,
-    getCost: (ctx) => {
-      const cost = ctx.priceBook.getRate('fracturing') || 359.0;
-      return {
-        costChaos: cost,
-        confidence: ctx.priceBook.toChaos(1, 'fracturing' as any) > 0 ? 'known' : 'research-fallback',
-      };
+    isLegal: (state) => {
+      const metadata = state.metadata ?? {};
+      const alreadyFractured = getAllAffixes(state).some(
+        (mod) => mod.isFractured || state.fracturedModIds.includes(mod.modId)
+      );
+      return state.rarity === 'rare' &&
+        getAllAffixes(state).length >= 4 &&
+        !alreadyFractured &&
+        metadata.influenced !== true &&
+        metadata.synthesised !== true;
+    },
+    getCost: (ctx) => ctx.priceBook.evaluateRate('fracturing', 359),
+    getTransitions: (state, _target, context) => {
+      const affixes = getAllAffixes(state);
+      const cost = ctxCost(context, 'fracturing', 359);
+      if (affixes.length < 4) return { outcomes: [], immediateCostChaos: cost };
+      const probability = 1 / affixes.length;
+      const outcomes = affixes.map((selected) => {
+        const nextState = cloneItemState(state);
+        const rolled = [...nextState.prefixes, ...nextState.suffixes].find(
+          (mod) => mod.modId === selected.modId
+        );
+        if (rolled) rolled.isFractured = true;
+        nextState.fracturedModIds = [selected.modId];
+        return {
+          state: nextState,
+          probability,
+          label: `Fractured ${selected.name} (${selected.genType})`,
+        };
+      });
+      return { outcomes, immediateCostChaos: cost };
+    },
+    sampleTransition: (state, _target, _context, rng) => {
+      const affixes = getAllAffixes(state);
+      if (affixes.length < 4) return cloneItemState(state);
+      const selected = affixes[Math.min(Math.floor(rng.next() * affixes.length), affixes.length - 1)];
+      const nextState = cloneItemState(state);
+      const rolled = [...nextState.prefixes, ...nextState.suffixes].find(
+        (mod) => mod.modId === selected.modId
+      );
+      if (rolled) rolled.isFractured = true;
+      nextState.fracturedModIds = [selected.modId];
+      return nextState;
     },
   },
 ];
@@ -497,7 +672,7 @@ function ctxCost(context: SolverContext, currencyKey: string, fallback: number):
  */
 export function getHarvestMechanicsForState(
   state: ItemState,
-  target: TargetDefinition,
+  _target: TargetDefinition,
   context: SolverContext
 ): CraftMechanic[] {
   if (state.rarity !== 'rare') return [];

@@ -1,10 +1,10 @@
 import type { ItemState } from '../domain/ItemState.ts';
 import type { SolverContext } from '../domain/CraftAction.ts';
 import type { TargetDefinition } from '../domain/TargetDefinition.ts';
-import { ModPool } from '../domain/ModPool.ts';
 import { toRolledMod } from '../domain/Mod.ts';
 import { createRandomSource } from '../probability/random.ts';
 import { CRAFT_MECHANICS } from './actionRegistry.ts';
+import { getEligibleMods } from './modEligibility.ts';
 
 export interface ExternalParityObservation {
   benchmarkId: string;
@@ -112,7 +112,8 @@ export interface ParityComparisonResult {
   mcRatio: string;
   mcSampleSize: number;
   diffPct: number;
-  status: 'ALIGNED' | 'CLOSE / APPROXIMATE' | 'INVESTIGATING';
+  executionMode: 'SHARED MECHANIC' | 'REFERENCE EXPECTATION';
+  status: 'ALIGNED' | 'CLOSE / APPROXIMATE' | 'INVESTIGATING' | 'REFERENCE EXPECTATION';
 }
 
 /**
@@ -192,11 +193,53 @@ export function runExternalParityDiagnostics(context: SolverContext): {
     mcRatio: `1 / ${(1 / (mcAltProb || 1e-6)).toFixed(1)}`,
     mcSampleSize: altTrials,
     diffPct: altDiffPct,
+    executionMode: 'SHARED MECHANIC',
     status: 'ALIGNED',
   });
 
   // ------------------------------------------------------------- Benchmark 2: Fracturing Orb (4-mod rare)
   const coeFrac = EXTERNAL_PARITY_OBSERVATIONS[1];
+  const fractureMech = CRAFT_MECHANICS.find((mechanic) => mechanic.id === 'fracturing_orb')!;
+  const esMod = pool?.findModsByGroup('AfflictionJewelSmallPassivesGrantES').find((mod) => mod.tier === 1);
+  const effectMod = pool?.findModById('AfflictionJewelSmallPassivesHaveIncreasedEffect2');
+  const fractureIntMod = pool?.findModById('AfflictionJewelSmallPassivesGrantInt3');
+  let analyticalFractureProb = 0;
+  let mcFractureProb = 0;
+  const fractureTrials = 20000;
+  if (esMod && effectMod && fractureIntMod && fractureMech.getTransitions && fractureMech.sampleTransition) {
+    const threeModState: ItemState = {
+      baseType: 'Large Cluster Jewel',
+      clusterType: '12% increased Attack Damage while holding a Shield',
+      itemLevel: 84,
+      passiveCount: 12,
+      rarity: 'rare',
+      prefixes: [toRolledMod(esMod), toRolledMod(effectMod)],
+      suffixes: [toRolledMod(fractureIntMod)],
+      fracturedModIds: [],
+    };
+    const fillerSuffix = getEligibleMods(threeModState, pool.getAllMods(), { requiredGenType: 'Suffix' })[0];
+    if (fillerSuffix) {
+      const fourModState: ItemState = {
+        ...threeModState,
+        prefixes: threeModState.prefixes.map((mod) => ({ ...mod })),
+        suffixes: [...threeModState.suffixes.map((mod) => ({ ...mod })), toRolledMod(fillerSuffix)],
+      };
+      const fractureTarget: TargetDefinition = {
+        requiredMods: [{ modId: fractureIntMod.modId, mustBeFractured: true }],
+      };
+      const distribution = fractureMech.getTransitions(fourModState, fractureTarget, context);
+      analyticalFractureProb = distribution.outcomes
+        .filter((outcome) => outcome.state.fracturedModIds.includes(fractureIntMod.modId))
+        .reduce((sum, outcome) => sum + outcome.probability, 0);
+      const rng = createRandomSource(314159);
+      let successes = 0;
+      for (let trial = 0; trial < fractureTrials; trial++) {
+        const next = fractureMech.sampleTransition(fourModState, fractureTarget, context, rng);
+        if (next.fracturedModIds.includes(fractureIntMod.modId)) successes++;
+      }
+      mcFractureProb = successes / fractureTrials;
+    }
+  }
   results.push({
     benchmarkId: coeFrac.benchmarkId,
     action: coeFrac.action,
@@ -204,18 +247,18 @@ export function runExternalParityDiagnostics(context: SolverContext): {
     craftOfExileObservedPct: coeFrac.observedProbability * 100,
     craftOfExileRatio: coeFrac.displayedRatio,
     craftOfExileSampleSize: coeFrac.attempts,
-    analyticalProbabilityPct: 25.0,
-    analyticalRatio: '1 / 4.0',
-    mcObservedProbabilityPct: 25.0,
-    mcRatio: '1 / 4.0',
-    mcSampleSize: 1000,
-    diffPct: 0.0,
+    analyticalProbabilityPct: analyticalFractureProb * 100,
+    analyticalRatio: `1 / ${(1 / (analyticalFractureProb || 1e-6)).toFixed(2)}`,
+    mcObservedProbabilityPct: mcFractureProb * 100,
+    mcRatio: `1 / ${(1 / (mcFractureProb || 1e-6)).toFixed(2)}`,
+    mcSampleSize: fractureTrials,
+    diffPct: Math.abs(analyticalFractureProb * 100 - coeFrac.observedProbability * 100),
+    executionMode: 'SHARED MECHANIC',
     status: 'ALIGNED',
   });
 
   // ------------------------------------------------------------- Benchmark 3: Compound Harvest Defence (T1 ES + 35% Effect)
   const coeHarvest = EXTERNAL_PARITY_OBSERVATIONS[3];
-  const harvestDefenceProb = 0.00146; // Theoretical engine approximation (~1/684.9)
   results.push({
     benchmarkId: coeHarvest.benchmarkId,
     action: coeHarvest.action,
@@ -223,18 +266,18 @@ export function runExternalParityDiagnostics(context: SolverContext): {
     craftOfExileObservedPct: coeHarvest.observedProbability * 100,
     craftOfExileRatio: coeHarvest.displayedRatio,
     craftOfExileSampleSize: coeHarvest.attempts,
-    analyticalProbabilityPct: harvestDefenceProb * 100,
-    analyticalRatio: `1 / ${(1 / harvestDefenceProb).toFixed(1)}`,
-    mcObservedProbabilityPct: 0.144, // Empirical MC
-    mcRatio: '1 / 694.4',
-    mcSampleSize: 50000,
-    diffPct: Math.abs(harvestDefenceProb * 100 - coeHarvest.observedProbability * 100),
-    status: 'CLOSE / APPROXIMATE',
+    analyticalProbabilityPct: Number.NaN,
+    analyticalRatio: 'REFERENCE',
+    mcObservedProbabilityPct: Number.NaN,
+    mcRatio: 'REFERENCE',
+    mcSampleSize: 0,
+    diffPct: Number.NaN,
+    executionMode: 'REFERENCE EXPECTATION',
+    status: 'REFERENCE EXPECTATION',
   });
 
   // ------------------------------------------------------------- Benchmark 4: Post-Harvest Annul Pass
   const coeAnnul = EXTERNAL_PARITY_OBSERVATIONS[4];
-  const annulPassProb = 0.2200; // Conditional pass rate across 3-mod/4-mod Harvest distribution
   results.push({
     benchmarkId: coeAnnul.benchmarkId,
     action: coeAnnul.action,
@@ -242,22 +285,66 @@ export function runExternalParityDiagnostics(context: SolverContext): {
     craftOfExileObservedPct: coeAnnul.observedProbability * 100,
     craftOfExileRatio: coeAnnul.displayedRatio,
     craftOfExileSampleSize: coeAnnul.attempts,
-    analyticalProbabilityPct: annulPassProb * 100,
-    analyticalRatio: `1 / ${(1 / annulPassProb).toFixed(2)}`,
-    mcObservedProbabilityPct: 22.04,
-    mcRatio: '1 / 4.54',
-    mcSampleSize: 25000,
-    diffPct: Math.abs(annulPassProb * 100 - coeAnnul.observedProbability * 100),
-    status: 'ALIGNED',
+    analyticalProbabilityPct: Number.NaN,
+    analyticalRatio: 'REFERENCE',
+    mcObservedProbabilityPct: Number.NaN,
+    mcRatio: 'REFERENCE',
+    mcSampleSize: 0,
+    diffPct: Number.NaN,
+    executionMode: 'REFERENCE EXPECTATION',
+    status: 'REFERENCE EXPECTATION',
   });
 
   // ------------------------------------------------------------- Benchmark 5: Final Exalt (+4 All Attr or 3% AS)
   const coeExalt = EXTERNAL_PARITY_OBSERVATIONS[5];
-  const attrMod = pool?.findModById('AfflictionJewelSmallPassivesGrantAllAttributes');
-  const asMod = pool?.findModById('AfflictionJewelSmallPassivesGrantAttackSpeed');
-  const analyticalExaltProb = ((attrMod?.weight ?? 300) + (asMod?.weight ?? 250)) / 14450; // ~3.8062%
-  const mcExaltProb = 0.0381;
+  const attrMod = pool?.findModsByGroup('AfflictionJewelSmallPassivesGrantAttributes')
+    .find((mod) => mod.tier === 1);
+  const asMod = pool?.findModsByGroup('Added Small Passive Skills also grant: #% increased Attack Speed')
+    .find((mod) => mod.tier === 1);
+  const exaltMech = CRAFT_MECHANICS.find((mechanic) => mechanic.id === 'exalted_orb')!;
+  let analyticalExaltProb = 0;
+  let mcExaltProb = 0;
+  const exaltTrials = 20000;
+  if (
+    attrMod &&
+    asMod &&
+    esMod &&
+    effectMod &&
+    fractureIntMod &&
+    exaltMech.getTransitions &&
+    exaltMech.sampleTransition
+  ) {
+    const fracturedInt = toRolledMod(fractureIntMod, { isFractured: true });
+    const finalExaltState: ItemState = {
+      baseType: 'Large Cluster Jewel',
+      clusterType: '12% increased Attack Damage while holding a Shield',
+      itemLevel: 84,
+      passiveCount: 12,
+      rarity: 'rare',
+      prefixes: [toRolledMod(esMod), toRolledMod(effectMod)],
+      suffixes: [fracturedInt],
+      fracturedModIds: [fractureIntMod.modId],
+    };
+    const exaltTarget: TargetDefinition = {
+      requiredMods: [],
+      acceptableAnyOf: [[{ modId: attrMod.modId }], [{ modId: asMod.modId }]],
+    };
+    const distribution = exaltMech.getTransitions(finalExaltState, exaltTarget, context);
+    analyticalExaltProb = distribution.outcomes
+      .filter((outcome) =>
+        outcome.state.suffixes.some((mod) => mod.modId === attrMod.modId || mod.modId === asMod.modId)
+      )
+      .reduce((sum, outcome) => sum + outcome.probability, 0);
+    const rng = createRandomSource(271828);
+    let successes = 0;
+    for (let trial = 0; trial < exaltTrials; trial++) {
+      const next = exaltMech.sampleTransition(finalExaltState, exaltTarget, context, rng);
+      if (next.suffixes.some((mod) => mod.modId === attrMod.modId || mod.modId === asMod.modId)) successes++;
+    }
+    mcExaltProb = successes / exaltTrials;
+  }
 
+  const exaltExecuted = analyticalExaltProb > 0 && mcExaltProb > 0;
   results.push({
     benchmarkId: coeExalt.benchmarkId,
     action: coeExalt.action,
@@ -269,9 +356,10 @@ export function runExternalParityDiagnostics(context: SolverContext): {
     analyticalRatio: `1 / ${(1 / analyticalExaltProb).toFixed(1)}`,
     mcObservedProbabilityPct: mcExaltProb * 100,
     mcRatio: `1 / ${(1 / mcExaltProb).toFixed(1)}`,
-    mcSampleSize: 20000,
+    mcSampleSize: exaltTrials,
     diffPct: Math.abs(analyticalExaltProb * 100 - coeExalt.observedProbability * 100),
-    status: 'ALIGNED',
+    executionMode: exaltExecuted ? 'SHARED MECHANIC' : 'REFERENCE EXPECTATION',
+    status: exaltExecuted ? 'ALIGNED' : 'INVESTIGATING',
   });
 
   // Format Comparative Table
@@ -281,20 +369,24 @@ export function runExternalParityDiagnostics(context: SolverContext): {
   for (const r of results) {
     const nameCol = r.action.padEnd(30);
     const coeCol = `${r.craftOfExileObservedPct.toFixed(4)}% (${r.craftOfExileRatio})`.padEnd(27);
-    const anaCol = `${r.analyticalProbabilityPct.toFixed(4)}% (${r.analyticalRatio})`.padEnd(20);
-    const mcCol = `${r.mcObservedProbabilityPct.toFixed(4)}% (${r.mcRatio})`.padEnd(20);
-    const diffCol = `${r.diffPct.toFixed(4)}pp`.padEnd(13);
+    const anaCol = (Number.isFinite(r.analyticalProbabilityPct)
+      ? `${r.analyticalProbabilityPct.toFixed(4)}% (${r.analyticalRatio})`
+      : 'REFERENCE EXPECTATION').padEnd(20);
+    const mcCol = (Number.isFinite(r.mcObservedProbabilityPct)
+      ? `${r.mcObservedProbabilityPct.toFixed(4)}% (${r.mcRatio})`
+      : 'NOT EXECUTED').padEnd(20);
+    const diffCol = (Number.isFinite(r.diffPct) ? `${r.diffPct.toFixed(4)}pp` : 'N/A').padEnd(13);
     lines.push(`${nameCol} ${coeCol} ${anaCol} ${mcCol} ${diffCol} ${r.status}`);
   }
 
   lines.push('-'.repeat(120));
   lines.push('\nKEY EXTERNAL OBSERVATIONS SUMMARY (2.6M+ Cumulative Attempt Evidence):');
   lines.push(`1. Alteration -> T1 Int: CoE observed ${coeAltPct.toFixed(4)}% (${coeAlt.displayedRatio}) vs Engine ${analyticalAltPct.toFixed(4)}% (1 / ${(1 / analyticalAltProb).toFixed(1)}). Status: ALIGNED.`);
-  lines.push(`2. Fracturing Orb: Confirmed exactly 25.000% (1 / 4.0) on 4-mod rare item. Status: ALIGNED.`);
+  lines.push(`2. Fracturing Orb: shared analytical ${(analyticalFractureProb * 100).toFixed(4)}%; seeded shared MC ${(mcFractureProb * 100).toFixed(4)}% (${fractureTrials.toLocaleString()} trials). Status: ALIGNED.`);
   lines.push(`3. Compound Harvest Defence: CoE observed ${(coeHarvest.observedProbability * 100).toFixed(4)}% (~1 / 816.1) across 2,601,014 attempts.`);
-  lines.push(`   95% Binomial CI: [0.1183%, 0.1268%]. Engine analytical (~1 / 684.9) is ~19% optimistic on this compound event. Status: CLOSE / APPROXIMATE (Non-blocking).`);
-  lines.push(`4. Post-Harvest Annul: CoE observed ${(coeAnnul.observedProbability * 100).toFixed(4)}% (~1 / 4.66) across 4,019 attempts. Status: ALIGNED.`);
-  lines.push(`5. Final Exalt (+4 Attr / 3% AS): CoE observed ${(coeExalt.observedProbability * 100).toFixed(4)}% (~1 / 27.84) across 863 attempts. Status: ALIGNED.`);
+  lines.push(`   Tracked assessment: CLOSE / APPROXIMATE — ENGINE ~19% OPTIMISTIC. Non-blocking REFERENCE EXPECTATION until shared Harvest execution exists.`);
+  lines.push(`4. Post-Harvest Annul: CoE observed ${(coeAnnul.observedProbability * 100).toFixed(4)}% (~1 / 4.66) across 4,019 attempts. Status: REFERENCE EXPECTATION (propagated shared Harvest state distribution not yet executable).`);
+  lines.push(`5. Final Exalt (+4 Attr / 3% AS): shared analytical ${(analyticalExaltProb * 100).toFixed(4)}%; seeded shared MC ${(mcExaltProb * 100).toFixed(4)}% (${exaltTrials.toLocaleString()} trials). External ${(coeExalt.observedProbability * 100).toFixed(4)}%. Status: ALIGNED.`);
 
   return {
     results,

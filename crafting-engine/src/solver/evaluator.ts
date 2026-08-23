@@ -64,13 +64,7 @@ export class CraftEvaluator {
   evaluateStartingStrategy(
     strategyName: string,
     startState: ItemState,
-    acquisitionInput?:
-      | {
-          type: 'market' | 'self-fracture' | 'clean-base';
-          costChaos: number;
-          confidence: 'deterministic' | 'approximate';
-        }
-      | number,
+    acquisitionInput?: AcquisitionOption | number,
     saleValueChaos?: number
   ): StartingStrategyResult {
     const harvestTags = [

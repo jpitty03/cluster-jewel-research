@@ -1,6 +1,6 @@
 import { writeFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
-import { CraftingOptimizer, type OptimizeCraftResponse } from '../src/index.ts';
+import { CraftingOptimizer, type OptimizeCraftRequest, type OptimizeCraftResponse } from '../src/index.ts';
 import { ClusterModRepository } from '../src/data/loadClusterMods.ts';
 import { ModPool } from '../src/domain/ModPool.ts';
 import { toRolledMod } from '../src/domain/Mod.ts';
@@ -74,7 +74,8 @@ function verifyRepresentativeMinEv(craftName: string, response: OptimizeCraftRes
 import { getCanonicalStateKey } from '../src/rules/actionDiscovery.ts';
 import { CRAFT_MECHANICS } from '../src/rules/actionRegistry.ts';
 import { createRandomSource } from '../src/probability/random.ts';
-import type { TargetDefinition, RolledMod } from '../src/domain/index.ts';
+import type { TargetDefinition } from '../src/domain/TargetDefinition.ts';
+import type { RolledMod } from '../src/domain/Mod.ts';
 
 function runCanonicalKeyDiagnostics(): string {
   const lines: string[] = [];
@@ -276,8 +277,12 @@ function runAutoDiscoveryDiagnostic(
     const nameCol = opt.strategyName.padEnd(41);
     const acqMode = (opt.acquisition?.type ?? 'clean-base').padEnd(20);
     const acqCost = formatChaos(opt.baseCostChaos, divineRate).padEnd(15);
-    const downEv = formatChaos(opt.expectedCraftingCostChaos, divineRate).padEnd(15);
-    const fullEv = formatChaos(opt.totalExpectedCostChaos, divineRate);
+    const downEv = (Number.isFinite(opt.expectedCraftingCostChaos)
+      ? formatChaos(opt.expectedCraftingCostChaos, divineRate)
+      : 'UNRESOLVED').padEnd(15);
+    const fullEv = Number.isFinite(opt.totalExpectedCostChaos)
+      ? formatChaos(opt.totalExpectedCostChaos, divineRate)
+      : 'UNRESOLVED';
     lines.push(`${nameCol} ${acqMode} ${acqCost} ${downEv} ${fullEv}`);
   }
 
@@ -285,11 +290,15 @@ function runAutoDiscoveryDiagnostic(
   const diffChaos = Math.abs(autoResponse.recommendedStrategy.totalExpectedCostChaos - manualResponse.recommendedStrategy.totalExpectedCostChaos);
   const diffPct = (diffChaos / manualResponse.recommendedStrategy.totalExpectedCostChaos) * 100;
   const isMatch = diffPct < 1.0 && cleanBasePassed && requiredModFracturesPassed;
+  const unresolvedRouteCount = allAutoOptions.filter(
+    (option) => !Number.isFinite(option.totalExpectedCostChaos)
+  ).length;
 
   lines.push(`\nAUTOMATIC DISCOVERY VERIFICATION:`);
-  lines.push(`  Selected Auto Route:   ${autoResponse.recommendedStrategy.strategyName} (${formatChaos(autoResponse.recommendedStrategy.totalExpectedCostChaos, divineRate)})`);
-  lines.push(`  Manual Fixture Route:  ${manualResponse.recommendedStrategy.strategyName} (${formatChaos(manualResponse.recommendedStrategy.totalExpectedCostChaos, divineRate)})`);
-  lines.push(`  Discovery Consistency: ${isMatch ? 'PASSED (Auto-discovered candidate set and winner match manual reference fixture)' : 'DIFFERENCE DETECTED'}`);
+  lines.push(`  Best Fully Resolved Route: ${autoResponse.recommendedStrategy.strategyName} (${formatChaos(autoResponse.recommendedStrategy.totalExpectedCostChaos, divineRate)})`);
+  lines.push(`  Reference Fixture Route:   ${manualResponse.recommendedStrategy.strategyName} (${formatChaos(manualResponse.recommendedStrategy.totalExpectedCostChaos, divineRate)})`);
+  lines.push(`  Resolved-Route Consistency: ${isMatch ? 'PASSED (auto-discovered resolved route matches manual reference fixture)' : 'DIFFERENCE DETECTED'}`);
+  lines.push(`  Global Route Optimality:    ${unresolvedRouteCount > 0 ? `NOT YET PROVEN (${unresolvedRouteCount} alternatives unresolved)` : 'PROVEN OVER EVALUATED ROUTES'}`);
 
   return lines.join('\n');
 }
@@ -431,9 +440,7 @@ function runCleanBaseT1IntSearchDiagnostic(): string {
   };
 
   const genericSearch = new GenericSearchEngine({ pool: poolA, priceBook }, target);
-  const searchResult = genericSearch.search(cleanBaseState);
-  const divineRate = priceBook.getRate('divine') || 200;
-
+  const searchResult = genericSearch.search(cleanBaseState, { maxIterations: 1_500 });
   lines.push(`Target: T1 Intelligence (ilvl 84 12p Shield Cluster)`);
   lines.push(`Starting Physical State: ${cleanBaseState.rarity} base (0 affixes, base cost: 10.0c)`);
 
@@ -445,20 +452,23 @@ function runCleanBaseT1IntSearchDiagnostic(): string {
   lines.push(`   - Transitions to Unexpanded States:      ${searchResult.graphBuild.transitionsToUnexpandedStates}`);
   lines.push(`   - Transition Prob Mass to Unexpanded:    ${(searchResult.graphBuild.transitionProbabilityMassToUnexpandedStates * 100).toFixed(4)}%`);
   lines.push(`   - Terminal Target States Discovered:     ${searchResult.graphBuild.terminalStatesFound}`);
+  lines.push(`   - Candidate Graph Contains Cycles:       ${searchResult.graphBuild.hasCycles ? 'YES' : 'NO'}`);
   lines.push(`   - State Counts by Rarity: Normal: ${searchResult.graphBuild.stateCountsByRarity.normal}, Magic: ${searchResult.graphBuild.stateCountsByRarity.magic}, Rare: ${searchResult.graphBuild.stateCountsByRarity.rare}`);
   lines.push(`   - Top State Subspaces: ${Object.entries(searchResult.graphBuild.stateCountsByAffixes).slice(0, 5).map(([k, v]) => `${k}:${v}`).join(', ')}`);
   lines.push(`   - State Generation Attribution by Action:`);
   for (const attr of Object.values(searchResult.graphBuild.actionAttribution)) {
-    lines.push(`     * ${attr.actionName.padEnd(22)}: ${attr.uniqueSuccessorsGenerated.toString().padStart(5)} unique successors generated | on-policy states using: ${attr.onPolicyStatesUsingAction} | unresolved edges: ${attr.unresolvedEdges}`);
+    lines.push(`     * ${attr.actionName.padEnd(22)}: ${attr.actionLocalUniqueSuccessorKeysProduced.toString().padStart(5)} action-local unique successors | ${attr.newGlobalStatesFirstDiscovered.toString().padStart(5)} new global states first discovered | on-policy states selecting: ${attr.onPolicyStatesSelectingAction} | unresolved outgoing edges: ${attr.unresolvedOutgoingEdges}`);
   }
 
   // 2. On-Policy Reachable Graph Report
   lines.push(`\n2. ON-POLICY REACHABLE GRAPH & ABSORPTION:`);
-  lines.push(`   - On-Policy Reachable States:            ${searchResult.onPolicyGraph.onPolicyReachableStates} states (Normal & Magic state space)`);
+  lines.push(`   - On-Policy Reachable States:            ${searchResult.onPolicyGraph.onPolicyReachableStates} states`);
   lines.push(`   - On-Policy Terminal Target States:      ${searchResult.onPolicyGraph.onPolicyTerminalStates}`);
-  lines.push(`   - On-Policy Unresolved Transitions:      ${searchResult.onPolicyGraph.onPolicyUnresolvedTransitions} (100% resolved within magic state space)`);
+  lines.push(`   - On-Policy Unresolved Transitions:      ${searchResult.onPolicyGraph.onPolicyUnresolvedTransitions}`);
   lines.push(`   - On-Policy Unresolved Probability Mass: ${(searchResult.onPolicyGraph.onPolicyUnresolvedProbabilityMass * 100).toFixed(4)}%`);
   lines.push(`   - Terminal Absorption Probability:       ${(searchResult.onPolicyGraph.terminalAbsorptionProbability * 100).toFixed(1)}%`);
+  lines.push(`   - Absorption Solver Converged:           ${searchResult.onPolicyGraph.absorptionConverged ? 'YES' : 'NO'} (${searchResult.onPolicyGraph.absorptionIterations} iterations, residual: ${searchResult.onPolicyGraph.absorptionMaxResidual.toExponential(4)})`);
+  lines.push(`   - Selected Policy Contains Cycles:       ${searchResult.onPolicyGraph.hasCycles ? 'YES' : 'NO'}`);
   lines.push(`   - Selected Policy Properness:            ${searchResult.onPolicyGraph.isProper ? 'PROPER & ABSORBING' : 'IMPROPER'}`);
 
   // 3. Value Iteration Convergence Report
@@ -475,6 +485,10 @@ function runCleanBaseT1IntSearchDiagnostic(): string {
   lines.push(`   - Expected Augmentation Orbs:            ${(searchResult.expectedCurrencies.augmentation ?? 0).toFixed(2)}`);
   lines.push(`   - Expected Regal Orbs:                   ${(searchResult.expectedCurrencies.regal ?? 0).toFixed(2)}`);
   lines.push(`   - Expected Annulment Orbs:               ${(searchResult.expectedCurrencies.annul ?? 0).toFixed(2)}`);
+  lines.push(`   - Expected Scouring Orbs:                ${(searchResult.expectedCurrencies.scour ?? 0).toFixed(2)}`);
+  lines.push(`   - Expected Exalted Orbs:                 ${(searchResult.expectedCurrencies.exalt ?? 0).toFixed(2)}`);
+  lines.push(`   - Expected Fracturing Orbs:              ${(searchResult.expectedCurrencies.fracturing ?? 0).toFixed(2)}`);
+  lines.push(`   - Expected Reacquisitions:               ${(searchResult.expectedCurrencies.reacquisition ?? 0).toFixed(2)}`);
   lines.push(`   - Sum(Expected Action * Immediate Cost): ${searchResult.reconciliation.sumExpectedActionCostChaos.toFixed(3)}c`);
   lines.push(`   - Reported Downstream Crafting EV:       ${searchResult.reconciliation.reportedDownstreamEVChaos.toFixed(3)}c`);
   lines.push(`   - EV Reconciliation Difference:          ${searchResult.reconciliation.differenceChaos.toFixed(4)}c (${searchResult.reconciliation.isReconciled ? 'RECONCILED' : 'FLAGGED'})`);
@@ -485,7 +499,9 @@ function runCleanBaseT1IntSearchDiagnostic(): string {
     lines.push(`\n  State: [${audit.state.rarity.toUpperCase()}] P:${audit.state.prefixes.length} (${audit.state.prefixes.map((p) => p.name).join(', ') || 'none'}) | S:${audit.state.suffixes.length} (${audit.state.suffixes.map((s) => s.name).join(', ') || 'none'})`);
     for (const c of audit.candidateQValues) {
       const isSelected = c.actionId === audit.bestActionId;
-      lines.push(`    - Action: ${c.actionName.padEnd(22)} | Status: ${c.status.padEnd(10)} | Immediate: ${c.immediateCostChaos.toFixed(2).padStart(5)}c | Cont EV: ${c.expectedContinuationChaos.toFixed(2).padStart(6)}c | Total Q(s,a): ${c.totalQValueChaos.toFixed(2).padStart(6)}c ${isSelected ? '<-- OPTIMAL (MIN Q)' : ''}`);
+      const continuation = Number.isFinite(c.expectedContinuationChaos) ? `${c.expectedContinuationChaos.toFixed(2)}c` : 'UNRESOLVED';
+      const qValue = Number.isFinite(c.totalQValueChaos) ? `${c.totalQValueChaos.toFixed(2)}c` : 'UNRESOLVED';
+      lines.push(`    - Action: ${c.actionName.padEnd(22)} | Status: ${c.status.padEnd(18)} | Immediate: ${c.immediateCostChaos.toFixed(2).padStart(5)}c | Cont EV: ${continuation.padStart(10)} | Q: ${qValue.padStart(10)} | LB: ${c.lowerBoundChaos.toFixed(2)}c ${isSelected ? '<-- SELECTED RESOLVED ACTION' : ''}`);
     }
   }
 
@@ -500,8 +516,8 @@ function runCleanBaseT1IntSearchDiagnostic(): string {
   }
   lines.push(`\nAction Competition Check: Does Augmentation beat Alteration on 1-Prefix Magic Miss items? ${augBeatsAlt ? 'YES (Augmentation has lower Q-value by preserving prefix and attempting direct suffix hit)' : 'NO'}`);
 
-  // 7. Optimal Policy Summary (Branching Rules)
-  lines.push(`\n6. OPTIMAL POLICY BRANCHING RULES:`);
+  // 7. Selected Policy Summary (Branching Rules)
+  lines.push(`\n6. SELECTED POLICY BRANCHING RULES:`);
   for (const step of searchResult.steps) {
     lines.push(`  - State: ${step.stateDescription}`);
     lines.push(`    Chosen Action: ${step.selectedAction} (Immediate Cost: ${step.immediateCostChaos.toFixed(2)}c, Cont EV: ${step.continuationCostChaos.toFixed(2)}c, Q(s,a): ${step.totalQValueChaos.toFixed(2)}c)`);
@@ -514,8 +530,17 @@ function runCleanBaseT1IntSearchDiagnostic(): string {
   lines.push(`   - Query: 'unknown_currency_test' -> source: ${unknownEval.source}, confidence: ${unknownEval.confidence}, costChaos: ${unknownEval.costChaos}c`);
   lines.push(`   - Result: ${unknownEval.confidence === 'unavailable' && unknownEval.costChaos === 0 ? 'PASSED (Unknown currency returns UNAVAILABLE, never 1c)' : 'FAILED'}`);
 
-  const passed = searchResult.reconciliation.isReconciled && searchResult.convergence.converged;
-  lines.push(`\nClean-Base Generic Search Verification: ${passed ? 'PASSED (Stochastic Shortest Path Bellman solver derived optimal policy with full convergence & reconciliation)' : 'FAILED'}`);
+  lines.push(`\n8. PROOF STATUS:`);
+  lines.push(`   - SELECTED POLICY: ${searchResult.optimalityProof.selectedPolicyStatus}`);
+  lines.push(`   - Recursive Candidate Resolution: ${searchResult.optimalityProof.candidateResolutionConverged ? 'CONVERGED' : 'NOT CONVERGED'}`);
+  lines.push(`   - RESULT: ${searchResult.optimalityProof.proofLevel}`);
+  lines.push(`   - GLOBAL OPTIMALITY: ${searchResult.optimalityProof.globalOptimality}`);
+  lines.push(`   - Unresolved Competitors: ${searchResult.optimalityProof.unresolvedCompetitorCount}`);
+  lines.push(`   - Potentially Cheaper by Valid Lower Bound: ${searchResult.optimalityProof.potentiallyCompetitiveUnresolvedCount}`);
+  lines.push(`   - Could an unresolved candidate still beat the incumbent? ${searchResult.optimalityProof.unresolvedCandidatesCouldBeatIncumbent ? 'YES' : 'NO'}`);
+
+  const passed = searchResult.reconciliation.isReconciled && searchResult.convergence.converged && searchResult.onPolicyGraph.isProper;
+  lines.push(`\nClean-Base Selected-Policy Verification: ${passed ? 'PASSED (fully resolved, proper, absorbing, converged, and cost-reconciled)' : 'FAILED'}`);
 
   return lines.join('\n');
 }
@@ -566,7 +591,7 @@ const fracEffState: ItemState = {
   fracturedModIds: [eff35.modId],
 };
 
-const craftARequest = {
+const craftARequest: OptimizeCraftRequest = {
   baseType: 'Large Cluster Jewel',
   clusterType: '12% increased Attack Damage while holding a Shield',
   itemLevel: 84,
@@ -767,7 +792,7 @@ const fracChaosState: ItemState = {
   fracturedModIds: [t1Chaos.modId],
 };
 
-const craftCRequest = {
+const craftCRequest: OptimizeCraftRequest = {
   baseType: 'Large Cluster Jewel',
   clusterType: 'Minions deal 10% increased Damage',
   itemLevel: 84,

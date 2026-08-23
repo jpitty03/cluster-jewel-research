@@ -5,7 +5,6 @@ import { generateStateKey } from './stateKey.ts';
 import { satisfiesTarget, type TargetDefinition } from '../domain/TargetDefinition.ts';
 import { DivineAction } from '../actions/divine.ts';
 import { calculateTotalWeight } from '../rules/modEligibility.ts';
-import type { PriceBook } from '../domain/PriceBook.ts';
 import {
   CraftingPolicyEngine,
   type HarvestStrategyComparison,
@@ -97,13 +96,7 @@ export class ExpectedCostSolver {
 
   public solve(
     startState: ItemState,
-    acquisitionInput?:
-      | {
-          type: 'market' | 'self-fracture' | 'clean-base';
-          costChaos: number;
-          confidence: 'deterministic' | 'approximate';
-        }
-      | number
+    acquisitionInput?: AcquisitionOption | number
   ): StateValueNode {
     const key = generateStateKey(startState);
 
@@ -157,16 +150,16 @@ export class ExpectedCostSolver {
     let downstreamCraftCost = this.policyEngine.vEnter;
     if (!hasFrac35) {
       if (hasFracPrefix) {
-        downstreamCraftCost = 100000;
+        downstreamCraftCost = Infinity;
       } else if (hasFracSuffix) {
-        downstreamCraftCost = 117000;
+        downstreamCraftCost = Infinity;
       } else {
         // Clean/normal base without fractured mod
         const genericSearch = new GenericSearchEngine(this.context, this.target);
         const searchResult = genericSearch.search(startState);
         downstreamCraftCost = searchResult.totalExpectedCostChaos;
 
-        if (searchResult.isTargetSatisfied && searchResult.totalExpectedCostChaos < 100000) {
+        if (searchResult.isTargetSatisfied) {
           const cleanSteps: CraftPlanStep[] = [
             {
               stepNumber: 1,
@@ -213,7 +206,7 @@ export class ExpectedCostSolver {
             pool,
           };
         } else {
-          downstreamCraftCost = 150000;
+          downstreamCraftCost = Infinity;
         }
       }
     }
@@ -303,7 +296,7 @@ export class ExpectedCostSolver {
     steps.push({
       stepNumber: 1,
       title: 'Base Acquisition',
-      actionName: selectedAcquisition ? selectedAcquisition.description : (baseCostChaos > 0 ? 'Buy Fractured Base' : 'Acquire Base'),
+      actionName: selectedAcquisition?.description ?? (baseCostChaos > 0 ? 'Buy Fractured Base' : 'Acquire Base'),
       description: fracMod ? `Starting fractured base: ${fracMod.name}` : 'Starting clean base',
       rawCostChaos: selectedAcquisitionCost,
       stepTotalCostChaos: selectedAcquisitionCost,
@@ -388,6 +381,10 @@ export class ExpectedCostSolver {
         rawCostChaos: downstreamCraftCost,
         stepTotalCostChaos: downstreamCraftCost,
         cumulativeCostChaos: totalExpectedCostChaos,
+        currencies: {
+          exalt: this.policyEngine.expExaltsFrac35,
+          annul: this.policyEngine.step4AnnulsFrac35,
+        },
       });
     }
 

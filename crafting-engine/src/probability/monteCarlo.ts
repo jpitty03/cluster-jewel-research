@@ -1,6 +1,7 @@
 import type { ItemState } from '../domain/ItemState.ts';
 import type { TargetDefinition } from '../domain/TargetDefinition.ts';
 import type { SolverContext } from '../domain/CraftAction.ts';
+import type { PriceBook } from '../domain/PriceBook.ts';
 import type { Mod } from '../domain/Mod.ts';
 import { toRolledMod } from '../domain/Mod.ts';
 import { satisfiesTarget, getMatchingOutcomeBranch } from '../domain/TargetDefinition.ts';
@@ -126,7 +127,6 @@ export interface SimulationResult {
 export class MonteCarloSimulator {
   private context: SolverContext;
   private target: TargetDefinition;
-  private allflameEnabled: boolean;
   private policyEngine: CraftingPolicyEngine;
   private divineAction = new DivineAction();
   private rng: RandomSource;
@@ -140,7 +140,6 @@ export class MonteCarloSimulator {
   ) {
     this.context = context;
     this.target = target;
-    this.allflameEnabled = allflameEnabled;
     this.policyEngine = policyEngine ?? new CraftingPolicyEngine(target, context.priceBook, context.pool, allflameEnabled);
     if (typeof rngOrSeed === 'number') {
       this.rng = createRandomSource(rngOrSeed);

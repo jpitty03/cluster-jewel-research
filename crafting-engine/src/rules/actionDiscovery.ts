@@ -1,13 +1,14 @@
 import type { ItemState } from '../domain/ItemState.ts';
 import type { TargetDefinition } from '../domain/TargetDefinition.ts';
-import type { SolverContext, CraftAction } from '../domain/CraftAction.ts';
+import type { SolverContext } from '../domain/CraftAction.ts';
 import type { RolledMod } from '../domain/Mod.ts';
-import { canAcceptPrefix, canAcceptSuffix } from './affixRules.ts';
-import { getRemovableAffixes } from '../domain/ItemState.ts';
-import { getTaggedModsForCluster } from './clusterPoolHelpers.ts';
 import { matchesModRequirement, evaluateRollRequirement } from '../domain/TargetDefinition.ts';
 
-import { CRAFT_MECHANICS, getHarvestMechanicsForState } from './actionRegistry.ts';
+import {
+  CRAFT_MECHANICS,
+  getHarvestMechanicsForState,
+  type DiscoveredActionType,
+} from './actionRegistry.ts';
 
 export interface ActionDiscoveryContext extends SolverContext {
   availableHarvestTags?: string[];
@@ -99,6 +100,12 @@ export function getCanonicalStateKey(
 
   const formatMod = (m: RolledMod): string => {
     const isTarget = reqs.some((r) => matchesModRequirement(m, r));
+    const fractureRequirement = reqs.some(
+      (r) => r.mustBeFractured !== undefined &&
+        (r.modId ? r.modId === m.modId : true) &&
+        (r.modGroup ? r.modGroup === m.modGroup || m.modGroups?.includes(r.modGroup) : true) &&
+        (r.name ? r.name === m.name : true)
+    );
     const isFrac = m.isFractured ? 'FRAC:' : '';
     const craftTags = (m.craftTags ?? []).slice().sort().join(',');
     const tagsSuffix = craftTags.length > 0 ? `:tags(${craftTags})` : '';
@@ -119,7 +126,7 @@ export function getCanonicalStateKey(
 
     // Always preserve full sorted modGroups exclusion set to ensure mod-group blocking and eligibility are preserved
     const allGroups = (m.modGroups && m.modGroups.length > 0 ? m.modGroups : [m.modGroup ?? m.modId]).slice().sort().join('+');
-    return `${isFrac}groups(${allGroups}):t${m.tier}${tagsSuffix}${rollSuffix}`;
+    return `${isFrac}groups(${allGroups}):t${m.tier}${fractureRequirement ? ':fracture-sensitive' : ''}${tagsSuffix}${rollSuffix}`;
   };
 
   const pKeys = state.prefixes.map(formatMod).sort().join('|');

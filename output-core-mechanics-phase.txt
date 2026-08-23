@@ -1,0 +1,135 @@
+====================================================================================================
+POST ON-POLICY SOLVER REVIEW — CORE MECHANICS PHASE RUNTIME DIAGNOSTIC
+====================================================================================================
+
+SHARED SCOUR BEFORE / AFTER:
+  ordinary magic item:
+    before: MAGIC | P=[Glowing] | S=[none]
+    analytical after: NORMAL | P=[none] | S=[none]
+    seeded sample after: NORMAL | P=[none] | S=[none]
+  ordinary rare item:
+    before: RARE | P=[Glowing, Powerful] | S=[of the Brute, of the Mongoose]
+    analytical after: NORMAL | P=[none] | S=[none]
+    seeded sample after: NORMAL | P=[none] | S=[none]
+  fractured item + removable mods:
+    before: RARE | P=[Glowing, Powerful] | S=[of the Prodigy [FRACTURED]]
+    analytical after: MAGIC | P=[none] | S=[of the Prodigy [FRACTURED]]
+    seeded sample after: MAGIC | P=[none] | S=[of the Prodigy [FRACTURED]]
+  Verified rule: zero fractured explicits -> normal; one -> magic; two or more -> rare.
+
+RESTART / REACQUIRE ECONOMIC DECISIONS:
+  Restart-winning state: RARE | P=[Glowing, Powerful] | S=[of the Brute [FRACTURED], of the Mongoose]
+    selected: Abandon + Reacquire Clean Base (0.529c)
+  Continue-winning state: RARE | P=[Glowing, Powerful] | S=[of the Brute, of the Mongoose]
+    selected: Orb of Scouring (0.929c)
+  Restart price evidence preserved: representative low-cost reacquisition fixture
+
+========================================================================================================================
+EXTERNAL CRAFT OF EXILE PARITY & MECHANICS BENCHMARK REPORT (2.6M+ CUMULATIVE SIMULATION)
+========================================================================================================================
+Note: External observations serve as independent empirical evidence of game mechanics.
+Probabilities are derived from eligible pools and mechanics, NOT tuned to fit observations.
+
+Step / Benchmark               Craft of Exile (Observed)   Analytical Engine   Our Monte Carlo     Difference   Status
+------------------------------------------------------------------------------------------------------------------------
+Orb of Alteration              1.5215% (~1 / 65.7)         1.4377% (1 / 69.6)   1.4750% (1 / 67.8)   0.0838pp      ALIGNED
+Fracturing Orb                 25.0000% (1 / 4.0)          25.0000% (1 / 4.00)  24.9550% (1 / 4.01)  0.0000pp      ALIGNED
+Harvest Reforge Defence (Compound) 0.1225% (~1 / 816.1)        REFERENCE EXPECTATION NOT EXECUTED         N/A           REFERENCE EXPECTATION
+Orb of Annulment (Post-Harvest) 21.4730% (~1 / 4.657)       REFERENCE EXPECTATION NOT EXECUTED         N/A           REFERENCE EXPECTATION
+Exalted Orb Slam (Final Suffix) 3.5921% (~1 / 27.84)        3.8062% (1 / 26.3)   3.8350% (1 / 26.1)   0.2141pp      ALIGNED
+------------------------------------------------------------------------------------------------------------------------
+
+KEY EXTERNAL OBSERVATIONS SUMMARY (2.6M+ Cumulative Attempt Evidence):
+1. Alteration -> T1 Int: CoE observed 1.5215% (~1 / 65.7) vs Engine 1.4377% (1 / 69.6). Status: ALIGNED.
+2. Fracturing Orb: shared analytical 25.0000%; seeded shared MC 24.9550% (20,000 trials). Status: ALIGNED.
+3. Compound Harvest Defence: CoE observed 0.1225% (~1 / 816.1) across 2,601,014 attempts.
+   Tracked assessment: CLOSE / APPROXIMATE — ENGINE ~19% OPTIMISTIC. Non-blocking REFERENCE EXPECTATION until shared Harvest execution exists.
+4. Post-Harvest Annul: CoE observed 21.4730% (~1 / 4.66) across 4,019 attempts. Status: REFERENCE EXPECTATION (propagated shared Harvest state distribution not yet executable).
+5. Final Exalt (+4 Attr / 3% AS): shared analytical 3.8062%; seeded shared MC 3.8350% (20,000 trials). External 3.5921%. Status: ALIGNED.
+
+FULL-POOL CLEAN-BASE T1 INTELLIGENCE POLICY PRESERVATION:
+    Clean-base solve:
+    Candidate graph states: 5000/5000 (cap hit: YES)
+    Candidate graph cycles: YES
+    On-policy states: 1360
+    On-policy cycles: YES
+    Bellman: CONVERGED in 331 iterations (residual 9.8646e-6)
+    On-policy unresolved probability: 0.000000%
+    Terminal absorption: 99.999999%
+    Occupancy: CONVERGED in 891 iterations (residual 9.9170e-9)
+    Action-cost sum / Bellman EV: 6.0496c / 6.0499c
+    EV reconciliation delta: 0.000296c (RECONCILED)
+    Selected policy: FULLY RESOLVED / PROPER / ABSORBING / COST-RECONCILED
+    Recursive candidate resolution: CONVERGED
+    Proof level: BEST FULLY RESOLVED POLICY FOUND
+    GLOBAL OPTIMALITY: NOT YET PROVEN
+    Unresolved competitors / potentially cheaper: 1235 / 1235
+    Price confidence complete: YES; warnings: 3
+  Action Orb of Transmutation: local successors=1359, first discoveries=1359, on-policy selections=1, unresolved edges=0
+  Action Orb of Augmentation: local successors=1287, first discoveries=0, on-policy selections=33, unresolved edges=0
+  Action Orb of Alteration: local successors=1359, first discoveries=0, on-policy selections=1292, unresolved edges=0
+  Action Regal Orb: local successors=45074, first discoveries=45074, on-policy selections=0, unresolved edges=81698
+  Action Orb of Scouring: local successors=1, first discoveries=0, on-policy selections=0, unresolved edges=0
+  Action Orb of Annulment: local successors=1261, first discoveries=71, on-policy selections=0, unresolved edges=4862
+  Action Exalted Orb Slam: local successors=59523, first discoveries=16949, on-policy selections=0, unresolved edges=159701
+  Action Fracturing Orb: local successors=0, first discoveries=0, on-policy selections=0, unresolved edges=0
+
+FULL GENERIC MULTI-STAGE ROUTE:
+  Target: magic item with fractured T1 Intelligence + T1 Maximum Energy Shield
+  Modeled pool: bounded five-mod fixture using real cluster-jewel mods/weights; route logic remains generic.
+  Generated physical starting states: 3
+    - Clean Base: clean-base 10.0c (deterministic)
+    - T1 Intelligence [of the Prodigy]: self-fracture 1539.0c (approximate)
+    - T1 Maximum Energy Shield [Glowing]: self-fracture 1534.3c (approximate)
+  Selected acquisition: clean base at 10.0c (restart destination and economic transition)
+  Expected currencies: transmutation=4.000, augmentation=6.333, alteration=14.333, regal=4.000, exalt=4.000, fracturing=4.000, reacquisition=3.000, scour=1.000
+  Expected downstream cost: 1473.987c; acquisition-inclusive: 1483.987c
+  Action Orb of Transmutation: local successors=11, first discoveries=11, on-policy selections=1, unresolved edges=0
+  Action Orb of Augmentation: local successors=18, first discoveries=12, on-policy selections=4, unresolved edges=0
+  Action Orb of Alteration: local successors=23, first discoveries=0, on-policy selections=7, unresolved edges=0
+  Action Regal Orb: local successors=64, first discoveries=3, on-policy selections=2, unresolved edges=0
+  Action Orb of Scouring: local successors=6, first discoveries=5, on-policy selections=2, unresolved edges=0
+  Action Orb of Annulment: local successors=77, first discoveries=74, on-policy selections=0, unresolved edges=0
+  Action Exalted Orb Slam: local successors=86, first discoveries=4, on-policy selections=5, unresolved edges=0
+  Action Fracturing Orb: local successors=12, first discoveries=11, on-policy selections=2, unresolved edges=0
+  Action Abandon + Reacquire Clean Base: local successors=1, first discoveries=0, on-policy selections=6, unresolved edges=0
+    Multi-stage solve:
+    Candidate graph states: 121/2000 (cap hit: NO)
+    Candidate graph cycles: YES
+    On-policy states: 30
+    On-policy cycles: YES
+    Bellman: CONVERGED in 10115 iterations (residual 9.9740e-6)
+    On-policy unresolved probability: 0.000000%
+    Terminal absorption: 100.000000%
+    Occupancy: CONVERGED in 560 iterations (residual 9.9545e-9)
+    Action-cost sum / Bellman EV: 1473.9865c / 1473.9865c
+    EV reconciliation delta: 0.000014c (RECONCILED)
+    Selected policy: FULLY RESOLVED / PROPER / ABSORBING / COST-RECONCILED
+    Recursive candidate resolution: CONVERGED
+    Proof level: OPTIMAL OVER MODELED ACTIONS: PROVEN
+    GLOBAL OPTIMALITY: NOT YET PROVEN
+    Unresolved competitors / potentially cheaper: 0 / 0
+    Price confidence complete: YES; warnings: 8
+  Policy family includes normal -> magic -> rare -> fracture -> scour/reset -> continue -> finish: YES
+
+CRAFT B GENERIC CLEAN-BASE DISCOVERY:
+  Target only: Blanketed Snow + Prismatic Heart + Widespread Destruction
+  Modeled pool: bounded three-notable fixture using real Cold-cluster mods/weights; no Craft-B solver branch.
+    Craft B solve:
+    Candidate graph states: 14/2000 (cap hit: NO)
+    Candidate graph cycles: YES
+    On-policy states: 7
+    On-policy cycles: NO
+    Bellman: CONVERGED in 2 iterations (residual 0.0000e+0)
+    On-policy unresolved probability: 0.000000%
+    Terminal absorption: 100.000000%
+    Occupancy: CONVERGED in 3 iterations (residual 0.0000e+0)
+    Action-cost sum / Bellman EV: 0.2450c / 0.2450c
+    EV reconciliation delta: 0.000000c (RECONCILED)
+    Selected policy: FULLY RESOLVED / PROPER / ABSORBING / COST-RECONCILED
+    Recursive candidate resolution: CONVERGED
+    Proof level: OPTIMAL OVER MODELED ACTIONS: PROVEN
+    GLOBAL OPTIMALITY: NOT YET PROVEN
+    Unresolved competitors / potentially cheaper: 0 / 0
+    Price confidence complete: YES; warnings: 3
+  Expected currencies: transmutation=1.000, augmentation=0.500, regal=1.000

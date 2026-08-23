@@ -4,7 +4,7 @@ REFERENCE CRAFT C VALIDATION REPORT & STEPWISE FINANCIAL PLAN (MINION CLUSTER)
 
 POLICY COST MODEL: PROVISIONALLY VALIDATED FOR CURRENT IMPLEMENTED MECHANICS (Analytical & Monte Carlo agree within 3.65%)
 GAME-MECHANICS FIDELITY: PARTIAL
-BEST OF EVALUATED POLICIES: PROVEN
+BEST OF FULLY RESOLVED EVALUATED POLICIES: PROVEN
 GLOBAL OPTIMALITY: NOT YET PROVEN
 
 ----------------------------------------------------------------------
@@ -250,7 +250,7 @@ MONTE CARLO EMPIRICAL VALIDATION & CROSS-COMPARISON
 ======================================================================
 Status: POLICY COST MODEL: PROVISIONALLY VALIDATED FOR CURRENT IMPLEMENTED MECHANICS (Analytical & Monte Carlo agree within 3.65%)
 GAME-MECHANICS FIDELITY: PARTIAL
-BEST OF EVALUATED POLICIES: PROVEN
+BEST OF FULLY RESOLVED EVALUATED POLICIES: PROVEN
 GLOBAL OPTIMALITY: NOT YET PROVEN
 Completed trials:       1,999 / 2,000 (99.95%)
 Timed out trials:       1
@@ -462,9 +462,9 @@ STARTING FRACTURE ROUTE COMPARISON
 Starting Base / Target                 Acquisition Mode     Acquisition Cost     Downstream EV        Full Route EV        Status
 --------------------------------------------------------------------------------------------------------------------------------
 35% Increased Effect [Powerful]        Self-Fracture (Rec)  1533.4c (~7.67 div)  41281.0c (~206.40 div) 42814.4c (~214.07 div) BEST
-T1 Maximum Life [Sanguine]             Self-Fracture        1527.4c (~7.64 div)  100000.0c (~500.00 div) 101527.4c (~507.64 div) +58713.0c (~293.57 div)
-+4 to all Attributes [of the Meteor]   Self-Fracture        1542.3c (~7.71 div)  117000.0c (~585.00 div) 118542.3c (~592.71 div) +75727.9c (~378.64 div)
-+5% to Chaos Resistance [of Eviction]  Self-Fracture        1542.3c (~7.71 div)  117000.0c (~585.00 div) 118542.3c (~592.71 div) +75727.9c (~378.64 div)
+T1 Maximum Life [Sanguine]             Self-Fracture        1527.4c (~7.64 div)  Infinityc (~Infinity div) Infinityc (~Infinity div) +Infinityc (~Infinity div)
++4 to all Attributes [of the Meteor]   Self-Fracture        1542.3c (~7.71 div)  Infinityc (~Infinity div) Infinityc (~Infinity div) +Infinityc (~Infinity div)
++5% to Chaos Resistance [of Eviction]  Self-Fracture        1542.3c (~7.71 div)  Infinityc (~Infinity div) Infinityc (~Infinity div) +Infinityc (~Infinity div)
 --------------------------------------------------------------------------------------------------------------------------------
 
 ======================================================================
@@ -476,16 +476,16 @@ ALTERNATE STARTING ROUTES
    Difference from best:        BEST
 
 2. Fractured T1 Maximum Life Base (Self-Fracture)
-   Expected total craft cost:  101527.4c (~507.64 div)
-   Difference from best:       +58713.0c (~293.57 div)
+   Expected total craft cost:  Infinityc (~Infinity div)
+   Difference from best:       +Infinityc (~Infinity div)
 
 3. Fractured +4 to All Attributes Base (Self-Fracture)
-   Expected total craft cost:  118542.3c (~592.71 div)
-   Difference from best:       +75727.9c (~378.64 div)
+   Expected total craft cost:  Infinityc (~Infinity div)
+   Difference from best:       +Infinityc (~Infinity div)
 
 4. Fractured +5% to Chaos Resistance Base (Self-Fracture)
-   Expected total craft cost:  118542.3c (~592.71 div)
-   Difference from best:       +75727.9c (~378.64 div)
+   Expected total craft cost:  Infinityc (~Infinity div)
+   Difference from best:       +Infinityc (~Infinity div)
 
 ======================================================================
 LABELED GAME MECHANICS ASSUMPTIONS
@@ -543,14 +543,15 @@ CANDIDATE SET STRUCTURAL AUDIT:
 GENERATED STARTING CANDIDATES (5 routes from 5 physical states):
 Route Name                                Acquisition Mode     Acq Cost        Downstream EV   Full Route EV
 ---------------------------------------------------------------------------------------------------------
-Start Clean Base Clean Base               clean-base           10.0c           103.1c          113.1c
 Self-Fracture 35% Increased Effect [Powerful] self-fracture        1531.2c (~7.66 div) 41281.0c (~206.40 div) 42812.2c (~214.06 div)
-Self-Fracture T1 Maximum Life [Sanguine]  self-fracture        1531.2c (~7.66 div) 100000.0c (~500.00 div) 101531.2c (~507.66 div)
-Self-Fracture +4 to all Attributes [of the Meteor] self-fracture        1538.6c (~7.69 div) 117000.0c (~585.00 div) 118538.6c (~592.69 div)
-Self-Fracture +5% to Chaos Resistance [of Eviction] self-fracture        1538.6c (~7.69 div) 117000.0c (~585.00 div) 118538.6c (~592.69 div)
+Start Clean Base Clean Base               clean-base           10.0c           UNRESOLVED      UNRESOLVED
+Self-Fracture T1 Maximum Life [Sanguine]  self-fracture        1531.2c (~7.66 div) UNRESOLVED      UNRESOLVED
+Self-Fracture +4 to all Attributes [of the Meteor] self-fracture        1538.6c (~7.69 div) UNRESOLVED      UNRESOLVED
+Self-Fracture +5% to Chaos Resistance [of Eviction] self-fracture        1538.6c (~7.69 div) UNRESOLVED      UNRESOLVED
 ---------------------------------------------------------------------------------------------------------
 
 AUTOMATIC DISCOVERY VERIFICATION:
-  Selected Auto Route:   Start Clean Base Clean Base (113.1c)
-  Manual Fixture Route:  Fractured 35% Increased Effect Base (Self-Fracture) (42814.4c (~214.07 div))
-  Discovery Consistency: DIFFERENCE DETECTED
+  Best Fully Resolved Route: Self-Fracture 35% Increased Effect [Powerful] (42812.2c (~214.06 div))
+  Reference Fixture Route:   Fractured 35% Increased Effect Base (Self-Fracture) (42814.4c (~214.07 div))
+  Resolved-Route Consistency: PASSED (auto-discovered resolved route matches manual reference fixture)
+  Global Route Optimality:    NOT YET PROVEN (4 alternatives unresolved)

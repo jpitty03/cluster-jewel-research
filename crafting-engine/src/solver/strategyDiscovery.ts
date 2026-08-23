@@ -1,5 +1,5 @@
 import type { TargetDefinition, ModRequirement } from '../domain/TargetDefinition.ts';
-import type { ItemState } from '../domain/ItemState.ts';
+import type { BaseType, ItemState } from '../domain/ItemState.ts';
 import type { ModPool } from '../domain/ModPool.ts';
 import type { PriceBook } from '../domain/PriceBook.ts';
 import type { StartingCraftOption } from '../index.ts';
@@ -30,7 +30,7 @@ export interface StartingStateCandidate {
  */
 export function generateStartingStateCandidates(
   target: TargetDefinition,
-  baseType: string,
+  baseType: BaseType,
   clusterType: string,
   itemLevel: number,
   context: StrategyDiscoveryContext,
@@ -44,7 +44,7 @@ export function generateStartingStateCandidates(
 
   // 1. Clean Base Physical State
   const cleanState: ItemState = {
-    baseType: baseType as any,
+    baseType,
     clusterType,
     itemLevel,
     passiveCount,
@@ -91,7 +91,8 @@ export function generateStartingStateCandidates(
     if (!groupKey || consideredGroups.has(groupKey)) continue;
     consideredGroups.add(groupKey);
 
-    const matchedMod = allMods.find((m) => matchesModRequirement(m, req));
+    const poolRequirement = req.mustBeFractured ? { ...req, mustBeFractured: undefined } : req;
+    const matchedMod = allMods.find((m) => matchesModRequirement(m, poolRequirement));
     if (!matchedMod) continue;
 
     // Physical state with single fractured mod
@@ -164,7 +165,7 @@ export function generateStartingStateCandidates(
  */
 export function generateStartingStrategies(
   target: TargetDefinition,
-  baseType: string,
+  baseType: BaseType,
   clusterType: string,
   itemLevel: number,
   context: StrategyDiscoveryContext,

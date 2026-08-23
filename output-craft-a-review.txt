@@ -4,7 +4,7 @@ REFERENCE CRAFT A VALIDATION REPORT & STEPWISE FINANCIAL PLAN
 
 POLICY COST MODEL: VALIDATED FOR CURRENT IMPLEMENTED MECHANICS (Analytical & Monte Carlo agree within 1.16%)
 GAME-MECHANICS FIDELITY: PARTIAL
-BEST OF EVALUATED POLICIES: PROVEN
+BEST OF FULLY RESOLVED EVALUATED POLICIES: PROVEN
 GLOBAL OPTIMALITY: NOT YET PROVEN
 
 ----------------------------------------------------------------------
@@ -303,7 +303,7 @@ MONTE CARLO EMPIRICAL VALIDATION & CROSS-COMPARISON
 ======================================================================
 Status: POLICY COST MODEL: VALIDATED FOR CURRENT IMPLEMENTED MECHANICS (Analytical & Monte Carlo agree within 1.16%)
 GAME-MECHANICS FIDELITY: PARTIAL
-BEST OF EVALUATED POLICIES: PROVEN
+BEST OF FULLY RESOLVED EVALUATED POLICIES: PROVEN
 GLOBAL OPTIMALITY: NOT YET PROVEN
 Completed trials:       2,000 / 2,000 (100.00%)
 
@@ -461,8 +461,8 @@ Starting Base / Target                 Acquisition Mode     Acquisition Cost    
 --------------------------------------------------------------------------------------------------------------------------------
 35% Increased Effect [Powerful]        Self-Fracture (Rec)  1533.4c (~7.67 div)  6090.3c (~30.45 div) 7623.7c (~38.12 div) BEST
                                        Market Purchase      2600.0c (~13.00 div) 6090.3c (~30.45 div) 8690.3c (~43.45 div) +1066.6c (~5.33 div)
-T1 Intelligence [of the Prodigy]       Self-Fracture        1542.3c (~7.71 div)  117000.0c (~585.00 div) 118542.3c (~592.71 div) +110918.6c (~554.59 div)
-                                       Market Purchase      1600.0c (~8.00 div)  117000.0c (~585.00 div) 118600.0c (~593.00 div) +110976.3c (~554.88 div)
+T1 Intelligence [of the Prodigy]       Self-Fracture        1542.3c (~7.71 div)  Infinityc (~Infinity div) Infinityc (~Infinity div) +Infinityc (~Infinity div)
+                                       Market Purchase      1600.0c (~8.00 div)  Infinityc (~Infinity div) Infinityc (~Infinity div) +Infinityc (~Infinity div)
 --------------------------------------------------------------------------------------------------------------------------------
 
 ======================================================================
@@ -478,12 +478,12 @@ ALTERNATE STARTING ROUTES
    Difference from best:       +1066.6c (~5.33 div)
 
 3. Self-Fracture T1 Intelligence (Clean 12p Base)
-   Expected total craft cost:  118542.3c (~592.71 div)
-   Difference from best:       +110918.6c (~554.59 div)
+   Expected total craft cost:  Infinityc (~Infinity div)
+   Difference from best:       +Infinityc (~Infinity div)
 
 4. Buy Fractured T1 Intelligence Base
-   Expected total craft cost:  118600.0c (~593.00 div)
-   Difference from best:       +110976.3c (~554.88 div)
+   Expected total craft cost:  Infinityc (~Infinity div)
+   Difference from best:       +Infinityc (~Infinity div)
 
 ======================================================================
 LABELED GAME MECHANICS ASSUMPTIONS
@@ -541,16 +541,17 @@ CANDIDATE SET STRUCTURAL AUDIT:
 GENERATED STARTING CANDIDATES (7 routes from 7 physical states):
 Route Name                                Acquisition Mode     Acq Cost        Downstream EV   Full Route EV
 ---------------------------------------------------------------------------------------------------------
-Start Clean Base Clean Base               clean-base           10.0c           103.1c          113.1c
 Self-Fracture 35% Increased Effect [Powerful] self-fracture        1534.3c (~7.67 div) 6090.3c (~30.45 div) 7624.6c (~38.12 div)
-Self-Fracture T1 Maximum Energy Shield [Glowing] self-fracture        1534.3c (~7.67 div) 100000.0c (~500.00 div) 101534.3c (~507.67 div)
-Self-Fracture T1 Intelligence [of the Prodigy] self-fracture        1539.0c (~7.70 div) 117000.0c (~585.00 div) 118539.0c (~592.70 div)
-Self-Fracture +4 to all Attributes [of the Meteor] self-fracture        1539.0c (~7.70 div) 117000.0c (~585.00 div) 118539.0c (~592.70 div)
-Self-Fracture +4% to all Elemental Resistance [of the Kaleidoscope] self-fracture        1539.0c (~7.70 div) 117000.0c (~585.00 div) 118539.0c (~592.70 div)
-Self-Fracture 3% increased Attack Speed [Added Small Passive Skills also grant: 3% increased Attack Speed] self-fracture        1543.6c (~7.72 div) 117000.0c (~585.00 div) 118543.6c (~592.72 div)
+Start Clean Base Clean Base               clean-base           10.0c           UNRESOLVED      UNRESOLVED
+Self-Fracture T1 Maximum Energy Shield [Glowing] self-fracture        1534.3c (~7.67 div) UNRESOLVED      UNRESOLVED
+Self-Fracture T1 Intelligence [of the Prodigy] self-fracture        1539.0c (~7.70 div) UNRESOLVED      UNRESOLVED
+Self-Fracture +4 to all Attributes [of the Meteor] self-fracture        1539.0c (~7.70 div) UNRESOLVED      UNRESOLVED
+Self-Fracture 3% increased Attack Speed [Added Small Passive Skills also grant: 3% increased Attack Speed] self-fracture        1543.6c (~7.72 div) UNRESOLVED      UNRESOLVED
+Self-Fracture +4% to all Elemental Resistance [of the Kaleidoscope] self-fracture        1539.0c (~7.70 div) UNRESOLVED      UNRESOLVED
 ---------------------------------------------------------------------------------------------------------
 
 AUTOMATIC DISCOVERY VERIFICATION:
-  Selected Auto Route:   Start Clean Base Clean Base (113.1c)
-  Manual Fixture Route:  Self-Fracture 35% Effect (Clean 12p Base) (7623.7c (~38.12 div))
-  Discovery Consistency: DIFFERENCE DETECTED
+  Best Fully Resolved Route: Self-Fracture 35% Increased Effect [Powerful] (7624.6c (~38.12 div))
+  Reference Fixture Route:   Self-Fracture 35% Effect (Clean 12p Base) (7623.7c (~38.12 div))
+  Resolved-Route Consistency: PASSED (auto-discovered resolved route matches manual reference fixture)
+  Global Route Optimality:    NOT YET PROVEN (6 alternatives unresolved)

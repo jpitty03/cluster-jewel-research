@@ -30,6 +30,8 @@ export interface RolledMod {
   genType: GenType;
   modGroup: string;
   modGroups: string[];
+  /** Legacy policy fixtures still expose this deprecated tag field. */
+  tags?: string[];
   craftTags?: string[];
   tier: number;
   statText: string;

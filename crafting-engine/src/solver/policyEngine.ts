@@ -1,7 +1,7 @@
 import type { ItemState } from '../domain/ItemState.ts';
-import type { TargetDefinition, ModRequirement, TargetOutcomeBranch } from '../domain/TargetDefinition.ts';
+import type { TargetDefinition } from '../domain/TargetDefinition.ts';
 import type { PriceBook } from '../domain/PriceBook.ts';
-import type { Mod, RolledMod } from '../domain/Mod.ts';
+import type { RolledMod } from '../domain/Mod.ts';
 import type { ModPool } from '../domain/ModPool.ts';
 import { satisfiesTarget, getMatchingOutcomeBranch, matchesModRequirement } from '../domain/TargetDefinition.ts';
 import { getRemovableAffixes } from '../domain/ItemState.ts';
@@ -329,23 +329,29 @@ export class CraftingPolicyEngine {
               modId: 'p1',
               name: '35% increased Effect',
               modGroup: 'AfflictionJewelSmallPassivesHaveIncreasedEffect',
+              modGroups: ['AfflictionJewelSmallPassivesHaveIncreasedEffect'],
               tier: 1,
               genType: 'Prefix',
+              statText: '',
               statValues: [],
               tags: [],
               craftTags: [],
               isFractured: true,
+              isNotable: false,
             },
             {
               modId: 'p2',
               name: this.harvestModName,
               modGroup: this.harvestModGroup,
+              modGroups: [this.harvestModGroup],
               tier: 1,
               genType: 'Prefix',
+              statText: '',
               statValues: [],
               tags: [],
               craftTags: [],
               isFractured: false,
+              isNotable: false,
             },
           ],
           suffixes: [
@@ -353,23 +359,29 @@ export class CraftingPolicyEngine {
               modId: g1.modId ?? 's1',
               name: g1.name,
               modGroup: g1.modGroup,
+              modGroups: [g1.modGroup],
               tier: g1.tier,
               genType: 'Suffix',
+              statText: '',
               statValues: [],
               tags: [],
               craftTags: [],
               isFractured: false,
+              isNotable: false,
             },
             {
               modId: g2.modId ?? 's2',
               name: g2.name,
               modGroup: g2.modGroup,
+              modGroups: [g2.modGroup],
               tier: g2.tier,
               genType: 'Suffix',
+              statText: '',
               statValues: [],
               tags: [],
               craftTags: [],
               isFractured: false,
+              isNotable: false,
             },
           ],
           fracturedModIds: ['p1'],
@@ -857,7 +869,7 @@ export class CraftingPolicyEngine {
   public getRepresentativeStateAudits(): RepresentativeStateAudit[] {
     const audits: RepresentativeStateAudit[] = [];
 
-    const makeState = (desc: string, suffixes: RolledMod[]): ItemState => ({
+    const makeState = (_desc: string, suffixes: RolledMod[]): ItemState => ({
       baseType: 'Large Cluster Jewel',
       clusterType: 'any',
       itemLevel: 84,
@@ -867,23 +879,29 @@ export class CraftingPolicyEngine {
           modId: 'p1',
           name: '35% increased Effect',
           modGroup: 'AfflictionJewelSmallPassivesHaveIncreasedEffect',
+          modGroups: ['AfflictionJewelSmallPassivesHaveIncreasedEffect'],
           tier: 1,
           genType: 'Prefix',
+          statText: '',
           statValues: [],
           tags: [],
           craftTags: [],
           isFractured: true,
+          isNotable: false,
         },
         {
           modId: 'p2',
           name: this.harvestModName,
           modGroup: this.harvestModGroup,
+          modGroups: [this.harvestModGroup],
           tier: 1,
           genType: 'Prefix',
+          statText: '',
           statValues: [],
           tags: [],
           craftTags: [],
           isFractured: false,
+          isNotable: false,
         },
       ],
       suffixes,
@@ -894,12 +912,15 @@ export class CraftingPolicyEngine {
       modId: 'junk1',
       name: 'Junk Suffix',
       modGroup: 'JunkGroup',
+      modGroups: ['JunkGroup'],
       tier: 2,
       genType: 'Suffix',
+      statText: '',
       statValues: [],
       tags: [],
       craftTags: [],
       isFractured: false,
+      isNotable: false,
     };
 
     // 1. Clean S0
@@ -912,12 +933,15 @@ export class CraftingPolicyEngine {
         modId: g.modId ?? g.id,
         name: g.name,
         modGroup: g.modGroup,
+        modGroups: [g.modGroup],
         tier: g.tier,
         genType: 'Suffix',
+        statText: '',
         statValues: [],
         tags: [],
         craftTags: [],
         isFractured: false,
+        isNotable: false,
       };
       const sGiState = makeState(`Frac 35 + ${this.harvestModName} + ${g.name}`, [targetMod]);
       audits.push(this.auditState(`Frac 35 + ${this.harvestModName} + ${g.name}`, sGiState));
