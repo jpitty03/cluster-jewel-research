@@ -1,36 +1,16 @@
 # Post Developer UI Phase 1 Review and Developer UI Phase 2 Plan
 
-## Review Scope
+## Status
 
-This review covers current `main` at:
+This document is the current source of truth for the next implementation pass.
+
+It reviews the Developer UI Phase 1 implementation at:
 
 - `2b3a131f1c2e75d46f33ebdf9ae9fe5e3fe1cbc6` — `feat: add developer craft optimizer worker UI`
 
-It also considers the immediately preceding cleanup commit:
+It also incorporates **live manual browser testing performed after the original Phase 2 review**. Those field tests materially change the priority order below.
 
-- `0ee7d01ccb885a4323a6ad630663a8bbf0a20a4e` — `refactor: remove deprecated configuration and unused utility modules`
-
-Primary implementation and diagnostics reviewed:
-
-- `src/CraftOptimizer.tsx`
-- `src/crafting/browserEngine.ts`
-- `src/crafting/optimizer.worker.ts`
-- `src/crafting/optimizerWorkerClient.ts`
-- `src/crafting/optimizerWorkerEngine.ts`
-- `src/crafting/optimizerWorkerProtocol.ts`
-- `crafting-engine/src/data/clusterModRepository.ts`
-- `crafting-engine/src/data/loadClusterMods.ts`
-- `crafting-engine/src/service/craftingCatalog.ts`
-- `crafting-engine/src/service/optimizerService.ts`
-- `crafting-engine/src/solver/genericSearch.ts`
-- `crafting-engine/src/rules/actionRegistry.ts`
-- `crafting-engine/KNOWN_MECHANICS.md`
-- `output-developer-ui-phase1.txt`
-- `output-browser-phase1-smoke.txt`
-- `output-pre-ui-hardening.txt`
-- Craft A/C review outputs
-
-This document is the source of truth for the next implementation pass.
+The Phase 1 architecture still passes. The new browser tests do **not** invalidate the Web Worker, service boundary, proof-honest UI, or A/C regressions. They do expose two product-level blockers that must be fixed before pricing polish becomes the main focus.
 
 ---
 
@@ -38,542 +18,501 @@ This document is the source of truth for the next implementation pass.
 
 ## Developer UI Phase 1
 
-**PASS.**
+**PASS architecturally.**
 
-The UI phase is now real rather than scaffolding.
+Working pieces to preserve:
 
-The implementation successfully established:
-
-- a browser-safe mod repository/parser;
-- a Node-only loader with committed-snapshot fallback;
-- a Web Worker boundary around synchronous Bellman search;
+- browser-safe repository/parser;
+- Node-only data loader with committed-snapshot fallback;
+- Web Worker execution;
 - terminate/recreate cancellation;
-- typed serializable worker messages;
-- a browser-safe catalog for base/enchantment/passive/mod selection;
-- 1–4 exact-mod target input;
-- proof-honest UI statuses;
-- complete on-policy rule serialization instead of representative-only steps;
+- serializable request/result protocol;
+- 1–4 exact-mod selection;
+- `PROVEN_OPTIMAL` / `BEST_RESOLVED` / `NO_RESOLVED_ROUTE` rendering;
+- real on-policy rule serialization;
 - expected action usage;
-- selected-policy vs broader-search confidence scopes;
-- explicit fallback-price control;
-- clean handling of search-budget exhaustion;
-- a full-pool case in which shared Harvest is selected by the generic solver;
-- preserved Craft A and Craft C regressions.
+- selected-policy vs considered-search confidence scopes;
+- fallback-price toggle;
+- budget exhaustion as a normal result;
+- generic Harvest action integration;
+- Craft A/C stability.
 
-The next phase should **not** add exotic crafting mechanics.
+## Revised Phase 2 priority
 
-The highest-value work is now to turn the developer UI into a trustworthy economics and target-definition tool while correcting two issues exposed by the browser integration.
+The next pass is now:
 
-## Recommended next phase
+> **Developer UI Phase 2A — Simple-Craft Correctness and Hard Runtime Control**
 
-> **Developer UI Phase 2 — Production Economics, Target Correctness, and Search Usability**
+Only after those gates pass should the work continue into:
 
-The UI should remain proof-honest. Do not hide unresolved competitors merely to make the interface look finished.
+> **Developer UI Phase 2B — Target UX, market pricing, result usability, and polish**
+
+The highest priority is no longer market-price integration. A simple live craft currently produces a clearly non-useful strategy, and a two-mod UI solve can run for minutes despite a 30-second configured search budget.
 
 ---
 
-# What Is Working Well
+# New Live Browser Findings — Highest Priority
 
-## 1. Browser/runtime separation is correct
+# Finding A — Default-Budget One-Mod T1 ES Produces A Non-Useful Strategy
 
-The browser imports the environment-neutral `clusterModRepository.ts` and committed PoEDB JSON directly, while Node scripts retain their own filesystem loader.
+## Severity
 
-The production worker bundle inspection found no `node:fs`, `node:path`, `node:url`, or `readFileSync` leakage.
+**CRITICAL PRODUCT CORRECTNESS**
 
-Preserve this separation.
-
-## 2. Web Worker execution is the right architecture
-
-The full-pool two-mod worker-path diagnostic takes several seconds, so moving the synchronous solver off the React main thread was necessary.
-
-The current cancellation strategy is appropriate for Phase 1:
+A manual browser run used the real UI defaults with:
 
 ```text
-Cancel
--> terminate active worker
--> reject outstanding request as AbortError
--> create fresh worker
+Base:        Large Cluster Jewel
+Enchant:     12% increased Attack Damage while holding a Shield
+Item level:  84
+Passives:    12
+Target:      Glowing (T1) / T1 Maximum Energy Shield
 ```
 
-The browser smoke confirms the page remains responsive afterward.
-
-Do not move Bellman search back onto the React thread.
-
-## 3. Proof-honest result rendering is strong
-
-The three user-facing states are appropriate:
+The UI returned:
 
 ```text
-PROVEN_OPTIMAL
+Recommendation: BEST_RESOLVED
+Selected acquisition: Approximate self-fracture: Glowing (T1)
+Expected total: 1534.300c
+
+Alternative acquisition:
+Clean Base: 1544.300c
+
+On-policy states: 2
+Terminal absorption: 100%
+Expected action usage:
+  Restart/Reacquire: Approximate self-fracture: Glowing (T1) = 1.000
+
+Search:
+  states expanded: 1667
+  expansion rounds: 1 / 3
+  engine elapsed: ~213 ms
+  worker round trip: ~215 ms
+  budget exhausted: NO
+```
+
+This is materially different from the earlier 300-state smoke-test concern.
+
+The **real default UI search** still recommends acquiring an already-fractured T1 ES item for ~1534c instead of discovering the ordinary clean-base Transmutation/Alteration/Augmentation path to a single target affix.
+
+The clean-base alternative being exactly ~10c more than the selected ~1534.3c route strongly suggests that the downstream clean-base policy is not representing the obvious cheap rolling route. The implementation must print and inspect the actual clean-base downstream decision before assuming the exact root cause.
+
+Do **not** fix this with a one-mod special case.
+
+The generic solver must be able to solve the simplest target correctly using the same action/state architecture used for larger crafts.
+
+## Required investigation
+
+Add a dedicated production-pool diagnostic for this exact case using the real UI/service defaults.
+
+At minimum print:
+
+```text
+virtual acquisition-menu decision
+clean-base acquisition Q / status
+self-fracture acquisition Q / status
+clean-base downstream state key
+all legal actions at clean normal state
+Transmutation Q / status
+all Transmutation successor target probability
+representative magic miss state
+Alteration Q / status
+Augmentation Q / status where legal
+whether any clean-path descendant is unresolved/improper
+why clean-base total becomes ~1544.3c
+```
+
+Trace the selected policy beginning specifically from the **clean-base destination**, even if it is not the global selected acquisition.
+
+Determine whether the issue is caused by one or more of:
+
+- starting-route acquisition/restart semantics;
+- target satisfaction/rarity semantics;
+- graph reachability;
+- transition caching;
+- action resolution classification;
+- search prioritization;
+- Bellman values on magic states;
+- clean-base path incorrectly abandoning into self-fracture;
+- another generic solver defect.
+
+Do not assume the answer before printing the route.
+
+## Required correctness gate
+
+For an ordinary one-mod target such as T1 ES, with plausible low currency prices and a 10c clean base, the engine must discover and compare the ordinary rolling route.
+
+A result whose only practical plan is:
+
+```text
+acquire target already fractured
+```
+
+is not sufficient for this fixture.
+
+Expected behavior is conceptually of the family:
+
+```text
+Clean Base
+-> Transmutation
+-> Alteration / Augmentation as state-appropriate
+-> target hit
+```
+
+The exact EV must come from real pool weights and prices. Do not hardcode an expected cost.
+
+The regression should assert semantic properties, not a magic number:
+
+- clean-base ordinary crafting route exists and is fully explainable;
+- its policy contains actual crafting actions;
+- target absorption is proper;
+- EV reconciles;
+- it is compared fairly against fractured acquisition;
+- no one-mod-specific solver branch is added.
+
+---
+
+# Finding B — UI `maxWallTimeMs` Is Not A Hard Runtime Ceiling
+
+## Severity
+
+**CRITICAL UI RELIABILITY**
+
+The manual two-mod browser benchmark was started with the normal UI defaults:
+
+```text
+maxStates:          5000
+maxWallTimeMs:      30000
+maxExpansionRounds: 3
+```
+
+Target:
+
+```text
+T1 Intelligence
+T1 Maximum Energy Shield
+```
+
+The browser worker continued running for **more than five minutes**.
+
+The user cancelled it manually.
+
+That is not acceptable behavior for a UI that advertises a 30-second wall-time budget.
+
+## Why the current deadline is soft
+
+`GenericSearchEngine.search()` creates a deadline and checks it around major loops.
+
+However, expensive synchronous work inside a loop — especially transition generation/aggregation for one state/action — can execute for a long time without another deadline check.
+
+Therefore `maxWallTimeMs` currently behaves as a cooperative/soft solver budget rather than a guaranteed browser-runtime ceiling.
+
+The Worker architecture is still correct: terminating the worker is an effective cancellation mechanism. Preserve it.
+
+## Required runtime design
+
+Implement **two layers** of timeout protection.
+
+### Layer 1 — hard browser/worker guard
+
+The client/worker boundary must guarantee that a configured UI wall-time budget cannot leave the page searching for minutes.
+
+A simple acceptable Phase 2A implementation is:
+
+```text
+start worker request
+start host timer = requested wall budget + small documented grace
+if worker has not returned:
+    terminate worker
+    recreate worker
+    surface a typed timeout outcome
+```
+
+Do not surface this as a mysterious generic exception.
+
+Use a distinct outcome/reason such as:
+
+```text
+SEARCH_WALL_TIME_EXCEEDED
+```
+
+or an equivalent typed status.
+
+The UI should say clearly that the search was stopped at the configured runtime budget and offer `Retry deeper`.
+
+### Layer 2 — improve cooperative engine checks
+
+Also thread deadline awareness into expensive transition-generation paths where practical.
+
+Do not rely solely on a timer outside the worker forever, because preserving the latest fully completed search round/partial proof is preferable to killing work blindly.
+
+Audit especially:
+
+- large analytical transition generation;
+- Harvest distributions;
+- Regal/Exalt/Fracture successor enumeration;
+- aggregation of large distributions;
+- rebuild/lazy-expansion rounds.
+
+If a transition generator cannot be safely interrupted yet, document that and let Layer 1 enforce the hard user-facing ceiling.
+
+## Required runtime gates
+
+Browser smoke must prove:
+
+```text
+configured 5s search -> returns/terminates near 5s, not minutes
+configured 30s search -> returns/terminates near 30s plus documented grace
+page remains responsive afterward
+subsequent search works on recreated worker
+```
+
+Do not write a test that waits five minutes.
+
+---
+
+# Finding C — The Manual One-Mod Test Confirms Warning Scoping Is Working
+
+The screenshot correctly shows:
+
+```text
+Selected mechanics: 0 approximation warnings
+Broader mechanics: 1 approximation warning
+```
+
+while the broader warning is Harvest-related.
+
+That distinction is good and should be preserved.
+
+However, the bottom-level warning list still visually mixes selected-route warnings, proof warnings, and merely considered mechanics warnings. Keep the prior Phase 2 requirement to classify warning scopes in the UI.
+
+---
+
+# Phase 2A — Required Implementation Order
+
+## 1. Reproduce the exact one-mod UI failure in a deterministic diagnostic
+
+Use:
+
+```text
+Large Cluster Jewel
+12% increased Attack Damage while holding a Shield
+ilvl 84
+12 passives
+Glowing (T1)
+UI/service default budgets
+clean base = 10c fixture
+```
+
+Print the clean-route internals described above.
+
+Do not proceed directly to a patch without identifying the route that yields ~1544.3c.
+
+## 2. Fix the generic search/acquisition defect
+
+The fix must apply generally.
+
+No:
+
+```text
+if targetCount === 1
+if target === T1 ES
+if craftName === ...
+```
+
+The solver should naturally prefer cheap ordinary crafting when its expected cost is lower.
+
+## 3. Add semantic one-mod product sanity diagnostics
+
+Run at least:
+
+```text
+T1 ES
+T1 Intelligence
+one representative notable
+```
+
+Use real full pools.
+
+For each report:
+
+- selected acquisition;
+- expected cost;
+- policy actions;
+- on-policy states;
+- absorption;
+- Bellman convergence;
+- occupancy convergence;
+- reconciliation;
+- unresolved competitors;
+- runtime.
+
+The goal is to prove the generic engine can solve simple real crafts before relying on it for multi-mod UI recommendations.
+
+## 4. Enforce a hard browser-runtime ceiling
+
+Implement the worker/client guard and add deadline checks inside expensive engine paths where reasonable.
+
+## 5. Re-run the two-mod UI benchmark
+
+Only after the hard-runtime guard exists.
+
+Use the same target as before.
+
+The pass condition is not necessarily that it resolves within 30 seconds.
+
+A valid result may be:
+
+```text
 BEST_RESOLVED
 NO_RESOLVED_ROUTE
+SEARCH_WALL_TIME_EXCEEDED / partial search limit
 ```
 
-The current full-pool two-mod route is correctly displayed as `BEST_RESOLVED`, not as proven cheapest, because unresolved alternatives may still be cheaper.
+depending on what was proven.
 
-Keep this language.
+The requirement is that the UI stops on time and remains proof-honest.
 
-## 4. `policyRules` now represents the actual on-policy graph
+## 6. Re-run Craft A and Craft C
 
-The service no longer serializes only the old representative `steps` collection.
+Preserve the mature regression paths.
 
-It now exposes actual on-policy decisions ordered by expected visits, which is much more suitable for explanation and later route summarization.
-
-## 5. Expected action usage is useful
-
-The two-mod diagnostic now reports concrete expected usage such as:
-
-```text
-Approximate self-fracture acquisition: 1.0
-Alterations: ~51.17
-Augmentation: ~1.0
-Regal: ~1.0
-```
-
-This is the right data source for user-facing craft summaries.
-
-## 6. Harvest is genuinely reachable from generic search
-
-The full-pool Harvest diagnostic selects `Harvest Reforge Critical` over resolved Exalt and Annul alternatives while still warning that Scour remains unresolved.
-
-That is a meaningful integration proof.
-
-Keep Harvest mechanics confidence:
-
-```text
-APPROXIMATE / EXTERNALLY CLOSE
-```
-
-until the model is independently improved.
-
-## 7. A/C regressions remain healthy
-
-Current reported references remain:
+Current reference neighborhood:
 
 ### Craft A
 
 ```text
-Analytical: 7623.7c
-Pooled MC:  7568.1c
+Analytical: ~7623.7c
+Pooled MC:  ~7568.1c
 Difference: ~-0.73%
-Completion: 100%
-Timeouts: 0
-Fallbacks: 0
-Missing states: 0
 ```
 
 ### Craft C
 
 ```text
-Analytical: 42814.4c
-Pooled MC:  42483.5c
+Analytical: ~42814.4c
+Pooled MC:  ~42483.5c
 Difference: ~-0.77%
-One timeout / 10,000
-Fallbacks: 0
-Missing states: 0
 ```
 
-Preserve these as regression fixtures.
+Do not tune back to old values if a legitimate generic fix changes them. Explain any movement.
 
 ---
 
-# Findings For Phase 2
+# Phase 2B — Continue After Phase 2A Gates Pass
 
-# Finding 1 — Shared Harvest Affix-Count Logic Is Only Correct For The Current One-Fracture Approximation
+The following requirements from the original Phase 2 plan remain valid.
 
-## Severity
+# 1. Fix Generic Harvest Total-Affix Modeling
 
-**HIGH — generic Harvest correctness**
-
-The new shared Harvest transition currently does this:
+The current approximation is effectively:
 
 ```text
-preserve fractured modifiers
-+ guaranteed tagged modifier
-+ 50% one extra modifier
-+ 50% two extra modifiers
+preserve fractures
++ guaranteed tagged mod
++ 50% one extra / 50% two extras
 ```
 
-That reproduces the historical approximation reasonably for the main externally tested state containing **one fractured modifier**:
+That gives 3/4 total affixes with one preserved fracture, but only 2/3 total affixes with no fracture.
+
+Under the project's current documented approximation, express the model in terms of desired **total explicit count**, e.g. 3 or 4, then subtract preserved fractures and the guaranteed mod to determine extras.
+
+Keep Harvest:
 
 ```text
-1 fracture + 1 guaranteed + 1 extra = 3 total
-1 fracture + 1 guaranteed + 2 extras = 4 total
+APPROXIMATE / EXTERNALLY CLOSE
 ```
 
-However, Harvest is now generic and Bellman-searchable from **unfractured rare items** too.
+Do not tune to the external 0.122529% observation.
 
-For an unfractured state the same implementation produces:
+Validate analytical and seeded distributions for:
+
+- unfractured rare;
+- one-fracture rare.
+
+# 2. Make UI And Diagnostics Solve The Same Target
+
+The direct two-mod diagnostic currently explicitly requires Rare while the current React UI only sends exact mod requirements.
+
+Add:
 
 ```text
-0 fracture + 1 guaranteed + 1 extra = 2 total
-0 fracture + 1 guaranteed + 2 extras = 3 total
+Final rarity: Any / Magic / Rare
 ```
 
-That conflicts with the project's own current documented cluster-jewel approximation in `KNOWN_MECHANICS.md`, which says the reforge model should produce a 3-or-4-affix cluster result.
+For 3–4 explicit requirements, enforce Rare automatically or reject impossible input.
 
-This issue was not exposed by the Harvest-selected Phase 1 fixture because that fixture deliberately starts with a fractured modifier.
+Render a Target Summary with the exact target sent to the worker.
 
-## Required fix
+Browser smoke must exercise the exact same target as the service benchmark.
 
-Make the approximation describe **desired total explicit count**, not a fixed number of extras.
+# 3. Move Validation Into The Service Boundary
 
-Conceptually under the current project assumption:
+Add one shared validator used by React, `OptimizerService`, worker diagnostics, and scripts.
 
-```text
-desired total explicit count = 3 or 4
-preserved fractured count = F
-guaranteed tagged count = 1
-extras to roll = desiredTotal - F - 1
-```
+Validate:
 
-Respect prefix/suffix capacity and mod-group exclusions while filling those extras.
-
-Do the same in analytical transitions and seeded sampling.
-
-Do **not** tune the model to the Craft of Exile compound probability.
-
-The purpose is internal consistency for generic unfractured and fractured states.
-
-## Required diagnostics
-
-Show analytical and seeded distributions for at least:
-
-```text
-A. unfractured rare reforge
-B. one-fracture rare reforge
-```
-
-Print total explicit-count distributions for both.
-
-The one-fracture external parity benchmark should remain close to its current behavior unless a real mechanics reason changes it.
-
----
-
-# Finding 2 — The Direct Two-Mod Diagnostic And The Actual React UI Do Not Define Exactly The Same Target
-
-## Severity
-
-**HIGH — validation fidelity**
-
-The direct worker diagnostic for T1 Intelligence + T1 ES explicitly uses:
-
-```ts
-requiredRarity: 'rare'
-```
-
-The actual React `CraftOptimizer` currently creates:
-
-```ts
-target: {
-  requiredMods: [...]
-}
-```
-
-with no required rarity.
-
-Therefore the direct worker benchmark and the user-facing browser path are not necessarily solving the same problem.
-
-The headless browser smoke checks that a result renders and remains responsive, but it does not currently assert the same target definition/cost as the direct service diagnostic.
-
-## Required fix
-
-Expose finished rarity in the UI, preferably:
-
-```text
-Final rarity
-[Any / Magic / Rare]
-```
-
-For 3–4 selected explicit modifiers, automatically require Rare or prevent an impossible choice.
-
-For 1–2 modifiers, allow the user to decide whether a magic item is acceptable.
-
-Also render a compact **Target Summary** in results so the user can see exactly what was solved.
-
-## Validation
-
-Add one browser smoke where the UI selects:
-
-```text
-Rare
-T1 Intelligence
-T1 Maximum Energy Shield
-```
-
-and verify the serialized worker request/result corresponds to that exact target.
-
-Do not use a direct-service test as a substitute for the actual browser input path.
-
----
-
-# Finding 3 — Input Validation Belongs In The Service Boundary, Not Only React
-
-## Severity
-
-**HIGH before broader target UX**
-
-The current React form correctly checks:
-
-- 1–4 modifiers;
-- duplicate exact IDs;
+- base type;
+- enchantment;
+- passive count;
 - item level;
-- base/enchantment/passive compatibility.
+- 1–4 mods;
+- exact-ID uniqueness;
+- mod eligibility;
+- mod-group conflicts;
+- prefix/suffix capacity;
+- notable capacity;
+- rarity feasibility.
 
-But the service itself does not own the full validation contract, and the UI can still express structurally impossible targets such as:
+React should render validation results, not independently duplicate crafting rules.
 
-- two tiers from the same mod family;
-- more than two required Prefixes;
-- more than two required Suffixes;
-- too many notables for the selected base size;
-- a required rarity incompatible with the selected number of affixes.
+# 4. Production Economics / League-Aware Pricing
 
-Those inputs can waste a large search budget only to return no route.
+The repository already has league-specific `trade-prices.json` snapshots and currency rates.
 
-## Required architecture
+Build a browser-safe optimizer pricing adapter that can provide:
 
-Add a browser-safe/service-safe validation helper, for example:
+- league;
+- snapshot timestamp;
+- currency-rate timestamp;
+- clean-base market quote when available;
+- provenance/staleness;
+- explicit engine-currency mappings.
 
-```ts
-validateOptimizeCraftInput(input, catalog/repository)
-```
+Do not silently treat the current prefilled `10c` UI value as market-known evidence.
 
-Return structured validation errors/warnings.
+If a quote is unavailable, show that honestly and allow manual override/fallback according to user settings.
 
-Use the same validator from:
+# 5. Expose Fractured-Base Market Inputs
 
-- React before sending the worker request;
-- `OptimizerService.optimize()` before search;
-- diagnostics.
+`OptimizerService` already supports `marketFracturedPricesChaos`.
 
-At minimum validate:
+Expose optional manual fields for target fracture candidates.
 
-```text
-base type
-cluster type
-passive count
-item level
-1–4 target mods
-mod eligibility
-exact-ID uniqueness
-mod-group conflicts
-prefix capacity
-suffix capacity
-notable capacity
-required rarity feasibility
-```
+Do not invent prices.
 
-Do not duplicate crafting-rule logic inside React.
+Automated fractured pricing should only be added when exact trade-stat mapping is trustworthy.
 
----
-
-# Finding 4 — Phase 1 Economics Are Still Mostly Research Defaults
-
-## Severity
-
-**HIGH — user usefulness**
-
-The UI currently exposes only a clean-base price field and otherwise relies heavily on research-default currency rates and approximate self-fracture acquisition.
-
-The repository already contains league-specific `trade-prices.json` snapshots with:
-
-- currency rates;
-- base prices;
-- timestamps;
-- finished notable-combo prices.
-
-Those are currently used by the Cluster Jewels UI but not by the Craft Optimizer.
-
-## Important provenance issue
-
-`CraftOptimizer` initializes:
-
-```text
-Clean base price = 10c
-```
-
-and sends that numeric value on every search.
-
-The service then classifies any supplied clean-base value as a known/user-supplied price.
-
-A pre-populated development default should not silently become equivalent to current market evidence.
-
-## Required Phase 2 pricing architecture
-
-Create a browser-safe optimizer market-price adapter/provider.
-
-It should expose:
-
-```text
-league
-snapshot timestamp
-currency-rate timestamp
-clean-base market observation if available
-source/provenance
-staleness
-```
-
-Use existing committed `src/data/<league>/trade-prices.json` snapshots where possible.
-
-### Currency rates
-
-Map trade/economy currency IDs to engine currency keys explicitly.
-
-Do not assume names are identical.
-
-Engine keys currently include values such as:
-
-```text
-chaos
-divine
-fracturing
-annul
-exalt
-scour
-alteration
-transmutation
-augmentation
-regal
-wildLifeforce
-vividLifeforce
-primalLifeforce
-```
-
-Missing mappings must remain fallback/unavailable rather than silently becoming a different currency.
-
-### Clean base
-
-Attempt to resolve a market base price for:
-
-```text
-base type
-cluster enchantment
-passive count
-item level
-league
-```
-
-If no matching cached quote exists:
-
-- leave market price unavailable;
-- allow a manual override;
-- or use research fallback only when the user allows it.
-
-Do not label the current hard-coded `10c` starter value as market-known.
-
-### Price freshness
-
-Show the market snapshot date/time in the UI.
-
-A stale market price is still usable as evidence, but its age must be visible.
-
----
-
-# Finding 5 — Market Fractured-Base Pricing Exists In The Service Contract But Is Not Exposed In The UI
-
-## Severity
-
-**HIGH for acquisition comparisons**
-
-`OptimizerService` already accepts:
-
-```ts
-marketFracturedPricesChaos
-```
-
-but the Phase 1 UI does not provide these values.
-
-As a result, self-fracture research estimates dominate the available fracture acquisition portfolio.
-
-## Phase 2 requirement
-
-At minimum expose optional manual market prices for each target fracture candidate generated from the selected target.
-
-Example:
-
-```text
-Market fractured T1 Intelligence: [     ] c
-Market fractured T1 ES:           [     ] c
-```
-
-Leave blank when unknown.
-
-Do not invent a market price.
-
-### Optional extension
-
-If the existing trade-query/stat infrastructure can reliably build an exact fractured-base query for arbitrary supported target mods, extend the publish-time price cache.
-
-But do not rush this by matching display text heuristically without a verified trade-stat mapping.
-
-A manual explicit price is better than a silently wrong automated price.
-
----
-
-# Finding 6 — Harvest Scope Reporting Includes Tags That Do Not Correspond To An Enabled Harvest Craft
-
-## Severity
-
-**MEDIUM — reporting correctness**
-
-Current examples report scopes such as:
-
-```text
-TARGET_INFERRED [defences, energy_shield]
-TARGET_INFERRED [attribute, defences, energy_shield]
-```
-
-but only tags present in `HARVEST_CRAFT_DEFINITIONS` actually create executable Harvest actions.
-
-The search itself is not necessarily wrong, because the factory ignores unsupported tags, but the UI/report can imply a broader Harvest action set than was truly enabled.
-
-## Required fix
+# 6. Report Actual Enabled Harvest Crafts
 
 Separate:
 
 ```text
-raw target-derived tags
+raw inferred mod tags
 ```
 
 from:
 
 ```text
-actual enabled Harvest craft IDs/tags
+actual executable Harvest crafts enabled
 ```
 
-The UI should report the latter as the active action scope.
+The UI should show the latter.
 
----
+# 7. Improve Warning Scope
 
-# Finding 7 — Warning Scope Is Better, But The Top-Level Warning List Still Mixes Selected And Merely Considered Approximation Warnings
-
-## Severity
-
-**MEDIUM — user interpretation**
-
-The service now correctly exposes:
-
-```text
-selectedPolicy
-consideredSearchSpace
-```
-
-for both price and mechanics confidence.
-
-However, top-level `warnings` still includes the broader mechanics/search warnings.
-
-The browser smoke demonstrates the consequence:
-
-```text
-one-mod selected mechanics warnings: 0
-one-mod browser mechanics warning visible: YES
-```
-
-The selected route itself may not use approximate Harvest, yet a prominent generic warning can still make it look that way.
-
-## Required refinement
-
-Create explicit warning scopes/types, for example:
+Use explicit categories such as:
 
 ```text
 SELECTED_ROUTE
@@ -582,427 +521,182 @@ CONSIDERED_ALTERNATIVE
 DATA_FRESHNESS
 ```
 
-Prominently display:
+Selected-route and proof warnings should be prominent.
 
-- selected-route confidence warnings;
-- proof/search limitations;
-- stale/missing market data.
+Considered-alternative approximation warnings should be secondary/collapsible.
 
-Put considered-alternative warnings in a secondary/collapsible section.
+# 8. Improve Target-Mod Selection UX
 
-Do not hide them; classify them.
+The exact-ID selector is correct but will not scale well.
 
----
+Add search/grouping by:
 
-# Finding 8 — The Quick One-Mod Diagnostic Is An Integration Smoke, Not A Product Recommendation Benchmark
+- mod/stat name;
+- tier;
+- Prefix/Suffix;
+- notable vs ordinary explicit.
 
-## Severity
+Keep exact `modId` as the submitted identity.
 
-**MEDIUM**
+# 9. Add Compact Result Summary
 
-The current quick one-mod T1 ES diagnostic uses only:
-
-```text
-300 states
-1 expansion round
-```
-
-and returns the approximately `1534.3c` self-fracture acquisition as the best resolved route.
-
-That is acceptable as a low-budget integration smoke because the UI correctly labels it `BEST_RESOLVED` rather than proven cheapest.
-
-It is **not** a meaningful benchmark for whether the optimizer can find the obvious cheap clean-base strategy for a simple one-mod target.
-
-## Required Phase 2 sanity fixture
-
-Add a separate default-budget/full-pool one-mod diagnostic using the actual UI/service defaults.
-
-For a simple T1 one-mod target, report:
-
-- clean-base route status;
-- fractured route status;
-- selected route;
-- unresolved competitor count;
-- expected cost;
-- proof status;
-- runtime.
-
-The goal is to ensure the normal product defaults produce a useful result for the simplest target class.
-
-If the clean-base route remains unresolved under normal UI budgets, treat search scalability as a product issue rather than hiding it behind a self-fracture recommendation.
-
----
-
-# Finding 9 — Search UX Needs A Better Retry/Progress Story, But Not A New Solver Architecture Yet
-
-## Severity
-
-**MEDIUM**
-
-The worker keeps the UI responsive, which solves the Phase 1 blocker.
-
-The next usability step is to make long searches understandable.
-
-## Phase 2 recommendation
-
-Add:
-
-- elapsed-time indicator while searching;
-- current configured state/time/round budget;
-- clear cancelled state;
-- a `Retry deeper` action when result is `BEST_RESOLVED` or `NO_RESOLVED_ROUTE` because the search budget exhausted.
-
-A simple retry can increase budgets and restart the search.
-
-Do not implement persistent graph continuation merely for UI polish unless measurements show it is needed.
-
-If coarse worker progress can be exposed cleanly at expansion-round boundaries, add it. Avoid invasive callbacks through every inner Bellman loop for this phase.
-
----
-
-# Finding 10 — Historical Crafting Review Docs Were Removed In The Cleanup Commit
-
-## Severity
-
-**REPOSITORY CONTINUITY / LOW RUNTIME RISK**
-
-Commit `0ee7d01...` removed the accumulated historical files under `docs/crafting-engine/`, leaving only the newest phase document.
-
-The code is unaffected, but this project deliberately uses review documents as architecture and validation history across implementation passes.
-
-## Required repository hygiene
-
-Do not delete future phase-review documents as "unused" source files.
-
-Prefer one of:
-
-```text
-docs/crafting-engine/current/
-docs/crafting-engine/archive/
-```
-
-or a clear index identifying the latest source-of-truth document while retaining prior findings.
-
-For this phase, restore the deleted review documents into an `archive/` folder if practical from Git history, or at minimum restore the most important architecture/parity history and add a short README/index explaining that archived plans are historical rather than current instructions.
-
-Do not allow an automated cleanup pass to remove review/history docs again.
-
----
-
-# Phase 2 Implementation Order
-
-## Step 1 — Correct generic Harvest total-affix generation
-
-Make analytical and seeded Harvest use a total-result-affix model that works consistently with zero or one fractured explicit.
-
-Preserve the current external-parity framing.
-
-Do not tune to Craft of Exile.
-
-## Step 2 — Add service-owned target validation and final-rarity support
-
-Implement one shared validator.
-
-Add final rarity to the developer UI and echo the exact target in result output.
-
-Make browser and direct diagnostics use identical target definitions when they are intended to compare.
-
-## Step 3 — Add league-aware market-price input
-
-Build a browser-safe price provider over committed `trade-prices.json` snapshots.
-
-Feed known currency rates and clean-base evidence into `OptimizerService` with explicit provenance.
-
-Show timestamp/staleness.
-
-Keep research fallback optional.
-
-## Step 4 — Expose fractured-base market overrides
-
-Provide optional per-target fracture purchase prices.
-
-Feed them to `marketFracturedPricesChaos`.
-
-Keep self-fracture estimates clearly approximate.
-
-## Step 5 — Improve warning/proof hierarchy
-
-Keep proof status at the top.
-
-Separate selected-route warnings from considered-space warnings.
-
-Show data freshness separately.
-
-## Step 6 — Improve target selection usability
-
-The current native selects are acceptable for Phase 1 but become awkward as the catalog grows.
-
-Without adding crafting logic to React, improve selection with:
-
-- searchable/filterable mod selection;
-- Prefix/Suffix grouping;
-- tier display;
-- notable indication;
-- already-selected/conflicting options disabled or explained using service/catalog validation data.
-
-Do not add a heavy UI dependency unless it materially helps.
-
-## Step 7 — Improve result usability
-
-Add a compact summary containing:
+Before the deep policy tables, show:
 
 ```text
 Target
-League / pricing timestamp
 Recommendation status
 Selected acquisition
-Expected craft cost
-Optional sale value / expected profit
-Major expected actions
-Selected-route confidence
-Unresolved competitor count
-Search runtime/budget
+Expected cost
+Expected profit if sale value supplied
+Proof level
+Runtime
+Important selected-route warnings
 ```
 
-The detailed policy table can remain collapsible.
+Keep detailed policy/debug data available below.
 
-Expose optional expected sale value input because `OptimizerService` already supports it.
+# 10. Add Sale Value / Profit And Retry-Deeper UX
 
-Do not fabricate sale value from unrelated combo prices.
+The service already supports sale value.
 
-## Step 8 — Add retry-deeper/search feedback
+Expose it in the UI.
 
-Keep cancellation.
+When a search is unresolved or times out, offer a convenient `Retry deeper` action that increases explicit budgets rather than hiding them.
 
-Add elapsed search feedback and a simple larger-budget retry path.
+Do not automatically launch unbounded searches.
 
-## Step 9 — Restore documentation continuity
+# 11. Preserve Project History
 
-Archive deleted historical review docs or restore the key architecture/parity history with an index.
+A prior cleanup commit removed many historical crafting-engine review documents.
 
-Do not change the new Phase 2 source-of-truth status.
+Do not continue deleting phase/review documentation merely because it is not imported by runtime code.
 
-## Step 10 — Run full diagnostics and regressions
+Documentation is project history, not dead TypeScript.
 
-Run build, lint, browser smoke, engine diagnostics, and A/C regressions.
-
-No unit tests.
+If historical docs need consolidation, archive/index them intentionally rather than silently deleting them.
 
 ---
 
-# Required Diagnostics
+# Search And Proof Requirements
 
-## 1. Build and lint
+Preserve all current proof-honest semantics.
 
-Run:
+Never label a route `PROVEN_OPTIMAL` merely because its selected policy is proper.
 
-```text
-npm run build
-npm run lint
-```
-
-No unit tests are required.
-
-## 2. Harvest affix-count diagnostic
-
-For an unfractured and a one-fracture rare state, print:
+Maintain the distinction:
 
 ```text
-analytical total-affix distribution
-seeded sampled total-affix distribution
-probability sum
-fractured-mod preservation
-mechanics-confidence label
+selected policy fully resolved/proper/reconciled
 ```
 
-## 3. UI target identity diagnostic
-
-Through the actual browser UI select:
+vs:
 
 ```text
-Large Cluster Jewel
-Shield Attack Damage enchant
-12 passives
-ilvl 84
-Rare
-T1 Intelligence
-T1 Maximum Energy Shield
+all potentially cheaper modeled competitors resolved or safely bounded
 ```
 
-Verify the worker received/solved that exact target.
+For simple one-mod fixtures, actively pursue stronger proof because the state space should be tractable.
 
-## 4. Default-budget one-mod product sanity
+For larger crafts, `BEST_RESOLVED` remains a valid product result when unresolved competitors exist.
 
-Run one full-pool one-mod target using actual UI default budgets.
-
-Do not use the 300-state quick smoke as the only evidence.
-
-Report whether clean-base search resolves and whether it beats approximate self-fracture.
-
-## 5. Full-pool two-mod browser smoke
-
-Repeat the rare T1 Int + T1 ES UI path and report:
-
-```text
-recommendation status
-cost
-selected acquisition
-runtime
-states
-on-policy states
-absorption
-Bellman convergence
-occupancy convergence
-reconciliation
-unresolved competitors
-budget exhaustion
-selected-route price confidence
-selected-route mechanics confidence
-```
-
-## 6. Market-price diagnostic
-
-For at least one selected league/base combination print:
-
-```text
-league
-price snapshot timestamp
-currency rate timestamp
-resolved clean-base quote
-quote age
-engine currency mappings used
-missing engine currency mappings
-fallbacks used
-```
-
-## 7. Fallback disabled with market data
-
-With known market rates/base price supplied and research fallback disabled, prove that known-priced actions remain eligible while true research-only actions are excluded.
-
-The expected result should not be `NO_RESOLVED_ROUTE` merely because no market rates were wired into the browser.
-
-If a required currency remains unavailable, report that explicitly.
-
-## 8. Browser warning-scope smoke
-
-Show a selected route that does not use Harvest while Harvest was considered.
-
-Verify:
-
-```text
-selected-route Harvest warning: NO
-considered-alternative Harvest warning: YES
-```
-
-## 9. Craft A/C regressions
-
-Preserve existing regression quality.
-
-If the state-dependent Harvest correction changes A/C, explain exactly why. Since their mature path commonly operates from a fractured state, large changes would deserve investigation.
+A timeout/budget stop must never manufacture an EV for an unresolved route.
 
 ---
 
-# Phase 2 Completion Gates
+# No Unit Tests For This Phase
 
-Developer UI Phase 2 is complete when:
+Do not add unit-test work.
 
+Continue validation through:
+
+- real browser smoke;
+- deterministic diagnostics;
+- full-pool reference searches;
+- analytical/seeded transition checks;
+- Craft A/C Monte Carlo regressions;
+- Craft of Exile parity fixtures.
+
+---
+
+# Phase 2A Completion Gates
+
+Do not move the main effort to pricing/polish until all of these pass:
+
+- [ ] exact live one-mod T1 ES failure reproduced in diagnostic output;
+- [ ] root cause documented;
+- [ ] generic fix implemented without one-mod/craft-specific branching;
+- [ ] clean-base ordinary crafting route is discovered for T1 ES;
+- [ ] at least two additional simple one-mod full-pool crafts behave sensibly;
+- [ ] selected simple policies are proper/absorbing;
+- [ ] Bellman/occupancy convergence reported;
+- [ ] EV reconciliation passes;
+- [ ] hard browser timeout guard exists;
+- [ ] configured runtime budgets stop near the configured wall time;
+- [ ] worker is usable after timeout/cancellation;
+- [ ] two-mod UI benchmark no longer runs unbounded for minutes;
+- [ ] Craft A remains healthy;
+- [ ] Craft C remains healthy;
 - [ ] `npm run build` passes;
-- [ ] `npm run lint` passes or only explicitly documented pre-existing warnings remain;
-- [ ] unfractured Harvest no longer uses the one-fracture-only affix-count shape;
-- [ ] analytical and sampled Harvest agree for zero- and one-fracture states;
-- [ ] target validation is service-owned;
-- [ ] final rarity is represented in the UI request;
-- [ ] browser smoke and direct diagnostics solve the same declared target when compared;
-- [ ] market snapshot currency/base pricing can feed the optimizer with provenance;
-- [ ] the default 10c development value is not silently called current market-known evidence;
-- [ ] market fractured-price overrides are available;
-- [ ] selected-route warnings are distinct from considered-search warnings;
-- [ ] actual enabled Harvest crafts are reported rather than raw unsupported inferred tags;
-- [ ] a default-budget one-mod full-pool sanity run is useful/proof-honest;
-- [ ] the two-mod browser run remains proof-honest and responsive;
-- [ ] cancellation still works;
-- [ ] A/C regressions remain healthy;
-- [ ] historical review-document continuity is preserved.
+- [ ] no unit tests added.
 
 ---
 
-# Out Of Scope For This Phase
+# Phase 2B Completion Gates
 
-Do not add:
+After Phase 2A:
 
-- Allflame/intangibility;
-- fossils;
-- essences;
-- beastcrafting;
-- veiled crafting;
-- a Craft-B-specific solver;
-- separate 1/2/3/4-mod solvers;
-- a large frontend framework/state-management dependency without need;
-- unit-test work.
-
-Do not attempt to force every target to `PROVEN_OPTIMAL` before the UI can be useful.
-
-The proof system is already designed to represent incomplete search honestly.
+- [ ] Harvest total-affix approximation is internally consistent for fractured/unfractured states;
+- [ ] UI final-rarity input exists;
+- [ ] service-owned structured validation exists;
+- [ ] browser smoke proves exact target parity with worker/service;
+- [ ] league-aware price provenance is wired where available;
+- [ ] clean-base default is not silently misclassified as known market data;
+- [ ] optional fractured-market overrides exist;
+- [ ] enabled Harvest craft scope is truthful;
+- [ ] warnings are scoped by selected/proof/alternative/data freshness;
+- [ ] target selector is searchable/grouped;
+- [ ] compact recommendation summary exists;
+- [ ] sale-value/profit input exists;
+- [ ] `Retry deeper` exists;
+- [ ] proof limitations remain visible;
+- [ ] `npm run build` passes.
 
 ---
 
 # Required Completion Report
 
-When finished, commit implementation and regenerated outputs to `main` and report:
+When implementation is complete, report:
 
 1. commit SHA;
 2. files changed;
-3. build result;
-4. lint result;
-5. Harvest zero-fracture analytical/sample affix-count distribution;
-6. Harvest one-fracture analytical/sample affix-count distribution;
-7. whether compound Harvest external parity materially changed;
-8. target validator behavior;
-9. final-rarity UI behavior;
-10. browser/direct target-identity parity;
-11. league/market price-provider architecture;
-12. currency mappings and missing rates;
-13. clean-base market-price source/timestamp;
-14. manual fractured-market-price behavior;
-15. fallback-disabled behavior with market data;
-16. warning-scope behavior;
-17. actual enabled Harvest scope reporting;
-18. default-budget one-mod result;
-19. full two-mod browser result;
-20. search retry/progress behavior;
-21. Craft A regression;
-22. Craft C regression;
-23. documentation archive/history status;
-24. recommended focus for Phase 3.
+3. `npm run build` result;
+4. exact root cause of the one-mod ~1534c recommendation;
+5. before/after one-mod T1 ES result;
+6. clean-base downstream policy/actions;
+7. at least two additional one-mod sanity results;
+8. hard timeout architecture;
+9. 5-second hard-timeout browser result;
+10. 30-second two-mod browser result;
+11. worker responsiveness after timeout/cancel;
+12. Bellman/occupancy/reconciliation for simple fixtures;
+13. Craft A regression;
+14. Craft C regression;
+15. Harvest total-affix fix and fractured/unfractured distributions if Phase 2B is included;
+16. final-rarity/validation changes if Phase 2B is included;
+17. market-price provenance changes if Phase 2B is included;
+18. remaining unresolved search limitations;
+19. whether Phase 2A gates passed;
+20. whether it is safe to continue into Phase 2B/polish.
 
 ---
 
 # Bottom Line
 
-Developer UI Phase 1 is successful.
+The browser test was valuable because it exposed two issues the scripted Phase 1 smoke did not adequately characterize:
 
-The project no longer needs another architecture-only backend phase before useful frontend work can continue.
+1. **The default-budget one-mod product result is not yet acceptable.** The engine is selecting an approximate ~1534c fractured acquisition instead of discovering the obvious ordinary crafting family.
+2. **The configured wall-time budget is not a hard UI runtime guarantee.** A nominal 30-second two-mod solve can remain active for many minutes.
 
-The next pass should make the UI's answers **economically grounded and target-exact**:
+Fix those first.
 
-```text
-consistent generic Harvest
-+
-service-owned target validation
-+
-final-rarity semantics
-+
-league-aware market prices
-+
-fractured-base price inputs
-+
-clear warning scope
-+
-useful default-budget search behavior
-+
-result usability
-```
-
-Keep `GAME-MECHANICS FIDELITY: PARTIAL` while Harvest remains approximate.
-
-Keep `GLOBAL OPTIMALITY: NOT YET PROVEN` unless the specific modeled search actually proves otherwise.
+The UI/worker architecture itself remains the correct foundation. Once simple-craft correctness and hard runtime control pass, continue with the existing Phase 2 work on target semantics, Harvest consistency, market pricing, warnings, and usability.
