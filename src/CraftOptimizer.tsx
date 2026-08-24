@@ -597,7 +597,7 @@ function CraftOptimizer() {
                 {result.recommendationStatus === 'PROVEN_OPTIMAL'
                   ? 'Proven optimal'
                   : result.recommendationStatus === 'BEST_RESOLVED_ACQUISITION_SAFE'
-                    ? 'Acquisition-safe'
+                    ? 'Acquisition-safe start'
                     : result.recommendationStatus === 'PROVISIONAL_RESOLVED'
                       ? 'Provisional — acquisition not yet safe'
                       : 'No resolved route'}
@@ -614,7 +614,7 @@ function CraftOptimizer() {
               <dt>Expected cost</dt><dd className="recommendation-cost">{chaos(result.expectedCostChaos)}</dd>
               {result.expectedSaleValueChaos !== undefined && <><dt>Expected sale value</dt><dd>{chaos(result.expectedSaleValueChaos)}</dd></>}
               {result.expectedProfitChaos !== undefined && <><dt>Expected profit</dt><dd>{chaos(result.expectedProfitChaos)}</dd></>}
-              <dt>Recommendation confidence</dt>
+              <dt>Starting acquisition confidence</dt>
               <dd>{result.recommendationStatus === 'NO_RESOLVED_ROUTE'
                 ? 'No fully resolved route is available'
                 : result.recommendationStatus === 'PROVISIONAL_RESOLVED'
@@ -622,6 +622,14 @@ function CraftOptimizer() {
                   : result.recommendationStatus === 'PROVEN_OPTIMAL'
                     ? 'Proven optimal over the modeled search space'
                     : 'Acquisition-safe'}</dd>
+              <dt>Crafting strategy confidence</dt>
+              <dd>{result.policyRefinement.status === 'MODELED_OPTIMAL'
+                ? 'Modeled-action optimality proven'
+                : result.policyRefinement.status === 'STILL_IMPROVING_AT_BUDGET'
+                  ? 'Current best — still improving at the search budget'
+                  : result.policyRefinement.status === 'CURRENT_BEST_UNPROVEN'
+                    ? 'Current best — modeled optimality not proven'
+                    : 'No executable downstream policy certified'}</dd>
               <dt>Finish condition</dt>
               <dd>{result.target.finalStateConstraints?.maxUnmatchedAffixes === 0 ? 'No unwanted affixes' : 'Extra affixes allowed'}</dd>
             </dl>
@@ -629,6 +637,14 @@ function CraftOptimizer() {
               <strong>{STATUS_COPY[result.recommendationStatus].title}</strong>
               <span>{STATUS_COPY[result.recommendationStatus].detail}</span>
             </div>
+            {result.recommended !== null && result.policyRefinement.status !== 'MODELED_OPTIMAL' && (
+              <div className={`optimizer-proof policy-${result.policyRefinement.status.toLowerCase()}`}>
+                <strong>{result.policyRefinement.status === 'STILL_IMPROVING_AT_BUDGET'
+                  ? 'Crafting strategy was still improving'
+                  : 'Crafting strategy is the current best found'}</strong>
+                <span>{result.policyRefinement.explanation}</span>
+              </div>
+            )}
             {result.recommendationStatus === 'PROVISIONAL_RESOLVED' && (
               <div className="provisional-warning" role="alert">
                 <strong>Do not treat this as the final cheapest recommendation.</strong>
@@ -785,6 +801,12 @@ function CraftOptimizer() {
                   <dt>Raw proof level</dt><dd>{result.proof.proofLevel}</dd>
                   <dt>Global optimality</dt><dd>{result.proof.globalOptimality}</dd>
                   <dt>Acquisition selection safe</dt><dd>{result.acquisition.selectionSafe ? 'yes' : 'no'}</dd>
+                  <dt>Downstream policy status</dt><dd>{result.policyRefinement.status}</dd>
+                  <dt>Downstream refinement stop</dt><dd>{result.policyRefinement.stopReason}</dd>
+                  {result.policyRefinement.firstCertifiedUpperBoundChaos !== undefined && <><dt>First certified policy U</dt><dd>{chaos(result.policyRefinement.firstCertifiedUpperBoundChaos)}</dd></>}
+                  {result.policyRefinement.finalUpperBoundChaos !== undefined && <><dt>Final returned policy U</dt><dd>{chaos(result.policyRefinement.finalUpperBoundChaos)}</dd></>}
+                  {result.policyRefinement.improvementFraction !== undefined && <><dt>Refinement improvement</dt><dd>{chaos(result.policyRefinement.improvementChaos)} ({(result.policyRefinement.improvementFraction * 100).toFixed(2)}%)</dd></>}
+                  {result.policyRefinement.unresolvedCompetitiveLowerBoundChaos !== undefined && <><dt>Unresolved downstream competitive L</dt><dd>{chaos(result.policyRefinement.unresolvedCompetitiveLowerBoundChaos)}</dd></>}
                   {result.acquisition.resolvedIncumbentUpperBoundChaos !== undefined && <><dt>Resolved incumbent U</dt><dd>{chaos(result.acquisition.resolvedIncumbentUpperBoundChaos)}</dd></>}
                   {result.acquisition.bestUnresolvedLowerBoundChaos !== undefined && <><dt>Best unresolved acquisition L</dt><dd>{chaos(result.acquisition.bestUnresolvedLowerBoundChaos)}</dd></>}
                   {result.acquisition.potentialGapChaos !== undefined && <><dt>Potential acquisition gap</dt><dd>{chaos(result.acquisition.potentialGapChaos)}</dd></>}
@@ -981,9 +1003,14 @@ function CraftOptimizer() {
                     <dt>Returned at budget</dt><dd>{result.search.returnedAtBudget ? 'yes' : 'no'}</dd>
                     <dt>Host guard triggered</dt><dd>{result.search.hostGuardTriggered ? 'yes' : 'no'}</dd>
                     <dt>Expansion architecture</dt><dd>{result.search.expansionMode}</dd>
+                    <dt>Retry session</dt><dd>{result.search.sessionReuse.status} — {result.search.sessionReuse.scope} ({result.search.sessionReuse.identityHash})</dd>
+                    {result.search.sessionReuse.missReason && <><dt>Session miss reason</dt><dd>{result.search.sessionReuse.missReason}</dd></>}
+                    <dt>Prior-request states retained</dt><dd>{result.search.sessionReuse.retainedStates.toLocaleString()}</dd>
+                    <dt>Prior transition distributions retained</dt><dd>{result.search.sessionReuse.retainedTransitionDistributions.toLocaleString()}</dd>
                     <dt>Actual canonical states fully re-expanded</dt><dd>{result.search.repeatedStatesExpanded.toLocaleString()}</dd>
                     <dt>Retained nodes revisited for deferred edges</dt><dd>{result.search.previouslyExpandedNodesRevisited.toLocaleString()}</dd>
                     <dt>Transition distributions generated</dt><dd>{result.search.transitionDistributionsGenerated.toLocaleString()}</dd>
+                    <dt>Transition distributions reused in this request</dt><dd>{result.search.transitionDistributionsReused.toLocaleString()}</dd>
                     <dt>Separate acquisition-feasibility states</dt><dd>{result.search.acquisitionFeasibilityStatesExpanded.toLocaleString()}</dd>
                     <dt>Expansion work from interrupted result rounds</dt><dd>{result.search.interruptedStatesExpanded.toLocaleString()}</dd>
                     <dt>Fair acquisition probes</dt><dd>{result.search.acquisitionFeasibility.certifiedCandidates}/{result.search.acquisitionFeasibility.attemptedCandidates} certified</dd>
@@ -1000,12 +1027,22 @@ function CraftOptimizer() {
                   <details>
                     <summary>Persistent expansion work by round</summary>
                     <p className="muted">Retained states keep their generated edges and are not counted as repeated expansion.</p>
-                    <table><thead><tr><th>Round</th><th>New states</th><th>Retained states</th><th>Transition distributions</th><th>Prior nodes revisited</th></tr></thead>
+                    <table><thead><tr><th>Round</th><th>New states</th><th>Retained states</th><th>Transitions generated / reused</th><th>Prior nodes revisited</th></tr></thead>
                       <tbody>{result.search.newStatesByRound.map((newStates, index) => (
-                        <tr key={index}><td>{index + 1}</td><td>{newStates}</td><td>{result.search.retainedStatesReusedByRound[index] ?? 0}</td><td>{result.search.transitionDistributionsGeneratedByRound[index] ?? 0}</td><td>{result.search.previouslyExpandedNodesRevisitedByRound[index] ?? 0}</td></tr>
+                        <tr key={index}><td>{index + 1}</td><td>{newStates}</td><td>{result.search.retainedStatesReusedByRound[index] ?? 0}</td><td>{result.search.transitionDistributionsGeneratedByRound[index] ?? 0} / {result.search.transitionDistributionsReusedByRound[index] ?? 0}</td><td>{result.search.previouslyExpandedNodesRevisitedByRound[index] ?? 0}</td></tr>
                       ))}</tbody>
                     </table>
                   </details>
+                  {result.policyRefinement.incumbentHistory.length > 0 && (
+                    <details>
+                      <summary>Downstream incumbent history</summary>
+                      <table><thead><tr><th>Round</th><th>Phase</th><th>Policy U</th><th>States</th><th>Elapsed</th></tr></thead>
+                        <tbody>{result.policyRefinement.incumbentHistory.map((entry) => (
+                          <tr key={`${entry.round}-${entry.phase}`}><td>{entry.round}</td><td>{entry.phase}</td><td>{chaos(entry.upperBoundChaos)}</td><td>{entry.statesExpanded.toLocaleString()}</td><td>{entry.elapsedMs.toLocaleString()} ms</td></tr>
+                        ))}</tbody>
+                      </table>
+                    </details>
+                  )}
                   {result.search.intent === 'DEEPEN' && (
                     <details>
                       <summary>DEEPEN frontier progress</summary>

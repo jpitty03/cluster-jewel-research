@@ -17754,4 +17754,31 @@ Exalted Orb Slam                116.53             115.45            0.92%      
 STABILITY CONCLUSION:
   Status:                MULTI-SEED STABLE
   Assessment:            Pooled action counts <=10% and completion >=99% across all deterministic seeds.
-AUTO-DISCOVERY DIAGNOSTIC: SKIPPED IN --regressions-only MODE (covered by the budgeted pre-UI generic diagnostic).
+
+================================================================================
+AUTOMATIC STARTING-STATE DISCOVERY DIAGNOSTIC: Craft A (Shield Cluster)
+================================================================================
+Target Definition: 3 base required mods (3 outcome branches)
+
+CANDIDATE SET STRUCTURAL AUDIT:
+  Clean Physical Base Generated (Rarity: normal): YES
+  Required-Mod Fractured Starts Generated:        YES
+  Duplicate Physical State Solves:               0 (Memoized by canonical state key)
+
+GENERATED STARTING CANDIDATES (7 routes from 7 physical states):
+Route Name                                Acquisition Mode     Acq Cost        Downstream EV   Full Route EV
+---------------------------------------------------------------------------------------------------------
+Executable Self-Fracture Powerful (T1)    self-fracture        1501.4c (~7.51 div) 6090.3c (~30.45 div) 7591.7c (~37.96 div)
+Start Clean Base Clean Base               clean-base           10.0c           UNRESOLVED      UNRESOLVED
+Executable Self-Fracture Glowing (T1)     self-fracture        1501.4c (~7.51 div) UNRESOLVED      UNRESOLVED
+Executable Self-Fracture of the Prodigy (T1) self-fracture        1506.3c (~7.53 div) UNRESOLVED      UNRESOLVED
+Executable Self-Fracture of the Meteor (T1) self-fracture        1506.3c (~7.53 div) UNRESOLVED      UNRESOLVED
+Executable Self-Fracture Added Small Passive Skills also grant: 3% increased Attack Speed (T1) self-fracture        1511.2c (~7.56 div) UNRESOLVED      UNRESOLVED
+Executable Self-Fracture of the Kaleidoscope (T1) self-fracture        1506.3c (~7.53 div) UNRESOLVED      UNRESOLVED
+---------------------------------------------------------------------------------------------------------
+
+AUTOMATIC DISCOVERY VERIFICATION:
+  Best Fully Resolved Route: Executable Self-Fracture Powerful (T1) (7591.7c (~37.96 div))
+  Reference Fixture Route:   Self-Fracture 35% Effect (Clean 12p Base) (7623.7c (~38.12 div))
+  Resolved-Route Consistency: PASSED (auto-discovered resolved route matches manual reference fixture)
+  Global Route Optimality:    NOT YET PROVEN (6 alternatives unresolved)

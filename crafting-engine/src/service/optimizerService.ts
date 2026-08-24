@@ -24,9 +24,11 @@ import {
 import { getCanonicalStateKey } from '../rules/actionDiscovery.ts';
 import { getTaggedModsForCluster } from '../rules/clusterPoolHelpers.ts';
 import {
+  createGenericSearchContinuationSession,
   GenericSearchEngine,
   type ActionResolutionStatus,
   type CandidateActionQValue,
+  type GenericSearchContinuationSession,
   type GenericSearchResult,
 } from '../solver/genericSearch.ts';
 import {
@@ -222,7 +224,11 @@ export interface AcquisitionCandidateSummary {
 }
 
 export interface AcquisitionStageSummary {
-  mode: 'NO_FRACTURE_CANDIDATES' | 'CLEAN_ROUTE_DOMINANCE' | 'EXECUTABLE_SYNTHESIS';
+  mode:
+    | 'NO_FRACTURE_CANDIDATES'
+    | 'CLEAN_ROUTE_DOMINANCE'
+    | 'CLEAN_EXECUTABLE_PROVISIONAL'
+    | 'EXECUTABLE_SYNTHESIS';
   candidateCount: number;
   attemptedCandidates: number;
   certifiedCandidates: number;
@@ -317,6 +323,36 @@ export interface OptimizationProofSummary {
   unresolvedCompetitorsMayBeCheaper: boolean;
 }
 
+export interface PolicyRefinementSummary {
+  status:
+    | 'MODELED_OPTIMAL'
+    | 'CURRENT_BEST_UNPROVEN'
+    | 'STILL_IMPROVING_AT_BUDGET'
+    | 'NO_EXECUTABLE_POLICY';
+  firstCertifiedUpperBoundChaos?: number;
+  finalUpperBoundChaos?: number;
+  improvementChaos?: number;
+  improvementFraction?: number;
+  selectedStartLowerBoundChaos?: number;
+  unresolvedCompetitiveLowerBoundChaos?: number;
+  potentialGapChaos?: number;
+  potentialGapFraction?: number;
+  incumbentHistory: GenericSearchResult['searchSummary']['incumbentHistory'];
+  lastMeaningfulImprovementRound?: number;
+  budgetEndedWhileImproving: boolean;
+  stopReason: GenericSearchResult['searchSummary']['refinementStopReason'];
+  explanation: string;
+}
+
+export interface SearchSessionReuseSummary {
+  status: 'COLD' | 'RESUMED' | 'INVALIDATED';
+  identityHash: string;
+  missReason?: string;
+  retainedStates: number;
+  retainedTransitionDistributions: number;
+  scope: 'CLEAN_DOWNSTREAM' | 'ACQUISITION_PORTFOLIO';
+}
+
 export interface OptimizationSearchSummary {
   intent: SearchIntent;
   statesExpanded: number;
@@ -347,6 +383,8 @@ export interface OptimizationSearchSummary {
   retainedStatesReusedByRound: number[];
   transitionDistributionsGenerated: number;
   transitionDistributionsGeneratedByRound: number[];
+  transitionDistributionsReused: number;
+  transitionDistributionsReusedByRound: number[];
   previouslyExpandedNodesRevisited: number;
   previouslyExpandedNodesRevisitedByRound: number[];
   acquisitionFeasibilityStatesExpanded: number;
@@ -357,7 +395,13 @@ export interface OptimizationSearchSummary {
   minimumFeasibleRarity: GenericSearchResult['searchSummary']['minimumFeasibleRarity'];
   acquisitionFeasibility: GenericSearchResult['searchSummary']['acquisitionFeasibility'];
   deepenProgress: GenericSearchResult['searchSummary']['deepenProgress'];
+  incumbentHistory: GenericSearchResult['searchSummary']['incumbentHistory'];
+  refinementStopReason: GenericSearchResult['searchSummary']['refinementStopReason'];
+  resumedFromPriorRequest: boolean;
+  retainedStatesFromPriorRequest: number;
+  retainedTransitionDistributionsFromPriorRequest: number;
   stageTimingMs: GenericSearchResult['stageTiming'] & { serializationMs: number };
+  sessionReuse: SearchSessionReuseSummary;
   totalElapsedMs: number;
   harvestActionScope: {
     mode: 'DISABLED' | 'TARGET_INFERRED' | 'EXPLICIT';
@@ -403,6 +447,7 @@ export interface OptimizeCraftResult {
   priceConfidence: ScopedPriceConfidenceSummary;
   mechanicsConfidence: ScopedMechanicsConfidenceSummary;
   proof: OptimizationProofSummary;
+  policyRefinement: PolicyRefinementSummary;
   search: OptimizationSearchSummary;
   solver: {
     bellmanIterations: number;
@@ -522,6 +567,104 @@ function buildAcquisitionPortfolio(
 
 function sortedRecord(record: Record<string, number | undefined>): Record<string, number | undefined> {
   return Object.fromEntries(Object.keys(record).sort().map((key) => [key, record[key]]));
+}
+
+export const OPTIMIZER_MECHANICS_ACTION_SET_VERSION = 'phase2j-core-actions-v1';
+export const OPTIMIZER_CANONICAL_STATE_VERSION = 'target-conditioned-groups-v2';
+
+interface SearchIdentityComponents {
+  version: number;
+  baseType: BaseType;
+  clusterType: string;
+  itemLevel: number;
+  passiveCount: number;
+  targetRequirements: string;
+  finalStateConstraints: string;
+  otherTargetSemantics: string;
+  cleanBaseEvidence: string;
+  currencyRates: string;
+  harvestScope: string;
+  researchFallback: boolean;
+  mechanicsActionSet: string;
+  canonicalStateVersion: string;
+}
+
+function searchIdentityComponents(
+  input: OptimizeCraftInput,
+  harvestTags: readonly string[]
+): SearchIdentityComponents {
+  return {
+    version: 1,
+    baseType: input.baseType,
+    clusterType: input.clusterType,
+    itemLevel: input.itemLevel,
+    passiveCount: input.passiveCount,
+    targetRequirements: JSON.stringify({
+      requiredMods: input.target.requiredMods,
+      requiredRarity: input.target.requiredRarity,
+      finalRollRequirements: input.target.finalRollRequirements,
+    }),
+    finalStateConstraints: JSON.stringify(input.target.finalStateConstraints ?? null),
+    otherTargetSemantics: JSON.stringify({
+      outcomeBranches: input.target.outcomeBranches,
+      acceptableAnyOf: input.target.acceptableAnyOf,
+    }),
+    cleanBaseEvidence: JSON.stringify({
+      costChaos: input.prices?.cleanBaseCostChaos,
+      source: input.prices?.cleanBasePriceSource,
+      provenance: input.prices?.cleanBasePriceProvenance,
+    }),
+    currencyRates: JSON.stringify(sortedRecord({
+      ...DEFAULT_CURRENCY_RATES,
+      ...(input.prices?.currencyRates ?? {}),
+    })),
+    harvestScope: JSON.stringify([...harvestTags].sort()),
+    researchFallback: input.allowResearchFallbackPrices ?? true,
+    mechanicsActionSet: JSON.stringify({
+      version: OPTIMIZER_MECHANICS_ACTION_SET_VERSION,
+      actions: CRAFT_MECHANICS.map((mechanic) => mechanic.id).sort(),
+    }),
+    canonicalStateVersion: OPTIMIZER_CANONICAL_STATE_VERSION,
+  };
+}
+
+function hashIdentity(identity: string): string {
+  let hash = 0x811c9dc5;
+  for (let index = 0; index < identity.length; index++) {
+    hash ^= identity.charCodeAt(index);
+    hash = Math.imul(hash, 0x01000193);
+  }
+  return `phase2j-${(hash >>> 0).toString(16).padStart(8, '0')}`;
+}
+
+function sessionInvalidationReason(
+  previous: SearchIdentityComponents | undefined,
+  current: SearchIdentityComponents
+): string | undefined {
+  if (!previous) return undefined;
+  if (previous.baseType !== current.baseType) return 'BASE_TYPE_CHANGED';
+  if (previous.clusterType !== current.clusterType) return 'CLUSTER_TYPE_CHANGED';
+  if (previous.itemLevel !== current.itemLevel) return 'ITEM_LEVEL_CHANGED';
+  if (previous.passiveCount !== current.passiveCount) return 'PASSIVE_COUNT_CHANGED';
+  if (previous.targetRequirements !== current.targetRequirements) return 'TARGET_SEMANTICS_CHANGED';
+  if (previous.finalStateConstraints !== current.finalStateConstraints) return 'FINAL_STATE_CONSTRAINT_CHANGED';
+  if (previous.otherTargetSemantics !== current.otherTargetSemantics) return 'TARGET_BRANCH_SEMANTICS_CHANGED';
+  if (previous.cleanBaseEvidence !== current.cleanBaseEvidence) return 'CLEAN_BASE_EVIDENCE_CHANGED';
+  if (previous.currencyRates !== current.currencyRates) return 'CURRENCY_RATES_CHANGED';
+  if (previous.harvestScope !== current.harvestScope) return 'HARVEST_SCOPE_CHANGED';
+  if (previous.researchFallback !== current.researchFallback) return 'RESEARCH_FALLBACK_POLICY_CHANGED';
+  if (previous.mechanicsActionSet !== current.mechanicsActionSet) return 'MECHANICS_ACTION_SET_CHANGED';
+  if (previous.canonicalStateVersion !== current.canonicalStateVersion) return 'CANONICAL_STATE_VERSION_CHANGED';
+  return undefined;
+}
+
+/** Diagnostic boundary for exact-context Retry Deeper invalidation audits. */
+export function describeOptimizerSearchSessionIdentity(
+  input: OptimizeCraftInput,
+  harvestTags: readonly string[]
+): { exactIdentity: string; identityHash: string } {
+  const exactIdentity = JSON.stringify(searchIdentityComponents(input, harvestTags));
+  return { exactIdentity, identityHash: hashIdentity(exactIdentity) };
 }
 
 function acquisitionCacheIdentity(
@@ -766,10 +909,22 @@ function mechanicsScope(
   };
 }
 
+interface OptimizerSearchSessionRecord {
+  identity: string;
+  components: SearchIdentityComponents;
+  cleanDownstream: GenericSearchContinuationSession;
+  portfolio?: {
+    identity: string;
+    continuation: GenericSearchContinuationSession;
+  };
+}
+
 /** Serializable optimizer boundary intended for the thin Developer UI. */
 export class OptimizerService {
   private readonly repo: ClusterModRepository;
   private readonly acquisitionSynthesisCache = new Map<string, AcquisitionSynthesisResult>();
+  private readonly searchSessions = new Map<string, OptimizerSearchSessionRecord>();
+  private lastSearchIdentityComponents?: SearchIdentityComponents;
 
   constructor(repo: ClusterModRepository) {
     this.repo = repo;
@@ -811,6 +966,39 @@ export class OptimizerService {
       .map((start, candidateIndex) => ({ start, candidateIndex }))
       .filter((entry) => entry.start.fracturedRequirement !== undefined);
     const harvestTags = input.harvestTags ?? inferHarvestTags(input.target, pool);
+    const identityComponents = searchIdentityComponents(input, harvestTags);
+    const searchIdentity = JSON.stringify(identityComponents);
+    const searchIdentityHash = hashIdentity(searchIdentity);
+    const invalidationReason = sessionInvalidationReason(
+      this.lastSearchIdentityComponents,
+      identityComponents
+    );
+    let searchSessionRecord = this.searchSessions.get(searchIdentity);
+    if (!searchSessionRecord) {
+      searchSessionRecord = {
+        identity: searchIdentity,
+        components: identityComponents,
+        cleanDownstream: createGenericSearchContinuationSession(),
+      };
+      if (this.searchSessions.size >= 8) {
+        const oldest = this.searchSessions.keys().next().value;
+        if (oldest !== undefined) this.searchSessions.delete(oldest);
+      }
+      this.searchSessions.set(searchIdentity, searchSessionRecord);
+    } else {
+      this.searchSessions.delete(searchIdentity);
+      this.searchSessions.set(searchIdentity, searchSessionRecord);
+    }
+    this.lastSearchIdentityComponents = identityComponents;
+    let selectedSessionReuse: SearchSessionReuseSummary = {
+      status: invalidationReason === undefined ? 'COLD' : 'INVALIDATED',
+      identityHash: searchIdentityHash,
+      missReason: invalidationReason,
+      retainedStates: 0,
+      retainedTransitionDistributions: 0,
+      scope: 'CLEAN_DOWNSTREAM',
+    };
+    let fastCleanSessionReuse: SearchSessionReuseSummary | undefined;
     const enabledHarvestCrafts = harvestTags.length > 0
       ? createHarvestReforgeMechanics({ pool, priceBook }, harvestTags)
         .filter((mechanic) =>
@@ -832,7 +1020,37 @@ export class OptimizerService {
       maxWallTimeMs: number,
       persistentExpansion = true,
       skipAcquisitionFeasibility = false
-    ): GenericSearchResult => new GenericSearchEngine(
+    ): GenericSearchResult => {
+      const portfolioIdentity = JSON.stringify(portfolio.map((candidate) => ({
+        id: candidate.id,
+        physicalState: getPhysicalStateSignature(candidate.physicalState),
+        methods: candidate.methods.map((method) => ({
+          id: method.id,
+          acquisitionCostChaos: method.acquisitionCostChaos,
+          confidence: method.confidence,
+          provenance: method.provenance,
+        })),
+      })));
+      if (searchSessionRecord.portfolio?.identity !== portfolioIdentity) {
+        searchSessionRecord.portfolio = {
+          identity: portfolioIdentity,
+          continuation: createGenericSearchContinuationSession(),
+        };
+      }
+      const continuation = searchSessionRecord.portfolio.continuation;
+      const retainedStates = continuation.expansion.nodes.size;
+      selectedSessionReuse = {
+        status: retainedStates > 0
+          ? 'RESUMED'
+          : invalidationReason === undefined ? 'COLD' : 'INVALIDATED',
+        identityHash: searchIdentityHash,
+        missReason: retainedStates > 0 ? undefined : invalidationReason,
+        retainedStates,
+        retainedTransitionDistributions:
+          continuation.expansion.transitionDistributionsGeneratedTotal,
+        scope: 'ACQUISITION_PORTFOLIO',
+      };
+      return new GenericSearchEngine(
         { pool, priceBook },
         input.target,
         {
@@ -846,9 +1064,12 @@ export class OptimizerService {
           maxExpansionRounds: input.searchBudget?.maxExpansionRounds ?? 3,
           searchIntent: input.searchIntent ?? 'RECOMMEND',
           persistentExpansion,
+          continuationSession: continuation,
+          recommendationRefinementRounds: 1,
           skipAcquisitionFeasibility,
         }
       ).search(startState);
+    };
 
     const synthesisResults = new Map<number, AcquisitionSynthesisResult>();
     const synthesisSummaries = new Map<number, AcquisitionSynthesisSummary>();
@@ -914,14 +1135,31 @@ export class OptimizerService {
       !targetExplicitlyRequiresFracture &&
       allStructuralBoundsProven
     ) {
+      const requestedIntent = input.searchIntent ?? 'RECOMMEND';
+      const fastWallTimeCeiling = requestedIntent === 'RECOMMEND'
+        ? 22_000
+        : Math.floor(runtimeBudget.engineDeadlineMs * 0.8);
       const fastWallTimeMs = Math.max(
         1,
-        Math.min(22_000, Math.floor(runtimeBudget.engineDeadlineMs * 0.75))
+        Math.min(fastWallTimeCeiling, Math.floor(runtimeBudget.engineDeadlineMs * 0.8))
       );
       // Certify the physical clean craft directly so acquisition-menu competition cannot consume
       // the tranche before an executable incumbent exists. Restart/reacquisition is still a real
       // shared mechanic and pays the clean-base price; the first clean base is added exactly once
       // at the service boundary below.
+      const retainedCleanStates = searchSessionRecord.cleanDownstream.expansion.nodes.size;
+      selectedSessionReuse = {
+        status: retainedCleanStates > 0
+          ? 'RESUMED'
+          : invalidationReason === undefined ? 'COLD' : 'INVALIDATED',
+        identityHash: searchIdentityHash,
+        missReason: retainedCleanStates > 0 ? undefined : invalidationReason,
+        retainedStates: retainedCleanStates,
+        retainedTransitionDistributions:
+          searchSessionRecord.cleanDownstream.expansion.transitionDistributionsGeneratedTotal,
+        scope: 'CLEAN_DOWNSTREAM',
+      };
+      fastCleanSessionReuse = { ...selectedSessionReuse };
       fastCleanResult = new GenericSearchEngine(
         { pool, priceBook },
         input.target,
@@ -935,6 +1173,8 @@ export class OptimizerService {
           maxExpansionRounds: input.searchBudget?.maxExpansionRounds ?? 3,
           searchIntent: input.searchIntent ?? 'RECOMMEND',
           persistentExpansion: true,
+          continuationSession: searchSessionRecord.cleanDownstream,
+          recommendationRefinementRounds: 1,
           restartReacquire: {
             destination: cleanStart.state,
             acquisitionCostChaos: cleanEvidence.costChaos,
@@ -1088,13 +1328,32 @@ export class OptimizerService {
       stageElapsedMs = (fastCleanResult?.searchSummary.elapsedMs ?? 0) +
         (Date.now() - acquisitionStarted);
       portfolio = buildAcquisitionPortfolio(starts, input, synthesisResults);
-      result = runDownstreamSearch(portfolio, Math.max(1, overallDeadline - Date.now()));
+      const downstreamResult = runDownstreamSearch(
+        portfolio,
+        Math.max(1, overallDeadline - Date.now())
+      );
+      const downstreamCertified = downstreamResult.optimalityProof.selectedPolicyStatus ===
+        'FULLY RESOLVED / PROPER / ABSORBING / COST-RECONCILED';
+      if (!downstreamCertified && fastCleanResult && fastCleanRoute) {
+        // A certified physical clean-base policy is a valid executable upper bound even when
+        // acquisition-family competition consumes the remaining request budget. Preserve it as
+        // a proof-honest provisional recommendation and keep every unresolved self-fracture
+        // lower bound visible; never turn failure to rank all acquisitions into NO_ROUTE.
+        stageMode = 'CLEAN_EXECUTABLE_PROVISIONAL';
+        result = fastCleanResult;
+        if (fastCleanSessionReuse) selectedSessionReuse = fastCleanSessionReuse;
+      } else {
+        result = downstreamResult;
+      }
     }
+
+    const usesDirectCleanPolicy = stageMode === 'CLEAN_ROUTE_DOMINANCE' ||
+      stageMode === 'CLEAN_EXECUTABLE_PROVISIONAL';
 
     const acquisitionDecision = [...result.policyMap.values()].find(
       (decision) => decision.state.flags?.acquisitionMenu === true
     );
-    const rankedAcquisitionRoutes = stageMode === 'CLEAN_ROUTE_DOMINANCE' && fastCleanRoute
+    const rankedAcquisitionRoutes = usesDirectCleanPolicy && fastCleanRoute
       ? [fastCleanRoute]
       : (acquisitionDecision?.candidateQValues ?? [])
         .filter((candidate) => candidate.actionId.startsWith('acquire_'))
@@ -1106,7 +1365,7 @@ export class OptimizerService {
       result.optimalityProof.selectedPolicyStatus ===
       'FULLY RESOLVED / PROPER / ABSORBING / COST-RECONCILED';
     const recommended = selectedPolicyCertified
-      ? stageMode === 'CLEAN_ROUTE_DOMINANCE'
+      ? usesDirectCleanPolicy
         ? fastCleanRoute ?? null
         : rankedAcquisitionRoutes.find(
           (route) =>
@@ -1138,7 +1397,8 @@ export class OptimizerService {
         }
         if (
           synthesis.status === 'RESOLVED' &&
-          synthesis.proof?.unresolvedCandidatesCouldBeatIncumbent !== true
+          synthesis.proof?.unresolvedCandidatesCouldBeatIncumbent !== true &&
+          !usesDirectCleanPolicy
         ) {
           return [];
         }
@@ -1206,6 +1466,97 @@ export class OptimizerService {
       result.optimalityProof.unresolvedCandidatesCouldBeatIncumbent ||
       synthesisFrontiersCouldBeat;
 
+    const directCleanCostOffset = usesDirectCleanPolicy ? cleanEvidence.costChaos : 0;
+    const policyIncumbentHistory = result.searchSummary.incumbentHistory.map((entry) => ({
+      ...entry,
+      upperBoundChaos: entry.upperBoundChaos + directCleanCostOffset,
+    }));
+    const firstPolicyUpperBound = policyIncumbentHistory[0]?.upperBoundChaos;
+    const finalPolicyUpperBound = recommended?.expectedTotalCostChaos ??
+      policyIncumbentHistory.at(-1)?.upperBoundChaos;
+    let lastMeaningfulImprovementRound: number | undefined;
+    for (let index = 1; index < policyIncumbentHistory.length; index++) {
+      const before = policyIncumbentHistory[index - 1].upperBoundChaos;
+      const after = policyIncumbentHistory[index].upperBoundChaos;
+      if (before - after > Math.max(0.01, before * 0.001)) {
+        lastMeaningfulImprovementRound = policyIncumbentHistory[index].round;
+      }
+    }
+    const finalHistoryDrop = policyIncumbentHistory.length < 2
+      ? 0
+      : policyIncumbentHistory.at(-2)!.upperBoundChaos -
+        policyIncumbentHistory.at(-1)!.upperBoundChaos;
+    const refinementStoppedAtBudget =
+      result.searchSummary.refinementStopReason === 'STATE_BUDGET' ||
+      result.searchSummary.refinementStopReason === 'ROUND_BUDGET' ||
+      result.searchSummary.refinementStopReason === 'WALL_TIME';
+    const budgetEndedWhileImproving = refinementStoppedAtBudget &&
+      finalHistoryDrop > Math.max(
+        0.01,
+        (policyIncumbentHistory.at(-2)?.upperBoundChaos ?? 0) * 0.001
+      );
+    const policyStartDecision = result.policyMap.get(
+      getCanonicalStateKey(result.startingState, input.target)
+    );
+    const selectedStartLowerBound = policyStartDecision?.candidateQValues.reduce(
+      (minimum, candidate) => Math.min(minimum, candidate.lowerBoundChaos),
+      Infinity
+    );
+    const unresolvedPolicyLowerBound = policyStartDecision?.candidateQValues
+      .filter((candidate) =>
+        candidate.status === 'UNRESOLVED' || candidate.couldBeatResolvedIncumbent
+      )
+      .reduce((minimum, candidate) => Math.min(minimum, candidate.lowerBoundChaos), Infinity);
+    const normalizedSelectedStartLowerBound = selectedStartLowerBound !== undefined &&
+      Number.isFinite(selectedStartLowerBound)
+      ? selectedStartLowerBound + directCleanCostOffset
+      : undefined;
+    const normalizedUnresolvedPolicyLowerBound = unresolvedPolicyLowerBound !== undefined &&
+      Number.isFinite(unresolvedPolicyLowerBound)
+      ? unresolvedPolicyLowerBound + directCleanCostOffset
+      : undefined;
+    const downstreamPotentialGap = finalPolicyUpperBound !== undefined &&
+      normalizedUnresolvedPolicyLowerBound !== undefined
+      ? Math.max(0, finalPolicyUpperBound - normalizedUnresolvedPolicyLowerBound)
+      : undefined;
+    const policyRefinementStatus: PolicyRefinementSummary['status'] = recommended === null
+      ? 'NO_EXECUTABLE_POLICY'
+      : result.optimalityProof.modeledActionOptimalityProven
+        ? 'MODELED_OPTIMAL'
+        : budgetEndedWhileImproving
+          ? 'STILL_IMPROVING_AT_BUDGET'
+          : 'CURRENT_BEST_UNPROVEN';
+    const policyRefinement: PolicyRefinementSummary = {
+      status: policyRefinementStatus,
+      firstCertifiedUpperBoundChaos: firstPolicyUpperBound,
+      finalUpperBoundChaos: finalPolicyUpperBound,
+      improvementChaos: firstPolicyUpperBound === undefined || finalPolicyUpperBound === undefined
+        ? undefined
+        : Math.max(0, firstPolicyUpperBound - finalPolicyUpperBound),
+      improvementFraction: firstPolicyUpperBound === undefined ||
+          finalPolicyUpperBound === undefined || firstPolicyUpperBound <= 0
+        ? undefined
+        : Math.max(0, firstPolicyUpperBound - finalPolicyUpperBound) / firstPolicyUpperBound,
+      selectedStartLowerBoundChaos: normalizedSelectedStartLowerBound,
+      unresolvedCompetitiveLowerBoundChaos: normalizedUnresolvedPolicyLowerBound,
+      potentialGapChaos: downstreamPotentialGap,
+      potentialGapFraction: downstreamPotentialGap === undefined || finalPolicyUpperBound === undefined ||
+          finalPolicyUpperBound <= 0
+        ? undefined
+        : downstreamPotentialGap / finalPolicyUpperBound,
+      incumbentHistory: policyIncumbentHistory,
+      lastMeaningfulImprovementRound,
+      budgetEndedWhileImproving,
+      stopReason: result.searchSummary.refinementStopReason,
+      explanation: policyRefinementStatus === 'MODELED_OPTIMAL'
+        ? 'The final crafting policy is optimal over every modeled action in the completed graph.'
+        : policyRefinementStatus === 'NO_EXECUTABLE_POLICY'
+          ? 'No executable downstream crafting policy was certified within this search budget.'
+          : policyRefinementStatus === 'STILL_IMPROVING_AT_BUDGET'
+            ? 'The executable downstream policy improved materially in the final completed tranche; modeled optimality is not proven.'
+            : 'This is the current best executable downstream policy; modeled optimality is not proven.',
+    };
+
     const policyRules: PolicyRule[] = result.onPolicyRules.map((rule) => ({
       stateKey: rule.stateKey,
       state: describePolicyState(rule.state),
@@ -1216,7 +1567,7 @@ export class OptimizerService {
       candidates: rule.candidateQValues.map(serializeCandidate),
     }));
     const policyExplanation = buildPolicyExplanation(result.onPolicyRules, input.target);
-    if (stageMode === 'CLEAN_ROUTE_DOMINANCE' && fastCleanRoute) {
+    if (usesDirectCleanPolicy && fastCleanRoute) {
       policyExplanation.unshift({
         condition: 'Start: choose an acquisition route',
         actionId: fastCleanRoute.actionId,
@@ -1323,12 +1674,12 @@ export class OptimizerService {
       alternatives: acquisitionRoutes.filter((route) => route.actionId !== recommended?.actionId),
       expectedCurrencies: Object.fromEntries(
         [
-          ...(stageMode === 'CLEAN_ROUTE_DOMINANCE' ? [['clean_base', 1] as const] : []),
+          ...(usesDirectCleanPolicy ? [['clean_base', 1] as const] : []),
           ...Object.entries(result.expectedCurrencies),
         ].map(([currency, amount]) => [currency, finiteOrNull(amount)])
       ),
       expectedActionUsage: [
-        ...(stageMode === 'CLEAN_ROUTE_DOMINANCE' ? [{
+        ...(usesDirectCleanPolicy ? [{
           actionId: fastCleanRoute!.actionId,
           actionName: fastCleanRoute!.name,
           expectedCount: 1,
@@ -1452,6 +1803,7 @@ export class OptimizerService {
         unresolvedCompetitiveCandidates: overallUnresolvedCompetitorCount,
         unresolvedCompetitorsMayBeCheaper: overallUnresolvedCouldBeat,
       },
+      policyRefinement,
       search: {
         ...result.searchSummary,
         maxWallTimeMs: runtimeBudget.requestedWallTimeMs,
@@ -1461,6 +1813,7 @@ export class OptimizerService {
         shutdownReserveMs: runtimeBudget.shutdownReserveMs,
         hostGuardTriggered: false,
         stageTimingMs: { ...result.stageTiming, serializationMs: 0 },
+        sessionReuse: selectedSessionReuse,
         totalElapsedMs: Date.now() - optimizationStarted,
         harvestActionScope: {
           mode: harvestTags.length === 0

@@ -8,12 +8,12 @@ DIAGNOSTIC A — STANDALONE SINGLE-TARGET EXECUTABLE FRACTURE
   optimistic lower bound: 369.000000c
   expected action usage: fracturing_orb=4.000000 (1436.000000c) | restart_reacquire=3.000000 (30.000000c) | alteration_orb=204.666667 (22.513333c) | exalted_orb=4.000000 (4.800000c) | augmentation_orb=53.166667 (1.595000c) | regal_orb=4.000000 (0.800000c) | scouring_orb=1.000000 (0.500000c) | transmutation_orb=4.000000 (0.120000c)
   expected restarts / Fracturing Orbs: 3.000000000 / 4.000000000
-  proper / terminal absorption: YES / 99.999999999%
+  proper / terminal absorption: YES / 100.000000000%
   Bellman / occupancy: CONVERGED (1016) / CONVERGED (7)
   EV reconciliation: 0.000000c (PASS)
-  states / runtime: 1667 / 1295ms
-  expansion mode / cumulative work / repeated / rounds: PERSISTENT_EXTENDED / 1667 / 0 / 1
-  state identity / seed / new-by-round / retained-by-round: FRACTURE_PREPARATION_BISIMULATION_V1 / 1 / 1666 / 1
+  states / runtime: 3334 / 3777ms
+  expansion mode / cumulative work / repeated / rounds: PERSISTENT_EXTENDED / 3334 / 0 / 2
+  state identity / seed / new-by-round / retained-by-round: FRACTURE_PREPARATION_BISIMULATION_V1 / 1 / 1666,1667 / 1,1667
   proof / global optimality: FULLY RESOLVED / PROPER / ABSORBING / COST-RECONCILED / NOT YET PROVEN
   unresolved candidates could beat incumbent: YES
 
@@ -27,21 +27,21 @@ DIAGNOSTIC B — WRONG-FRACTURE RECOVERY
 
 DIAGNOSTIC C — MULTIPLE FRACTURE-TARGET PORTFOLIO
   Forced-Rare T1 Intelligence + T1 Attributes:
-  recommendation: PROVISIONAL_RESOLVED
-  winner: Restart/Reacquire: Start clean base: Clean Base
-  expected total: 2960.929055c
-  acquisition safe: NO
-  proper / absorption / reconciled: YES / 100.000000000% / YES
-  runtime: 20925ms; staged engine=20913ms; downstream=15089ms
-  downstream states / cumulative work / repeated: 5000 / 9998 / 0
+  recommendation: BEST_RESOLVED_ACQUISITION_SAFE
+  winner: Start clean base: Clean Base
+  expected total: 278.535387c
+  acquisition safe: YES
+  proper / absorption / reconciled: YES / 99.999999765% / YES
+  runtime: 7143ms; staged engine=7112ms; downstream=7089ms
+  downstream states / cumulative work / repeated: 5000 / 5000 / 0
   downstream expansion mode / rounds: PERSISTENT_EXTENDED / 3
-  synthesis stage: EXECUTABLE_SYNTHESIS; candidates=2; attempted=2; certified=2; cache hits=0
-  synthesis shared budget: states=10002; wall=50000ms; rounds/candidate=3
-  fracture of the Prodigy (T1): status=RESOLVED; U=1482.328333c; L=363.000000c; orbs=4.000000; restarts=3.000000; proper=true; global=NOT YET PROVEN; identity=FRACTURE_PREPARATION_BISIMULATION_V1; ranked executable method=YES
-  fracture of the Meteor (T1): status=RESOLVED; U=1482.328333c; L=363.000000c; orbs=4.000000; restarts=3.000000; proper=true; global=NOT YET PROVEN; identity=FRACTURE_PREPARATION_BISIMULATION_V1; ranked executable method=YES
+  synthesis stage: CLEAN_ROUTE_DOMINANCE; candidates=2; attempted=0; certified=0; cache hits=0
+  synthesis shared budget: states=0; wall=0ms; rounds/candidate=3
+  fracture of the Prodigy (T1): status=SKIPPED_DOMINATED; U=UNAVAILABLE; L=363.000000c; orbs=N/A; restarts=N/A; proper=N/A; global=N/A; identity=N/A; ranked executable method=NO
+  fracture of the Meteor (T1): status=SKIPPED_DOMINATED; U=UNAVAILABLE; L=363.000000c; orbs=N/A; restarts=N/A; proper=N/A; global=N/A; identity=N/A; ranked executable method=NO
   fractured market methods present: NO
   all relevant physical families discovered: YES
-  both fracture families certified and sent to downstream ranking: YES
+  both fracture families certified and sent to downstream ranking: NO
 
 DIAGNOSTIC D — NO-MARKET-QUOTE PRODUCT GATE / EXACT CACHE
   Explicit fractured T1 Intelligence target:
@@ -49,8 +49,8 @@ DIAGNOSTIC D — NO-MARKET-QUOTE PRODUCT GATE / EXACT CACHE
   winner: Restart/Reacquire: Executable self-fracture: of the Prodigy (T1)
   expected total: 1482.328333c
   acquisition safe: NO
-  proper / absorption / reconciled: YES / 99.999999999% / YES
-  runtime: 3337ms; staged engine=3337ms; downstream=1658ms
+  proper / absorption / reconciled: YES / 100.000000000% / YES
+  runtime: 6544ms; staged engine=6543ms; downstream=1669ms
   downstream states / cumulative work / repeated: 5000 / 7501 / 0
   downstream expansion mode / rounds: PERSISTENT_EXTENDED / 3
   synthesis stage: EXECUTABLE_SYNTHESIS; candidates=1; attempted=1; certified=1; cache hits=0
@@ -59,7 +59,7 @@ DIAGNOSTIC D — NO-MARKET-QUOTE PRODUCT GATE / EXACT CACHE
   fractured market methods present: NO
   no fractured market prices supplied: YES
   fractured executable family exists: YES
-  exact repeat cache hits / runtime: 1 / 2023ms
+  exact repeat cache hits / runtime: 1 / 1225ms
   cache identity: Exact JSON identity: clean physical signature + fractured requirement + clean-base cost/confidence/provenance + complete active currency rates + enabled synthesis actions + acquisition state-identity version + Harvest scope + fallback policy + search intent + exact per-candidate budget.
 
 DIAGNOSTIC E — EXTERNAL FRACTURING ORB PARITY
@@ -83,9 +83,9 @@ R1–R4 NORMAL OPTIMIZER REGRESSIONS
   expected total: 8.816617c
   acquisition safe: YES
   proper / absorption / reconciled: YES / 100.000000000% / YES
-  runtime: 431ms; staged engine=427ms; downstream=417ms
+  runtime: 930ms; staged engine=926ms; downstream=915ms
   downstream states / cumulative work / repeated: 396 / 396 / 0
-  downstream expansion mode / rounds: PERSISTENT_EXTENDED / 1
+  downstream expansion mode / rounds: PERSISTENT_EXTENDED / 2
   synthesis stage: CLEAN_ROUTE_DOMINANCE; candidates=1; attempted=0; certified=0; cache hits=0
   synthesis shared budget: states=0; wall=0ms; rounds/candidate=3
   fracture Glowing (T1): status=SKIPPED_DOMINATED; U=UNAVAILABLE; L=363.000000c; orbs=N/A; restarts=N/A; proper=N/A; global=N/A; identity=N/A; ranked executable method=NO
@@ -96,9 +96,9 @@ R1–R4 NORMAL OPTIMIZER REGRESSIONS
   expected total: 243.759278c
   acquisition safe: YES
   proper / absorption / reconciled: YES / 100.000000000% / YES
-  runtime: 722ms; staged engine=718ms; downstream=714ms
+  runtime: 1661ms; staged engine=1657ms; downstream=1652ms
   downstream states / cumulative work / repeated: 418 / 418 / 0
-  downstream expansion mode / rounds: PERSISTENT_EXTENDED / 1
+  downstream expansion mode / rounds: PERSISTENT_EXTENDED / 2
   synthesis stage: CLEAN_ROUTE_DOMINANCE; candidates=2; attempted=0; certified=0; cache hits=0
   synthesis shared budget: states=0; wall=0ms; rounds/candidate=3
   fracture Glowing (T1): status=SKIPPED_DOMINATED; U=UNAVAILABLE; L=363.000000c; orbs=N/A; restarts=N/A; proper=N/A; global=N/A; identity=N/A; ranked executable method=NO
@@ -110,9 +110,9 @@ R1–R4 NORMAL OPTIMIZER REGRESSIONS
   expected total: 243.759278c
   acquisition safe: YES
   proper / absorption / reconciled: YES / 100.000000000% / YES
-  runtime: 911ms; staged engine=907ms; downstream=903ms
+  runtime: 1705ms; staged engine=1701ms; downstream=1696ms
   downstream states / cumulative work / repeated: 418 / 418 / 0
-  downstream expansion mode / rounds: PERSISTENT_EXTENDED / 1
+  downstream expansion mode / rounds: PERSISTENT_EXTENDED / 2
   synthesis stage: CLEAN_ROUTE_DOMINANCE; candidates=2; attempted=0; certified=0; cache hits=0
   synthesis shared budget: states=0; wall=0ms; rounds/candidate=3
   fracture Glowing (T1): status=SKIPPED_DOMINATED; U=UNAVAILABLE; L=363.000000c; orbs=N/A; restarts=N/A; proper=N/A; global=N/A; identity=N/A; ranked executable method=NO
@@ -121,18 +121,18 @@ R1–R4 NORMAL OPTIMIZER REGRESSIONS
   R4 forced-Rare T1 ES + T1 Int:
   recommendation: BEST_RESOLVED_ACQUISITION_SAFE
   winner: Start clean base: Clean Base
-  expected total: 226.970482c
+  expected total: 160.301495c
   acquisition safe: YES
-  proper / absorption / reconciled: YES / 100.000000000% / YES
-  runtime: 4064ms; staged engine=4055ms; downstream=4047ms
-  downstream states / cumulative work / repeated: 3334 / 3334 / 0
-  downstream expansion mode / rounds: PERSISTENT_EXTENDED / 2
+  proper / absorption / reconciled: YES / 99.999999999% / YES
+  runtime: 9397ms; staged engine=9376ms; downstream=9359ms
+  downstream states / cumulative work / repeated: 5000 / 5000 / 0
+  downstream expansion mode / rounds: PERSISTENT_EXTENDED / 3
   synthesis stage: CLEAN_ROUTE_DOMINANCE; candidates=2; attempted=0; certified=0; cache hits=0
   synthesis shared budget: states=0; wall=0ms; rounds/candidate=3
   fracture Glowing (T1): status=SKIPPED_DOMINATED; U=UNAVAILABLE; L=363.000000c; orbs=N/A; restarts=N/A; proper=N/A; global=N/A; identity=N/A; ranked executable method=NO
   fracture of the Prodigy (T1): status=SKIPPED_DOMINATED; U=UNAVAILABLE; L=363.000000c; orbs=N/A; restarts=N/A; proper=N/A; global=N/A; identity=N/A; ranked executable method=NO
   fractured market methods present: NO
-  R4 clean-family U / L: 226.970482c / 4.231050c
+  R4 clean-family U / L: 160.301495c / 4.286541c
 
 R5 — HARVEST PARITY
   harvest_defences_t1_int_es_raw_presence: external=0.2512458%; analytical=0.2755331%; MC=0.2753000%; status=CLOSE / APPROXIMATE; semantics=Raw simultaneous presence of T1 Intelligence + T1 Maximum Energy Shield; extra affixes allowed

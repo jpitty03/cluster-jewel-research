@@ -67,8 +67,11 @@ export class SolverCraftActionAdapter {
     return this.mechanic.getCost(this.context);
   }
 
-  getTransitions(state: ItemState, deadlineMs?: number): TransitionDistribution | undefined {
-    if (!this.mechanic.getTransitions) return undefined;
+  getTransitionsWithCacheInfo(
+    state: ItemState,
+    deadlineMs?: number
+  ): { distribution?: TransitionDistribution; reused: boolean } {
+    if (!this.mechanic.getTransitions) return { reused: false };
     const control = { deadlineMs };
     if (this.mechanic.id === 'alteration_orb') {
       const resetState = cloneItemState(state);
@@ -80,10 +83,10 @@ export class SolverCraftActionAdapter {
       );
       const cacheKey = getCanonicalStateKey(resetState, this.target);
       const cached = this.transitionCache.get(cacheKey);
-      if (cached) return cached;
+      if (cached) return { distribution: cached, reused: true };
       const distribution = this.mechanic.getTransitions(state, this.target, this.context, control);
       this.transitionCache.set(cacheKey, distribution);
-      return distribution;
+      return { distribution, reused: false };
     }
     if (this.mechanic.actionType === 'HARVEST_REFORGE') {
       // A Harvest reforge removes every non-fractured explicit before rolling.
@@ -98,12 +101,19 @@ export class SolverCraftActionAdapter {
         .map((mod) => mod.modId);
       const cacheKey = getCanonicalStateKey(resetState, this.target);
       const cached = this.transitionCache.get(cacheKey);
-      if (cached) return cached;
+      if (cached) return { distribution: cached, reused: true };
       const distribution = this.mechanic.getTransitions(state, this.target, this.context, control);
       this.transitionCache.set(cacheKey, distribution);
-      return distribution;
+      return { distribution, reused: false };
     }
-    return this.mechanic.getTransitions(state, this.target, this.context, control);
+    return {
+      distribution: this.mechanic.getTransitions(state, this.target, this.context, control),
+      reused: false,
+    };
+  }
+
+  getTransitions(state: ItemState, deadlineMs?: number): TransitionDistribution | undefined {
+    return this.getTransitionsWithCacheInfo(state, deadlineMs).distribution;
   }
 
   sampleTransition(state: ItemState, rng: RandomSource): ItemState {
@@ -155,6 +165,9 @@ export interface ActionStateAttribution {
   newGlobalStatesFirstDiscovered: number;
   onPolicyStatesSelectingAction: number;
   unresolvedOutgoingEdges: number;
+  transitionDistributionsGenerated: number;
+  transitionDistributionsReused: number;
+  transitionGenerationMs: number;
 }
 
 export interface GraphBuildResult {
@@ -168,6 +181,8 @@ export interface GraphBuildResult {
   terminalStatesFound: number;
   stateCountsByRarity: Record<string, number>;
   stateCountsByAffixes: Record<string, number>;
+  targetProgressCounts: Record<string, number>;
+  frontierTargetProgressCounts: Record<string, number>;
   hasCycles: boolean;
   actionAttribution: Record<string, ActionStateAttribution>;
   /** Distinct states expanded by this round only. Equals `nodes.size` for a fresh graph. */
@@ -176,6 +191,7 @@ export interface GraphBuildResult {
   extendedPersistentGraph: boolean;
   /** Actual mechanic transition distributions generated during this graph-build call. */
   transitionDistributionsGeneratedThisRound: number;
+  transitionDistributionsReusedThisRound: number;
   /** Retained nodes revisited only to materialize an edge deferred by an earlier round. */
   previouslyExpandedNodesRevisitedThisRound: number;
   timing: {
@@ -351,6 +367,8 @@ export interface SearchSummary {
   /** Actual mechanic transition distributions generated across seed, probes, and main rounds. */
   transitionDistributionsGenerated: number;
   transitionDistributionsGeneratedByRound: number[];
+  transitionDistributionsReused: number;
+  transitionDistributionsReusedByRound: number[];
   /** Retained nodes revisited to materialize deferred edges; they are not full state re-expansions. */
   previouslyExpandedNodesRevisited: number;
   previouslyExpandedNodesRevisitedByRound: number[];
@@ -364,6 +382,26 @@ export interface SearchSummary {
   minimumFeasibleRarity: MinimumFeasibleRarityResult;
   acquisitionFeasibility: AcquisitionFeasibilitySummary;
   deepenProgress: DeepenProgressSummary;
+  incumbentHistory: SearchIncumbentHistoryEntry[];
+  refinementStopReason:
+    | 'MODELED_OPTIMAL'
+    | 'STABLE'
+    | 'STATE_BUDGET'
+    | 'ROUND_BUDGET'
+    | 'WALL_TIME'
+    | 'FIRST_USEFUL_RETURNED'
+    | 'NO_EXECUTABLE_POLICY';
+  resumedFromPriorRequest: boolean;
+  retainedStatesFromPriorRequest: number;
+  retainedTransitionDistributionsFromPriorRequest: number;
+}
+
+export interface SearchIncumbentHistoryEntry {
+  round: number;
+  upperBoundChaos: number;
+  statesExpanded: number;
+  elapsedMs: number;
+  phase: 'FIRST_CERTIFIED' | 'REFINEMENT' | 'DEEPEN' | 'PROVE';
 }
 
 export interface SearchProgressSnapshot {
@@ -456,6 +494,10 @@ export interface GenericSearchOptions {
    * before/after comparison.
    */
   persistentExpansion?: boolean;
+  /** Exact-context continuation owned by the caller; never serialize this graph to the UI. */
+  continuationSession?: GenericSearchContinuationSession;
+  /** Bounded number of completed rounds after the first useful RECOMMEND policy. */
+  recommendationRefinementRounds?: number;
   /** Internal feasibility control; prevents a physical-state probe from abandoning into another acquisition. */
   excludeAcquisitionActions?: boolean;
   /**
@@ -477,6 +519,10 @@ class StateExpansionQueue {
 
   get length(): number {
     return this.heap.length;
+  }
+
+  snapshotStates(): ItemState[] {
+    return this.heap.map((entry) => entry.state);
   }
 
   push(state: ItemState, priority: number): void {
@@ -582,6 +628,7 @@ export function createPersistentExpansionSession(): PersistentExpansionSession {
     statesExpandedTotal: 0,
     transitionGenerationMs: 0,
     transitionDistributionsGeneratedTotal: 0,
+    transitionDistributionsReusedTotal: 0,
     previouslyExpandedNodesRevisitedTotal: 0,
   };
 }
@@ -606,8 +653,29 @@ export interface PersistentExpansionSession {
   transitionGenerationMs: number;
   /** Mechanic distributions generated across completed graph builds in this session. */
   transitionDistributionsGeneratedTotal: number;
+  transitionDistributionsReusedTotal: number;
   /** Retained nodes revisited only to materialize deferred edges across this session. */
   previouslyExpandedNodesRevisitedTotal: number;
+}
+
+/** Caller-owned exact-context state for continuation across optimize requests. */
+export interface GenericSearchContinuationSession {
+  expansion: PersistentExpansionSession;
+  prioritizedStateKeys: Set<string>;
+  resolutionFrontierKeys: Set<string>;
+  incumbentHistory: SearchIncumbentHistoryEntry[];
+  completedRounds: number;
+  lastResult?: GenericSearchResult;
+}
+
+export function createGenericSearchContinuationSession(): GenericSearchContinuationSession {
+  return {
+    expansion: createPersistentExpansionSession(),
+    prioritizedStateKeys: new Set(),
+    resolutionFrontierKeys: new Set(),
+    incumbentHistory: [],
+    completedRounds: 0,
+  };
 }
 
 function directedGraphHasCycle(adjacency: Map<string, string[]>, deadlineMs?: number): boolean {
@@ -1106,6 +1174,7 @@ export class GenericSearchEngine {
     >();
     let transitionGenerationInterrupted = false;
     let transitionDistributionsGeneratedThisRound = 0;
+    let transitionDistributionsReusedThisRound = 0;
     const previouslyExpandedNodesRevisited = new Set<string>();
 
     for (const adapter of this.adapters) {
@@ -1118,6 +1187,9 @@ export class GenericSearchEngine {
           newGlobalStatesFirstDiscovered: 0,
           onPolicyStatesSelectingAction: 0,
           unresolvedOutgoingEdges: 0,
+          transitionDistributionsGenerated: 0,
+          transitionDistributionsReused: 0,
+          transitionGenerationMs: 0,
         };
       } else {
         // Discovery counters stay cumulative across a persistent session because they
@@ -1163,8 +1235,15 @@ export class GenericSearchEngine {
       let dist: TransitionDistribution | undefined;
       const transitionStarted = Date.now();
       try {
-        dist = adapter.getTransitions(curr, deadlineMs);
-        transitionDistributionsGeneratedThisRound++;
+        const transition = adapter.getTransitionsWithCacheInfo(curr, deadlineMs);
+        dist = transition.distribution;
+        if (transition.reused) {
+          transitionDistributionsReusedThisRound++;
+          actionAttribution[adapter.id].transitionDistributionsReused++;
+        } else {
+          transitionDistributionsGeneratedThisRound++;
+          actionAttribution[adapter.id].transitionDistributionsGenerated++;
+        }
       } catch (error) {
         if (error instanceof TransitionGenerationDeadlineExceeded) {
           transitionGenerationInterrupted = true;
@@ -1172,7 +1251,9 @@ export class GenericSearchEngine {
         }
         throw error;
       } finally {
-        transitionGenerationMs += Date.now() - transitionStarted;
+        const elapsed = Date.now() - transitionStarted;
+        transitionGenerationMs += elapsed;
+        actionAttribution[adapter.id].transitionGenerationMs += elapsed;
       }
       if (!dist || dist.outcomes.length === 0) return true;
       const cachedTransitions = aggregatedDistributionCache.get(dist);
@@ -1371,6 +1452,26 @@ export class GenericSearchEngine {
     const transitionProbabilityMassToUnexpandedStates =
       totalTransitionsCount > 0 ? totalUnexpandedProbMass / totalTransitionsCount : 0;
 
+    const targetRequirements = getAllTargetModRequirements(this.target);
+    const targetProgressKey = (state: ItemState): string => {
+      const affixes = [...state.prefixes, ...state.suffixes];
+      const matched = targetRequirements.filter((requirement) =>
+        affixes.some((mod) => matchesModRequirement(mod, requirement))
+      ).length;
+      return `${matched}/${targetRequirements.length}`;
+    };
+    const targetProgressCounts: Record<string, number> = {};
+    for (const node of nodes.values()) {
+      const progress = targetProgressKey(node.state);
+      targetProgressCounts[progress] = (targetProgressCounts[progress] ?? 0) + 1;
+    }
+    const frontierTargetProgressCounts: Record<string, number> = {};
+    for (const state of queue.snapshotStates()) {
+      const progress = targetProgressKey(state);
+      frontierTargetProgressCounts[progress] =
+        (frontierTargetProgressCounts[progress] ?? 0) + 1;
+    }
+
     for (const [actionId, keys] of actionLocalSuccessorKeys) {
       if (actionAttribution[actionId]) {
         actionAttribution[actionId].actionLocalUniqueSuccessorKeysProduced = keys.size;
@@ -1397,6 +1498,7 @@ export class GenericSearchEngine {
       session.statesExpandedTotal += statesExpandedThisRound;
       session.transitionGenerationMs += transitionGenerationMs;
       session.transitionDistributionsGeneratedTotal += transitionDistributionsGeneratedThisRound;
+      session.transitionDistributionsReusedTotal += transitionDistributionsReusedThisRound;
       session.previouslyExpandedNodesRevisitedTotal += previouslyExpandedNodesRevisited.size;
     }
 
@@ -1411,11 +1513,14 @@ export class GenericSearchEngine {
       terminalStatesFound,
       stateCountsByRarity,
       stateCountsByAffixes,
+      targetProgressCounts,
+      frontierTargetProgressCounts,
       hasCycles: directedGraphHasCycle(adjacency, deadlineMs),
       actionAttribution,
       statesExpandedThisRound,
       extendedPersistentGraph: session !== undefined && statesExpandedBefore > 0,
       transitionDistributionsGeneratedThisRound,
+      transitionDistributionsReusedThisRound,
       previouslyExpandedNodesRevisitedThisRound: previouslyExpandedNodesRevisited.size,
       timing: {
         transitionGenerationMs,
@@ -1439,17 +1544,65 @@ export class GenericSearchEngine {
     const deadlineMs = effectiveOptions.maxWallTimeMs === undefined
       ? undefined
       : startTime + Math.max(1, effectiveOptions.maxWallTimeMs);
-    const statesPerRound = Math.max(1, Math.ceil(maxStates / maxExpansionRounds));
+    const persistentExpansion = effectiveOptions.persistentExpansion !== false;
+    const continuation = persistentExpansion ? effectiveOptions.continuationSession : undefined;
+    const expansionSession = persistentExpansion
+      ? continuation?.expansion ?? createPersistentExpansionSession()
+      : undefined;
+    const retainedStatesFromPriorRequest = expansionSession?.nodes.size ?? 0;
+    const retainedTransitionDistributionsFromPriorRequest =
+      expansionSession?.transitionDistributionsGeneratedTotal ?? 0;
+    const resumedFromPriorRequest = retainedStatesFromPriorRequest > 0;
+    const priorCompletedRounds = continuation?.completedRounds ?? 0;
+    const availableRounds = resumedFromPriorRequest
+      ? Math.max(1, maxExpansionRounds - priorCompletedRounds)
+      : maxExpansionRounds;
+    const buildRoundStateBudgets = (): number[] => {
+      if (resumedFromPriorRequest) {
+        return Array.from({ length: availableRounds }, (_, index) =>
+          Math.min(
+            maxStates,
+            retainedStatesFromPriorRequest + Math.ceil(
+              (maxStates - retainedStatesFromPriorRequest) * (index + 1) / availableRounds
+            )
+          )
+        );
+      }
+      // Preserve the normal 5k/3 recommendation graph as the exact prefix of a larger
+      // cold search. A resumed DEEPEN and a cold DEEPEN therefore reach the same final
+      // graph under the same total state/round budget instead of diverging solely because
+      // their tranche boundaries were computed from different maxima.
+      const foundationStates = Math.min(maxStates, 5_000);
+      const foundationRounds = maxStates > foundationStates && maxExpansionRounds > 3
+        ? 3
+        : maxExpansionRounds;
+      const budgets = Array.from({ length: foundationRounds }, (_, index) =>
+        Math.min(
+          foundationStates,
+          Math.ceil(foundationStates * (index + 1) / foundationRounds)
+        )
+      );
+      const remainingRounds = maxExpansionRounds - foundationRounds;
+      for (let index = 0; index < remainingRounds; index++) {
+        budgets.push(Math.min(
+          maxStates,
+          foundationStates + Math.ceil(
+            (maxStates - foundationStates) * (index + 1) / remainingRounds
+          )
+        ));
+      }
+      return budgets;
+    };
+    const roundStateBudgets = buildRoundStateBudgets();
     const stagedRecommendationRounds = startState.flags?.acquisitionMenu === true
       ? Math.min(2, Math.max(1, maxExpansionRounds - 1))
       : 1;
-    let roundStateBudget = Math.min(maxStates, statesPerRound);
-    let prioritizedStateKeys = new Set<string>();
-    const persistentExpansion = effectiveOptions.persistentExpansion !== false;
-    const expansionSession = persistentExpansion ? createPersistentExpansionSession() : undefined;
-    let resolutionFrontierKeys = new Set<string>();
+    let roundStateBudget = roundStateBudgets[0] ?? maxStates;
+    let prioritizedStateKeys = new Set(continuation?.prioritizedStateKeys ?? []);
+    let resolutionFrontierKeys = new Set(continuation?.resolutionFrontierKeys ?? []);
     let cumulativeExpansionWork = 0;
     let transitionDistributionsGenerated = 0;
+    let transitionDistributionsReused = 0;
     let previouslyExpandedNodesRevisited = 0;
     let interruptedStatesExpanded = 0;
     let roundsExecuted = 0;
@@ -1474,16 +1627,23 @@ export class GenericSearchEngine {
     addStageTiming(aggregateTiming, result.stageTiming);
     cumulativeExpansionWork += result.graphBuild.statesExpandedThisRound;
     transitionDistributionsGenerated += result.graphBuild.transitionDistributionsGeneratedThisRound;
+    transitionDistributionsReused += result.graphBuild.transitionDistributionsReusedThisRound;
     previouslyExpandedNodesRevisited += result.graphBuild.previouslyExpandedNodesRevisitedThisRound;
     const seedStatesExpanded = result.graphBuild.statesExpandedThisRound;
     let returnedProofGraphStates = result.graphBuild.nodes.size;
     const newStatesByRound: number[] = [];
     const retainedStatesReusedByRound: number[] = [];
     const transitionDistributionsGeneratedByRound: number[] = [];
+    const transitionDistributionsReusedByRound: number[] = [];
     const previouslyExpandedNodesRevisitedByRound: number[] = [];
     let wallTimeInterrupted = false;
-    let recommendationSatisfied = false;
-    let certifiedRecommendationFound = false;
+    let certifiedRecommendationFound = continuation?.lastResult !== undefined &&
+      continuation.lastResult.optimalityProof.selectedPolicyStatus ===
+        'FULLY RESOLVED / PROPER / ABSORBING / COST-RECONCILED';
+    let recommendationRefinementRoundsRemaining = Math.max(
+      0,
+      effectiveOptions.recommendationRefinementRounds ?? 1
+    );
     let timeToFirstCompletedRoundMs: number | undefined;
     let timeToFirstCertifiedPolicyMs: number | undefined;
     let timeToFirstUsefulRecommendationMs: number | undefined;
@@ -1498,6 +1658,7 @@ export class GenericSearchEngine {
     let previousRoundProgress: SearchProgressSnapshot | undefined;
     let finalRoundProgress: SearchProgressSnapshot | undefined;
     let stoppedEarlyNoMeaningfulProgress = false;
+    const incumbentHistory = continuation?.incumbentHistory.map((entry) => ({ ...entry })) ?? [];
 
     const hasCertifiedPolicy = (candidateResult: GenericSearchResult): boolean =>
       candidateResult.optimalityProof.selectedPolicyStatus ===
@@ -1570,7 +1731,8 @@ export class GenericSearchEngine {
     if (
       startState.flags?.acquisitionMenu === true &&
       acquisitionCandidates.length > 0 &&
-      effectiveOptions.skipAcquisitionFeasibility !== true
+      effectiveOptions.skipAcquisitionFeasibility !== true &&
+      !resumedFromPriorRequest
     ) {
       const feasibilityDeadline = deadlineMs === undefined
         ? undefined
@@ -1602,6 +1764,8 @@ export class GenericSearchEngine {
           cumulativeExpansionWork += feasibilityResult.graphBuild.nodes.size;
           transitionDistributionsGenerated +=
             feasibilityResult.graphBuild.transitionDistributionsGeneratedThisRound;
+          transitionDistributionsReused +=
+            feasibilityResult.graphBuild.transitionDistributionsReusedThisRound;
           previouslyExpandedNodesRevisited +=
             feasibilityResult.graphBuild.previouslyExpandedNodesRevisitedThisRound;
           addStageTiming(aggregateTiming, feasibilityResult.stageTiming);
@@ -1646,7 +1810,7 @@ export class GenericSearchEngine {
       }
     }
 
-    for (let round = 0; round < maxExpansionRounds; round++) {
+    for (let round = 0; round < availableRounds; round++) {
       if (deadlineMs !== undefined && Date.now() >= deadlineMs) break;
       if (
         intent === 'DEEPEN' &&
@@ -1663,8 +1827,8 @@ export class GenericSearchEngine {
       }
       let completedRound: GenericSearchResult;
       const roundStarted = Date.now();
-      const deferredThisRound = !certifiedRecommendationFound &&
-        (intent === 'RECOMMEND' || round < stagedRecommendationRounds);
+      const deferredThisRound = intent === 'RECOMMEND' ||
+        (!certifiedRecommendationFound && round < stagedRecommendationRounds);
       const roundDeadlineMs = deadlineMs;
       const sessionKeysBeforeRound = expansionSession
         ? new Set(expansionSession.nodes.keys())
@@ -1672,6 +1836,8 @@ export class GenericSearchEngine {
       const sessionStatesBeforeRound = expansionSession?.statesExpandedTotal ?? 0;
       const sessionDistributionsBeforeRound =
         expansionSession?.transitionDistributionsGeneratedTotal ?? 0;
+      const sessionReusedDistributionsBeforeRound =
+        expansionSession?.transitionDistributionsReusedTotal ?? 0;
       const sessionRevisitsBeforeRound =
         expansionSession?.previouslyExpandedNodesRevisitedTotal ?? 0;
       try {
@@ -1703,6 +1869,11 @@ export class GenericSearchEngine {
             (expansionSession?.transitionDistributionsGeneratedTotal ?? 0) -
               sessionDistributionsBeforeRound
           );
+          transitionDistributionsReused += Math.max(
+            0,
+            (expansionSession?.transitionDistributionsReusedTotal ?? 0) -
+              sessionReusedDistributionsBeforeRound
+          );
           previouslyExpandedNodesRevisited += Math.max(
             0,
             (expansionSession?.previouslyExpandedNodesRevisitedTotal ?? 0) -
@@ -1727,6 +1898,7 @@ export class GenericSearchEngine {
       roundsExecuted++;
       cumulativeExpansionWork += result.graphBuild.statesExpandedThisRound;
       transitionDistributionsGenerated += result.graphBuild.transitionDistributionsGeneratedThisRound;
+      transitionDistributionsReused += result.graphBuild.transitionDistributionsReusedThisRound;
       previouslyExpandedNodesRevisited +=
         result.graphBuild.previouslyExpandedNodesRevisitedThisRound;
       newStatesByRound.push(result.graphBuild.statesExpandedThisRound);
@@ -1735,6 +1907,9 @@ export class GenericSearchEngine {
       );
       transitionDistributionsGeneratedByRound.push(
         result.graphBuild.transitionDistributionsGeneratedThisRound
+      );
+      transitionDistributionsReusedByRound.push(
+        result.graphBuild.transitionDistributionsReusedThisRound
       );
       previouslyExpandedNodesRevisitedByRound.push(
         result.graphBuild.previouslyExpandedNodesRevisitedThisRound
@@ -1759,6 +1934,18 @@ export class GenericSearchEngine {
 
       if (hasCertifiedPolicy(result)) {
         timeToFirstCertifiedPolicyMs ??= Date.now() - startTime;
+        const priorIncumbent = incumbentHistory.at(-1)?.upperBoundChaos;
+        incumbentHistory.push({
+          round: priorCompletedRounds + roundsExecuted,
+          upperBoundChaos: result.totalExpectedCostChaos,
+          statesExpanded: result.graphBuild.nodes.size,
+          elapsedMs: Date.now() - startTime,
+          phase: priorIncumbent === undefined
+            ? 'FIRST_CERTIFIED'
+            : intent === 'RECOMMEND'
+              ? 'REFINEMENT'
+              : intent,
+        });
       }
 
       const certifiedRecommendation = hasAcquisitionSafeCertifiedPolicy(result);
@@ -1766,8 +1953,16 @@ export class GenericSearchEngine {
         certifiedRecommendationFound = true;
         timeToFirstUsefulRecommendationMs ??= Date.now() - startTime;
         if (intent === 'RECOMMEND') {
-          recommendationSatisfied = true;
-          break;
+          const canRefine = recommendationRefinementRoundsRemaining > 0 &&
+            round + 1 < availableRounds &&
+            roundStateBudget < maxStates &&
+            result.optimalityProof.modeledActionOptimalityProven !== true &&
+            (deadlineMs === undefined || Date.now() < deadlineMs);
+          if (canRefine) {
+            recommendationRefinementRoundsRemaining--;
+          } else {
+            break;
+          }
         }
       }
 
@@ -1800,18 +1995,20 @@ export class GenericSearchEngine {
       prioritizedStateKeys = competitiveKeys;
       resolutionFrontierKeys = new Set(result.optimisticResolutionFrontier);
       if (roundStateBudget >= maxStates) break;
-      roundStateBudget = Math.min(maxStates, roundStateBudget + statesPerRound);
+      roundStateBudget = roundStateBudgets[round + 1] ?? maxStates;
     }
 
     const elapsedMs = Date.now() - startTime;
     const competitiveRemain = result.optimalityProof.unresolvedCandidatesCouldBeatIncumbent;
-    const stateBudgetExhausted = !recommendationSatisfied && competitiveRemain && result.graphBuild.hitStateLimit && roundStateBudget >= maxStates;
+    const stateBudgetExhausted = competitiveRemain &&
+      result.graphBuild.hitStateLimit && roundStateBudget >= maxStates;
     const wallTimeBudgetExhausted = competitiveRemain && (
       wallTimeInterrupted ||
       result.graphBuild.hitWallTimeLimit ||
       (effectiveOptions.maxWallTimeMs !== undefined && elapsedMs >= effectiveOptions.maxWallTimeMs)
     );
-    const roundBudgetExhausted = !recommendationSatisfied && competitiveRemain && roundsExecuted >= maxExpansionRounds;
+    const roundBudgetExhausted = competitiveRemain &&
+      priorCompletedRounds + roundsExecuted >= maxExpansionRounds;
     aggregateTiming.repeatedRoundWorkMs = priorCompletedRoundWorkMs;
     const attributedMs = aggregateTiming.seedResultMs +
       aggregateTiming.transitionGenerationMs +
@@ -1828,6 +2025,19 @@ export class GenericSearchEngine {
     const beforeProgress = firstRoundProgress ?? fallbackProgress;
     const afterProgress = finalRoundProgress ?? fallbackProgress;
     const meaningfulDeepenProgress = madeMeaningfulProgress(beforeProgress, afterProgress);
+    const refinementStopReason: SearchSummary['refinementStopReason'] = !hasCertifiedPolicy(result)
+      ? 'NO_EXECUTABLE_POLICY'
+      : result.optimalityProof.modeledActionOptimalityProven
+        ? 'MODELED_OPTIMAL'
+        : wallTimeBudgetExhausted
+          ? 'WALL_TIME'
+          : stateBudgetExhausted
+            ? 'STATE_BUDGET'
+            : roundBudgetExhausted
+              ? 'ROUND_BUDGET'
+              : stoppedEarlyNoMeaningfulProgress
+                ? 'STABLE'
+                : 'FIRST_USEFUL_RETURNED';
     result.searchSummary = {
       intent,
       // This is the canonical graph on which the returned policy/proof was actually solved.
@@ -1869,6 +2079,8 @@ export class GenericSearchEngine {
       retainedStatesReusedByRound,
       transitionDistributionsGenerated,
       transitionDistributionsGeneratedByRound,
+      transitionDistributionsReused,
+      transitionDistributionsReusedByRound,
       previouslyExpandedNodesRevisited,
       previouslyExpandedNodesRevisitedByRound,
       acquisitionFeasibilityStatesExpanded: acquisitionFeasibilityAttempts.reduce(
@@ -1905,7 +2117,19 @@ export class GenericSearchEngine {
           ? 'No meaningful additional progress in this deeper budget.'
           : undefined,
       },
+      incumbentHistory,
+      refinementStopReason,
+      resumedFromPriorRequest,
+      retainedStatesFromPriorRequest,
+      retainedTransitionDistributionsFromPriorRequest,
     };
+    if (continuation) {
+      continuation.prioritizedStateKeys = new Set(prioritizedStateKeys);
+      continuation.resolutionFrontierKeys = new Set(resolutionFrontierKeys);
+      continuation.incumbentHistory = incumbentHistory.map((entry) => ({ ...entry }));
+      continuation.completedRounds = priorCompletedRounds + roundsExecuted;
+      continuation.lastResult = result;
+    }
     return result;
   }
 
@@ -3366,6 +3590,8 @@ export class GenericSearchEngine {
         retainedStatesReusedByRound: [],
         transitionDistributionsGenerated: graphResult.transitionDistributionsGeneratedThisRound,
         transitionDistributionsGeneratedByRound: [],
+        transitionDistributionsReused: graphResult.transitionDistributionsReusedThisRound,
+        transitionDistributionsReusedByRound: [],
         previouslyExpandedNodesRevisited: graphResult.previouslyExpandedNodesRevisitedThisRound,
         previouslyExpandedNodesRevisitedByRound: [],
         acquisitionFeasibilityStatesExpanded: 0,
@@ -3400,6 +3626,11 @@ export class GenericSearchEngine {
           meaningfulProgress: false,
           stoppedEarlyNoMeaningfulProgress: false,
         },
+        incumbentHistory: [],
+        refinementStopReason: 'NO_EXECUTABLE_POLICY',
+        resumedFromPriorRequest: false,
+        retainedStatesFromPriorRequest: 0,
+        retainedTransitionDistributionsFromPriorRequest: 0,
       },
       stageTiming,
       isTargetSatisfied,

@@ -1,0 +1,64 @@
+PHASE 2J SEARCH / REFINEMENT / RESUME / FOUR-MOD SCALING DIAGNOSTIC
+
+J2 HERALD POLICY REFINEMENT
+  RECOMMEND 5k/30s/3: status=BEST_RESOLVED_ACQUISITION_SAFE; U=62.518070c; elapsed=6872ms
+  proper=true; absorption=1.000000000000; Bellman=true; occupancy=true; reconciled=true; unresolvedOnPolicy=0.000e+0
+  policyRefinement=STILL_IMPROVING_AT_BUDGET; stop=STATE_BUDGET; firstU=214.520976c; finalU=62.518070c; improvement=152.002906c; fraction=70.857%
+  incumbentHistory=[{"round":2,"upperBoundChaos":214.5209759138433,"statesExpanded":3334,"elapsedMs":1925,"phase":"FIRST_CERTIFIED"},{"round":3,"upperBoundChaos":62.5180695395436,"statesExpanded":5000,"elapsedMs":6832,"phase":"REFINEMENT"}]
+  session={"status":"COLD","identityHash":"phase2j-88d816cc","retainedStates":0,"retainedTransitionDistributions":0,"scope":"CLEAN_DOWNSTREAM"}
+  states=5000; currentRequestNew=[1666,1667,1666]; generated=17230; reused=238; retainedByRound=[1,1667,3334]
+  plan=CERTIFIED; steps=8; uncovered=[]; invented=[]
+  timeToFirstUseful=1925ms; totalEngine=6832ms; bounded reserve=one completed post-certification round inside the existing total state/round/wall budget
+
+J3 COLD VS RESUMED DEEPEN
+  resumed 10k/60s/4: status=BEST_RESOLVED_ACQUISITION_SAFE; U=62.518070c; elapsed=20407ms
+  proper=true; absorption=0.999999999999; Bellman=true; occupancy=true; reconciled=true; unresolvedOnPolicy=0.000e+0
+  policyRefinement=CURRENT_BEST_UNPROVEN; stop=STATE_BUDGET; firstU=214.520976c; finalU=62.518070c; improvement=152.002906c; fraction=70.857%
+  incumbentHistory=[{"round":2,"upperBoundChaos":214.5209759138433,"statesExpanded":3334,"elapsedMs":1925,"phase":"FIRST_CERTIFIED"},{"round":3,"upperBoundChaos":62.5180695395436,"statesExpanded":5000,"elapsedMs":6832,"phase":"REFINEMENT"},{"round":4,"upperBoundChaos":62.51806953954562,"statesExpanded":10000,"elapsedMs":20347,"phase":"DEEPEN"}]
+  session={"status":"RESUMED","identityHash":"phase2j-88d816cc","retainedStates":5000,"retainedTransitionDistributions":17230,"scope":"CLEAN_DOWNSTREAM"}
+  states=10000; currentRequestNew=[5000]; generated=18748; reused=0; retainedByRound=[5000]
+  plan=CERTIFIED; steps=8; uncovered=[]; invented=[]
+  cold 10k/60s/4: status=BEST_RESOLVED_ACQUISITION_SAFE; U=62.518070c; elapsed=22198ms
+  proper=true; absorption=0.999999999999; Bellman=true; occupancy=true; reconciled=true; unresolvedOnPolicy=0.000e+0
+  policyRefinement=CURRENT_BEST_UNPROVEN; stop=STATE_BUDGET; firstU=214.520976c; finalU=62.518070c; improvement=152.002906c; fraction=70.857%
+  incumbentHistory=[{"round":2,"upperBoundChaos":214.5209759138433,"statesExpanded":3334,"elapsedMs":1899,"phase":"FIRST_CERTIFIED"},{"round":3,"upperBoundChaos":62.5180695395436,"statesExpanded":5000,"elapsedMs":6165,"phase":"DEEPEN"},{"round":4,"upperBoundChaos":62.51806953954562,"statesExpanded":10000,"elapsedMs":22147,"phase":"DEEPEN"}]
+  session={"status":"COLD","identityHash":"phase2j-88d816cc","retainedStates":0,"retainedTransitionDistributions":0,"scope":"CLEAN_DOWNSTREAM"}
+  states=10000; currentRequestNew=[1666,1667,1666,5000]; generated=35458; reused=238; retainedByRound=[1,1667,3334,5000]
+  plan=CERTIFIED; steps=8; uncovered=[]; invented=[]
+  EV difference=0.000000e+0c; healthEquivalent=true; duplicate transition generation delta=16710; PASS
+
+J4 SESSION INVALIDATION
+  baseline=phase2j-1bf17b13
+  targetModId: phase2j-fa5ac938; invalidated=true
+  finalStateConstraint: phase2j-b7af29ff; invalidated=true
+  currencyRate: phase2j-8ac9bcca; invalidated=true
+  cleanBaseCost: phase2j-59611250; invalidated=true
+  harvestScope: phase2j-a210e4e4; invalidated=true
+  itemLevel: phase2j-ff0015d8; invalidated=true
+  budgets and RECOMMEND/DEEPEN intent are intentionally absent from exact mechanics/economics identity; PASS
+
+J5 FOUR-MOD DIAGNOSTIC-ONLY FINITE BASELINE
+  {"selectedMagicPair":["AfflictionJewelSmallPassivesGrantES3","AfflictionJewelSmallPassivesGrantInt3"],"pairCandidatesEvaluated":4,"magicPairProbability":0.00023025094651559093,"regalThirdTargetProbability":0.02330097087378641,"exaltFourthTargetProbability":0.023681944804348695,"successProbabilityPerCycle":0.0005518123061207463,"expectedCostChaos":866938.4522344256,"expectedUsage":{"transmutation_orb":1812.2103999999997,"alteration_orb":7868776.064802986,"regal_orb":1812.2103999999997,"exalted_orb":42.22626174757281,"scouring_orb":1811.2103999999997},"reconciliationDifferenceChaos":1.1641532182693481e-10}
+  policy=Transmute/Alter until a generically enumerated target prefix+suffix pair -> Regal for any third target -> Exalt for the fourth -> Scour/repeat on miss; transition source=shared action registry/PriceBook; product ranking import=NONE; proper=true; absorption=1; reconciled=true
+
+J6 EXACT FOUR-MOD GENERIC PRODUCT SOLVE
+  product 5k/30s/3: status=PROVISIONAL_RESOLVED; U=78487.604523c; elapsed=29037ms
+  proper=true; absorption=1.000000000000; Bellman=true; occupancy=true; reconciled=true; unresolvedOnPolicy=0.000e+0
+  policyRefinement=CURRENT_BEST_UNPROVEN; stop=STATE_BUDGET; firstU=78487.604523c; finalU=78487.604523c; improvement=0.000000c; fraction=0.000%
+  incumbentHistory=[{"round":3,"upperBoundChaos":78487.60452306771,"statesExpanded":5000,"elapsedMs":8744,"phase":"FIRST_CERTIFIED"}]
+  session={"status":"COLD","identityHash":"phase2j-e9d68009","retainedStates":0,"retainedTransitionDistributions":0,"scope":"CLEAN_DOWNSTREAM"}
+  states=5000; currentRequestNew=[1666,1667,1666]; generated=17319; reused=458; retainedByRound=[1,1667,3334]
+  plan=CERTIFIED; steps=8; uncovered=[]; invented=[]
+  acquisitionStage=CLEAN_EXECUTABLE_PROVISIONAL; proof-honest acquisitionSafe=false; pre-fractured market methods=ABSENT
+  direct graph profile={"targetProgress":{"0/4":378,"2/4":2663,"3/4":361,"4/4":5,"1/4":1593},"frontierTargetProgress":{"1/4":12714,"0/4":6590,"2/4":1612},"rarity":{"normal":1,"magic":459,"rare":4540},"affixes":{"NORMAL_0P_0S":1,"MAGIC_1P_1S":418,"RARE_2P_1S":928,"RARE_2P_2S":2828,"RARE_1P_2S":778,"MAGIC_1P_0S":22,"MAGIC_0P_1S":19,"RARE_1P_1S":4,"RARE_2P_0S":1,"RARE_0P_2S":1},"actionAttribution":{"transmutation_orb":{"actionId":"transmutation_orb","actionName":"Orb of Transmutation","actionLocalUniqueSuccessorKeysProduced":460,"newGlobalStatesFirstDiscovered":459,"onPolicyStatesSelectingAction":1,"unresolvedOutgoingEdges":0,"transitionDistributionsGenerated":1,"transitionDistributionsReused":0,"transitionGenerationMs":0},"augmentation_orb":{"actionId":"augmentation_orb","actionName":"Orb of Augmentation","actionLocalUniqueSuccessorKeysProduced":418,"newGlobalStatesFirstDiscovered":0,"onPolicyStatesSelectingAction":4,"unresolvedOutgoingEdges":0,"transitionDistributionsGenerated":41,"transitionDistributionsReused":0,"transitionGenerationMs":0},"alteration_orb":{"actionId":"alteration_orb","actionName":"Orb of Alteration","actionLocalUniqueSuccessorKeysProduced":459,"newGlobalStatesFirstDiscovered":0,"onPolicyStatesSelectingAction":451,"unresolvedOutgoingEdges":0,"transitionDistributionsGenerated":1,"transitionDistributionsReused":458,"transitionGenerationMs":2},"regal_orb":{"actionId":"regal_orb","actionName":"Regal Orb","actionLocalUniqueSuccessorKeysProduced":8793,"newGlobalStatesFirstDiscovered":8072,"onPolicyStatesSelectingAction":4,"unresolvedOutgoingEdges":14186,"transitionDistributionsGenerated":459,"transitionDistributionsReused":0,"transitionGenerationMs":17},"scouring_orb":{"actionId":"scouring_orb","actionName":"Orb of Scouring","actionLocalUniqueSuccessorKeysProduced":42,"newGlobalStatesFirstDiscovered":41,"onPolicyStatesSelectingAction":642,"unresolvedOutgoingEdges":2253,"transitionDistributionsGenerated":4994,"transitionDistributionsReused":0,"transitionGenerationMs":7},"annulment_orb":{"actionId":"annulment_orb","actionName":"Orb of Annulment","actionLocalUniqueSuccessorKeysProduced":4723,"newGlobalStatesFirstDiscovered":3695,"onPolicyStatesSelectingAction":69,"unresolvedOutgoingEdges":11590,"transitionDistributionsGenerated":4535,"transitionDistributionsReused":0,"transitionGenerationMs":6},"exalted_orb":{"actionId":"exalted_orb","actionName":"Exalted Orb Slam","actionLocalUniqueSuccessorKeysProduced":11706,"newGlobalStatesFirstDiscovered":11320,"onPolicyStatesSelectingAction":50,"unresolvedOutgoingEdges":29424,"transitionDistributionsGenerated":1712,"transitionDistributionsReused":0,"transitionGenerationMs":37},"fracturing_orb":{"actionId":"fracturing_orb","actionName":"Fracturing Orb","actionLocalUniqueSuccessorKeysProduced":2328,"newGlobalStatesFirstDiscovered":2328,"onPolicyStatesSelectingAction":0,"unresolvedOutgoingEdges":87,"transitionDistributionsGenerated":582,"transitionDistributionsReused":0,"transitionGenerationMs":0},"restart_reacquire":{"actionId":"restart_reacquire","actionName":"Abandon + Reacquire","actionLocalUniqueSuccessorKeysProduced":1,"newGlobalStatesFirstDiscovered":0,"onPolicyStatesSelectingAction":0,"unresolvedOutgoingEdges":0,"transitionDistributionsGenerated":4994,"transitionDistributionsReused":0,"transitionGenerationMs":1}},"timing":{"seedResultMs":1,"transitionGenerationMs":70,"graphAggregationAndSetupMs":923,"bellmanMs":6289,"candidateClassificationAndTrustMs":369,"absorptionMs":42,"occupancyMs":262,"competitiveFrontierCollectionMs":17,"resultAssemblyMs":4,"repeatedRoundWorkMs":2622,"unattributedOrInterruptedMs":70}}
+  observed pre-fix browser reference=NO_RESOLVED_ROUTE after ~10 minutes; controlled post-fix product result is finite within the 30-second request guard
+
+J7 TARGET-CONDITIONED QUOTIENT SAFETY AUDIT
+  concreteStates=1000; quotientClasses=309; collapsed=691; violations=0; actionScope=shared conventional actions plus deferred Annul/Fracture placeholders; PASS
+  Existing canonical quotient retained exact target identities, roll pass/fail, fracture state, mod-group/name exclusions, rarity/occupancy, flags, and final-state semantics. No weaker Phase 2J state identity was introduced.
+
+CONSTRAINT AUDIT
+  target/Craft-specific solver branches added: NO
+  hardcoded route winner/target order added: NO
+  product budgets raised as the fix: NO
+  unit tests added: NO

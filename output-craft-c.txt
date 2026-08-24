@@ -34855,4 +34855,29 @@ Exalted Orb Slam                371.51             392.80            5.73%      
 STABILITY CONCLUSION:
   Status:                MULTI-SEED STABLE
   Assessment:            Pooled action counts <=10% and completion >=99% across all deterministic seeds.
-AUTO-DISCOVERY DIAGNOSTIC: SKIPPED IN --regressions-only MODE (covered by the budgeted pre-UI generic diagnostic).
+
+================================================================================
+AUTOMATIC STARTING-STATE DISCOVERY DIAGNOSTIC: Craft C (Minion Cluster)
+================================================================================
+Target Definition: 4 base required mods (0 outcome branches)
+
+CANDIDATE SET STRUCTURAL AUDIT:
+  Clean Physical Base Generated (Rarity: normal): YES
+  Required-Mod Fractured Starts Generated:        YES
+  Duplicate Physical State Solves:               0 (Memoized by canonical state key)
+
+GENERATED STARTING CANDIDATES (5 routes from 5 physical states):
+Route Name                                Acquisition Mode     Acq Cost        Downstream EV   Full Route EV
+---------------------------------------------------------------------------------------------------------
+Executable Self-Fracture Powerful (T1)    self-fracture        1498.1c (~7.49 div) 41281.0c (~206.40 div) 42779.1c (~213.90 div)
+Start Clean Base Clean Base               clean-base           10.0c           UNRESOLVED      UNRESOLVED
+Executable Self-Fracture Sanguine (T1)    self-fracture        1498.1c (~7.49 div) UNRESOLVED      UNRESOLVED
+Executable Self-Fracture of the Meteor (T1) self-fracture        1505.9c (~7.53 div) UNRESOLVED      UNRESOLVED
+Executable Self-Fracture of Eviction (T1) self-fracture        1505.9c (~7.53 div) UNRESOLVED      UNRESOLVED
+---------------------------------------------------------------------------------------------------------
+
+AUTOMATIC DISCOVERY VERIFICATION:
+  Best Fully Resolved Route: Executable Self-Fracture Powerful (T1) (42779.1c (~213.90 div))
+  Reference Fixture Route:   Fractured 35% Increased Effect Base (Self-Fracture) (42814.4c (~214.07 div))
+  Resolved-Route Consistency: PASSED (auto-discovered resolved route matches manual reference fixture)
+  Global Route Optimality:    NOT YET PROVEN (4 alternatives unresolved)
