@@ -106,9 +106,14 @@ function optimizerLines(
     `  acquisition shared states / wall / rounds: ${result.acquisition.stage.totalStateBudget} / ${result.acquisition.stage.totalWallTimeBudgetMs}ms / ${result.acquisition.stage.maxExpansionRoundsPerCandidate}`,
     ...result.acquisition.candidates
       .filter((candidate) => candidate.synthesis)
-      .map((candidate) => {
+      .flatMap((candidate) => {
         const synthesis = candidate.synthesis!;
-        return `  fracture ${candidate.label}: ${synthesis.status}; U=${money(synthesis.expectedCostChaos)}; L=${money(synthesis.lowerBoundChaos)}; executable=${candidate.methods.some((method) => method.executable) ? 'YES' : 'NO'}; orbs=${synthesis.expectedFracturingOrbs?.toFixed(6) ?? 'N/A'}; restarts=${synthesis.expectedRestarts?.toFixed(6) ?? 'N/A'}; states=${synthesis.search?.statesExpanded ?? 0}; elapsed=${synthesis.search?.elapsedMs ?? 0}ms; cache=${synthesis.cacheHit ? 'HIT' : 'MISS'}`;
+        const evidence = synthesis.lowerBoundEvidence;
+        return [
+          `  fracture ${candidate.label}: ${synthesis.status}; U=${money(synthesis.expectedCostChaos)}; L=${money(synthesis.lowerBoundChaos)}; executable=${candidate.methods.some((method) => method.executable) ? 'YES' : 'NO'}; orbs=${synthesis.expectedFracturingOrbs?.toFixed(6) ?? 'N/A'}; restarts=${synthesis.expectedRestarts?.toFixed(6) ?? 'N/A'}; states=${synthesis.search?.statesExpanded ?? 0}; elapsed=${synthesis.search?.elapsedMs ?? 0}ms; cache=${synthesis.cacheHit ? 'HIT' : 'MISS'}`,
+          `    bound decomposition: clean=${money(evidence.cleanBaseCostChaos)}; partial=${money(evidence.partialGraphLowerBoundChaos)}; mechanics=${money(evidence.mandatoryMechanicsLowerBoundChaos)}; combined=${money(evidence.combinedLowerBoundChaos)}; rule=${evidence.combinationRule}`,
+          `    bound provenance: ${evidence.mechanics.provenance} components=${evidence.mechanics.components.map((component) => `${component.id}:${component.selectedMinimumActionId}*${component.minimumApplications}@${money(component.lowerBoundChaos)}`).join(',') || 'NONE'}`,
+        ];
       }),
     `  market-fractured method present: ${result.acquisition.candidates.some((candidate) => candidate.methods.some((method) => method.id.startsWith('market'))) ? 'YES' : 'NO'}`,
   ];
@@ -316,6 +321,14 @@ const persistent = synthesizeAcquisition(context, {
   searchBudget: { maxStates: 5_001, maxWallTimeMs: 30_000, maxExpansionRounds: 3 },
   searchIntent: 'PROVE',
 });
+console.error('[phase2e] direct normal-price Glowing self-fracture bound audit');
+const glowingSynthesis = synthesizeAcquisition(context, {
+  cleanStartingState: cleanBase,
+  desiredPhysicalState: { fracturedMod: { modId: t1EsId } },
+  cleanBaseAcquisition,
+  searchBudget: { maxStates: 5_001, maxWallTimeMs: 30_000, maxExpansionRounds: 3 },
+  searchIntent: 'PROVE',
+});
 
 const service = new OptimizerService(repo);
 const baseInput: Omit<OptimizeCraftInput, 'target'> = {
@@ -429,7 +442,9 @@ const wrongFractureRules = persistent.policy.filter((rule) =>
   rule.selectedActionId === 'restart_reacquire'
 );
 const controlledThreats = controlledUnresolved.result.acquisition.candidates.filter(
-  (candidate) => candidate.synthesis && candidate.synthesis.status !== 'RESOLVED'
+  (candidate) => candidate.synthesis &&
+    candidate.synthesis.lowerBoundChaos <
+      (controlledUnresolved.result.acquisition.resolvedIncumbentUpperBoundChaos ?? Infinity)
 );
 const forcedCleanRoute = [
   ...(forcedRare.result.recommended ? [forcedRare.result.recommended] : []),
@@ -438,6 +453,69 @@ const forcedCleanRoute = [
 const executableRegistryActions = CRAFT_MECHANICS
   .filter((mechanic) => typeof mechanic.getTransitions === 'function')
   .map((mechanic) => mechanic.id);
+
+interface AdmissibilityAuditRow {
+  label: string;
+  lowerBoundChaos: number;
+  certifiedUpperBoundChaos: number;
+}
+
+const admissibilityAudit: AdmissibilityAuditRow[] = [];
+const addCleanAudit = (
+  label: string,
+  run: { result: OptimizeCraftResult }
+): void => {
+  if (run.result.expectedCostChaos !== null && run.result.recommended !== null) {
+    admissibilityAudit.push({
+      label,
+      lowerBoundChaos: run.result.recommended.lowerBoundChaos,
+      certifiedUpperBoundChaos: run.result.expectedCostChaos,
+    });
+  }
+};
+addCleanAudit('clean-base one-mod state', oneMod);
+addCleanAudit('clean-base two-mod Any state', twoModAny);
+addCleanAudit('clean-base two-mod no-unwanted state', twoModClean);
+addCleanAudit('forced-Rare clean state', forcedRare);
+if (persistent.expectedCostChaos !== undefined) {
+  admissibilityAudit.push({
+    label: 'standalone normal-price self-fracture synthesis state',
+    lowerBoundChaos: persistent.lowerBoundChaos,
+    certifiedUpperBoundChaos: persistent.expectedCostChaos,
+  });
+}
+if (glowingSynthesis.expectedCostChaos !== undefined) {
+  admissibilityAudit.push({
+    label: 'standalone normal-price Glowing self-fracture synthesis state',
+    lowerBoundChaos: glowingSynthesis.lowerBoundChaos,
+    certifiedUpperBoundChaos: glowingSynthesis.expectedCostChaos,
+  });
+}
+for (const [fixture, run] of [
+  ['artificially cheap-fracture state', controlledUnresolved],
+  ['normal-price multi-fracture state', multiFracture],
+  ['normal-price explicit-fracture state', noMarket],
+] as const) {
+  for (const candidate of run.result.acquisition.candidates) {
+    const synthesis = candidate.synthesis;
+    if (synthesis?.expectedCostChaos === undefined) continue;
+    admissibilityAudit.push({
+      label: `${fixture}: ${candidate.label}`,
+      lowerBoundChaos: synthesis.lowerBoundEvidence.combinedLowerBoundChaos,
+      certifiedUpperBoundChaos: synthesis.expectedCostChaos,
+    });
+  }
+}
+const admissibilityViolations = admissibilityAudit.filter(
+  (row) => row.lowerBoundChaos > row.certifiedUpperBoundChaos + 1e-8
+);
+if (admissibilityViolations.length > 0) {
+  throw new Error(
+    `Phase 2H admissibility audit failed: ${admissibilityViolations.map((row) =>
+      `${row.label} L=${row.lowerBoundChaos} U=${row.certifiedUpperBoundChaos}`
+    ).join(' | ')}`
+  );
+}
 
 const lines: string[] = [];
 lines.push('PHASE 2E — FRACTURE-PREPARATION BASELINE, SEARCH FIDELITY, AND PROOF HARDENING');
@@ -464,7 +542,7 @@ lines.push(`  concrete baseline coverage: magic=${baseline.stageCoverage.magicRo
 
 lines.push('');
 lines.push('DIAGNOSTIC C — SEARCH VS BASELINE / STATE-ACTION FAILURE');
-lines.push(`  before U_search / L_search: ${money(preChangeSearch.expectedCostChaos)} / ${money(preChangeSearch.lowerBoundChaos)}`);
+lines.push(`  historical captured pre-change U_search / L_search: ${money(preChangeSearch.expectedCostChaos)} / ${money(preChangeSearch.lowerBoundChaos)}`);
 lines.push(`  baseline difference / ratio: ${money(preChangeSearch.expectedCostChaos - baseline.expectedCostChaos)} / ${(preChangeSearch.expectedCostChaos / baseline.expectedCostChaos).toFixed(6)}x`);
 lines.push(`  before usage/failure: ${preChangeSearch.alterations.toFixed(6)} Alterations; ${preChangeSearch.selectedRegalStates}/${preChangeSearch.targetReadyMagicStates} target-ready magic states selected Regal; ${preChangeSearch.resolvedExaltedEdges}/${preChangeSearch.targetRareThreeStatesExpanded} rare3 Exalt edges resolved; ${preChangeSearch.missingExaltedSuccessors} missing Exalt successors.`);
 lines.push('  diagnosis: concrete filler identities expanded the same target-present milestones into tens of thousands of equivalent rare3/rare4 states, so unresolved Exalt edges forced the certified policy to reroll valid target hits.');
@@ -484,10 +562,10 @@ lines.push(`  in-place reset / restart EV: ${persistent.wrongFractureRecovery.in
 lines.push(`  permanent-wrong invariant audit: ${wrongFractureStatesAudited} states and ${wrongFractureNonRestartTransitions} non-restart transitions never reached a desired fracture; PASS.`);
 
 lines.push('');
-lines.push('DIAGNOSTIC E — UNRESOLVED LOWER-BOUND PROPAGATION');
+lines.push('DIAGNOSTIC E — CHEAP-FRACTURE LOWER-BOUND PROPAGATION');
 lines.push('  Fixture isolation: one-mod T1 ES with an intentionally artificial 0.001c Fracturing Orb price and 500-state acquisition budget; diagnostic proof only, never normal pricing/ranking.');
 lines.push(...optimizerLines('  Controlled low-price / low-budget proof fixture', controlledUnresolved));
-lines.push(`  unresolved synthesis candidates: ${controlledThreats.length}`);
+lines.push(`  synthesis candidates whose admissible L remains below the clean incumbent: ${controlledThreats.length}`);
 for (const candidate of controlledThreats) {
   lines.push(`  threat ${candidate.label}: status=${candidate.synthesis!.status}; finite executable method=${candidate.methods.some((method) => method.executable) ? 'YES' : 'NO'}; L=${money(candidate.synthesis!.lowerBoundChaos)}; selected incumbent U=${money(controlledUnresolved.result.acquisition.resolvedIncumbentUpperBoundChaos)}; blocks safety=${candidate.synthesis!.lowerBoundChaos < (controlledUnresolved.result.acquisition.resolvedIncumbentUpperBoundChaos ?? Infinity) ? 'YES' : 'NO'}`);
 }
@@ -519,6 +597,11 @@ lines.push('  no new mechanic required: generic search now beats the known-legal
 lines.push('');
 lines.push('DIAGNOSTIC I — PERSISTENT EXTENSION');
 lines.push(`  status / U / L: ${persistent.status} / ${money(persistent.expectedCostChaos)} / ${money(persistent.lowerBoundChaos)}`);
+lines.push(`  lower-bound decomposition: partial=${money(persistent.lowerBoundEvidence.partialGraphLowerBoundChaos)}; mechanics=${money(persistent.lowerBoundEvidence.mandatoryMechanicsLowerBoundChaos)}; combined=${money(persistent.lowerBoundEvidence.combinedLowerBoundChaos)}; admissibility margin=${money((persistent.expectedCostChaos ?? Infinity) - persistent.lowerBoundEvidence.combinedLowerBoundChaos)}`);
+lines.push(`  lower-bound provenance: ${persistent.lowerBoundEvidence.mechanics.provenance}`);
+for (const component of persistent.lowerBoundEvidence.mechanics.components) {
+  lines.push(`    ${component.id}: minimum=${component.minimumApplications}; action=${component.selectedMinimumActionId}; cost=${money(component.lowerBoundChaos)}; confidence=${component.mechanicsConfidence}/${component.priceConfidence}; ${component.provenance}`);
+}
 lines.push(`  canonical identity / mode / rounds: ${persistent.search.canonicalStateIdentity} / ${persistent.search.expansionMode} / ${persistent.search.expansionRounds}`);
 lines.push(`  canonical states / cumulative work / repeated: ${persistent.search.statesExpanded} / ${persistent.search.cumulativeExpansionWork} / ${persistent.search.repeatedStatesExpanded}`);
 lines.push(`  seed / new per round / retained reused per round: ${persistent.search.seedStatesExpanded} / ${persistent.search.newStatesByRound.join(',')} / ${persistent.search.retainedStatesReusedByRound.join(',')}`);
@@ -532,6 +615,20 @@ lines.push(...optimizerLines('  R2 two-mod T1 ES + T1 Int, Any', twoModAny));
 lines.push(...optimizerLines('  R3 two-mod no-unwanted', twoModClean));
 lines.push(...optimizerLines('  R4 forced-Rare two-mod', forcedRare));
 lines.push(`  R4 clean-family U / L: ${money(forcedCleanRoute?.expectedTotalCostChaos)} / ${money(forcedCleanRoute?.lowerBoundChaos)}`);
+
+lines.push('');
+lines.push('PHASE 2H D1–D7 — ADMISSIBLE-BOUND PROOF SCALING');
+lines.push(`  D1 standalone: partial=${money(persistent.lowerBoundEvidence.partialGraphLowerBoundChaos)}; mechanics=${money(persistent.lowerBoundEvidence.mandatoryMechanicsLowerBoundChaos)}; combined=${money(persistent.lowerBoundEvidence.combinedLowerBoundChaos)}; certified U=${money(persistent.expectedCostChaos)}; margin=${money((persistent.expectedCostChaos ?? Infinity) - persistent.lowerBoundEvidence.combinedLowerBoundChaos)}.`);
+lines.push(`  D2 normal-price domination: forced-Rare clean U=${money(forcedRare.result.expectedCostChaos)}; each self-fracture mechanics L=${money(forcedRare.result.acquisition.candidates.find((candidate) => candidate.synthesis)?.synthesis?.lowerBoundEvidence.mandatoryMechanicsLowerBoundChaos)}; bound-dominated=${forcedRare.result.acquisition.candidates.filter((candidate) => candidate.synthesis?.status === 'SKIPPED_DOMINATED').length}; acquisition-safe=${forcedRare.result.acquisition.selectionSafe ? 'YES' : 'NO'}.`);
+lines.push(`  D3 cheap-fracture preservation: clean U=${money(controlledUnresolved.result.expectedCostChaos)}; best fracture L=${money(Math.min(...controlledUnresolved.result.acquisition.candidates.filter((candidate) => candidate.synthesis).map((candidate) => candidate.synthesis!.lowerBoundChaos)))}; competitive=${controlledThreats.length}; status=${controlledUnresolved.result.recommendationStatus}; acquisition-safe=${controlledUnresolved.result.acquisition.selectionSafe ? 'YES' : 'NO'}.`);
+lines.push('  D4 historical captured pre-change forced-Rare: clean U=243.959278c; fracture Glowing U/L=1477.396467c/4.240050c; fracture Prodigy U/L=1482.328333c/4.239731c; PROVISIONAL_RESOLVED; acquisition-safe=NO; acquisition states=10002; downstream states/cumulative=5000/9998; staged/worker=32030ms/32054ms.');
+lines.push(`  D4 forced-Rare after: clean U=${money(forcedRare.result.expectedCostChaos)}; ${forcedRare.result.acquisition.candidates.filter((candidate) => candidate.synthesis).map((candidate) => `${candidate.label} U=${money(candidate.synthesis!.expectedCostChaos)} L=${money(candidate.synthesis!.lowerBoundChaos)} status=${candidate.synthesis!.status}`).join(' | ')}; ${forcedRare.result.recommendationStatus}; acquisition-safe=${forcedRare.result.acquisition.selectionSafe ? 'YES' : 'NO'}; acquisition states=${forcedRare.result.acquisition.stage.totalStateBudget}; downstream states/cumulative=${forcedRare.result.search.statesExpanded}/${forcedRare.result.search.cumulativeExpansionWork}; staged/worker=${forcedRare.result.search.totalElapsedMs}ms/${forcedRare.elapsedMs}ms.`);
+lines.push(`  D5 admissibility audit: samples=${admissibilityAudit.length}; violations=${admissibilityViolations.length}; tolerance=1e-8c.`);
+for (const row of admissibilityAudit) {
+  lines.push(`    PASS ${row.label}: L=${money(row.lowerBoundChaos)} <= U=${money(row.certifiedUpperBoundChaos)}; margin=${money(row.certifiedUpperBoundChaos - row.lowerBoundChaos)}.`);
+}
+lines.push(`  D6 historical captured pre-change/current frontier attribution: competitive unresolved=2/${forcedRare.result.alternatives.filter((route) => route.status === 'UNRESOLVED' || route.couldBeatResolvedIncumbent).length}; bound-dominated=0/${forcedRare.result.alternatives.filter((route) => route.status === 'DOMINATED_BY_BOUND').length}; acquisition-family states=10002/${forcedRare.result.acquisition.stage.totalStateBudget}; DEEPEN fracture frontier=2/${forcedRare.result.alternatives.filter((route) => route.status === 'UNRESOLVED' || route.couldBeatResolvedIncumbent).length}.`);
+lines.push(`  D7 serialized evidence: rule=${persistent.lowerBoundEvidence.combinationRule}; partial/mechanics/combined fields=PRESENT; component count=${persistent.lowerBoundEvidence.mechanics.components.length}; target identity unchanged=${persistent.acquisitionTarget.requiredMods?.[0]?.modId === targetModId ? 'YES' : 'NO'}.`);
 
 lines.push('');
 lines.push('R5 — HARVEST PARITY');

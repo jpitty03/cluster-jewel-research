@@ -4,6 +4,7 @@ import type {
   AcquisitionCandidateSummary,
   OptimizeCraftInput,
   OptimizeCraftResult,
+  PolicyExplanationRule,
   RecommendationStatus,
 } from '../crafting-engine/src/service/optimizerService.ts';
 import type { SearchIntent } from '../crafting-engine/src/service/searchRuntime.ts';
@@ -75,6 +76,48 @@ function playerActionName(actionId: string, actionName: string, recommendedStart
   return recommendedStart === 'Clean Base'
     ? 'Acquire a clean base'
     : `Acquire ${recommendedStart}`;
+}
+
+function renderPolicyCondition(
+  rule: PolicyExplanationRule,
+  mods: ReturnType<typeof browserCraftingCatalog.getEligibleMods>,
+): string {
+  const { context } = rule;
+  if (context.acquisitionMenu) return 'Start: choose an acquisition route';
+  const display = (modId: string): string => {
+    const match = mods.find((mod) => mod.modId === modId);
+    if (!match) return modId;
+    const duplicateDisplay = mods.some(
+      (mod) => mod.modId !== modId && mod.displayName === match.displayName
+    );
+    return duplicateDisplay ? `${match.displayName} [${modId}]` : match.displayName;
+  };
+  const formatAffix = (
+    affix: PolicyExplanationRule['context']['prefixes'][number],
+  ): string => {
+    const roll = affix.currentRoll?.length ? ` (roll ${affix.currentRoll.join('/')})` : '';
+    const label = display(affix.modId);
+    const tier = label.includes(`(T${affix.tier})`) ? '' : ` (T${affix.tier})`;
+    return `${affix.isFractured ? 'fractured ' : ''}${label}${tier}${roll}`;
+  };
+  const exactAffixState = [
+    ...context.prefixes.map((affix) => `prefix ${formatAffix(affix)}`),
+    ...context.suffixes.map((affix) => `suffix ${formatAffix(affix)}`),
+  ];
+  const details = [
+    context.matchedTargetModIds.length > 0
+      ? `target present: ${context.matchedTargetModIds.map(display).join(', ')}`
+      : 'no target modifier present',
+    context.unmatchedTargetModIds.length > 0
+      ? `target missing: ${context.unmatchedTargetModIds.map(display).join(', ')}`
+      : 'all target modifiers present',
+    context.disambiguateAffixes && exactAffixState.length > 0
+      ? `exact affix state: ${exactAffixState.join(', ')}`
+      : undefined,
+    context.influenced ? 'influenced' : undefined,
+    context.synthesised ? 'synthesised' : undefined,
+  ].filter((detail): detail is string => detail !== undefined);
+  return `${context.rarity} ${context.prefixCount}P/${context.suffixCount}S; ${details.join('; ')}`;
 }
 
 function playerWarning(message: string): string {
@@ -632,15 +675,16 @@ function CraftOptimizer() {
                 )}
                 {result.policyExplanation.length > 0 ? (
                   <div className="craft-rules">
-                    {result.policyExplanation.map((rule) => (
-                      <article
+                    {result.policyExplanation.map((rule) => {
+                      const renderedCondition = renderPolicyCondition(rule, eligibleMods);
+                      return <article
                         className="craft-rule"
-                        key={`${rule.condition}\u0000${rule.actionId}`}
-                        data-condition={rule.condition}
+                        key={`${JSON.stringify(rule.context)}\u0000${rule.actionId}`}
+                        data-condition={renderedCondition}
                         data-action={rule.action}
                         data-action-id={rule.actionId}
                       >
-                        <div><span>If</span><strong>{rule.condition}</strong></div>
+                        <div><span>If</span><strong>{renderedCondition}</strong></div>
                         <span className="craft-rule-arrow" aria-hidden="true">→</span>
                         <div><span>Then</span><strong>{playerActionName(rule.actionId, rule.action, recommendedStart)}</strong></div>
                         <details>
@@ -649,15 +693,15 @@ function CraftOptimizer() {
                           <p className="muted">Optimizer action: {rule.action}</p>
                           <p className="muted">Example engine state: {rule.exampleState}</p>
                         </details>
-                      </article>
-                    ))}
+                      </article>;
+                    })}
                   </div>
                 ) : <p>No resolved policy instructions are available under this search budget.</p>}
               </>
             ) : <p>No certified acquisition route is available under this search budget.</p>}
           </section>
 
-          <section className="optimizer-card expected-materials" aria-labelledby="expected-materials-title">
+          {result.recommended !== null && <section className="optimizer-card expected-materials" aria-labelledby="expected-materials-title">
             <h2 id="expected-materials-title">Expected materials</h2>
             <p className="muted">These are long-run averages from the selected policy, so fractional usage is expected rather than a guaranteed whole-number shopping list.</p>
             {result.expectedActionUsage.length > 0 ? (
@@ -684,7 +728,7 @@ function CraftOptimizer() {
                 </ul>
               </details>
             )}
-          </section>
+          </section>}
 
           <details className="optimizer-card advanced-optimizer-details">
             <summary>
@@ -707,6 +751,20 @@ function CraftOptimizer() {
                 </dl>
                 {selectedMethod && <p className="muted">{selectedMethod.provenance}</p>}
               </section>
+
+              {result.recommended === null && result.expectedActionUsage.length > 0 && (
+                <section className="advanced-section uncertified-exploratory-usage">
+                  <h2>Uncertified exploratory policy usage</h2>
+                  <p><strong>Not a valid craft estimate.</strong> No certified executable policy was selected under this budget. These raw counts are retained only as research diagnostics.</p>
+                  <table><thead><tr><th>Exploratory action</th><th>Raw expected usage</th><th>Raw expected cost</th></tr></thead>
+                    <tbody>{result.expectedActionUsage.map((usage) => (
+                      <tr key={usage.actionId} data-action-id={usage.actionId}>
+                        <td>{usage.actionName}</td><td>{count(usage.expectedCount)}</td><td>{chaos(usage.expectedCostChaos)}</td>
+                      </tr>
+                    ))}</tbody>
+                  </table>
+                </section>
+              )}
 
               <section className="advanced-section policy-health">
                 <h2>Policy health</h2>
@@ -742,9 +800,23 @@ function CraftOptimizer() {
                   <dt>Allocation</dt><dd>{result.acquisition.stage.allocation}</dd>
                   <dt>Cache identity contract</dt><dd>{result.acquisition.stage.cacheIdentity}</dd>
                 </dl>
+                {result.acquisition.stage.cleanCertification && (
+                  <details>
+                    <summary>Clean-route certification prepass</summary>
+                    <dl>
+                      <dt>Certified</dt><dd>{result.acquisition.stage.cleanCertification.certified ? 'yes' : 'no'} — {result.acquisition.stage.cleanCertification.recommendationStatus}</dd>
+                      <dt>Executable U</dt><dd>{chaos(result.acquisition.stage.cleanCertification.expectedTotalCostChaos)}</dd>
+                      <dt>Optimistic L</dt><dd>{chaos(result.acquisition.stage.cleanCertification.lowerBoundChaos)}</dd>
+                      <dt>Unresolved gap</dt><dd>{chaos(result.acquisition.stage.cleanCertification.optimalityGapChaos)}</dd>
+                      <dt>States / cumulative work</dt><dd>{result.acquisition.stage.cleanCertification.statesExpanded.toLocaleString()} / {result.acquisition.stage.cleanCertification.cumulativeExpansionWork.toLocaleString()}</dd>
+                      <dt>Rounds / elapsed</dt><dd>{result.acquisition.stage.cleanCertification.expansionRounds} / {result.acquisition.stage.cleanCertification.elapsedMs.toLocaleString()} ms</dd>
+                      <dt>Proof health</dt><dd>{result.acquisition.stage.cleanCertification.proper ? 'proper' : 'improper'}, absorption {(result.acquisition.stage.cleanCertification.absorptionProbability * 100).toFixed(6)}%, {result.acquisition.stage.cleanCertification.costReconciled ? 'cost-reconciled' : 'not reconciled'}</dd>
+                    </dl>
+                  </details>
+                )}
                 {result.acquisition.candidates.some((candidate) => candidate.synthesis) ? (
                   <>
-                    <table><thead><tr><th>Physical family</th><th>Status</th><th>Executable U</th><th>Optimistic L</th><th>Fracturing Orbs</th><th>Restarts</th><th>Proof</th></tr></thead>
+                    <table><thead><tr><th>Physical family</th><th>Status</th><th>Executable U</th><th>Combined L</th><th>Partial-graph L</th><th>Mechanics-required L</th><th>Fracturing Orbs</th><th>Restarts</th><th>Proof</th></tr></thead>
                       <tbody>{result.acquisition.candidates.filter((candidate) => candidate.synthesis).map((candidate) => {
                         const synthesis = candidate.synthesis!;
                         return <tr
@@ -756,9 +828,11 @@ function CraftOptimizer() {
                           <td>{synthesis.status}</td>
                           <td>{chaos(synthesis.expectedCostChaos)}</td>
                           <td>{chaos(synthesis.lowerBoundChaos)}</td>
+                          <td>{chaos(synthesis.lowerBoundEvidence.partialGraphLowerBoundChaos)}</td>
+                          <td>{chaos(synthesis.lowerBoundEvidence.mandatoryMechanicsLowerBoundChaos)}</td>
                           <td>{synthesis.expectedFracturingOrbs === undefined ? '—' : count(synthesis.expectedFracturingOrbs)}</td>
                           <td>{synthesis.expectedRestarts === undefined ? '—' : count(synthesis.expectedRestarts)}</td>
-                          <td>{synthesis.proof?.globalOptimality ?? synthesis.provenance}</td>
+                          <td>{synthesis.proof?.globalOptimality ?? synthesis.provenance}; mechanics price evidence {synthesis.lowerBoundEvidence.mechanics.components.map((component) => component.priceConfidence).join(', ') || 'none'}</td>
                         </tr>;
                       })}</tbody>
                     </table>
@@ -815,7 +889,12 @@ function CraftOptimizer() {
                     <dt>Minimum feasible rarity</dt><dd>{result.search.minimumFeasibleRarity.rarity} — {result.search.minimumFeasibleRarity.reason}</dd>
                     <dt>Returned at budget</dt><dd>{result.search.returnedAtBudget ? 'yes' : 'no'}</dd>
                     <dt>Host guard triggered</dt><dd>{result.search.hostGuardTriggered ? 'yes' : 'no'}</dd>
-                    <dt>Expansion architecture</dt><dd>{result.search.expansionMode}; {result.search.repeatedStatesExpanded.toLocaleString()} repeated states</dd>
+                    <dt>Expansion architecture</dt><dd>{result.search.expansionMode}</dd>
+                    <dt>Actual canonical states fully re-expanded</dt><dd>{result.search.repeatedStatesExpanded.toLocaleString()}</dd>
+                    <dt>Retained nodes revisited for deferred edges</dt><dd>{result.search.previouslyExpandedNodesRevisited.toLocaleString()}</dd>
+                    <dt>Transition distributions generated</dt><dd>{result.search.transitionDistributionsGenerated.toLocaleString()}</dd>
+                    <dt>Separate acquisition-feasibility states</dt><dd>{result.search.acquisitionFeasibilityStatesExpanded.toLocaleString()}</dd>
+                    <dt>Expansion work from interrupted result rounds</dt><dd>{result.search.interruptedStatesExpanded.toLocaleString()}</dd>
                     <dt>Fair acquisition probes</dt><dd>{result.search.acquisitionFeasibility.certifiedCandidates}/{result.search.acquisitionFeasibility.attemptedCandidates} certified</dd>
                     <dt>Budget exhausted</dt><dd>{result.search.budgetExhausted ? 'yes' : 'no'}</dd>
                     <dt>Raw inferred tags</dt><dd>{result.search.harvestActionScope.rawInferredTags.join(', ') || 'none'}</dd>
@@ -826,6 +905,15 @@ function CraftOptimizer() {
                     <table><tbody>{Object.entries(result.search.stageTimingMs).map(([stage, milliseconds]) => (
                       <tr key={stage}><th>{stage}</th><td>{milliseconds} ms</td></tr>
                     ))}</tbody></table>
+                  </details>
+                  <details>
+                    <summary>Persistent expansion work by round</summary>
+                    <p className="muted">Retained states keep their generated edges and are not counted as repeated expansion.</p>
+                    <table><thead><tr><th>Round</th><th>New states</th><th>Retained states</th><th>Transition distributions</th><th>Prior nodes revisited</th></tr></thead>
+                      <tbody>{result.search.newStatesByRound.map((newStates, index) => (
+                        <tr key={index}><td>{index + 1}</td><td>{newStates}</td><td>{result.search.retainedStatesReusedByRound[index] ?? 0}</td><td>{result.search.transitionDistributionsGeneratedByRound[index] ?? 0}</td><td>{result.search.previouslyExpandedNodesRevisitedByRound[index] ?? 0}</td></tr>
+                      ))}</tbody>
+                    </table>
                   </details>
                   {result.search.intent === 'DEEPEN' && (
                     <details>

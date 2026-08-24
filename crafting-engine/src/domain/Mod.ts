@@ -22,6 +22,8 @@ export interface Mod {
   tier: number;
   tierCount: number;
   isNotable: boolean;
+  /** The same display/name key exists in another exclusion group in this pool. */
+  eligibilityNameSensitive?: boolean;
 }
 
 export interface RolledMod {
@@ -39,6 +41,8 @@ export interface RolledMod {
   currentRoll?: number[];
   isFractured: boolean;
   isNotable: boolean;
+  /** Preserve the name in canonical identity because duplicate-name eligibility can differ. */
+  eligibilityNameSensitive?: boolean;
 }
 
 export function toRolledMod(
@@ -61,5 +65,6 @@ export function toRolledMod(
     currentRoll: options.currentRoll ? [...options.currentRoll] : undefined,
     isFractured: options.isFractured ?? false,
     isNotable: mod.isNotable,
+    eligibilityNameSensitive: mod.eligibilityNameSensitive,
   };
 }

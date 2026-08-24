@@ -7,7 +7,7 @@ import {
   type PriceConfidence,
   type PriceSource,
 } from '../domain/PriceBook.ts';
-import type { BaseType, ItemState } from '../domain/ItemState.ts';
+import type { BaseType, ItemRarity, ItemState } from '../domain/ItemState.ts';
 import { getAllAffixes, getPhysicalStateSignature, normalizeItemState } from '../domain/ItemState.ts';
 import type { TargetDefinition } from '../domain/TargetDefinition.ts';
 import { getAllTargetModRequirements, matchesModRequirement } from '../domain/TargetDefinition.ts';
@@ -16,7 +16,12 @@ import type {
   AcquisitionPortfolioCandidate,
   MechanicsConfidence,
 } from '../rules/actionRegistry.ts';
-import { createHarvestReforgeMechanics } from '../rules/actionRegistry.ts';
+import {
+  CRAFT_MECHANICS,
+  createHarvestReforgeMechanics,
+  createRestartReacquireMechanic,
+} from '../rules/actionRegistry.ts';
+import { getCanonicalStateKey } from '../rules/actionDiscovery.ts';
 import { getTaggedModsForCluster } from '../rules/clusterPoolHelpers.ts';
 import {
   GenericSearchEngine,
@@ -31,9 +36,11 @@ import {
 import {
   ACQUISITION_FRACTURE_PREPARATION_STATE_IDENTITY,
   DEFAULT_ACQUISITION_SYNTHESIS_ACTION_IDS,
+  buildAcquisitionTargetDefinition,
   synthesizeAcquisition,
   type AcquisitionSynthesisResult,
 } from '../solver/acquisitionSynthesis.ts';
+import { evaluateMandatoryMechanicsLowerBound } from '../solver/mandatoryMechanicsLowerBound.ts';
 import {
   OptimizerInputValidationError,
   validateOptimizeCraftInput,
@@ -141,6 +148,19 @@ export interface PolicyExplanationRule {
   representedStateCount: number;
   expectedVisits: number;
   exampleState: string;
+  context: {
+    rarity: ItemRarity;
+    prefixCount: number;
+    suffixCount: number;
+    matchedTargetModIds: string[];
+    unmatchedTargetModIds: string[];
+    prefixes: Array<{ modId: string; tier: number; isFractured: boolean; currentRoll?: number[] }>;
+    suffixes: Array<{ modId: string; tier: number; isFractured: boolean; currentRoll?: number[] }>;
+    influenced: boolean;
+    synthesised: boolean;
+    acquisitionMenu: boolean;
+    disambiguateAffixes: boolean;
+  };
 }
 
 export interface RouteSummary {
@@ -168,10 +188,11 @@ export interface AcquisitionMethodSummary {
 
 export interface AcquisitionSynthesisSummary {
   status: AcquisitionSynthesisResult['status'] | 'SKIPPED_DOMINATED';
-  provenance: AcquisitionSynthesisResult['provenance'] | 'STRUCTURAL FRACTURE LOWER BOUND';
+  provenance: AcquisitionSynthesisResult['provenance'] | 'ADMISSIBLE MECHANICS LOWER BOUND';
   expectedCostChaos?: number;
   expectedPreparationCostChaos?: number;
   lowerBoundChaos: number;
+  lowerBoundEvidence: AcquisitionSynthesisResult['lowerBoundEvidence'];
   expectedRestarts?: number;
   expectedRestartCostChaos?: number;
   expectedFracturingOrbs?: number;
@@ -211,6 +232,25 @@ export interface AcquisitionStageSummary {
   elapsedMs: number;
   allocation: string;
   cacheIdentity: string;
+  cleanCertification?: {
+    attempted: boolean;
+    certified: boolean;
+    recommendationStatus: GenericSearchResult['optimalityProof']['selectedPolicyStatus'];
+    expectedTotalCostChaos?: number;
+    lowerBoundChaos?: number;
+    optimalityGapChaos?: number;
+    statesExpanded: number;
+    cumulativeExpansionWork: number;
+    expansionRounds: number;
+    elapsedMs: number;
+    proper: boolean;
+    absorptionProbability: number;
+    costReconciled: boolean;
+    fullyResolvedOnPolicy: boolean;
+    unresolvedOnPolicyProbability: number;
+    unresolvedCompetitorCount: number;
+    startActionId?: string;
+  };
 }
 
 export interface AcquisitionSummary {
@@ -301,6 +341,15 @@ export interface OptimizationSearchSummary {
   timeToFirstUsefulRecommendationMs?: number;
   expansionMode: 'REBUILT_EACH_ROUND' | 'PERSISTENT_EXTENDED';
   repeatedStatesExpanded: number;
+  seedStatesExpanded: number;
+  newStatesByRound: number[];
+  retainedStatesReusedByRound: number[];
+  transitionDistributionsGenerated: number;
+  transitionDistributionsGeneratedByRound: number[];
+  previouslyExpandedNodesRevisited: number;
+  previouslyExpandedNodesRevisitedByRound: number[];
+  acquisitionFeasibilityStatesExpanded: number;
+  interruptedStatesExpanded: number;
   optimisticLowerBoundIterations: number;
   optimisticLowerBoundConverged: boolean;
   optimisticLowerBoundMethod: 'KNOWN_PARTIAL_GRAPH_WITH_ZERO_COST_UNKNOWN_SUCCESSORS';
@@ -515,6 +564,7 @@ function summarizeSynthesis(
     expectedCostChaos: result.expectedCostChaos,
     expectedPreparationCostChaos: result.expectedPreparationCostChaos,
     lowerBoundChaos: result.lowerBoundChaos,
+    lowerBoundEvidence: result.lowerBoundEvidence,
     expectedRestarts: result.expectedRestarts,
     expectedRestartCostChaos: result.expectedRestartCostChaos,
     expectedFracturingOrbs: result.expectedFracturingOrbs,
@@ -599,14 +649,83 @@ function describePolicyCondition(state: ItemState, target: TargetDefinition): st
     `${state.suffixes.length} suffix(es), and ${matchedTargets}/${requirements.length} target modifier(s)`;
 }
 
+function targetRequirementIdentity(
+  requirement: ReturnType<typeof getAllTargetModRequirements>[number],
+  index: number
+): string {
+  return requirement.modId ?? requirement.name ?? requirement.modGroup ?? `target requirement ${index + 1}`;
+}
+
+function policyConditionContext(
+  state: ItemState,
+  target: TargetDefinition
+): PolicyExplanationRule['context'] {
+  const requirements = getAllTargetModRequirements(target);
+  const affixes = getAllAffixes(state);
+  const matchedTargetModIds = [...new Set(affixes
+    .filter((mod) => requirements.some((requirement) => matchesModRequirement(mod, requirement)))
+    .map((mod) => mod.modId))]
+    .sort();
+  const unmatchedTargetModIds = requirements
+    .map((requirement, index) => ({ requirement, id: targetRequirementIdentity(requirement, index) }))
+    .filter(({ requirement }) => !affixes.some((mod) => matchesModRequirement(mod, requirement)))
+    .map(({ id }) => id)
+    .sort();
+  const describeAffix = (mod: ItemState['prefixes'][number]) => ({
+    modId: mod.modId,
+    tier: mod.tier,
+    isFractured: mod.isFractured,
+    currentRoll: mod.currentRoll ? [...mod.currentRoll] : undefined,
+  });
+  return {
+    rarity: state.rarity,
+    prefixCount: state.prefixes.length,
+    suffixCount: state.suffixes.length,
+    matchedTargetModIds,
+    unmatchedTargetModIds,
+    prefixes: state.prefixes.map(describeAffix).sort((left, right) => left.modId.localeCompare(right.modId)),
+    suffixes: state.suffixes.map(describeAffix).sort((left, right) => left.modId.localeCompare(right.modId)),
+    influenced: state.flags?.influenced === true,
+    synthesised: state.flags?.synthesised === true,
+    acquisitionMenu: state.flags?.acquisitionMenu === true,
+    disambiguateAffixes: false,
+  };
+}
+
 function buildPolicyExplanation(
   rules: GenericSearchResult['onPolicyRules'],
   target: TargetDefinition
 ): PolicyExplanationRule[] {
+  const prepared = rules.map((rule) => ({
+    rule,
+    condition: describePolicyCondition(rule.state, target),
+    context: policyConditionContext(rule.state, target),
+  }));
+  const coarseKey = (context: PolicyExplanationRule['context']): string => JSON.stringify({
+    rarity: context.rarity,
+    prefixCount: context.prefixCount,
+    suffixCount: context.suffixCount,
+    matchedTargetModIds: context.matchedTargetModIds,
+    unmatchedTargetModIds: context.unmatchedTargetModIds,
+    influenced: context.influenced,
+    synthesised: context.synthesised,
+    acquisitionMenu: context.acquisitionMenu,
+  });
+  const actionsByCoarseContext = new Map<string, Set<string>>();
+  for (const { rule, context } of prepared) {
+    const actions = actionsByCoarseContext.get(coarseKey(context)) ?? new Set<string>();
+    actions.add(rule.selectedActionId);
+    actionsByCoarseContext.set(coarseKey(context), actions);
+  }
   const grouped = new Map<string, PolicyExplanationRule>();
-  for (const rule of rules) {
-    const condition = describePolicyCondition(rule.state, target);
-    const key = `${condition}\u0000${rule.selectedActionId}`;
+  for (const { rule, condition, context } of prepared) {
+    const coarse = coarseKey(context);
+    const disambiguateAffixes = (actionsByCoarseContext.get(coarse)?.size ?? 0) > 1;
+    context.disambiguateAffixes = disambiguateAffixes;
+    const detailed = disambiguateAffixes
+      ? JSON.stringify({ prefixes: context.prefixes, suffixes: context.suffixes })
+      : '';
+    const key = `${coarse}\u0000${detailed}\u0000${rule.selectedActionId}`;
     const existing = grouped.get(key);
     if (existing) {
       existing.representedStateCount++;
@@ -620,6 +739,7 @@ function buildPolicyExplanation(
       representedStateCount: 1,
       expectedVisits: rule.expectedVisits,
       exampleState: describePolicyState(rule.state),
+      context,
     });
   }
   return [...grouped.values()].sort((left, right) => {
@@ -676,6 +796,14 @@ export class OptimizerService {
     );
     const cleanStart = starts.find((start) => start.fracturedRequirement === undefined);
     if (!cleanStart) throw new Error('Strategy discovery did not produce a clean starting state');
+    const cleanCandidateIndex = starts.indexOf(cleanStart);
+    const cleanMethodIndex = cleanStart.acquisitions.findIndex(
+      (method) => method.type === 'clean-base'
+    );
+    if (cleanMethodIndex < 0) {
+      throw new Error('Clean strategy candidate did not provide a clean-base acquisition method');
+    }
+    const cleanMethod = cleanStart.acquisitions[cleanMethodIndex];
     const cleanEvidence = cleanBaseEvidence(cleanStart, input);
     const fractureEntries = starts
       .map((start, candidateIndex) => ({ start, candidateIndex }))
@@ -734,62 +862,138 @@ export class OptimizerService {
     let stageCacheHits = 0;
     let stageAttemptedCandidates = 0;
 
-    // Simple clean routes receive a short certification pass first. If its executable upper bound
-    // is already below the unavoidable price of one clean base plus one Fracturing Orb, every
-    // self-fracture family is soundly dominated without paying off-policy synthesis latency.
+    // Clean routes receive a bounded certification pass first. If its executable upper bound is
+    // no greater than every fracture family's generic mandatory-mechanics lower bound, those
+    // families are soundly dominated without paying off-policy synthesis latency.
     let fastCleanResult: GenericSearchResult | undefined;
     let fastCleanRoute: RouteSummary | undefined;
     const targetExplicitlyRequiresFracture = getAllTargetModRequirements(input.target)
       .some((requirement) => requirement.mustBeFractured === true);
-    const fracturePrice = priceBook.evaluateRate('fracturing');
-    const fracturePriceUsable = fracturePrice.confidence === 'known' ||
-      (input.allowResearchFallbackPrices ?? true);
-    const structuralFractureLowerBound = cleanEvidence.costChaos + fracturePrice.costChaos;
+    const structuralBounds = new Map<number, AcquisitionSynthesisResult['lowerBoundEvidence']>();
+    for (const { start, candidateIndex } of fractureEntries) {
+      const acquisitionTarget = buildAcquisitionTargetDefinition({
+        fracturedMod: start.fracturedRequirement!,
+      });
+      const restart = createRestartReacquireMechanic({
+        destination: cleanStart.state,
+        acquisitionCostChaos: cleanEvidence.costChaos,
+        confidence: cleanEvidence.confidence,
+        provenance: cleanEvidence.provenance,
+      });
+      const mechanics = evaluateMandatoryMechanicsLowerBound(
+        { pool, priceBook },
+        cleanStart.state,
+        acquisitionTarget,
+        [...CRAFT_MECHANICS, restart],
+        DEFAULT_ACQUISITION_SYNTHESIS_ACTION_IDS,
+        input.allowResearchFallbackPrices ?? true
+      );
+      const mandatoryPreparation = mechanics.proven ? mechanics.lowerBoundChaos : 0;
+      const mandatory = cleanEvidence.costChaos + mandatoryPreparation;
+      structuralBounds.set(candidateIndex, {
+        cleanBaseCostChaos: cleanEvidence.costChaos,
+        partialGraphPreparationLowerBoundChaos: 0,
+        partialGraphLowerBoundChaos: cleanEvidence.costChaos,
+        mandatoryMechanicsPreparationLowerBoundChaos: mandatoryPreparation,
+        mandatoryMechanicsLowerBoundChaos: mandatory,
+        combinedLowerBoundChaos: mandatory,
+        combinationRule: 'MAX_OF_ADMISSIBLE_BOUNDS',
+        mechanics,
+        provenance:
+          'Pre-search acquisition lower bound is max(clean-base-only partial bound, generic ' +
+          'mandatory-mechanics bound).',
+      });
+    }
+    const allStructuralBoundsProven = fractureEntries.every(({ candidateIndex }) =>
+      structuralBounds.get(candidateIndex)?.mechanics.proven === true
+    );
     if (
       fractureEntries.length > 0 &&
       !targetExplicitlyRequiresFracture &&
-      input.target.requiredRarity !== 'rare' &&
-      fracturePriceUsable &&
-      fracturePrice.costChaos > 0
+      allStructuralBoundsProven
     ) {
       const fastWallTimeMs = Math.max(
         1,
         Math.min(22_000, Math.floor(runtimeBudget.engineDeadlineMs * 0.75))
       );
-      const cleanPortfolio = buildAcquisitionPortfolio([cleanStart], input);
-      // The bounded clean feasibility pass intentionally uses the established rebuilt-round
-      // mode: it is the fast, stable Phase 2C path for simple clean targets. Acquisition
-      // synthesis itself retains persistent extension and reports it independently.
-      fastCleanResult = runDownstreamSearch(cleanPortfolio, fastWallTimeMs, false, true);
-      const fastDecision = [...fastCleanResult.policyMap.values()].find(
-        (decision) => decision.state.flags?.acquisitionMenu === true
-      );
-      fastCleanRoute = (fastDecision?.candidateQValues ?? [])
-        .filter((candidate) => candidate.actionId.startsWith('acquire_'))
-        .map(routeSummary)
-        .find((route) =>
-          route.actionId === fastDecision?.bestActionId &&
-          route.status === 'RESOLVED' &&
-          route.expectedTotalCostChaos !== null
-        );
+      // Certify the physical clean craft directly so acquisition-menu competition cannot consume
+      // the tranche before an executable incumbent exists. Restart/reacquisition is still a real
+      // shared mechanic and pays the clean-base price; the first clean base is added exactly once
+      // at the service boundary below.
+      fastCleanResult = new GenericSearchEngine(
+        { pool, priceBook },
+        input.target,
+        {
+          includeHarvest: harvestTags.length > 0,
+          harvestTags,
+          prioritizeTargetProgress: true,
+          allowResearchFallbackPrices: input.allowResearchFallbackPrices ?? true,
+          maxStates: input.searchBudget?.maxStates ?? 5_000,
+          maxWallTimeMs: fastWallTimeMs,
+          maxExpansionRounds: input.searchBudget?.maxExpansionRounds ?? 3,
+          searchIntent: input.searchIntent ?? 'RECOMMEND',
+          persistentExpansion: true,
+          restartReacquire: {
+            destination: cleanStart.state,
+            acquisitionCostChaos: cleanEvidence.costChaos,
+            confidence: cleanEvidence.confidence,
+            provenance: cleanEvidence.provenance,
+            label: 'Abandon attempt and reacquire a clean base',
+          },
+        }
+      ).search(cleanStart.state);
       const fastCertified = fastCleanResult.optimalityProof.selectedPolicyStatus ===
         'FULLY RESOLVED / PROPER / ABSORBING / COST-RECONCILED';
+      if (fastCertified && Number.isFinite(fastCleanResult.totalExpectedCostChaos)) {
+        const total = cleanEvidence.costChaos + fastCleanResult.totalExpectedCostChaos;
+        const startDecision = fastCleanResult.policyMap.get(
+          getCanonicalStateKey(cleanStart.state, input.target)
+        );
+        const downstreamLowerBound = Math.min(
+          ...(startDecision?.candidateQValues
+            .map((candidate) => candidate.lowerBoundChaos)
+            .filter(Number.isFinite) ?? [])
+        );
+        const totalLowerBound = cleanEvidence.costChaos + (
+          Number.isFinite(downstreamLowerBound) ? downstreamLowerBound : 0
+        );
+        fastCleanRoute = {
+          actionId: `acquire_candidate_${cleanCandidateIndex}_clean-base_${cleanMethodIndex}`,
+          name: cleanMethod.description ?? 'Start clean base: Clean Base',
+          acquisitionCandidateId: `candidate_${cleanCandidateIndex}`,
+          acquisitionMethodId: `clean-base_${cleanMethodIndex}`,
+          expectedTotalCostChaos: total,
+          lowerBoundChaos: totalLowerBound,
+          incumbentUpperBoundChaos: total,
+          optimalityGapChaos: Math.max(0, total - totalLowerBound),
+          status: 'RESOLVED',
+          couldBeatResolvedIncumbent: false,
+        };
+      }
       if (
         fastCertified &&
         fastCleanRoute?.expectedTotalCostChaos !== null &&
         fastCleanRoute?.expectedTotalCostChaos !== undefined &&
-        fastCleanRoute.expectedTotalCostChaos <= structuralFractureLowerBound
+        fractureEntries.every(({ candidateIndex }) =>
+          fastCleanRoute!.expectedTotalCostChaos! <=
+            structuralBounds.get(candidateIndex)!.combinedLowerBoundChaos
+        )
       ) {
         stageMode = 'CLEAN_ROUTE_DOMINANCE';
         for (const { candidateIndex } of fractureEntries) {
+          const bound = structuralBounds.get(candidateIndex)!;
           synthesisSummaries.set(candidateIndex, {
             status: 'SKIPPED_DOMINATED',
-            provenance: 'STRUCTURAL FRACTURE LOWER BOUND',
-            lowerBoundChaos: structuralFractureLowerBound,
+            provenance: 'ADMISSIBLE MECHANICS LOWER BOUND',
+            lowerBoundChaos: bound.combinedLowerBoundChaos,
+            lowerBoundEvidence: bound,
             explanation:
               `Certified clean route ${fastCleanRoute.expectedTotalCostChaos.toFixed(3)}c is no ` +
-              `more expensive than the unavoidable ${cleanEvidence.costChaos.toFixed(3)}c clean ` +
-              `base + ${fracturePrice.costChaos.toFixed(3)}c first Fracturing Orb lower bound.`,
+              `more expensive than the generic unavoidable acquisition lower bound ` +
+              `${bound.combinedLowerBoundChaos.toFixed(3)}c (${cleanEvidence.costChaos.toFixed(3)}c ` +
+              `clean base + ${bound.mandatoryMechanicsPreparationLowerBoundChaos.toFixed(3)}c ` +
+              `mandatory state-creation cost; price evidence ` +
+              `${bound.mechanics.components.map((component) => component.priceConfidence).join(', ') || 'none'}).`,
             cacheHit: false,
             allocatedMaxStates: 0,
             allocatedMaxWallTimeMs: 0,
@@ -879,7 +1083,8 @@ export class OptimizerService {
           }
         }
       }
-      stageElapsedMs = Date.now() - acquisitionStarted;
+      stageElapsedMs = (fastCleanResult?.searchSummary.elapsedMs ?? 0) +
+        (Date.now() - acquisitionStarted);
       portfolio = buildAcquisitionPortfolio(starts, input, synthesisResults);
       result = runDownstreamSearch(portfolio, Math.max(1, overallDeadline - Date.now()));
     }
@@ -887,17 +1092,21 @@ export class OptimizerService {
     const acquisitionDecision = [...result.policyMap.values()].find(
       (decision) => decision.state.flags?.acquisitionMenu === true
     );
-    const rankedAcquisitionRoutes = (acquisitionDecision?.candidateQValues ?? [])
-      .filter((candidate) => candidate.actionId.startsWith('acquire_'))
-      .map(routeSummary)
-      .sort((left, right) =>
-        (left.expectedTotalCostChaos ?? Infinity) - (right.expectedTotalCostChaos ?? Infinity)
-      );
+    const rankedAcquisitionRoutes = stageMode === 'CLEAN_ROUTE_DOMINANCE' && fastCleanRoute
+      ? [fastCleanRoute]
+      : (acquisitionDecision?.candidateQValues ?? [])
+        .filter((candidate) => candidate.actionId.startsWith('acquire_'))
+        .map(routeSummary)
+        .sort((left, right) =>
+          (left.expectedTotalCostChaos ?? Infinity) - (right.expectedTotalCostChaos ?? Infinity)
+        );
     const selectedPolicyCertified =
       result.optimalityProof.selectedPolicyStatus ===
       'FULLY RESOLVED / PROPER / ABSORBING / COST-RECONCILED';
     const recommended = selectedPolicyCertified
-      ? rankedAcquisitionRoutes.find(
+      ? stageMode === 'CLEAN_ROUTE_DOMINANCE'
+        ? fastCleanRoute ?? null
+        : rankedAcquisitionRoutes.find(
           (route) =>
             route.actionId === acquisitionDecision?.bestActionId &&
             route.status === 'RESOLVED' &&
@@ -933,9 +1142,12 @@ export class OptimizerService {
         }
         const couldBeat = incumbentUpperBound !== undefined &&
           synthesis.lowerBoundChaos < incumbentUpperBound;
+        const dominatedByBound = incumbentUpperBound !== undefined && !couldBeat;
         return [{
           actionId: `synthesis_frontier_${candidateId}`,
-          name: `Unresolved self-fracture frontier: ${starts[candidateIndex].label}`,
+          name: dominatedByBound
+            ? `Self-fracture ${starts[candidateIndex].label} (dominated by admissible bound)`
+            : `Unresolved self-fracture frontier: ${starts[candidateIndex].label}`,
           acquisitionCandidateId: candidateId,
           acquisitionMethodId: 'self-fracture_executable',
           expectedTotalCostChaos: null,
@@ -944,7 +1156,7 @@ export class OptimizerService {
           optimalityGapChaos: incumbentUpperBound === undefined
             ? null
             : Math.max(0, incumbentUpperBound - synthesis.lowerBoundChaos),
-          status: 'UNRESOLVED',
+          status: dominatedByBound ? 'DOMINATED_BY_BOUND' : 'UNRESOLVED',
           couldBeatResolvedIncumbent: couldBeat,
         }];
       }
@@ -1001,6 +1213,32 @@ export class OptimizerService {
       totalCostChaos: finiteOrNull(rule.totalCostChaos),
       candidates: rule.candidateQValues.map(serializeCandidate),
     }));
+    const policyExplanation = buildPolicyExplanation(result.onPolicyRules, input.target);
+    if (stageMode === 'CLEAN_ROUTE_DOMINANCE' && fastCleanRoute) {
+      policyExplanation.unshift({
+        condition: 'Start: choose an acquisition route',
+        actionId: fastCleanRoute.actionId,
+        action: fastCleanRoute.name,
+        representedStateCount: 1,
+        expectedVisits: 1,
+        exampleState: 'Choose an acquisition route',
+        context: {
+          rarity: cleanStart.state.rarity,
+          prefixCount: 0,
+          suffixCount: 0,
+          matchedTargetModIds: [],
+          unmatchedTargetModIds: getAllTargetModRequirements(input.target).map(
+            (requirement, index) => targetRequirementIdentity(requirement, index)
+          ).sort(),
+          prefixes: [],
+          suffixes: [],
+          influenced: false,
+          synthesised: false,
+          acquisitionMenu: true,
+          disambiguateAffixes: false,
+        },
+      });
+    }
     const expectedCostChaos = recommended?.expectedTotalCostChaos ?? null;
     const expectedProfitChaos = input.expectedSaleValueChaos === undefined || expectedCostChaos === null
       ? undefined
@@ -1082,10 +1320,21 @@ export class OptimizerService {
       recommended,
       alternatives: acquisitionRoutes.filter((route) => route.actionId !== recommended?.actionId),
       expectedCurrencies: Object.fromEntries(
-        Object.entries(result.expectedCurrencies).map(([currency, amount]) => [currency, finiteOrNull(amount)])
+        [
+          ...(stageMode === 'CLEAN_ROUTE_DOMINANCE' ? [['clean_base', 1] as const] : []),
+          ...Object.entries(result.expectedCurrencies),
+        ].map(([currency, amount]) => [currency, finiteOrNull(amount)])
       ),
-      expectedActionUsage: result.expectedActionUsage.map((usage) => ({ ...usage })),
-      policyExplanation: buildPolicyExplanation(result.onPolicyRules, input.target),
+      expectedActionUsage: [
+        ...(stageMode === 'CLEAN_ROUTE_DOMINANCE' ? [{
+          actionId: fastCleanRoute!.actionId,
+          actionName: fastCleanRoute!.name,
+          expectedCount: 1,
+          expectedCostChaos: cleanEvidence.costChaos,
+        }] : []),
+        ...result.expectedActionUsage.map((usage) => ({ ...usage })),
+      ],
+      policyExplanation,
       policyRules,
       acquisition: {
         selectedCandidateId: selectedParts.candidateId,
@@ -1136,6 +1385,28 @@ export class OptimizerService {
             'cost/confidence/provenance + complete active currency rates + enabled synthesis actions ' +
             '+ acquisition state-identity version + Harvest scope + fallback policy + search intent ' +
             '+ exact per-candidate budget.',
+          cleanCertification: fastCleanResult ? {
+            attempted: true,
+            certified: fastCleanResult.optimalityProof.selectedPolicyStatus ===
+              'FULLY RESOLVED / PROPER / ABSORBING / COST-RECONCILED',
+            recommendationStatus: fastCleanResult.optimalityProof.selectedPolicyStatus,
+            expectedTotalCostChaos: fastCleanRoute?.expectedTotalCostChaos ?? undefined,
+            lowerBoundChaos: fastCleanRoute?.lowerBoundChaos ?? undefined,
+            optimalityGapChaos: fastCleanRoute?.optimalityGapChaos ?? undefined,
+            statesExpanded: fastCleanResult.searchSummary.statesExpanded,
+            cumulativeExpansionWork: fastCleanResult.searchSummary.cumulativeExpansionWork,
+            expansionRounds: fastCleanResult.searchSummary.expansionRounds,
+            elapsedMs: fastCleanResult.searchSummary.elapsedMs,
+            proper: fastCleanResult.onPolicyGraph.isProper,
+            absorptionProbability: fastCleanResult.onPolicyGraph.terminalAbsorptionProbability,
+            costReconciled: fastCleanResult.reconciliation.isReconciled,
+            fullyResolvedOnPolicy: fastCleanResult.onPolicyGraph.isFullyResolved,
+            unresolvedOnPolicyProbability:
+              fastCleanResult.onPolicyGraph.onPolicyUnresolvedProbabilityMass,
+            unresolvedCompetitorCount:
+              fastCleanResult.optimalityProof.unresolvedCompetitorCount,
+            startActionId: fastCleanRoute?.actionId,
+          } : undefined,
         },
       },
       expectedCostChaos,

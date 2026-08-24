@@ -8,6 +8,24 @@ export class ModPool {
   private suffixes: Mod[];
 
   constructor(mods: Mod[]) {
+    const groupSignaturesByName = new Map<string, Set<string>>();
+    for (const mod of mods) {
+      const groups = (mod.modGroups?.length > 0 ? mod.modGroups : [mod.modGroup])
+        .slice()
+        .sort()
+        .join('+');
+      const signatures = groupSignaturesByName.get(mod.name) ?? new Set<string>();
+      signatures.add(groups);
+      groupSignaturesByName.set(mod.name, signatures);
+    }
+    for (const mod of mods) {
+      if ((groupSignaturesByName.get(mod.name)?.size ?? 0) > 1) {
+        // Duplicate-name exclusion is a separate legality predicate from mod-group exclusion.
+        // Mark it from pool data so canonical search preserves only names that can change the
+        // eligible successor pool, without any modifier-name special cases.
+        mod.eligibilityNameSensitive = true;
+      }
+    }
     this.mods = mods;
     this.prefixes = mods.filter((m) => m.genType === 'Prefix');
     this.suffixes = mods.filter((m) => m.genType === 'Suffix');

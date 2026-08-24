@@ -68,6 +68,9 @@ export class TransitionGenerationDeadlineExceeded extends Error {
 
 export type MechanicsConfidence = 'VALIDATED' | 'APPROXIMATE / EXTERNALLY CLOSE';
 
+/** State properties an action can create from a state where they are absent. */
+export type MechanicStateCreation = 'FRACTURED_AFFIX';
+
 export interface CraftMechanic {
   id: string;
   actionType: DiscoveredActionType;
@@ -78,6 +81,8 @@ export interface CraftMechanic {
   parameters?: Record<string, any>;
   mechanicsConfidence?: MechanicsConfidence;
   mechanicsProvenance?: string;
+  /** Authoritative capability declaration used by generic mandatory-cost proofs. */
+  createsState?: readonly MechanicStateCreation[];
   getTransitions?(
     state: ItemState,
     target: TargetDefinition,
@@ -847,6 +852,7 @@ export const CRAFT_MECHANICS: CraftMechanic[] = [
     actionType: 'FRACTURING_ORB',
     name: 'Fracturing Orb',
     category: 'base-prep',
+    createsState: ['FRACTURED_AFFIX'],
     isLegal: (state) => {
       const alreadyFractured = getAllAffixes(state).some(
         (mod) => isFracturedMod(state, mod)

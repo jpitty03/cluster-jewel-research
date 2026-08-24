@@ -115,8 +115,6 @@ export function getCanonicalStateKey(
         (r.name ? r.name === m.name : true)
     );
     const isFrac = m.isFractured ? 'FRAC:' : '';
-    const craftTags = (m.craftTags ?? []).slice().sort().join(',');
-    const tagsSuffix = craftTags.length > 0 ? `:tags(${craftTags})` : '';
 
     // Check if target definition has specific roll requirements for this mod
     let rollSuffix = '';
@@ -132,9 +130,18 @@ export function getCanonicalStateKey(
       }
     }
 
-    // Always preserve full sorted modGroups exclusion set to ensure mod-group blocking and eligibility are preserved
+    // Full mod-group exclusion identity is mechanically authoritative for pool eligibility.
+    // Eligibility also rejects an occupied name. ModPool marks names found in multiple exclusion
+    // groups, and those names remain explicit below; all other names are redundant with the group
+    // identity. Tier, notable flag, and own tags do not affect reset, uniform Annul/Fracture
+    // selection, or additions once side and groups are retained. Target identity and roll
+    // sensitivity stay explicit.
     const allGroups = (m.modGroups && m.modGroups.length > 0 ? m.modGroups : [m.modGroup ?? m.modId]).slice().sort().join('+');
-    return `${isFrac}groups(${allGroups}):t${m.tier}:name(${m.name}):notable(${m.isNotable})${targetSuffix}${fractureRequirement ? ':fracture-sensitive' : ''}${tagsSuffix}${rollSuffix}`;
+    const eligibilityName = m.eligibilityNameSensitive ? `:eligibility-name(${m.name})` : '';
+    const targetIdentity = isTarget
+      ? `:id(${m.modId}):t${m.tier}:name(${m.name})${targetSuffix}`
+      : '';
+    return `${isFrac}groups(${allGroups})${eligibilityName}${targetIdentity}${fractureRequirement ? ':fracture-sensitive' : ''}${rollSuffix}`;
   };
 
   const pKeys = state.prefixes.map(formatMod).sort().join('|');

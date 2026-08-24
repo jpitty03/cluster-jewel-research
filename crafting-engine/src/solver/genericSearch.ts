@@ -1,5 +1,9 @@
 import type { ItemState } from '../domain/ItemState.ts';
-import { cloneItemState, isFracturedMod, normalizeItemState } from '../domain/ItemState.ts';
+import {
+  cloneItemState,
+  isFracturedMod,
+  normalizeItemState,
+} from '../domain/ItemState.ts';
 import type { TargetDefinition } from '../domain/TargetDefinition.ts';
 import type { SolverContext } from '../domain/CraftAction.ts';
 import type { PriceConfidence, PriceSource } from '../domain/PriceBook.ts';
@@ -170,6 +174,10 @@ export interface GraphBuildResult {
   statesExpandedThisRound: number;
   /** True when this round extended a retained graph instead of rebuilding it. */
   extendedPersistentGraph: boolean;
+  /** Actual mechanic transition distributions generated during this graph-build call. */
+  transitionDistributionsGeneratedThisRound: number;
+  /** Retained nodes revisited only to materialize an edge deferred by an earlier round. */
+  previouslyExpandedNodesRevisitedThisRound: number;
   timing: {
     transitionGenerationMs: number;
     graphAggregationAndSetupMs: number;
@@ -340,6 +348,16 @@ export interface SearchSummary {
   newStatesByRound: number[];
   /** Previously expanded canonical states retained with their generated edges in each round. */
   retainedStatesReusedByRound: number[];
+  /** Actual mechanic transition distributions generated across seed, probes, and main rounds. */
+  transitionDistributionsGenerated: number;
+  transitionDistributionsGeneratedByRound: number[];
+  /** Retained nodes revisited to materialize deferred edges; they are not full state re-expansions. */
+  previouslyExpandedNodesRevisited: number;
+  previouslyExpandedNodesRevisitedByRound: number[];
+  /** Work in separate bounded acquisition-feasibility graphs, not duplicate main-graph expansion. */
+  acquisitionFeasibilityStatesExpanded: number;
+  /** Canonical states expanded in a round whose proof solve was interrupted before it could return. */
+  interruptedStatesExpanded: number;
   optimisticLowerBoundIterations: number;
   optimisticLowerBoundConverged: boolean;
   optimisticLowerBoundMethod: 'KNOWN_PARTIAL_GRAPH_WITH_ZERO_COST_UNKNOWN_SUCCESSORS';
@@ -563,6 +581,8 @@ export function createPersistentExpansionSession(): PersistentExpansionSession {
     statesExpandedThisRound: 0,
     statesExpandedTotal: 0,
     transitionGenerationMs: 0,
+    transitionDistributionsGeneratedTotal: 0,
+    previouslyExpandedNodesRevisitedTotal: 0,
   };
 }
 
@@ -584,6 +604,10 @@ export interface PersistentExpansionSession {
   /** Distinct states expanded across every round that used this session. */
   statesExpandedTotal: number;
   transitionGenerationMs: number;
+  /** Mechanic distributions generated across completed graph builds in this session. */
+  transitionDistributionsGeneratedTotal: number;
+  /** Retained nodes revisited only to materialize deferred edges across this session. */
+  previouslyExpandedNodesRevisitedTotal: number;
 }
 
 function directedGraphHasCycle(adjacency: Map<string, string[]>, deadlineMs?: number): boolean {
@@ -1081,6 +1105,8 @@ export class GenericSearchEngine {
       Array<{ targetKey: string; probability: number; nextState: ItemState; label?: string }>
     >();
     let transitionGenerationInterrupted = false;
+    let transitionDistributionsGeneratedThisRound = 0;
+    const previouslyExpandedNodesRevisited = new Set<string>();
 
     for (const adapter of this.adapters) {
       const existing = actionAttribution[adapter.id];
@@ -1138,6 +1164,7 @@ export class GenericSearchEngine {
       const transitionStarted = Date.now();
       try {
         dist = adapter.getTransitions(curr, deadlineMs);
+        transitionDistributionsGeneratedThisRound++;
       } catch (error) {
         if (error instanceof TransitionGenerationDeadlineExceeded) {
           transitionGenerationInterrupted = true;
@@ -1231,6 +1258,7 @@ export class GenericSearchEngine {
           continue;
         }
         const placeholder = node.actions.get(actionId);
+        previouslyExpandedNodesRevisited.add(nodeKey);
         node.actions.delete(actionId);
         session.deferredEdges.delete(edgeId);
         if (!materializeAction(node, node.state, nodeKey, adapter)) {
@@ -1368,6 +1396,8 @@ export class GenericSearchEngine {
       session.statesExpandedThisRound = statesExpandedThisRound;
       session.statesExpandedTotal += statesExpandedThisRound;
       session.transitionGenerationMs += transitionGenerationMs;
+      session.transitionDistributionsGeneratedTotal += transitionDistributionsGeneratedThisRound;
+      session.previouslyExpandedNodesRevisitedTotal += previouslyExpandedNodesRevisited.size;
     }
 
     return {
@@ -1385,6 +1415,8 @@ export class GenericSearchEngine {
       actionAttribution,
       statesExpandedThisRound,
       extendedPersistentGraph: session !== undefined && statesExpandedBefore > 0,
+      transitionDistributionsGeneratedThisRound,
+      previouslyExpandedNodesRevisitedThisRound: previouslyExpandedNodesRevisited.size,
       timing: {
         transitionGenerationMs,
         graphAggregationAndSetupMs: Math.max(
@@ -1417,6 +1449,9 @@ export class GenericSearchEngine {
     const expansionSession = persistentExpansion ? createPersistentExpansionSession() : undefined;
     let resolutionFrontierKeys = new Set<string>();
     let cumulativeExpansionWork = 0;
+    let transitionDistributionsGenerated = 0;
+    let previouslyExpandedNodesRevisited = 0;
+    let interruptedStatesExpanded = 0;
     let roundsExecuted = 0;
     const aggregateTiming = emptyStageTiming();
     const seedStarted = Date.now();
@@ -1438,9 +1473,14 @@ export class GenericSearchEngine {
     aggregateTiming.seedResultMs = Date.now() - seedStarted;
     addStageTiming(aggregateTiming, result.stageTiming);
     cumulativeExpansionWork += result.graphBuild.statesExpandedThisRound;
+    transitionDistributionsGenerated += result.graphBuild.transitionDistributionsGeneratedThisRound;
+    previouslyExpandedNodesRevisited += result.graphBuild.previouslyExpandedNodesRevisitedThisRound;
     const seedStatesExpanded = result.graphBuild.statesExpandedThisRound;
+    let returnedProofGraphStates = result.graphBuild.nodes.size;
     const newStatesByRound: number[] = [];
     const retainedStatesReusedByRound: number[] = [];
+    const transitionDistributionsGeneratedByRound: number[] = [];
+    const previouslyExpandedNodesRevisitedByRound: number[] = [];
     let wallTimeInterrupted = false;
     let recommendationSatisfied = false;
     let certifiedRecommendationFound = false;
@@ -1560,6 +1600,10 @@ export class GenericSearchEngine {
             candidateDeadline
           );
           cumulativeExpansionWork += feasibilityResult.graphBuild.nodes.size;
+          transitionDistributionsGenerated +=
+            feasibilityResult.graphBuild.transitionDistributionsGeneratedThisRound;
+          previouslyExpandedNodesRevisited +=
+            feasibilityResult.graphBuild.previouslyExpandedNodesRevisitedThisRound;
           addStageTiming(aggregateTiming, feasibilityResult.stageTiming);
           const certified = hasCertifiedPolicy(feasibilityResult);
           if (certified) {
@@ -1604,17 +1648,32 @@ export class GenericSearchEngine {
 
     for (let round = 0; round < maxExpansionRounds; round++) {
       if (deadlineMs !== undefined && Date.now() >= deadlineMs) break;
+      if (
+        intent === 'DEEPEN' &&
+        roundsExecuted > 0 &&
+        deadlineMs !== undefined &&
+        lastCompletedRoundWorkMs > 0 &&
+        Date.now() + Math.ceil(lastCompletedRoundWorkMs * 1.25) >= deadlineMs
+      ) {
+        // A deeper retained-graph round grows monotonically. Do not begin one when the latest
+        // measured round no longer fits with a modest proof-assembly margin; returning the last
+        // completed proof is more useful than spending the remainder on an interrupted graph.
+        stoppedEarlyNoMeaningfulProgress = true;
+        break;
+      }
       let completedRound: GenericSearchResult;
       const roundStarted = Date.now();
       const deferredThisRound = !certifiedRecommendationFound &&
         (intent === 'RECOMMEND' || round < stagedRecommendationRounds);
-      const roundsRemainingIncludingThis = maxExpansionRounds - round;
-      const roundDeadlineMs = intent === 'DEEPEN' && previousRoundProgress !== undefined && deadlineMs !== undefined
-        ? Math.min(
-            deadlineMs,
-            Date.now() + Math.max(1, Math.floor((deadlineMs - Date.now()) / roundsRemainingIncludingThis))
-          )
-        : deadlineMs;
+      const roundDeadlineMs = deadlineMs;
+      const sessionKeysBeforeRound = expansionSession
+        ? new Set(expansionSession.nodes.keys())
+        : undefined;
+      const sessionStatesBeforeRound = expansionSession?.statesExpandedTotal ?? 0;
+      const sessionDistributionsBeforeRound =
+        expansionSession?.transitionDistributionsGeneratedTotal ?? 0;
+      const sessionRevisitsBeforeRound =
+        expansionSession?.previouslyExpandedNodesRevisitedTotal ?? 0;
       try {
         completedRound = this.searchOnce(
           startState,
@@ -1630,6 +1689,30 @@ export class GenericSearchEngine {
         );
       } catch (error) {
         if (error instanceof SearchRoundDeadlineExceeded) {
+          // buildGraph may have completed and updated the retained session before a later proof
+          // stage met the round deadline. Count that real work, but do not call it a completed
+          // result round or imply that the prior returned policy was solved over those nodes.
+          const interruptedNewStates = Math.max(
+            0,
+            (expansionSession?.statesExpandedTotal ?? 0) - sessionStatesBeforeRound
+          );
+          interruptedStatesExpanded += interruptedNewStates;
+          cumulativeExpansionWork += interruptedNewStates;
+          transitionDistributionsGenerated += Math.max(
+            0,
+            (expansionSession?.transitionDistributionsGeneratedTotal ?? 0) -
+              sessionDistributionsBeforeRound
+          );
+          previouslyExpandedNodesRevisited += Math.max(
+            0,
+            (expansionSession?.previouslyExpandedNodesRevisitedTotal ?? 0) -
+              sessionRevisitsBeforeRound
+          );
+          if (sessionKeysBeforeRound && expansionSession) {
+            for (const key of expansionSession.nodes.keys()) {
+              if (!sessionKeysBeforeRound.has(key)) expansionSession.nodes.delete(key);
+            }
+          }
           if (deadlineMs !== undefined && Date.now() >= deadlineMs) {
             wallTimeInterrupted = true;
           } else if (intent === 'DEEPEN') {
@@ -1640,11 +1723,21 @@ export class GenericSearchEngine {
         throw error;
       }
       result = completedRound;
+      returnedProofGraphStates = result.graphBuild.nodes.size;
       roundsExecuted++;
       cumulativeExpansionWork += result.graphBuild.statesExpandedThisRound;
+      transitionDistributionsGenerated += result.graphBuild.transitionDistributionsGeneratedThisRound;
+      previouslyExpandedNodesRevisited +=
+        result.graphBuild.previouslyExpandedNodesRevisitedThisRound;
       newStatesByRound.push(result.graphBuild.statesExpandedThisRound);
       retainedStatesReusedByRound.push(
         Math.max(0, result.graphBuild.nodes.size - result.graphBuild.statesExpandedThisRound)
+      );
+      transitionDistributionsGeneratedByRound.push(
+        result.graphBuild.transitionDistributionsGeneratedThisRound
+      );
+      previouslyExpandedNodesRevisitedByRound.push(
+        result.graphBuild.previouslyExpandedNodesRevisitedThisRound
       );
       const roundWorkMs = Date.now() - roundStarted;
       if (roundsExecuted > 1) priorCompletedRoundWorkMs += lastCompletedRoundWorkMs;
@@ -1737,7 +1830,9 @@ export class GenericSearchEngine {
     const meaningfulDeepenProgress = madeMeaningfulProgress(beforeProgress, afterProgress);
     result.searchSummary = {
       intent,
-      statesExpanded: result.graphBuild.nodes.size,
+      // This is the canonical graph on which the returned policy/proof was actually solved.
+      // Work from an interrupted later round is reported separately and remains in cumulative work.
+      statesExpanded: returnedProofGraphStates,
       cumulativeExpansionWork,
       elapsedMs,
       expansionRounds: roundsExecuted,
@@ -1754,10 +1849,33 @@ export class GenericSearchEngine {
       timeToFirstCertifiedPolicyMs,
       timeToFirstUsefulRecommendationMs,
       expansionMode: persistentExpansion ? 'PERSISTENT_EXTENDED' : 'REBUILT_EACH_ROUND',
-      repeatedStatesExpanded: Math.max(0, cumulativeExpansionWork - result.graphBuild.nodes.size),
+      // Persistent sessions never fully expand a canonical node twice. Rebuilt searches report
+      // the prior complete-graph work literally, excluding separate feasibility probes and
+      // interrupted one-time nodes; retained-node edge top-ups remain exposed independently.
+      repeatedStatesExpanded: persistentExpansion
+        ? 0
+        : Math.max(
+            0,
+            cumulativeExpansionWork -
+              acquisitionFeasibilityAttempts.reduce(
+                (sum, attempt) => sum + attempt.statesExpanded,
+                0
+              ) -
+              interruptedStatesExpanded -
+              returnedProofGraphStates
+          ),
       seedStatesExpanded,
       newStatesByRound,
       retainedStatesReusedByRound,
+      transitionDistributionsGenerated,
+      transitionDistributionsGeneratedByRound,
+      previouslyExpandedNodesRevisited,
+      previouslyExpandedNodesRevisitedByRound,
+      acquisitionFeasibilityStatesExpanded: acquisitionFeasibilityAttempts.reduce(
+        (sum, attempt) => sum + attempt.statesExpanded,
+        0
+      ),
+      interruptedStatesExpanded,
       optimisticLowerBoundIterations: result.searchSummary.optimisticLowerBoundIterations,
       optimisticLowerBoundConverged: result.searchSummary.optimisticLowerBoundConverged,
       optimisticLowerBoundMethod: 'KNOWN_PARTIAL_GRAPH_WITH_ZERO_COST_UNKNOWN_SUCCESSORS',
@@ -3246,6 +3364,12 @@ export class GenericSearchEngine {
         seedStatesExpanded: 0,
         newStatesByRound: [],
         retainedStatesReusedByRound: [],
+        transitionDistributionsGenerated: graphResult.transitionDistributionsGeneratedThisRound,
+        transitionDistributionsGeneratedByRound: [],
+        previouslyExpandedNodesRevisited: graphResult.previouslyExpandedNodesRevisitedThisRound,
+        previouslyExpandedNodesRevisitedByRound: [],
+        acquisitionFeasibilityStatesExpanded: 0,
+        interruptedStatesExpanded: 0,
         optimisticLowerBoundIterations,
         optimisticLowerBoundConverged,
         optimisticLowerBoundMethod: 'KNOWN_PARTIAL_GRAPH_WITH_ZERO_COST_UNKNOWN_SUCCESSORS',

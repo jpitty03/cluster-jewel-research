@@ -236,10 +236,20 @@ await command('Runtime.enable');
 await command('Page.addScriptToEvaluateOnNewDocument', { source: `(() => {
   window.__phase2gOptimizerRequests = [];
   window.__phase2gResults = [];
+  window.__phase2gCheapFracture = false;
   const originalPostMessage = Worker.prototype.postMessage;
   Worker.prototype.postMessage = function(message) {
-    if (message?.type === 'OPTIMIZE') window.__phase2gOptimizerRequests.push(JSON.parse(JSON.stringify(message)));
-    return Reflect.apply(originalPostMessage, this, arguments);
+    let outgoing = message;
+    if (message?.type === 'OPTIMIZE' && window.__phase2gCheapFracture) {
+      outgoing = JSON.parse(JSON.stringify(message));
+      outgoing.input.prices.currencyRates.fracturing = 0.001;
+      outgoing.input.searchBudget.acquisitionMaxStates = 500;
+      outgoing.input.searchBudget.acquisitionMaxWallTimeMs = 4_000;
+      outgoing.input.searchBudget.acquisitionMaxExpansionRounds = 3;
+      window.__phase2gCheapFracture = false;
+    }
+    if (outgoing?.type === 'OPTIMIZE') window.__phase2gOptimizerRequests.push(JSON.parse(JSON.stringify(outgoing)));
+    return originalPostMessage.call(this, outgoing);
   };
   const originalAddEventListener = Worker.prototype.addEventListener;
   Worker.prototype.addEventListener = function(type, listener, options) {
@@ -293,6 +303,13 @@ const targetConsistencyPass = targetPrimary === esOption?.primary && targetPrima
 const targetDebugIdentityPass = targetTechnical.includes('Glowing') && targetTechnical.includes(ES_ID);
 
 const oneMod = await runSearch(31_500);
+
+// Keep the Phase 2E artificial cheap-fracture counter-fixture on its certified
+// one-mod target. It must stay provisional because its admissible fracture lower
+// bound remains below the finite clean-base incumbent.
+await evaluate('window.__phase2gCheapFracture = true');
+const provisional = await runSearch(31_500);
+
 await clickButton('Add modifier');
 await waitFor(`document.querySelectorAll('.target-row select').length === 2`, 2_000);
 await setTarget(0, ES_ID);
@@ -301,11 +318,11 @@ const twoModAny = await runSearch(31_500);
 await setLabeledValue('Extra affixes', 'no-unwanted');
 const noUnwanted = await runSearch(31_500);
 
-// Existing controlled forced-Rare fixture: self-fracture families are relevant and the result stays provisional.
+// Phase 2H's normal fracture bound makes the forced-Rare route safe.
 await setLabeledValue('Extra affixes', 'allow-extra');
 await setLabeledValue('Final rarity', 'rare');
 await setLabeledValue('Max wall time (ms)', 60000);
-const provisional = await runSearch(62_500);
+const forcedRare = await runSearch(62_500);
 
 // Bounded no-route presentation fixture exercises the fourth player-facing status without frontier work.
 await setLabeledValue('Max states', 1);
@@ -316,6 +333,7 @@ const noRoute = await runSearch(3_000);
 const requests = await evaluate(`window.__phase2gOptimizerRequests.map((request) => request.input)`);
 const expectedRequests = [
   { mods: [ES_ID], rarity: undefined, maxUnmatchedAffixes: undefined, states: 5000, wall: 30000, rounds: 3 },
+  { mods: [ES_ID], rarity: undefined, maxUnmatchedAffixes: undefined, states: 5000, wall: 30000, rounds: 3, cheapFracture: true },
   { mods: [ES_ID, INT_ID], rarity: undefined, maxUnmatchedAffixes: undefined, states: 5000, wall: 30000, rounds: 3 },
   { mods: [ES_ID, INT_ID], rarity: undefined, maxUnmatchedAffixes: 0, states: 5000, wall: 30000, rounds: 3 },
   { mods: [ES_ID, INT_ID], rarity: 'rare', maxUnmatchedAffixes: undefined, states: 5000, wall: 60000, rounds: 3 },
@@ -323,21 +341,29 @@ const expectedRequests = [
 ];
 const requestIdentityPass = requests.length === expectedRequests.length && requests.every((request, index) => {
   const expected = expectedRequests[index];
+  const expectedPrices = JSON.parse(JSON.stringify(EXPECTED_PRICE_CONTEXT));
+  if (expected.cheapFracture) expectedPrices.currencyRates.fracturing = 0.001;
   return request.baseType === BASE_TYPE && request.clusterType === CLUSTER_TYPE &&
     request.itemLevel === 84 && request.passiveCount === 12 &&
     JSON.stringify(request.target.requiredMods.map((requirement) => requirement.modId)) === JSON.stringify(expected.mods) &&
     request.target.requiredRarity === expected.rarity &&
     request.target.finalStateConstraints?.maxUnmatchedAffixes === expected.maxUnmatchedAffixes &&
-    JSON.stringify(request.prices) === JSON.stringify(EXPECTED_PRICE_CONTEXT) &&
+    JSON.stringify(request.prices) === JSON.stringify(expectedPrices) &&
     request.marketContext?.league === 'Allflame' &&
     JSON.stringify(request.marketContext) === JSON.stringify(requests[0].marketContext) &&
     request.allowResearchFallbackPrices === true && request.expectedSaleValueChaos === undefined &&
     request.searchBudget.maxStates === expected.states && request.searchBudget.maxWallTimeMs === expected.wall &&
-    request.searchBudget.maxExpansionRounds === expected.rounds && request.searchIntent === 'RECOMMEND';
+    request.searchBudget.maxExpansionRounds === expected.rounds &&
+    request.searchBudget.acquisitionMaxStates === (expected.cheapFracture ? 500 : undefined) &&
+    request.searchBudget.acquisitionMaxWallTimeMs === (expected.cheapFracture ? 4_000 : undefined) &&
+    request.searchBudget.acquisitionMaxExpansionRounds === (expected.cheapFracture ? 3 : undefined) &&
+    request.searchIntent === 'RECOMMEND';
 });
 
-const expectedGuideRules = oneMod.result.policyExplanation.map(({ condition, action, actionId }) => ({ condition, action, actionId }));
-const guidePass = expectedGuideRules.length > 0 && JSON.stringify(oneMod.guideRules) === JSON.stringify(expectedGuideRules);
+const expectedGuideRules = oneMod.result.policyExplanation.map(({ action, actionId }) => ({ action, actionId }));
+const guidePass = expectedGuideRules.length > 0 && oneMod.guideRules.length === expectedGuideRules.length &&
+  oneMod.guideRules.every((rule, index) => rule.condition && rule.action === expectedGuideRules[index].action &&
+    rule.actionId === expectedGuideRules[index].actionId);
 const materialsPass = oneMod.result.expectedActionUsage.length > 0 &&
   oneMod.result.expectedActionUsage.every((usage) => oneMod.materialRows.some((row) =>
     row.actionId === usage.actionId && row.expectedCount === usage.expectedCount &&
@@ -358,12 +384,20 @@ const provisionalHealthy = provisional.result.recommendationStatus === 'PROVISIO
   !provisional.result.acquisition.selectionSafe && provisional.hero.includes('Provisional route') &&
   provisional.hero.includes('Not acquisition-safe') && provisional.provisionalWarning.includes('cheaper unresolved route may exist') &&
   provisional.result.recommended !== null && provisional.hero.includes('Recommended start') &&
-  provisional.hero.includes('228.909c');
+  closeEnough(provisional.result.expectedCostChaos, oneMod.result.expectedCostChaos);
+const forcedRareHealthy = forcedRare.result.recommendationStatus === 'BEST_RESOLVED_ACQUISITION_SAFE' &&
+  forcedRare.result.acquisition.selectionSafe && forcedRare.result.recommended !== null &&
+  forcedRare.result.risk.selectedPolicyProper &&
+  closeEnough(forcedRare.result.risk.terminalAbsorptionProbability, 1, 1e-9);
 const noRoutePresentationHealthy = noRoute.result.recommendationStatus === 'NO_RESOLVED_ROUTE' &&
   noRoute.hero.includes('Search outcome') && noRoute.hero.includes('No resolved route') &&
   noRoute.hero.includes('No start certified under this budget') &&
   noRoute.noRouteWarning.includes('No craft recommendation is available') &&
-  noRoute.guideText.includes('No certified acquisition route is available');
+  noRoute.guideText.includes('No certified acquisition route is available') &&
+  noRoute.materialText === '' && noRoute.materialRows.length === 0 &&
+  !noRoute.advancedVisibleText.includes('Acquire No start certified under this budget') &&
+  (noRoute.result.expectedActionUsage.length === 0 ||
+    noRoute.advancedVisibleText.includes('Uncertified exploratory policy usage'));
 const fractureSyntheses = provisional.result.acquisition.candidates.filter((candidate) => candidate.synthesis);
 const fracturePresentationEvidence = {
   relevantFamilies: fractureSyntheses.length > 0,
@@ -402,7 +436,7 @@ const checks = {
   R1_one_mod: oneModHealthy,
   R2_two_mod_any: twoModHealthy,
   R3_no_unwanted: noUnwantedHealthy,
-  R4_provisional: provisionalHealthy,
+  R4_forced_rare: forcedRareHealthy,
   R5_self_fracture_presentation: fracturePresentationPass,
   S1_no_route_presentation: noRoutePresentationHealthy,
 };
@@ -420,7 +454,7 @@ lines.push(`D8 exact worker identity: ${checks.D8_worker_identity ? 'PASS' : 'FA
 lines.push(`R1 one-mod T1 ES: ${checks.R1_one_mod ? 'PASS' : 'FAIL'} in ${oneMod.elapsedMs}ms; status=${oneMod.result.recommendationStatus}; acquisition=Clean Base; expected=${oneMod.result.expectedCostChaos}; absorption=${oneMod.result.risk.terminalAbsorptionProbability}; Bellman=${oneMod.result.solver.bellmanConverged}; occupancy=${oneMod.result.solver.occupancyConverged}`);
 lines.push(`R2 two-mod T1 ES + T1 Int Any: ${checks.R2_two_mod_any ? 'PASS' : 'FAIL'} in ${twoModAny.elapsedMs}ms; status=${twoModAny.result.recommendationStatus}; expected=${twoModAny.result.expectedCostChaos}; absorption=${twoModAny.result.risk.terminalAbsorptionProbability}`);
 lines.push(`R3 no-unwanted: ${checks.R3_no_unwanted ? 'PASS' : 'FAIL'} in ${noUnwanted.elapsedMs}ms; expected=${noUnwanted.result.expectedCostChaos}; constraint=${JSON.stringify(noUnwanted.result.target.finalStateConstraints)}`);
-lines.push(`R4 controlled provisional: ${checks.R4_provisional ? 'PASS' : 'FAIL'} in ${provisional.elapsedMs}ms; status=${provisional.result.recommendationStatus}; safe=${provisional.result.acquisition.selectionSafe}; U=${provisional.result.acquisition.resolvedIncumbentUpperBoundChaos}; L=${provisional.result.acquisition.bestUnresolvedLowerBoundChaos}`);
+lines.push(`R4 forced-Rare normal-price proof: ${checks.R4_forced_rare ? 'PASS' : 'FAIL'} in ${forcedRare.elapsedMs}ms; status=${forcedRare.result.recommendationStatus}; safe=${forcedRare.result.acquisition.selectionSafe}; U=${forcedRare.result.acquisition.resolvedIncumbentUpperBoundChaos}; L=${forcedRare.result.acquisition.bestUnresolvedLowerBoundChaos}`);
 lines.push(`R5 self-fracture presentation: ${checks.R5_self_fracture_presentation ? 'PASS' : 'FAIL'}; ${JSON.stringify(fractureSyntheses)}`);
 lines.push(`R5 presentation evidence: ${JSON.stringify(fracturePresentationEvidence)}; expanded=${compact(provisional.selfFractureExpandedText)}`);
 lines.push(`Supplemental no-route presentation: ${checks.S1_no_route_presentation ? 'PASS' : 'FAIL'} in ${noRoute.elapsedMs}ms; hero=${compact(noRoute.hero)}; alert=${compact(noRoute.noRouteWarning)}`);

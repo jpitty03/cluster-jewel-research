@@ -8,6 +8,11 @@ import {
   matchesModRequirement,
 } from '../domain/TargetDefinition.ts';
 import { getCanonicalStateKey } from '../rules/actionDiscovery.ts';
+import {
+  CRAFT_MECHANICS,
+  createHarvestReforgeMechanics,
+  createRestartReacquireMechanic,
+} from '../rules/actionRegistry.ts';
 import type { SearchIntent } from '../service/searchRuntime.ts';
 import {
   GenericSearchEngine,
@@ -15,6 +20,10 @@ import {
   type MechanicsConfidenceResult,
   type PriceConfidenceResult,
 } from './genericSearch.ts';
+import {
+  evaluateMandatoryMechanicsLowerBound,
+  type MandatoryMechanicsLowerBoundResult,
+} from './mandatoryMechanicsLowerBound.ts';
 
 /**
  * Phase 2D executable acquisition synthesis.
@@ -130,6 +139,17 @@ export interface AcquisitionSynthesisResult {
   cleanBaseCostChaos: number;
   /** Optimistic lower bound on `expectedCostChaos` given the partially expanded graph. */
   lowerBoundChaos: number;
+  lowerBoundEvidence: {
+    cleanBaseCostChaos: number;
+    partialGraphPreparationLowerBoundChaos: number;
+    partialGraphLowerBoundChaos: number;
+    mandatoryMechanicsPreparationLowerBoundChaos: number;
+    mandatoryMechanicsLowerBoundChaos: number;
+    combinedLowerBoundChaos: number;
+    combinationRule: 'MAX_OF_ADMISSIBLE_BOUNDS';
+    mechanics: MandatoryMechanicsLowerBoundResult;
+    provenance: string;
+  };
   terminalStateSemantics: string;
   acquisitionTarget: TargetDefinition;
   enabledActionIds: string[];
@@ -177,6 +197,12 @@ export interface AcquisitionSynthesisResult {
     seedStatesExpanded: number;
     newStatesByRound: number[];
     retainedStatesReusedByRound: number[];
+    transitionDistributionsGenerated: number;
+    transitionDistributionsGeneratedByRound: number[];
+    previouslyExpandedNodesRevisited: number;
+    previouslyExpandedNodesRevisitedByRound: number[];
+    acquisitionFeasibilityStatesExpanded: number;
+    interruptedStatesExpanded: number;
     elapsedMs: number;
     budgetExhausted: boolean;
     maxStates: number;
@@ -299,6 +325,13 @@ export function synthesizeAcquisition(
   ];
   const budget = request.searchBudget ?? {};
   const cleanBaseCostChaos = request.cleanBaseAcquisition.costChaos;
+  const restartReacquire = {
+    destination: cleanStartingState,
+    acquisitionCostChaos: cleanBaseCostChaos,
+    confidence: request.cleanBaseAcquisition.confidence,
+    provenance: request.cleanBaseAcquisition.provenance,
+    label: request.cleanBaseAcquisition.label ?? 'Abandon attempt and reacquire a clean base',
+  };
 
   const engine = new GenericSearchEngine(
     { ...context, target: acquisitionTarget },
@@ -311,13 +344,7 @@ export function synthesizeAcquisition(
       prioritizeTargetProgress: true,
       canonicalStateKey: getAcquisitionFracturePreparationStateKey,
       searchIntent: request.searchIntent ?? 'RECOMMEND',
-      restartReacquire: {
-        destination: cleanStartingState,
-        acquisitionCostChaos: cleanBaseCostChaos,
-        confidence: request.cleanBaseAcquisition.confidence,
-        provenance: request.cleanBaseAcquisition.provenance,
-        label: request.cleanBaseAcquisition.label ?? 'Abandon attempt and reacquire a clean base',
-      },
+      restartReacquire,
       maxStates: budget.maxStates,
       maxWallTimeMs: budget.maxWallTimeMs,
       maxExpansionRounds: budget.maxExpansionRounds,
@@ -346,8 +373,47 @@ export function synthesizeAcquisition(
     startDecision && startDecision.candidateQValues.length > 0
       ? Math.min(...startDecision.candidateQValues.map((candidate) => candidate.lowerBoundChaos))
       : 0;
-  const lowerBoundChaos =
-    cleanBaseCostChaos + (Number.isFinite(startLowerBound) ? startLowerBound : 0);
+  const partialGraphPreparationLowerBoundChaos = Number.isFinite(startLowerBound)
+    ? startLowerBound
+    : 0;
+  const mechanics = [
+    ...CRAFT_MECHANICS,
+    ...(request.includeHarvest
+      ? createHarvestReforgeMechanics(context, request.harvestTags)
+      : []),
+    createRestartReacquireMechanic(restartReacquire),
+  ];
+  const mandatoryMechanics = evaluateMandatoryMechanicsLowerBound(
+    context,
+    cleanStartingState,
+    acquisitionTarget,
+    mechanics,
+    enabledActionIds,
+    request.allowResearchFallbackPrices ?? true
+  );
+  const partialGraphLowerBoundChaos = cleanBaseCostChaos + partialGraphPreparationLowerBoundChaos;
+  const mandatoryMechanicsPreparationLowerBoundChaos = mandatoryMechanics.proven
+    ? mandatoryMechanics.lowerBoundChaos
+    : 0;
+  const mandatoryMechanicsLowerBoundChaos =
+    cleanBaseCostChaos + mandatoryMechanicsPreparationLowerBoundChaos;
+  const lowerBoundChaos = Math.max(
+    partialGraphLowerBoundChaos,
+    mandatoryMechanicsLowerBoundChaos
+  );
+  const lowerBoundEvidence: AcquisitionSynthesisResult['lowerBoundEvidence'] = {
+    cleanBaseCostChaos,
+    partialGraphPreparationLowerBoundChaos,
+    partialGraphLowerBoundChaos,
+    mandatoryMechanicsPreparationLowerBoundChaos,
+    mandatoryMechanicsLowerBoundChaos,
+    combinedLowerBoundChaos: lowerBoundChaos,
+    combinationRule: 'MAX_OF_ADMISSIBLE_BOUNDS',
+    mechanics: mandatoryMechanics,
+    provenance:
+      'Full acquisition lower bound is max(partial-graph optimistic bound, mechanics-required ' +
+      'bound). Both include the first clean-base acquisition exactly once.',
+  };
 
   const restartUsage = result.expectedActionUsage.find(
     (usage) => usage.actionId === 'restart_reacquire'
@@ -441,6 +507,7 @@ export function synthesizeAcquisition(
     expectedPreparationCostChaos: finiteOrUndefined(preparationCost),
     cleanBaseCostChaos,
     lowerBoundChaos,
+    lowerBoundEvidence,
     terminalStateSemantics: ACQUISITION_TERMINAL_STATE_SEMANTICS,
     acquisitionTarget,
     enabledActionIds,
@@ -507,6 +574,17 @@ export function synthesizeAcquisition(
       seedStatesExpanded: result.searchSummary.seedStatesExpanded,
       newStatesByRound: [...result.searchSummary.newStatesByRound],
       retainedStatesReusedByRound: [...result.searchSummary.retainedStatesReusedByRound],
+      transitionDistributionsGenerated: result.searchSummary.transitionDistributionsGenerated,
+      transitionDistributionsGeneratedByRound: [
+        ...result.searchSummary.transitionDistributionsGeneratedByRound,
+      ],
+      previouslyExpandedNodesRevisited: result.searchSummary.previouslyExpandedNodesRevisited,
+      previouslyExpandedNodesRevisitedByRound: [
+        ...result.searchSummary.previouslyExpandedNodesRevisitedByRound,
+      ],
+      acquisitionFeasibilityStatesExpanded:
+        result.searchSummary.acquisitionFeasibilityStatesExpanded,
+      interruptedStatesExpanded: result.searchSummary.interruptedStatesExpanded,
       elapsedMs: result.searchSummary.elapsedMs,
       budgetExhausted: result.searchSummary.budgetExhausted,
       maxStates: result.searchSummary.maxStates,

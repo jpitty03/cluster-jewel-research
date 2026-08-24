@@ -5,13 +5,13 @@ DIAGNOSTIC A — STANDALONE SINGLE-TARGET EXECUTABLE FRACTURE
   status: RESOLVED
   expected total acquisition EV: 1506.328333c
   expected preparation EV: 1496.328333c
-  optimistic lower bound: 10.239731c
+  optimistic lower bound: 369.000000c
   expected action usage: fracturing_orb=4.000000 (1436.000000c) | restart_reacquire=3.000000 (30.000000c) | alteration_orb=204.666667 (22.513333c) | exalted_orb=4.000000 (4.800000c) | augmentation_orb=53.166667 (1.595000c) | regal_orb=4.000000 (0.800000c) | scouring_orb=1.000000 (0.500000c) | transmutation_orb=4.000000 (0.120000c)
   expected restarts / Fracturing Orbs: 3.000000000 / 4.000000000
-  proper / terminal absorption: YES / 100.000000000%
-  Bellman / occupancy: CONVERGED (1015) / CONVERGED (7)
+  proper / terminal absorption: YES / 99.999999999%
+  Bellman / occupancy: CONVERGED (1016) / CONVERGED (7)
   EV reconciliation: 0.000000c (PASS)
-  states / runtime: 1667 / 6609ms
+  states / runtime: 1667 / 1295ms
   expansion mode / cumulative work / repeated / rounds: PERSISTENT_EXTENDED / 1667 / 0 / 1
   state identity / seed / new-by-round / retained-by-round: FRACTURE_PREPARATION_BISIMULATION_V1 / 1 / 1666 / 1
   proof / global optimality: FULLY RESOLVED / PROPER / ABSORBING / COST-RECONCILED / NOT YET PROVEN
@@ -27,18 +27,18 @@ DIAGNOSTIC B — WRONG-FRACTURE RECOVERY
 
 DIAGNOSTIC C — MULTIPLE FRACTURE-TARGET PORTFOLIO
   Forced-Rare T1 Intelligence + T1 Attributes:
-  recommendation: NO_RESOLVED_ROUTE
-  winner: NONE
-  expected total: UNAVAILABLE
+  recommendation: PROVISIONAL_RESOLVED
+  winner: Restart/Reacquire: Start clean base: Clean Base
+  expected total: 2960.929055c
   acquisition safe: NO
-  proper / absorption / reconciled: NO / 0.000000000% / NO
-  runtime: 43436ms; staged engine=43421ms; downstream=24854ms
-  downstream states / cumulative work / repeated: 5000 / 9998 / 4998
+  proper / absorption / reconciled: YES / 100.000000000% / YES
+  runtime: 20925ms; staged engine=20913ms; downstream=15089ms
+  downstream states / cumulative work / repeated: 5000 / 9998 / 0
   downstream expansion mode / rounds: PERSISTENT_EXTENDED / 3
   synthesis stage: EXECUTABLE_SYNTHESIS; candidates=2; attempted=2; certified=2; cache hits=0
   synthesis shared budget: states=10002; wall=50000ms; rounds/candidate=3
-  fracture of the Prodigy (T1): status=RESOLVED; U=1482.328333c; L=4.239731c; orbs=4.000000; restarts=3.000000; proper=true; global=NOT YET PROVEN; identity=FRACTURE_PREPARATION_BISIMULATION_V1; ranked executable method=YES
-  fracture of the Meteor (T1): status=RESOLVED; U=1482.328333c; L=4.239727c; orbs=4.000000; restarts=3.000000; proper=true; global=NOT YET PROVEN; identity=FRACTURE_PREPARATION_BISIMULATION_V1; ranked executable method=YES
+  fracture of the Prodigy (T1): status=RESOLVED; U=1482.328333c; L=363.000000c; orbs=4.000000; restarts=3.000000; proper=true; global=NOT YET PROVEN; identity=FRACTURE_PREPARATION_BISIMULATION_V1; ranked executable method=YES
+  fracture of the Meteor (T1): status=RESOLVED; U=1482.328333c; L=363.000000c; orbs=4.000000; restarts=3.000000; proper=true; global=NOT YET PROVEN; identity=FRACTURE_PREPARATION_BISIMULATION_V1; ranked executable method=YES
   fractured market methods present: NO
   all relevant physical families discovered: YES
   both fracture families certified and sent to downstream ranking: YES
@@ -49,17 +49,17 @@ DIAGNOSTIC D — NO-MARKET-QUOTE PRODUCT GATE / EXACT CACHE
   winner: Restart/Reacquire: Executable self-fracture: of the Prodigy (T1)
   expected total: 1482.328333c
   acquisition safe: NO
-  proper / absorption / reconciled: YES / 100.000000000% / YES
-  runtime: 16467ms; staged engine=16467ms; downstream=5689ms
-  downstream states / cumulative work / repeated: 5000 / 7501 / 2501
+  proper / absorption / reconciled: YES / 99.999999999% / YES
+  runtime: 3337ms; staged engine=3337ms; downstream=1658ms
+  downstream states / cumulative work / repeated: 5000 / 7501 / 0
   downstream expansion mode / rounds: PERSISTENT_EXTENDED / 3
   synthesis stage: EXECUTABLE_SYNTHESIS; candidates=1; attempted=1; certified=1; cache hits=0
   synthesis shared budget: states=5001; wall=32000ms; rounds/candidate=3
-  fracture of the Prodigy (T1): status=RESOLVED; U=1482.328333c; L=4.239731c; orbs=4.000000; restarts=3.000000; proper=true; global=NOT YET PROVEN; identity=FRACTURE_PREPARATION_BISIMULATION_V1; ranked executable method=YES
+  fracture of the Prodigy (T1): status=RESOLVED; U=1482.328333c; L=363.000000c; orbs=4.000000; restarts=3.000000; proper=true; global=NOT YET PROVEN; identity=FRACTURE_PREPARATION_BISIMULATION_V1; ranked executable method=YES
   fractured market methods present: NO
   no fractured market prices supplied: YES
   fractured executable family exists: YES
-  exact repeat cache hits / runtime: 1 / 4906ms
+  exact repeat cache hits / runtime: 1 / 2023ms
   cache identity: Exact JSON identity: clean physical signature + fractured requirement + clean-base cost/confidence/provenance + complete active currency rates + enabled synthesis actions + acquisition state-identity version + Harvest scope + fallback policy + search intent + exact per-candidate budget.
 
 DIAGNOSTIC E — EXTERNAL FRACTURING ORB PARITY
@@ -79,26 +79,26 @@ DIAGNOSTIC F — LEGACY REFERENCE COMPARISON
 R1–R4 NORMAL OPTIMIZER REGRESSIONS
   R1 one-mod T1 ES:
   recommendation: BEST_RESOLVED_ACQUISITION_SAFE
-  winner: Restart/Reacquire: Start clean base: Clean Base
+  winner: Start clean base: Clean Base
   expected total: 8.816617c
   acquisition safe: YES
   proper / absorption / reconciled: YES / 100.000000000% / YES
-  runtime: 6032ms; staged engine=6011ms; downstream=6000ms
-  downstream states / cumulative work / repeated: 1361 / 1362 / 1
-  downstream expansion mode / rounds: REBUILT_EACH_ROUND / 1
+  runtime: 431ms; staged engine=427ms; downstream=417ms
+  downstream states / cumulative work / repeated: 396 / 396 / 0
+  downstream expansion mode / rounds: PERSISTENT_EXTENDED / 1
   synthesis stage: CLEAN_ROUTE_DOMINANCE; candidates=1; attempted=0; certified=0; cache hits=0
   synthesis shared budget: states=0; wall=0ms; rounds/candidate=3
   fracture Glowing (T1): status=SKIPPED_DOMINATED; U=UNAVAILABLE; L=363.000000c; orbs=N/A; restarts=N/A; proper=N/A; global=N/A; identity=N/A; ranked executable method=NO
   fractured market methods present: NO
   R2 two-mod T1 ES + T1 Int, Any:
   recommendation: BEST_RESOLVED_ACQUISITION_SAFE
-  winner: Restart/Reacquire: Start clean base: Clean Base
+  winner: Start clean base: Clean Base
   expected total: 243.759278c
   acquisition safe: YES
   proper / absorption / reconciled: YES / 100.000000000% / YES
-  runtime: 12907ms; staged engine=12893ms; downstream=12888ms
-  downstream states / cumulative work / repeated: 1361 / 1362 / 1
-  downstream expansion mode / rounds: REBUILT_EACH_ROUND / 1
+  runtime: 722ms; staged engine=718ms; downstream=714ms
+  downstream states / cumulative work / repeated: 418 / 418 / 0
+  downstream expansion mode / rounds: PERSISTENT_EXTENDED / 1
   synthesis stage: CLEAN_ROUTE_DOMINANCE; candidates=2; attempted=0; certified=0; cache hits=0
   synthesis shared budget: states=0; wall=0ms; rounds/candidate=3
   fracture Glowing (T1): status=SKIPPED_DOMINATED; U=UNAVAILABLE; L=363.000000c; orbs=N/A; restarts=N/A; proper=N/A; global=N/A; identity=N/A; ranked executable method=NO
@@ -106,33 +106,33 @@ R1–R4 NORMAL OPTIMIZER REGRESSIONS
   fractured market methods present: NO
   R3 two-mod no-unwanted:
   recommendation: BEST_RESOLVED_ACQUISITION_SAFE
-  winner: Restart/Reacquire: Start clean base: Clean Base
+  winner: Start clean base: Clean Base
   expected total: 243.759278c
   acquisition safe: YES
   proper / absorption / reconciled: YES / 100.000000000% / YES
-  runtime: 15483ms; staged engine=15469ms; downstream=15463ms
-  downstream states / cumulative work / repeated: 1361 / 1362 / 1
-  downstream expansion mode / rounds: REBUILT_EACH_ROUND / 1
+  runtime: 911ms; staged engine=907ms; downstream=903ms
+  downstream states / cumulative work / repeated: 418 / 418 / 0
+  downstream expansion mode / rounds: PERSISTENT_EXTENDED / 1
   synthesis stage: CLEAN_ROUTE_DOMINANCE; candidates=2; attempted=0; certified=0; cache hits=0
   synthesis shared budget: states=0; wall=0ms; rounds/candidate=3
   fracture Glowing (T1): status=SKIPPED_DOMINATED; U=UNAVAILABLE; L=363.000000c; orbs=N/A; restarts=N/A; proper=N/A; global=N/A; identity=N/A; ranked executable method=NO
   fracture of the Prodigy (T1): status=SKIPPED_DOMINATED; U=UNAVAILABLE; L=363.000000c; orbs=N/A; restarts=N/A; proper=N/A; global=N/A; identity=N/A; ranked executable method=NO
   fractured market methods present: NO
   R4 forced-Rare T1 ES + T1 Int:
-  recommendation: PROVISIONAL_RESOLVED
-  winner: Restart/Reacquire: Start clean base: Clean Base
-  expected total: 243.959278c
-  acquisition safe: NO
+  recommendation: BEST_RESOLVED_ACQUISITION_SAFE
+  winner: Start clean base: Clean Base
+  expected total: 226.970482c
+  acquisition safe: YES
   proper / absorption / reconciled: YES / 100.000000000% / YES
-  runtime: 44444ms; staged engine=44422ms; downstream=35043ms
-  downstream states / cumulative work / repeated: 5000 / 9998 / 4998
-  downstream expansion mode / rounds: PERSISTENT_EXTENDED / 3
-  synthesis stage: EXECUTABLE_SYNTHESIS; candidates=2; attempted=2; certified=2; cache hits=1
-  synthesis shared budget: states=10002; wall=50000ms; rounds/candidate=3
-  fracture Glowing (T1): status=RESOLVED; U=1477.396467c; L=4.240050c; orbs=4.000000; restarts=3.000000; proper=true; global=NOT YET PROVEN; identity=FRACTURE_PREPARATION_BISIMULATION_V1; ranked executable method=YES
-  fracture of the Prodigy (T1): status=RESOLVED; U=1482.328333c; L=4.239731c; orbs=4.000000; restarts=3.000000; proper=true; global=NOT YET PROVEN; identity=FRACTURE_PREPARATION_BISIMULATION_V1; ranked executable method=YES
+  runtime: 4064ms; staged engine=4055ms; downstream=4047ms
+  downstream states / cumulative work / repeated: 3334 / 3334 / 0
+  downstream expansion mode / rounds: PERSISTENT_EXTENDED / 2
+  synthesis stage: CLEAN_ROUTE_DOMINANCE; candidates=2; attempted=0; certified=0; cache hits=0
+  synthesis shared budget: states=0; wall=0ms; rounds/candidate=3
+  fracture Glowing (T1): status=SKIPPED_DOMINATED; U=UNAVAILABLE; L=363.000000c; orbs=N/A; restarts=N/A; proper=N/A; global=N/A; identity=N/A; ranked executable method=NO
+  fracture of the Prodigy (T1): status=SKIPPED_DOMINATED; U=UNAVAILABLE; L=363.000000c; orbs=N/A; restarts=N/A; proper=N/A; global=N/A; identity=N/A; ranked executable method=NO
   fractured market methods present: NO
-  R4 clean-family U / L: 243.959278c / 4.230098c
+  R4 clean-family U / L: 226.970482c / 4.231050c
 
 R5 — HARVEST PARITY
   harvest_defences_t1_int_es_raw_presence: external=0.2512458%; analytical=0.2755331%; MC=0.2753000%; status=CLOSE / APPROXIMATE; semantics=Raw simultaneous presence of T1 Intelligence + T1 Maximum Energy Shield; extra affixes allowed
