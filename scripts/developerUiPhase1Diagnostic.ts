@@ -71,7 +71,7 @@ lines.push(`  bases: ${baseTypes.join(' | ')}`);
 lines.push(`  Large cluster enchantments: ${clusterTypes.length}`);
 lines.push(`  valid Large passive counts: ${passiveCounts.join(', ')}`);
 lines.push(`  eligible ilvl ${itemLevel} shield-pool mods: ${eligibleMods.length}`);
-lines.push(`  exact mod fixture: ${t1Es.displayName} [${t1Es.modId}; ${t1Es.genType}; group=${t1Es.modGroup}; ilvl=${t1Es.requiredItemLevel}]`);
+lines.push(`  exact mod fixture: ${t1Es.technicalName} (T${t1Es.tier}) [${t1Es.modId}; ${t1Es.genType}; group=${t1Es.modGroup}; ilvl=${t1Es.requiredItemLevel}]`);
 
 const commonInput = {
   baseType,

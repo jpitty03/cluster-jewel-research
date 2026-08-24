@@ -21,6 +21,12 @@ import {
 
 const DEFAULT_ITEM_LEVEL = 84;
 const DEFAULT_BUDGET = { maxStates: 5000, maxWallTimeMs: 30_000, maxExpansionRounds: 3 };
+const TARGET_MOD_GROUP_ORDER = [
+  'Ordinary Prefix',
+  'Ordinary Suffix',
+  'Notable Prefix',
+  'Notable Suffix',
+] as const;
 
 const STATUS_COPY: Record<RecommendationStatus, { title: string; detail: string }> = {
   PROVEN_OPTIMAL: {
@@ -105,7 +111,7 @@ function CraftOptimizer() {
     const filtered = eligibleMods.filter((mod) =>
       selectedTargetIds.includes(mod.modId) ||
       needle.length === 0 ||
-      `${mod.displayName} ${mod.statText} ${mod.modId} t${mod.tier} ${mod.genType}`.toLowerCase().includes(needle)
+      mod.searchAliases.some((alias) => alias.toLowerCase().includes(needle))
     );
     const groups = new Map<string, typeof filtered>();
     for (const mod of filtered) {
@@ -114,7 +120,10 @@ function CraftOptimizer() {
       entries.push(mod);
       groups.set(key, entries);
     }
-    return [...groups.entries()];
+    return [...groups.entries()].sort(([left], [right]) =>
+      TARGET_MOD_GROUP_ORDER.indexOf(left as typeof TARGET_MOD_GROUP_ORDER[number]) -
+      TARGET_MOD_GROUP_ORDER.indexOf(right as typeof TARGET_MOD_GROUP_ORDER[number])
+    );
   }, [eligibleMods, modSearch, selectedTargetIds]);
 
   const draftInput = useMemo((): OptimizeCraftInput => {
@@ -367,7 +376,7 @@ function CraftOptimizer() {
             <input
               type="search"
               value={modSearch}
-              placeholder="Name, tier, Prefix/Suffix, notable…"
+              placeholder="Granted stat, internal name, mod ID, tier…"
               onChange={(event) => setModSearch(event.target.value)}
             />
           </label>
@@ -378,8 +387,13 @@ function CraftOptimizer() {
                 {groupedEligibleMods.map(([group, mods]) => (
                   <optgroup key={group} label={group}>
                     {mods.map((mod) => (
-                      <option key={mod.modId} value={mod.modId}>
-                        {mod.displayName} — T{mod.tier}, ilvl {mod.requiredItemLevel}
+                      <option
+                        key={mod.modId}
+                        value={mod.modId}
+                        data-primary-label={mod.displayName}
+                        data-technical-name={mod.technicalName}
+                      >
+                        {mod.selectionLabel}
                       </option>
                     ))}
                   </optgroup>
@@ -409,14 +423,14 @@ function CraftOptimizer() {
           <p>Final rarity: {validation.normalizedInput.target.requiredRarity ?? 'Any'}</p>
           <p>Extra affixes: {validation.normalizedInput.target.finalStateConstraints?.maxUnmatchedAffixes === 0 ? 'No unwanted affixes' : 'Allowed'}</p>
           <ul>
-            {validation.normalizedInput.target.requiredMods.map((requirement) => (
-              <li key={requirement.modId}>
+            {validation.normalizedInput.target.requiredMods.map((requirement, index) => (
+              <li key={`${requirement.modId}-${index}`} data-mod-id={requirement.modId}>
                 {(() => {
                   const mod = eligibleMods.find((candidate) => candidate.modId === requirement.modId);
                   return mod ? (
                     <>
-                      <strong>{mod.displayName}</strong> — {mod.statText} · {mod.genType}, ilvl {mod.requiredItemLevel}
-                      <details><summary>Exact modifier ID</summary><code>{mod.modId}</code></details>
+                      <strong>{mod.displayName}</strong> · {mod.genType}, ilvl {mod.requiredItemLevel}
+                      <details><summary>Technical modifier details</summary><code>{mod.technicalLabel}</code></details>
                     </>
                   ) : requirement.modId;
                 })()}
