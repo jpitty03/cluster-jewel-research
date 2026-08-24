@@ -151,6 +151,17 @@ export const optimizer = new CraftingOptimizer();
 export const optimizerService = new OptimizerService(new ClusterModRepository());
 
 export { OptimizerService } from './service/optimizerService.ts';
+export { buildCraftPlan, craftPlanPhaseForAction } from './service/craftPlan.ts';
+export type {
+  CraftPlanDecisionGroup,
+  CraftPlanDecisionOption,
+  CraftPlanPhase,
+  CraftPlanRecovery,
+  CraftPlanStep,
+  CraftPlanSummary,
+  TargetOrderBehaviorEvidence,
+  TargetOrderPreference,
+} from './service/craftPlan.ts';
 export type {
   AcquisitionSummary,
   MechanicsConfidenceSummary,

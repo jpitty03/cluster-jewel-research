@@ -24,7 +24,7 @@ DIAGNOSTIC B — KNOWN-LEGAL FIXED-POLICY BASELINE
   legality: Exalted Orb was legal on every three-affix rare state and produced 3040 canonical four-affix fracture sources.
   legality: Fracturing Orb was legal on every source; desired outcomes Scoured to the terminal state and every wrong fracture used restart/reacquisition.
   legality: No Crafting Bench action or pre-fractured market purchase participates in this policy.
-  U_baseline / preparation / runtime: 1512.424444c / 1502.424444c / 326ms
+  U_baseline / preparation / runtime: 1512.424444c / 1502.424444c / 307ms
   target hit / desired fracture per attempt: 1.437699681% / 25.000000000%
   action usage: transmutation_orb=4.000000 (0.120000c) | alteration_orb=274.222222 (30.164444c) | augmentation_orb=1.333333 (0.040000c) | regal_orb=4.000000 (0.800000c) | exalted_orb=4.000000 (4.800000c) | fracturing_orb=4.000000 (1436.000000c) | scouring_orb=1.000000 (0.500000c) | restart_reacquire=3.000000 (30.000000c)
   proper / absorption / reconciliation: YES / 100.000000000% / 0.000000c (PASS)
@@ -37,8 +37,8 @@ DIAGNOSTIC C — SEARCH VS BASELINE / STATE-ACTION FAILURE
   before usage/failure: 100709.345101 Alterations; 3/33 target-ready magic states selected Regal; 2/1670 rare3 Exalt edges resolved; 53889 missing Exalt successors.
   diagnosis: concrete filler identities expanded the same target-present milestones into tens of thousands of equivalent rare3/rare4 states, so unresolved Exalt edges forced the certified policy to reroll valid target hits.
   change: acquisition-only FRACTURE_PREPARATION_BISIMULATION_V1 quotient; target-absent identities remain exact, while target-present filler permutations collapse by rarity/count/fracture milestone. Bellman action choice remains unrestricted.
-  quotient audit: PASS; concrete graph=5001; classes=5; non-wrong states=2072; wrong states=2928; runtime=168ms; violations=0
-  after U_search / L_search / runtime: 1506.328333c / 10.249418c / 1337ms
+  quotient audit: PASS; concrete graph=5001; classes=5; non-wrong states=2072; wrong states=2928; runtime=154ms; violations=0
+  after U_search / L_search / runtime: 1506.328333c / 10.249418c / 1264ms
   after vs baseline: -6.096111c (BEATS BASELINE)
   after action usage: fracturing_orb=4.000000 (1436.000000c) | restart_reacquire=3.000000 (30.000000c) | alteration_orb=204.666667 (22.513333c) | exalted_orb=4.000000 (4.800000c) | augmentation_orb=53.166667 (1.595000c) | regal_orb=4.000000 (0.800000c) | scouring_orb=1.000000 (0.500000c) | transmutation_orb=4.000000 (0.120000c)
   after proof: FULLY RESOLVED / PROPER / ABSORBING / COST-RECONCILED; global=NOT YET PROVEN; unresolved-could-beat=true
@@ -56,11 +56,11 @@ DIAGNOSTIC E — CHEAP-FRACTURE LOWER-BOUND PROPAGATION
   recommendation / winner: PROVISIONAL_RESOLVED / Restart/Reacquire: Start clean base: Clean Base
   expected total / acquisition safe: 8.816617c / NO
   proper / absorption / reconciled: YES / 100.000000000% / YES
-  runtime / staged / downstream: 2401ms / 2397ms / 838ms
+  runtime / staged / downstream: 2335ms / 2330ms / 861ms
   downstream states / cumulative / repeated / rounds / mode: 398 / 795 / 0 / 1 / PERSISTENT_EXTENDED
   acquisition candidates / attempted / certified / cache hits: 1 / 1 / 1 / 0
   acquisition shared states / wall / rounds: 500 / 4000ms / 3
-  fracture Glowing (T1): RESOLVED; U=41.400467c; L=4.241094c; executable=YES; orbs=4.000000; restarts=3.000000; states=500; elapsed=1163ms; cache=MISS
+  fracture Glowing (T1): RESOLVED; U=41.400467c; L=4.241094c; executable=YES; orbs=4.000000; restarts=3.000000; states=500; elapsed=1092ms; cache=MISS
     bound decomposition: clean=4.000000c; partial=4.241094c; mechanics=4.001000c; combined=4.241094c; rule=MAX_OF_ADMISSIBLE_BOUNDS
     bound provenance: Mechanics-required cost derived from target predicates and shared action-registry state-creation capabilities. components=CREATE_REQUIRED_FRACTURED_AFFIX:fracturing_orb*1@0.001000c
   market-fractured method present: NO
@@ -73,14 +73,14 @@ DIAGNOSTIC F — MULTIPLE FRACTURES / NO MARKET QUOTE
   recommendation / winner: PROVISIONAL_RESOLVED / Restart/Reacquire: Start clean base: Clean Base
   expected total / acquisition safe: 2960.929055c / NO
   proper / absorption / reconciled: YES / 100.000000000% / YES
-  runtime / staged / downstream: 20833ms / 20821ms / 15657ms
+  runtime / staged / downstream: 20060ms / 20043ms / 14963ms
   downstream states / cumulative / repeated / rounds / mode: 5000 / 9998 / 0 / 3 / PERSISTENT_EXTENDED
   acquisition candidates / attempted / certified / cache hits: 2 / 2 / 2 / 0
   acquisition shared states / wall / rounds: 10002 / 30000ms / 3
-  fracture of the Prodigy (T1): RESOLVED; U=1482.328333c; L=363.000000c; executable=YES; orbs=4.000000; restarts=3.000000; states=1667; elapsed=1361ms; cache=MISS
+  fracture of the Prodigy (T1): RESOLVED; U=1482.328333c; L=363.000000c; executable=YES; orbs=4.000000; restarts=3.000000; states=1667; elapsed=1333ms; cache=MISS
     bound decomposition: clean=4.000000c; partial=4.249418c; mechanics=363.000000c; combined=363.000000c; rule=MAX_OF_ADMISSIBLE_BOUNDS
     bound provenance: Mechanics-required cost derived from target predicates and shared action-registry state-creation capabilities. components=CREATE_REQUIRED_FRACTURED_AFFIX:fracturing_orb*1@359.000000c
-  fracture of the Meteor (T1): RESOLVED; U=1482.328333c; L=363.000000c; executable=YES; orbs=4.000000; restarts=3.000000; states=1667; elapsed=1418ms; cache=MISS
+  fracture of the Meteor (T1): RESOLVED; U=1482.328333c; L=363.000000c; executable=YES; orbs=4.000000; restarts=3.000000; states=1667; elapsed=1565ms; cache=MISS
     bound decomposition: clean=4.000000c; partial=4.249826c; mechanics=363.000000c; combined=363.000000c; rule=MAX_OF_ADMISSIBLE_BOUNDS
     bound provenance: Mechanics-required cost derived from target predicates and shared action-registry state-creation capabilities. components=CREATE_REQUIRED_FRACTURED_AFFIX:fracturing_orb*1@359.000000c
   market-fractured method present: NO
@@ -88,16 +88,18 @@ DIAGNOSTIC F — MULTIPLE FRACTURES / NO MARKET QUOTE
   recommendation / winner: PROVISIONAL_RESOLVED / Restart/Reacquire: Executable self-fracture: of the Prodigy (T1)
   expected total / acquisition safe: 1482.328333c / NO
   proper / absorption / reconciled: YES / 99.999999999% / YES
-  runtime / staged / downstream: 1910ms / 1910ms / 1909ms
+  runtime / staged / downstream: 1674ms / 1673ms / 1672ms
   downstream states / cumulative / repeated / rounds / mode: 5000 / 7501 / 0 / 3 / PERSISTENT_EXTENDED
   acquisition candidates / attempted / certified / cache hits: 1 / 1 / 1 / 1
   acquisition shared states / wall / rounds: 5001 / 15000ms / 3
-  fracture of the Prodigy (T1): RESOLVED; U=1482.328333c; L=363.000000c; executable=YES; orbs=4.000000; restarts=3.000000; states=1667; elapsed=1361ms; cache=HIT
+  fracture of the Prodigy (T1): RESOLVED; U=1482.328333c; L=363.000000c; executable=YES; orbs=4.000000; restarts=3.000000; states=1667; elapsed=1333ms; cache=HIT
     bound decomposition: clean=4.000000c; partial=4.249418c; mechanics=363.000000c; combined=363.000000c; rule=MAX_OF_ADMISSIBLE_BOUNDS
     bound provenance: Mechanics-required cost derived from target predicates and shared action-registry state-creation capabilities. components=CREATE_REQUIRED_FRACTURED_AFFIX:fracturing_orb*1@359.000000c
   market-fractured method present: NO
   independent executable fracture families: 2
   no-market executable family / cache hit: YES / 1
+  Phase 2I selected self-fracture plan: ACQUIRE[acquire_candidate_1_self-fracture_executable,fracturing_orb,alteration_orb,restart_reacquire,exalted_orb,augmentation_orb,regal_orb,scouring_orb,transmutation_orb] | RECOVER[restart_reacquire] | SUCCESS[terminal]
+  Phase 2I self-fracture plan coverage: uncovered=NONE; invented=NONE; wrong-fracture recovery=restart_reacquire; PASS.
 
 DIAGNOSTIC G — FRACTURING ORB PARITY
   external / analytical / seeded MC / status: 25.0000% / 25.0000% / 24.9550% / ALIGNED
@@ -129,7 +131,7 @@ R1–R4 NORMAL OPTIMIZER REGRESSIONS
   recommendation / winner: BEST_RESOLVED_ACQUISITION_SAFE / Start clean base: Clean Base
   expected total / acquisition safe: 8.816617c / YES
   proper / absorption / reconciled: YES / 100.000000000% / YES
-  runtime / staged / downstream: 499ms / 495ms / 489ms
+  runtime / staged / downstream: 470ms / 465ms / 460ms
   downstream states / cumulative / repeated / rounds / mode: 396 / 396 / 0 / 1 / PERSISTENT_EXTENDED
   acquisition candidates / attempted / certified / cache hits: 1 / 0 / 0 / 0
   acquisition shared states / wall / rounds: 0 / 0ms / 3
@@ -141,7 +143,7 @@ R1–R4 NORMAL OPTIMIZER REGRESSIONS
   recommendation / winner: BEST_RESOLVED_ACQUISITION_SAFE / Start clean base: Clean Base
   expected total / acquisition safe: 243.759278c / YES
   proper / absorption / reconciled: YES / 100.000000000% / YES
-  runtime / staged / downstream: 858ms / 854ms / 851ms
+  runtime / staged / downstream: 843ms / 837ms / 833ms
   downstream states / cumulative / repeated / rounds / mode: 418 / 418 / 0 / 1 / PERSISTENT_EXTENDED
   acquisition candidates / attempted / certified / cache hits: 2 / 0 / 0 / 0
   acquisition shared states / wall / rounds: 0 / 0ms / 3
@@ -156,7 +158,7 @@ R1–R4 NORMAL OPTIMIZER REGRESSIONS
   recommendation / winner: BEST_RESOLVED_ACQUISITION_SAFE / Start clean base: Clean Base
   expected total / acquisition safe: 243.759278c / YES
   proper / absorption / reconciled: YES / 100.000000000% / YES
-  runtime / staged / downstream: 842ms / 837ms / 834ms
+  runtime / staged / downstream: 930ms / 926ms / 924ms
   downstream states / cumulative / repeated / rounds / mode: 418 / 418 / 0 / 1 / PERSISTENT_EXTENDED
   acquisition candidates / attempted / certified / cache hits: 2 / 0 / 0 / 0
   acquisition shared states / wall / rounds: 0 / 0ms / 3
@@ -171,7 +173,7 @@ R1–R4 NORMAL OPTIMIZER REGRESSIONS
   recommendation / winner: BEST_RESOLVED_ACQUISITION_SAFE / Start clean base: Clean Base
   expected total / acquisition safe: 226.970482c / YES
   proper / absorption / reconciled: YES / 100.000000000% / YES
-  runtime / staged / downstream: 2919ms / 2910ms / 2902ms
+  runtime / staged / downstream: 2855ms / 2846ms / 2838ms
   downstream states / cumulative / repeated / rounds / mode: 3334 / 3334 / 0 / 2 / PERSISTENT_EXTENDED
   acquisition candidates / attempted / certified / cache hits: 2 / 0 / 0 / 0
   acquisition shared states / wall / rounds: 0 / 0ms / 3
@@ -189,7 +191,7 @@ PHASE 2H D1–D7 — ADMISSIBLE-BOUND PROOF SCALING
   D2 normal-price domination: forced-Rare clean U=226.970482c; each self-fracture mechanics L=363.000000c; bound-dominated=2; acquisition-safe=YES.
   D3 cheap-fracture preservation: clean U=8.816617c; best fracture L=4.241094c; competitive=1; status=PROVISIONAL_RESOLVED; acquisition-safe=NO.
   D4 historical captured pre-change forced-Rare: clean U=243.959278c; fracture Glowing U/L=1477.396467c/4.240050c; fracture Prodigy U/L=1482.328333c/4.239731c; PROVISIONAL_RESOLVED; acquisition-safe=NO; acquisition states=10002; downstream states/cumulative=5000/9998; staged/worker=32030ms/32054ms.
-  D4 forced-Rare after: clean U=226.970482c; Glowing (T1) U=UNAVAILABLE L=363.000000c status=SKIPPED_DOMINATED | of the Prodigy (T1) U=UNAVAILABLE L=363.000000c status=SKIPPED_DOMINATED; BEST_RESOLVED_ACQUISITION_SAFE; acquisition-safe=YES; acquisition states=0; downstream states/cumulative=3334/3334; staged/worker=2910ms/2919ms.
+  D4 forced-Rare after: clean U=226.970482c; Glowing (T1) U=UNAVAILABLE L=363.000000c status=SKIPPED_DOMINATED | of the Prodigy (T1) U=UNAVAILABLE L=363.000000c status=SKIPPED_DOMINATED; BEST_RESOLVED_ACQUISITION_SAFE; acquisition-safe=YES; acquisition states=0; downstream states/cumulative=3334/3334; staged/worker=2846ms/2855ms.
   D5 admissibility audit: samples=10; violations=0; tolerance=1e-8c.
     PASS clean-base one-mod state: L=4.226401c <= U=8.816617c; margin=4.590216c.
     PASS clean-base two-mod Any state: L=4.229954c <= U=243.759278c; margin=239.529324c.

@@ -78,6 +78,13 @@ function playerActionName(actionId: string, actionName: string, recommendedStart
     : `Acquire ${recommendedStart}`;
 }
 
+function playerModName(
+  modId: string,
+  mods: ReturnType<typeof browserCraftingCatalog.getEligibleMods>,
+): string {
+  return mods.find((mod) => mod.modId === modId)?.displayName ?? modId;
+}
+
 function renderPolicyCondition(
   rule: PolicyExplanationRule,
   mods: ReturnType<typeof browserCraftingCatalog.getEligibleMods>,
@@ -651,52 +658,87 @@ function CraftOptimizer() {
 
           <section className="optimizer-card craft-guide" aria-labelledby="craft-guide-title">
             <h2 id="craft-guide-title">How to craft it</h2>
-            {result.recommended ? (
+            {result.recommended && result.craftPlan.status === 'CERTIFIED' ? (
               <>
                 <div className="craft-start">
                   <span>Starting point</span>
                   <strong>{recommendedStart}</strong>
-                  <p>Match the current item to a condition below, then take that condition's action. These are policy branches, not chronological steps.</p>
+                  <p>This condensed playbook puts the selected policy in chronological order. Repeat its recovery loop after misses, and expand Decision details when the exact current affixes matter.</p>
                 </div>
-                {selectedSynthesis && (
-                  <section className="selected-fracture-guide">
-                    <h3>Self-fracture acquisition</h3>
-                    <p>{selectedSynthesis.explanation}</p>
-                    <dl>
-                      <dt>Expected Fracturing Orbs</dt>
-                      <dd>{selectedSynthesis.expectedFracturingOrbs === undefined ? '—' : count(selectedSynthesis.expectedFracturingOrbs)}</dd>
-                      <dt>Expected clean-base retries</dt>
-                      <dd>{selectedSynthesis.expectedRestarts === undefined ? '—' : count(selectedSynthesis.expectedRestarts)}</dd>
-                    </dl>
-                    {selectedSynthesis.wrongFractureRecovery && (
-                      <p className="fracture-recovery"><strong>Wrong fracture:</strong> {selectedSynthesis.wrongFractureRecovery.note}</p>
-                    )}
-                  </section>
-                )}
-                {result.policyExplanation.length > 0 ? (
-                  <div className="craft-rules">
-                    {result.policyExplanation.map((rule) => {
-                      const renderedCondition = renderPolicyCondition(rule, eligibleMods);
-                      return <article
-                        className="craft-rule"
-                        key={`${JSON.stringify(rule.context)}\u0000${rule.actionId}`}
-                        data-condition={renderedCondition}
-                        data-action={rule.action}
-                        data-action-id={rule.actionId}
-                      >
-                        <div><span>If</span><strong>{renderedCondition}</strong></div>
-                        <span className="craft-rule-arrow" aria-hidden="true">→</span>
-                        <div><span>Then</span><strong>{playerActionName(rule.actionId, rule.action, recommendedStart)}</strong></div>
-                        <details>
-                          <summary>Policy context</summary>
-                          <p>{rule.representedStateCount} represented states · {count(rule.expectedVisits)} expected visits</p>
-                          <p className="muted">Optimizer action: {rule.action}</p>
-                          <p className="muted">Example engine state: {rule.exampleState}</p>
-                        </details>
-                      </article>;
-                    })}
-                  </div>
-                ) : <p>No resolved policy instructions are available under this search budget.</p>}
+                <ol className="craft-plan" data-plan-status={result.craftPlan.status}>
+                  {result.craftPlan.steps.map((step, stepIndex) => {
+                    const recoveryIndex = step.recoveryTargetStepId === undefined
+                      ? undefined
+                      : result.craftPlan.steps.findIndex((candidate) => candidate.id === step.recoveryTargetStepId);
+                    const preferredTargets = step.preferredTargetModIds?.map((modId) =>
+                      playerModName(modId, eligibleMods)
+                    ) ?? [];
+                    return <li
+                      className="craft-plan-step"
+                      key={step.id}
+                      data-step-id={step.id}
+                      data-phase={step.phase}
+                      data-action-ids={step.actionIds.join(',')}
+                    >
+                      <span className="craft-plan-number" aria-hidden="true">{stepIndex + 1}</span>
+                      <div className="craft-plan-step-body">
+                        <h3>{preferredTargets.length > 0
+                          ? `${step.title}: ${preferredTargets.join(' + ')}`
+                          : step.title}</h3>
+                        <p>{step.instruction}</p>
+                        {step.actionIds.length > 0 && (
+                          <p className="craft-plan-actions"><strong>Selected actions:</strong>{' '}
+                            {step.actionIds.map((actionId, actionIndex) =>
+                              playerActionName(
+                                actionId,
+                                step.actionNames[actionIndex] ?? actionId,
+                                recommendedStart,
+                              )
+                            ).join(', ')}
+                          </p>
+                        )}
+                        {step.phase === 'ACQUIRE' && selectedSynthesis && (
+                          <details className="selected-fracture-guide">
+                            <summary>Self-fracture materials and recovery</summary>
+                            <p>{selectedSynthesis.explanation}</p>
+                            <dl>
+                              <dt>Expected Fracturing Orbs</dt>
+                              <dd>{selectedSynthesis.expectedFracturingOrbs === undefined ? '—' : count(selectedSynthesis.expectedFracturingOrbs)}</dd>
+                              <dt>Expected clean-base retries</dt>
+                              <dd>{selectedSynthesis.expectedRestarts === undefined ? '—' : count(selectedSynthesis.expectedRestarts)}</dd>
+                            </dl>
+                            {selectedSynthesis.wrongFractureRecovery && (
+                              <p className="fracture-recovery"><strong>Wrong fracture:</strong> {selectedSynthesis.wrongFractureRecovery.note}</p>
+                            )}
+                          </details>
+                        )}
+                        {step.decisionDetails.map((decision) => (
+                          <details className="craft-plan-decision-details" key={decision.id}>
+                            <summary>Decision details</summary>
+                            <p>{decision.summary}</p>
+                            <ul>{decision.options.map((option) => {
+                              const exampleRule = result.policyExplanation[option.policyRuleIndices[0]];
+                              return <li
+                                key={option.actionId}
+                                data-action-id={option.actionId}
+                                data-policy-rule-indices={option.policyRuleIndices.join(',')}
+                              >
+                                <strong>{playerActionName(option.actionId, option.action, recommendedStart)}</strong>
+                                <span>{option.representedStateCount} represented states · {count(option.expectedVisits)} expected visits</span>
+                                {exampleRule && <span className="craft-plan-decision-example">Example: {renderPolicyCondition(exampleRule, eligibleMods)}</span>}
+                                {option.policyRuleIndices.length > 1 && <span className="muted">{option.policyRuleIndices.length - 1} more exact cases are retained in Advanced optimizer details.</span>}
+                              </li>;
+                            })}</ul>
+                          </details>
+                        ))}
+                        {recoveryIndex !== undefined && recoveryIndex >= 0 && (
+                          <p className="craft-plan-loop"><strong>Return to Step {recoveryIndex + 1}.</strong></p>
+                        )}
+                      </div>
+                    </li>;
+                  })}
+                </ol>
+                {result.craftPlan.optimalityNote && <p className="craft-plan-optimality">{result.craftPlan.optimalityNote}</p>}
               </>
             ) : <p>No certified acquisition route is available under this search budget.</p>}
           </section>
@@ -865,6 +907,55 @@ function CraftOptimizer() {
                   </>
                 ) : <p>No fractured physical family was mechanically relevant.</p>}
               </section>
+
+              {result.craftPlan.status === 'CERTIFIED' && (
+                <details className="policy-rules target-order-evidence">
+                  <summary>Target-order policy evidence</summary>
+                  <p><strong>Classification:</strong>{' '}
+                    {result.craftPlan.targetOrderPreference.kind === 'PREFER_TARGET_FIRST'
+                      ? `Prefer ${result.craftPlan.targetOrderPreference.targetModIds.map((modId) => playerModName(modId, eligibleMods)).join(' + ')} first (${result.craftPlan.targetOrderPreference.strength.toLowerCase()})`
+                      : 'No selected-policy target order'}</p>
+                  <p>{result.craftPlan.targetOrderPreference.evidence}</p>
+                  <table><thead><tr><th>Target present</th><th>Magic states</th><th>Expected visits</th><th>Preserve / reroll</th><th>Selected actions</th></tr></thead>
+                    <tbody>{result.craftPlan.targetOrderPreference.behaviors.map((behavior) => (
+                      <tr key={behavior.targetModId} data-target-mod-id={behavior.targetModId}>
+                        <td>{playerModName(behavior.targetModId, eligibleMods)}</td>
+                        <td>{behavior.representedMagicStates}</td>
+                        <td>{count(behavior.expectedVisits)}</td>
+                        <td>{behavior.preserveStates} / {behavior.rerollStates}</td>
+                        <td>{behavior.selectedActions.map((action) => `${action.actionId} (${action.representedStates})`).join(', ') || 'none'}</td>
+                      </tr>
+                    ))}</tbody>
+                  </table>
+                </details>
+              )}
+
+              <details className="policy-rules exact-policy-branches">
+                <summary>Full exact policy branches ({result.policyExplanation.length})</summary>
+                <p className="muted">These are the complete condition-to-action branches compressed by the chronological playbook above.</p>
+                <div className="craft-rules">
+                  {result.policyExplanation.map((rule) => {
+                    const renderedCondition = renderPolicyCondition(rule, eligibleMods);
+                    return <article
+                      className="craft-rule"
+                      key={`${JSON.stringify(rule.context)}\u0000${rule.actionId}`}
+                      data-condition={renderedCondition}
+                      data-action={rule.action}
+                      data-action-id={rule.actionId}
+                    >
+                      <div><span>If</span><strong>{renderedCondition}</strong></div>
+                      <span className="craft-rule-arrow" aria-hidden="true">→</span>
+                      <div><span>Then</span><strong>{playerActionName(rule.actionId, rule.action, recommendedStart)}</strong></div>
+                      <details>
+                        <summary>Policy context</summary>
+                        <p>{rule.representedStateCount} represented states · {count(rule.expectedVisits)} expected visits</p>
+                        <p className="muted">Optimizer action: {rule.action}</p>
+                        <p className="muted">Example engine state: {rule.exampleState}</p>
+                      </details>
+                    </article>;
+                  })}
+                </div>
+              </details>
 
               <details className="policy-rules">
                 <summary>Full on-policy rules ({result.policyRules.length})</summary>

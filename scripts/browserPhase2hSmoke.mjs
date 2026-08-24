@@ -3,6 +3,7 @@ import { writeFileSync } from 'node:fs';
 const debugPort = process.env.BROWSER_DEBUG_PORT ?? '9222';
 const appUrl = process.env.PHASE2_APP_URL ?? 'http://127.0.0.1:4173/';
 const outputPath = new URL('../output-browser-phase2h-smoke.txt', import.meta.url);
+const phase2iOutputPath = new URL('../output-browser-phase2i-smoke.txt', import.meta.url);
 const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 const CLUSTER_TYPE = '10% increased Damage while affected by a Herald';
 const EMPOWERED = 'Empowered Envoy';
@@ -96,6 +97,22 @@ async function runSearch(timeoutMs) {
       result,
       hero: document.querySelector('.recommendation-hero')?.innerText ?? '',
       guide: document.querySelector('.craft-guide')?.innerText ?? '',
+      guideHeight: document.querySelector('.craft-guide')?.getBoundingClientRect().height ?? 0,
+      planPresent: document.querySelector('.craft-guide .craft-plan') !== null,
+      primaryExactRuleCount: document.querySelectorAll('.craft-guide .craft-rule').length,
+      planSteps: [...document.querySelectorAll('.craft-guide .craft-plan-step')].map((step) => ({
+        id: step.dataset.stepId,
+        phase: step.dataset.phase,
+        actionIds: (step.dataset.actionIds ?? '').split(',').filter(Boolean),
+        title: step.querySelector('h3')?.textContent?.trim() ?? '',
+        text: step.innerText,
+      })),
+      decisionDetails: [...document.querySelectorAll('.craft-guide .craft-plan-decision-details')].map((details) => ({
+        initiallyClosed: details instanceof HTMLDetailsElement && !details.open,
+        actionIds: [...details.querySelectorAll('li[data-action-id]')].map((entry) => entry.dataset.actionId),
+        policyRuleIndices: [...details.querySelectorAll('li[data-action-id]')].map((entry) => entry.dataset.policyRuleIndices),
+        text: details.textContent ?? '',
+      })),
       rules: [...document.querySelectorAll('.craft-rule')].map((rule) => ({
         condition: rule.dataset.condition,
         actionId: rule.dataset.actionId,
@@ -110,6 +127,13 @@ async function runSearch(timeoutMs) {
         text: row.innerText,
       })),
       advancedInitiallyClosed: advanced instanceof HTMLDetailsElement && !advanced.open,
+      exactPolicyInitiallyClosed: (() => {
+        const details = document.querySelector('.exact-policy-branches');
+        return details instanceof HTMLDetailsElement && !details.open;
+      })(),
+      targetOrderEvidencePresent: document.querySelector('.target-order-evidence') !== null,
+      targetOrderEvidenceRows: document.querySelectorAll('.target-order-evidence tbody tr').length,
+      advancedExactRuleCount: document.querySelectorAll('.exact-policy-branches .craft-rule').length,
     };
     if (advanced instanceof HTMLDetailsElement) advanced.open = true;
     snapshot.advancedText = advanced?.textContent ?? '';
@@ -207,6 +231,17 @@ const materialCorrespondence = herald.materialRows.length === herald.result.expe
     row.actionId === usage.actionId && row.expectedCount === usage.expectedCount &&
     row.expectedCostChaos === usage.expectedCostChaos
   ));
+const heraldPlanActionIds = new Set(herald.result.craftPlan.selectedActionIds);
+const heraldDisplayedActionIds = herald.planSteps.flatMap((step) => step.actionIds);
+const conflictingDecision = herald.decisionDetails.find((details) =>
+  details.actionIds.includes('regal_orb') && details.actionIds.includes('alteration_orb')
+);
+const exactPolicyCorrespondence = herald.advancedExactRuleCount === herald.result.policyExplanation.length &&
+  herald.rules.length === herald.result.policyExplanation.length &&
+  herald.rules.every((rule, index) =>
+    rule.condition && rule.actionId === herald.result.policyExplanation[index].actionId &&
+    rule.action === herald.result.policyExplanation[index].action
+  );
 
 await setLabeledValue('Max states', 1);
 await setLabeledValue('Max wall time (ms)', 250);
@@ -243,6 +278,25 @@ const checks = {
   H8_no_market_or_bench: herald.result.acquisition.candidates.every((candidate) =>
     candidate.methods.every((method) => !method.id.startsWith('market'))
   ) && !herald.result.expectedActionUsage.some((usage) => /bench/i.test(usage.actionName)),
+  I_D1_herald_compact_plan: herald.planPresent && herald.planSteps.length >= 6 && herald.planSteps.length <= 9 &&
+    herald.primaryExactRuleCount === 0 && herald.result.craftPlan.exactPolicyBranchesHiddenByDefault ===
+      herald.result.policyExplanation.length &&
+    ['transmutation_orb', 'alteration_orb', 'augmentation_orb', 'regal_orb', 'exalted_orb', 'scouring_orb']
+      .every((actionId) => heraldDisplayedActionIds.includes(actionId)) &&
+    herald.planSteps.at(-1)?.phase === 'SUCCESS',
+  I_D2_no_fabricated_actions: herald.result.craftPlan.inventedActionIds.length === 0 &&
+    heraldDisplayedActionIds.every((actionId) => heraldPlanActionIds.has(actionId)),
+  I_D3_selected_action_coverage: herald.result.craftPlan.uncoveredActionIds.length === 0,
+  I_D4_conflicting_branch_preservation: Boolean(conflictingDecision) &&
+    conflictingDecision.initiallyClosed && conflictingDecision.policyRuleIndices.every(Boolean) &&
+    herald.planSteps.find((step) => step.phase === 'PROMOTE')?.text.includes('Decision details'),
+  I_D5_full_exact_policy_advanced: herald.advancedInitiallyClosed && herald.exactPolicyInitiallyClosed &&
+    exactPolicyCorrespondence && collisions.length === 0,
+  I_W6_generic_target_order_copy: herald.result.craftPlan.targetOrderPreference.kind === 'NONE' &&
+    herald.planSteps.find((step) => step.phase === 'ROLL')?.title === 'Roll for a target modifier' &&
+    herald.targetOrderEvidencePresent && herald.targetOrderEvidenceRows === 2,
+  I_D10_no_route_plan_safety: noRoute.result.craftPlan.status === 'UNCERTIFIED' &&
+    noRoute.result.craftPlan.steps.length === 0 && !noRoute.planPresent && !noRoute.materialSectionPresent,
 };
 
 const lines = ['PHASE 2H — HERALD PRODUCTION BROWSER / WORKER SMOKE'];
@@ -257,6 +311,18 @@ lines.push(`H7 progressive disclosure: ${checks.H7_progressive_disclosure ? 'PAS
 lines.push(`H8 market/Bench exclusions: ${checks.H8_no_market_or_bench ? 'PASS' : 'FAIL'}`);
 writeFileSync(outputPath, `${lines.join('\n')}\n`, 'utf8');
 console.log(lines.join('\n'));
+
+const phase2iLines = ['PHASE 2I — CHRONOLOGICAL CRAFT PLAN PRODUCTION BROWSER / WORKER SMOKE'];
+phase2iLines.push(`URL: ${appUrl}`);
+phase2iLines.push(`D1 Herald compact plan: ${checks.I_D1_herald_compact_plan ? 'PASS' : 'FAIL'}; status=${herald.result.recommendationStatus}; U=${herald.result.expectedCostChaos}; steps=${herald.planSteps.length}; height=${herald.guideHeight.toFixed(1)}px; plan=${JSON.stringify(herald.planSteps)}; recovery=${herald.result.craftPlan.recovery?.returnToStepId ?? 'NONE'}; decisionGroups=${herald.result.craftPlan.detailedDecisionCount}; exactHidden=${herald.result.craftPlan.exactPolicyBranchesHiddenByDefault}`);
+phase2iLines.push(`D2 no fabricated actions: ${checks.I_D2_no_fabricated_actions ? 'PASS' : 'FAIL'}; invented=${JSON.stringify(herald.result.craftPlan.inventedActionIds)}; displayed=${JSON.stringify(heraldDisplayedActionIds)}; selected=${JSON.stringify(herald.result.craftPlan.selectedActionIds)}`);
+phase2iLines.push(`D3 selected-action coverage: ${checks.I_D3_selected_action_coverage ? 'PASS' : 'FAIL'}; uncovered=${JSON.stringify(herald.result.craftPlan.uncoveredActionIds)}; represented=${JSON.stringify(herald.result.craftPlan.representedActionIds)}`);
+phase2iLines.push(`D4 conflicting branch preservation: ${checks.I_D4_conflicting_branch_preservation ? 'PASS' : 'FAIL'}; decision=${JSON.stringify(conflictingDecision ?? null)}`);
+phase2iLines.push(`D5 full exact policy Advanced preservation: ${checks.I_D5_full_exact_policy_advanced ? 'PASS' : 'FAIL'}; returned=${herald.result.policyExplanation.length}; advancedCards=${herald.advancedExactRuleCount}; collisions=${JSON.stringify(collisions)}; advancedInitiallyClosed=${herald.advancedInitiallyClosed}; exactInitiallyClosed=${herald.exactPolicyInitiallyClosed}`);
+phase2iLines.push(`W6 selected-policy target order in UI: ${checks.I_W6_generic_target_order_copy ? 'PASS' : 'FAIL'}; ${JSON.stringify(herald.result.craftPlan.targetOrderPreference)}`);
+phase2iLines.push(`D10 no-route plan/material safety: ${checks.I_D10_no_route_plan_safety ? 'PASS' : 'FAIL'}; status=${noRoute.result.recommendationStatus}; planStatus=${noRoute.result.craftPlan.status}; steps=${noRoute.result.craftPlan.steps.length}; planElement=${noRoute.planPresent}; materials=${noRoute.materialSectionPresent}; AdvancedRawUsage=${noRouteRawSafe}`);
+writeFileSync(phase2iOutputPath, `${phase2iLines.join('\n')}\n`, 'utf8');
+console.log(phase2iLines.join('\n'));
 socket.close();
 
 const failures = Object.entries(checks).filter(([, passed]) => !passed).map(([name]) => name);

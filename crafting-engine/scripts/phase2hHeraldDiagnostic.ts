@@ -249,6 +249,15 @@ function summarize(id: string, result: OptimizeCraftResult, workerElapsedMs: num
   if (collision.collisions.length > 0) {
     throw new Error(`${id} rendered policy collisions: ${collision.collisions.join(' | ')}`);
   }
+  if (
+    result.craftPlan.status !== 'CERTIFIED' ||
+    result.craftPlan.steps.length < 6 ||
+    result.craftPlan.steps.length > 9 ||
+    result.craftPlan.uncoveredActionIds.length > 0 ||
+    result.craftPlan.inventedActionIds.length > 0
+  ) {
+    throw new Error(`${id} invalid Phase 2I compact plan: ${JSON.stringify(result.craftPlan)}`);
+  }
   for (const candidate of result.acquisition.candidates) {
     const synthesis = candidate.synthesis;
     if (!synthesis?.expectedCostChaos) continue;
@@ -265,6 +274,9 @@ function summarize(id: string, result: OptimizeCraftResult, workerElapsedMs: num
     `  engineElapsed=${result.search.elapsedMs}; totalStaged=${result.search.totalElapsedMs}; workerElapsed=${workerElapsedMs}`,
     `  cleanCertification=${JSON.stringify(result.acquisition.stage.cleanCertification ?? null)}`,
     `  policyCards=${result.policyExplanation.length}; renderedCollisions=${collision.collisions.length}; branchExamples=${collision.branchExamples.join(' | ') || 'NONE'}`,
+    `  compactPlan=${result.craftPlan.steps.length} steps; targetOrder=${JSON.stringify(result.craftPlan.targetOrderPreference)}; recoveryTarget=${result.craftPlan.recovery?.returnToStepId ?? 'NONE'}; decisionGroups=${result.craftPlan.detailedDecisionCount}; exactBranchesHidden=${result.craftPlan.exactPolicyBranchesHiddenByDefault}`,
+    `  compactSteps=${result.craftPlan.steps.map((step, index) => `${index + 1}:${step.title}[${step.actionIds.join(',') || 'terminal'}]${step.recoveryTargetStepId ? `->${step.recoveryTargetStepId}` : ''}`).join(' | ')}`,
+    `  compactCoverage=selected:${result.craftPlan.selectedActionIds.join(',')}; represented:${result.craftPlan.representedActionIds.join(',')}; uncovered:${result.craftPlan.uncoveredActionIds.join(',') || 'NONE'}; invented:${result.craftPlan.inventedActionIds.join(',') || 'NONE'}`,
     `  expectedUsage=${result.expectedActionUsage.map((usage) => `${usage.actionId}:${usage.expectedCount.toFixed(6)}:${usage.expectedCostChaos.toFixed(6)}c`).join(', ') || 'NONE'}`,
     ...result.acquisition.candidates.filter((candidate) => candidate.synthesis).map((candidate) => {
       const synthesis = candidate.synthesis!;

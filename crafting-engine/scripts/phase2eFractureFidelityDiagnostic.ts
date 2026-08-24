@@ -422,6 +422,24 @@ const noMarket = runOptimizer(service, 'Diagnostic F no-market explicit fracture
     acquisitionMaxExpansionRounds: 3,
   },
 });
+const noMarketSelectedCandidate = noMarket.result.acquisition.candidates.find(
+  (candidate) => candidate.id === noMarket.result.acquisition.selectedCandidateId
+);
+const noMarketSelectedMethod = noMarketSelectedCandidate?.methods.find(
+  (method) => method.id === noMarket.result.acquisition.selectedMethodId
+);
+const noMarketPlanAcquire = noMarket.result.craftPlan.steps.find((step) => step.phase === 'ACQUIRE');
+const noMarketPlanRecovery = noMarket.result.craftPlan.steps.find((step) => step.phase === 'RECOVER');
+if (
+  !noMarketSelectedMethod?.executable ||
+  noMarket.result.craftPlan.status !== 'CERTIFIED' ||
+  !noMarketPlanAcquire?.actionIds.includes('fracturing_orb') ||
+  !noMarketPlanRecovery?.actionIds.includes('restart_reacquire') ||
+  noMarket.result.craftPlan.uncoveredActionIds.length > 0 ||
+  noMarket.result.craftPlan.inventedActionIds.length > 0
+) {
+  throw new Error(`Phase 2I self-fracture plan presentation failed: ${JSON.stringify(noMarket.result.craftPlan)}`);
+}
 
 console.error('[phase2e] Harvest and Fracturing parity');
 const parity = runExternalParityDiagnostics(context);
@@ -577,6 +595,8 @@ lines.push(...optimizerLines('  T1 Intelligence + T1 Attributes portfolio', mult
 lines.push(...optimizerLines('  Explicit fractured T1 Intelligence without market quote', noMarket));
 lines.push(`  independent executable fracture families: ${multiFracture.result.acquisition.candidates.filter((candidate) => candidate.methods.some((method) => method.executable)).length}`);
 lines.push(`  no-market executable family / cache hit: ${noMarket.result.acquisition.candidates.some((candidate) => candidate.methods.some((method) => method.executable)) ? 'YES' : 'NO'} / ${noMarket.result.acquisition.stage.cacheHits}`);
+lines.push(`  Phase 2I selected self-fracture plan: ${noMarket.result.craftPlan.steps.map((step) => `${step.phase}[${step.actionIds.join(',') || 'terminal'}]${step.recoveryTargetStepId ? `->${step.recoveryTargetStepId}` : ''}`).join(' | ')}`);
+lines.push(`  Phase 2I self-fracture plan coverage: uncovered=${noMarket.result.craftPlan.uncoveredActionIds.join(',') || 'NONE'}; invented=${noMarket.result.craftPlan.inventedActionIds.join(',') || 'NONE'}; wrong-fracture recovery=${noMarketPlanRecovery?.actionIds.join(',') ?? 'NONE'}; PASS.`);
 
 lines.push('');
 lines.push('DIAGNOSTIC G — FRACTURING ORB PARITY');

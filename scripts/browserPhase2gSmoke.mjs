@@ -168,6 +168,7 @@ async function runSearch(timeoutMs) {
       provisionalWarning: document.querySelector('.provisional-warning')?.innerText ?? '',
       noRouteWarning: document.querySelector('.no-route-warning')?.innerText ?? '',
       guideText: document.querySelector('.craft-guide')?.innerText ?? '',
+      guidePrimaryRuleCount: document.querySelectorAll('.craft-guide .craft-rule').length,
       guideRules: [...document.querySelectorAll('.craft-rule')].map((rule) => ({
         condition: rule.dataset.condition,
         action: rule.dataset.action,
@@ -181,6 +182,10 @@ async function runSearch(timeoutMs) {
         text: row.innerText,
       })),
       advancedInitiallyClosed: advanced instanceof HTMLDetailsElement && !advanced.open,
+      exactPolicyInitiallyClosed: (() => {
+        const details = document.querySelector('.exact-policy-branches');
+        return details instanceof HTMLDetailsElement && !details.open;
+      })(),
       advancedRawText: advanced?.textContent ?? '',
       fracturePlayerLabels: [...document.querySelectorAll('.self-fracture-portfolio tbody tr')].map((row) => ({
         candidateId: row.dataset.candidateId,
@@ -193,6 +198,7 @@ async function runSearch(timeoutMs) {
         expectedCostChaos: result.expectedCostChaos,
         expectedActionUsage: result.expectedActionUsage,
         policyExplanation: result.policyExplanation,
+        craftPlan: result.craftPlan,
         recommended: result.recommended,
         acquisition: {
           selectedCandidateId: result.acquisition.selectedCandidateId,
@@ -363,7 +369,9 @@ const requestIdentityPass = requests.length === expectedRequests.length && reque
 const expectedGuideRules = oneMod.result.policyExplanation.map(({ action, actionId }) => ({ action, actionId }));
 const guidePass = expectedGuideRules.length > 0 && oneMod.guideRules.length === expectedGuideRules.length &&
   oneMod.guideRules.every((rule, index) => rule.condition && rule.action === expectedGuideRules[index].action &&
-    rule.actionId === expectedGuideRules[index].actionId);
+    rule.actionId === expectedGuideRules[index].actionId) && oneMod.guidePrimaryRuleCount === 0 &&
+  oneMod.exactPolicyInitiallyClosed && oneMod.result.craftPlan.status === 'CERTIFIED' &&
+  oneMod.result.craftPlan.uncoveredActionIds.length === 0 && oneMod.result.craftPlan.inventedActionIds.length === 0;
 const materialsPass = oneMod.result.expectedActionUsage.length > 0 &&
   oneMod.result.expectedActionUsage.every((usage) => oneMod.materialRows.some((row) =>
     row.actionId === usage.actionId && row.expectedCount === usage.expectedCount &&
@@ -373,13 +381,20 @@ const oneModHealthy = oneMod.result.recommendationStatus === 'BEST_RESOLVED_ACQU
   oneMod.result.acquisition.selectionSafe && closeEnough(oneMod.result.expectedCostChaos, 8.784) &&
   oneMod.result.risk.selectedPolicyProper && closeEnough(oneMod.result.risk.terminalAbsorptionProbability, 1, 1e-9) &&
   closeEnough(oneMod.result.risk.unresolvedOnPolicyProbability, 0, 1e-9) && oneMod.result.solver.bellmanConverged &&
-  oneMod.result.solver.occupancyConverged;
+  oneMod.result.solver.occupancyConverged &&
+  !oneMod.result.craftPlan.steps.some((step) => ['PROMOTE', 'FINISH', 'RECOVER'].includes(step.phase));
 const twoModHealthy = twoModAny.result.recommendationStatus === 'BEST_RESOLVED_ACQUISITION_SAFE' &&
   twoModAny.result.acquisition.selectionSafe && closeEnough(twoModAny.result.expectedCostChaos, 228.790) &&
-  closeEnough(twoModAny.result.risk.terminalAbsorptionProbability, 1, 1e-9);
+  closeEnough(twoModAny.result.risk.terminalAbsorptionProbability, 1, 1e-9) &&
+  twoModAny.result.craftPlan.uncoveredActionIds.length === 0 &&
+  twoModAny.result.craftPlan.inventedActionIds.length === 0 &&
+  !JSON.stringify(twoModAny.result.craftPlan).includes('Empowered Envoy') &&
+  !JSON.stringify(twoModAny.result.craftPlan).includes('Endbringer');
 const noUnwantedHealthy = noUnwanted.result.target.finalStateConstraints?.maxUnmatchedAffixes === 0 &&
   noUnwanted.hero.includes('No unwanted affixes') && closeEnough(noUnwanted.result.expectedCostChaos, 228.790) &&
-  closeEnough(noUnwanted.result.risk.terminalAbsorptionProbability, 1, 1e-9);
+  closeEnough(noUnwanted.result.risk.terminalAbsorptionProbability, 1, 1e-9) &&
+  noUnwanted.result.craftPlan.uncoveredActionIds.length === 0 &&
+  noUnwanted.result.craftPlan.inventedActionIds.length === 0;
 const provisionalHealthy = provisional.result.recommendationStatus === 'PROVISIONAL_RESOLVED' &&
   !provisional.result.acquisition.selectionSafe && provisional.hero.includes('Provisional route') &&
   provisional.hero.includes('Not acquisition-safe') && provisional.provisionalWarning.includes('cheaper unresolved route may exist') &&
@@ -445,15 +460,15 @@ const lines = ['PHASE 2G — PRODUCTION USER-FACING CRAFT GUIDE / WORKER SMOKE']
 lines.push(`URL: ${appUrl}`);
 lines.push(`D1 human recommendation status: ${checks.D1_human_status ? 'PASS' : 'FAIL'}; ${compact(oneMod.proof)}`);
 lines.push(`D2 primary result hierarchy: ${checks.D2_primary_hierarchy ? 'PASS' : 'FAIL'}; ${compact(oneMod.hero)}`);
-lines.push(`D3 branch-aware craft guide exact result correspondence: ${checks.D3_branch_aware_guide ? 'PASS' : 'FAIL'}; displayed=${JSON.stringify(oneMod.guideRules)}; returned=${JSON.stringify(expectedGuideRules)}`);
+lines.push(`D3 compact guide plus Advanced exact-policy correspondence: ${checks.D3_branch_aware_guide ? 'PASS' : 'FAIL'}; primaryExactCards=${oneMod.guidePrimaryRuleCount}; compactSteps=${oneMod.result.craftPlan.steps.length}; displayedAdvanced=${JSON.stringify(oneMod.guideRules)}; returned=${JSON.stringify(expectedGuideRules)}`);
 lines.push(`D4 expected materials exact result correspondence: ${checks.D4_expected_materials ? 'PASS' : 'FAIL'}; ${compact(oneMod.materialText)}`);
 lines.push(`D5 provisional result warning: ${checks.D5_provisional_warning ? 'PASS' : 'FAIL'}; ${compact(provisional.hero)}; alert=${compact(provisional.provisionalWarning)}`);
 lines.push(`D6 advanced diagnostics retained: ${checks.D6_advanced_diagnostics ? 'PASS' : 'FAIL'}; U=${provisional.result.acquisition.resolvedIncumbentUpperBoundChaos}; L=${provisional.result.acquisition.bestUnresolvedLowerBoundChaos}; fractureFamilies=${fractureSyntheses.length}`);
 lines.push(`D7 Phase 2F labels: ${checks.D7_phase2f_labels ? 'PASS' : 'FAIL'}; ordinary=${esOption?.text ?? 'MISSING'}; intelligence=${intOption?.text ?? 'MISSING'}; notable=${notableOption?.text ?? 'MISSING'}`);
 lines.push(`D8 exact worker identity: ${checks.D8_worker_identity ? 'PASS' : 'FAIL'}; ${JSON.stringify(requests.map((request) => ({ baseType: request.baseType, clusterType: request.clusterType, itemLevel: request.itemLevel, passiveCount: request.passiveCount, target: request.target, prices: request.prices, marketContext: request.marketContext, expectedSaleValueChaos: request.expectedSaleValueChaos, allowResearchFallbackPrices: request.allowResearchFallbackPrices, searchBudget: request.searchBudget, searchIntent: request.searchIntent })))}`);
-lines.push(`R1 one-mod T1 ES: ${checks.R1_one_mod ? 'PASS' : 'FAIL'} in ${oneMod.elapsedMs}ms; status=${oneMod.result.recommendationStatus}; acquisition=Clean Base; expected=${oneMod.result.expectedCostChaos}; absorption=${oneMod.result.risk.terminalAbsorptionProbability}; Bellman=${oneMod.result.solver.bellmanConverged}; occupancy=${oneMod.result.solver.occupancyConverged}`);
-lines.push(`R2 two-mod T1 ES + T1 Int Any: ${checks.R2_two_mod_any ? 'PASS' : 'FAIL'} in ${twoModAny.elapsedMs}ms; status=${twoModAny.result.recommendationStatus}; expected=${twoModAny.result.expectedCostChaos}; absorption=${twoModAny.result.risk.terminalAbsorptionProbability}`);
-lines.push(`R3 no-unwanted: ${checks.R3_no_unwanted ? 'PASS' : 'FAIL'} in ${noUnwanted.elapsedMs}ms; expected=${noUnwanted.result.expectedCostChaos}; constraint=${JSON.stringify(noUnwanted.result.target.finalStateConstraints)}`);
+lines.push(`R1 one-mod T1 ES: ${checks.R1_one_mod ? 'PASS' : 'FAIL'} in ${oneMod.elapsedMs}ms; status=${oneMod.result.recommendationStatus}; acquisition=Clean Base; expected=${oneMod.result.expectedCostChaos}; absorption=${oneMod.result.risk.terminalAbsorptionProbability}; Bellman=${oneMod.result.solver.bellmanConverged}; occupancy=${oneMod.result.solver.occupancyConverged}; plan=${JSON.stringify(oneMod.result.craftPlan.steps.map((step) => ({ phase: step.phase, actionIds: step.actionIds })) )}`);
+lines.push(`R2 two-mod T1 ES + T1 Int Any: ${checks.R2_two_mod_any ? 'PASS' : 'FAIL'} in ${twoModAny.elapsedMs}ms; status=${twoModAny.result.recommendationStatus}; expected=${twoModAny.result.expectedCostChaos}; absorption=${twoModAny.result.risk.terminalAbsorptionProbability}; targetOrder=${JSON.stringify(twoModAny.result.craftPlan.targetOrderPreference)}; plan=${JSON.stringify(twoModAny.result.craftPlan.steps.map((step) => ({ phase: step.phase, actionIds: step.actionIds })) )}`);
+lines.push(`R3 no-unwanted: ${checks.R3_no_unwanted ? 'PASS' : 'FAIL'} in ${noUnwanted.elapsedMs}ms; expected=${noUnwanted.result.expectedCostChaos}; constraint=${JSON.stringify(noUnwanted.result.target.finalStateConstraints)}; plan=${JSON.stringify(noUnwanted.result.craftPlan.steps.map((step) => ({ phase: step.phase, actionIds: step.actionIds })) )}`);
 lines.push(`R4 forced-Rare normal-price proof: ${checks.R4_forced_rare ? 'PASS' : 'FAIL'} in ${forcedRare.elapsedMs}ms; status=${forcedRare.result.recommendationStatus}; safe=${forcedRare.result.acquisition.selectionSafe}; U=${forcedRare.result.acquisition.resolvedIncumbentUpperBoundChaos}; L=${forcedRare.result.acquisition.bestUnresolvedLowerBoundChaos}`);
 lines.push(`R5 self-fracture presentation: ${checks.R5_self_fracture_presentation ? 'PASS' : 'FAIL'}; ${JSON.stringify(fractureSyntheses)}`);
 lines.push(`R5 presentation evidence: ${JSON.stringify(fracturePresentationEvidence)}; expanded=${compact(provisional.selfFractureExpandedText)}`);

@@ -1133,6 +1133,117 @@ td a {
   color: var(--accent-2);
 }
 
+.craft-plan {
+  display: grid;
+  gap: 10px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.craft-plan-step {
+  display: grid;
+  grid-template-columns: 34px minmax(0, 1fr);
+  gap: 12px;
+  padding: 13px 14px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--surface-2);
+}
+
+.craft-plan-number {
+  display: grid;
+  width: 30px;
+  height: 30px;
+  place-items: center;
+  border: 1px solid var(--accent-border);
+  border-radius: 50%;
+  background: var(--accent-bg);
+  color: var(--text-h);
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.craft-plan-step-body {
+  min-width: 0;
+
+  h3 {
+    margin: 2px 0 5px;
+    color: var(--text-h);
+    font-size: 15px;
+  }
+
+  > p {
+    margin: 0;
+  }
+}
+
+.craft-plan-actions,
+.craft-plan-loop {
+  margin-top: 7px !important;
+  color: var(--text-dim);
+  font-size: 12px;
+}
+
+.craft-plan-loop strong {
+  color: var(--accent-2);
+}
+
+.craft-plan-decision-details,
+.selected-fracture-guide {
+  margin-top: 10px;
+
+  > summary {
+    cursor: pointer;
+    color: var(--text-h);
+    font-size: 13px;
+    font-weight: 700;
+  }
+}
+
+.craft-plan-decision-details {
+  padding: 10px 12px;
+  border: 1px solid var(--border);
+  border-radius: 7px;
+  background: var(--surface);
+
+  > p {
+    margin: 8px 0;
+    color: var(--text-dim);
+    font-size: 12px;
+  }
+
+  ul {
+    display: grid;
+    gap: 8px;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+
+  li {
+    display: grid;
+    gap: 2px;
+    padding-top: 8px;
+    border-top: 1px solid var(--border);
+    font-size: 12px;
+  }
+
+  li > strong {
+    color: var(--text-h);
+  }
+}
+
+.craft-plan-decision-example {
+  overflow-wrap: anywhere;
+}
+
+.craft-plan-optimality {
+  margin: 12px 0 0;
+  color: var(--accent-2);
+  font-size: 13px;
+}
+
 .craft-rules {
   display: grid;
   gap: 10px;

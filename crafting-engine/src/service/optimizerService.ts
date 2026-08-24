@@ -41,6 +41,7 @@ import {
   type AcquisitionSynthesisResult,
 } from '../solver/acquisitionSynthesis.ts';
 import { evaluateMandatoryMechanicsLowerBound } from '../solver/mandatoryMechanicsLowerBound.ts';
+import { buildCraftPlan, type CraftPlanSummary } from './craftPlan.ts';
 import {
   OptimizerInputValidationError,
   validateOptimizeCraftInput,
@@ -386,6 +387,7 @@ export interface OptimizeCraftResult {
   expectedCurrencies: Record<string, number | null>;
   expectedActionUsage: ExpectedActionUsage[];
   policyExplanation: PolicyExplanationRule[];
+  craftPlan: CraftPlanSummary;
   policyRules: PolicyRule[];
   acquisition: AcquisitionSummary;
   expectedCostChaos: number | null;
@@ -1313,7 +1315,7 @@ export class OptimizerService {
       ) === index
     );
 
-    const output: OptimizeCraftResult = {
+    const outputWithoutCraftPlan: Omit<OptimizeCraftResult, 'craftPlan'> = {
       target: input.target,
       validationNotices: validation.notices,
       recommendationStatus,
@@ -1488,6 +1490,10 @@ export class OptimizerService {
       marketContext: input.marketContext,
       warningDetails: uniqueWarningDetails,
       warnings: [...new Set(uniqueWarningDetails.map((warning) => warning.message))],
+    };
+    const output: OptimizeCraftResult = {
+      ...outputWithoutCraftPlan,
+      craftPlan: buildCraftPlan(outputWithoutCraftPlan),
     };
 
     // This assertion belongs at the boundary: an accidental Map/Infinity must
