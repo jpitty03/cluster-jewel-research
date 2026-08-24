@@ -219,7 +219,7 @@ RECOMMENDED ACQUISITION (STEP 1):
 ----------------------------------------------------------------------
 Base Acquisition
 ----------------------------------------------------------------------
-Action: Prepare 4-mod clean base with Powerful via Alt/Aug/Regal/Bench and use Fracturing Orb (25% chance)
+Action: Executable or explicitly supplied self-fracture acquisition for Powerful
 Note: Starting fractured base: Powerful
 Raw step cost:                1533.4c (~7.67 div)
 Expected step total:          1533.4c (~7.67 div)

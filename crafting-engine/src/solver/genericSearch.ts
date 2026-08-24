@@ -434,6 +434,11 @@ export interface GenericSearchOptions {
   persistentExpansion?: boolean;
   /** Internal feasibility control; prevents a physical-state probe from abandoning into another acquisition. */
   excludeAcquisitionActions?: boolean;
+  /**
+   * Integration-stage control for a one-candidate clean-only certification pass. The caller must
+   * account for every omitted acquisition family with an independent sound bound before using it.
+   */
+  skipAcquisitionFeasibility?: boolean;
 }
 
 class StateExpansionQueue {
@@ -1502,7 +1507,11 @@ export class GenericSearchEngine {
     // Give every distinct physical acquisition a bounded feasibility attempt
     // before global proof competition. Certified on-policy states become the
     // first global expansion frontier; unresolved probes remain explicit.
-    if (startState.flags?.acquisitionMenu === true && acquisitionCandidates.length > 0) {
+    if (
+      startState.flags?.acquisitionMenu === true &&
+      acquisitionCandidates.length > 0 &&
+      effectiveOptions.skipAcquisitionFeasibility !== true
+    ) {
       const feasibilityDeadline = deadlineMs === undefined
         ? undefined
         : startTime + Math.max(1, Math.floor((deadlineMs - startTime) * 0.4));

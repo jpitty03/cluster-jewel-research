@@ -4,7 +4,6 @@ import type { ModPool } from '../domain/ModPool.ts';
 import { generateStateKey } from './stateKey.ts';
 import { satisfiesTarget, type TargetDefinition } from '../domain/TargetDefinition.ts';
 import { DivineAction } from '../actions/divine.ts';
-import { calculateTotalWeight } from '../rules/modEligibility.ts';
 import {
   CraftingPolicyEngine,
   type HarvestStrategyComparison,
@@ -24,7 +23,7 @@ export interface AcquisitionBreakdown {
 export interface AcquisitionOption {
   type: 'market' | 'self-fracture' | 'clean-base';
   costChaos: number;
-  confidence: 'deterministic' | 'approximate';
+  confidence: 'deterministic' | 'approximate' | 'executable';
   description?: string;
   cleanBaseCostChaos?: number;
   prepCostChaos?: number;
@@ -127,14 +126,8 @@ export class ExpectedCostSolver {
     const priceBook = this.context.priceBook;
     const pool = this.context.pool;
     const divineRate = priceBook.getRate('divine');
-    const fracOrbRate = priceBook.getRate('fracturing');
     const annulRate = priceBook.getRate('annul');
     const exaltRate = priceBook.getRate('exalt');
-    const altRate = 0.2;
-    const augRate = 0.05;
-    const regalRate = 1.0;
-    const benchRate = 4.5;
-    const cleanBaseCost = 10;
 
     // Identify fractured mod on the starting base
     const fracPrefix = startState.prefixes.find((p) => p.isFractured);
@@ -211,78 +204,31 @@ export class ExpectedCostSolver {
       }
     }
 
-    // Compute Starting Option Analysis (Market Purchase vs Self-Fracture)
+    // The acquisition price is supplied by strategy discovery. In particular, this solver never
+    // reconstructs the retired Alt/Aug/Regal/Bench + fixed-4x fracture estimate. Core discovery
+    // supplies a certified executable synthesis cost; historical fixtures may still explicitly
+    // pass their own reference acquisition for regression reporting.
     const step1Options: AcquisitionOption[] = [];
-    if (fracMod && pool) {
-      const poolMod = pool.getAllMods().find(
-        (m) =>
-          (fracMod.modGroup ? m.modGroup === fracMod.modGroup : true) &&
-          (fracMod.tier !== undefined ? m.tier === fracMod.tier : true)
-      );
-
-      const allEligible = pool.getAllMods().filter((m) => m.genType === fracMod.genType && m.ilvl <= (startState.itemLevel ?? 84));
-      const totalAffixWeight = calculateTotalWeight(allEligible) || 15650;
-      const modWeight = poolMod?.weight ?? 300;
-
-      const altsNeeded = totalAffixWeight / modWeight;
-      const prepCost = altsNeeded * altRate + (altsNeeded * 0.25) * augRate + regalRate + benchRate;
-      const selfFracCost = 4 * (cleanBaseCost + prepCost + fracOrbRate);
-      const fullSelfFrac = selfFracCost + downstreamCraftCost;
-
-      const breakdown: AcquisitionBreakdown = acquisition?.breakdown ?? {
-        cleanBaseCostChaos: cleanBaseCost,
-        prepCostChaos: prepCost,
-        fracturingOrbCostChaos: fracOrbRate,
-        successChance: 25.0,
-        expectedAttempts: 4.0,
-      };
-
-      if (acquisition && acquisition.type === 'market') {
-        const fullBuy = acquisition.costChaos + downstreamCraftCost;
-        step1Options.push({
-          type: 'market',
-          costChaos: acquisition.costChaos,
-          confidence: 'deterministic',
-          description: `Direct market purchase of fractured ${fracMod.name} base`,
-          isRecommended: fullBuy <= fullSelfFrac,
-          downstreamCostChaos: downstreamCraftCost,
-          fullRouteTotalCostChaos: fullBuy,
-          reason:
-            fullBuy <= fullSelfFrac
-              ? `Market purchase total of ${(fullBuy / divineRate).toFixed(2)} div (${fullBuy.toFixed(1)}c) is cheaper than self-fracturing (${fullSelfFrac.toFixed(1)}c).`
-              : `Market price is ${(acquisition.costChaos / divineRate).toFixed(2)} div (${acquisition.costChaos.toFixed(1)}c). Deterministic alternative with 0 crafting risk.`,
-        });
-      }
-
-      // Self-Fracture option
-      const selfFracActualCost = acquisition?.type === 'self-fracture' && acquisition.costChaos > 0 ? acquisition.costChaos : selfFracCost;
-      const fullActualSelfFrac = selfFracActualCost + downstreamCraftCost;
+    if (fracMod && acquisition) {
+      const fullRouteTotalCostChaos = acquisition.costChaos + downstreamCraftCost;
       step1Options.push({
-        type: 'self-fracture',
-        costChaos: selfFracActualCost,
-        confidence: 'approximate',
-        description: `Prepare 4-mod clean base with ${fracMod.name} via Alt/Aug/Regal/Bench and use Fracturing Orb (25% chance)`,
-        cleanBaseCostChaos: breakdown.cleanBaseCostChaos,
-        prepCostChaos: breakdown.prepCostChaos,
-        fracturingOrbCostChaos: breakdown.fracturingOrbCostChaos,
-        successChance: breakdown.successChance,
-        expectedAttempts: breakdown.expectedAttempts,
-        breakdown,
-        isRecommended: !acquisition || acquisition.type === 'self-fracture' || fullActualSelfFrac < (baseCostChaos + downstreamCraftCost),
+        ...acquisition,
+        description: acquisition.description ??
+          (acquisition.type === 'self-fracture'
+            ? `Executable or explicitly supplied self-fracture acquisition for ${fracMod.name}`
+            : `Explicitly supplied acquisition for fractured ${fracMod.name}`),
+        isRecommended: true,
         downstreamCostChaos: downstreamCraftCost,
-        fullRouteTotalCostChaos: fullActualSelfFrac,
-        reason:
-          acquisition?.type === 'market'
-            ? fullActualSelfFrac < (baseCostChaos + downstreamCraftCost)
-              ? `Self-fracturing saves ${(baseCostChaos - selfFracActualCost).toFixed(1)}c on average vs market purchase.`
-              : `Market purchase saves ${(selfFracActualCost - baseCostChaos).toFixed(1)}c vs self-fracturing.`
-            : 'Self-fracturing route evaluated with Alt/Aug/Regal/Bench prep + Fracturing Orb.',
+        fullRouteTotalCostChaos,
+        reason: acquisition.confidence === 'executable'
+          ? 'Self-fracture acquisition cost is a certified executable synthesis incumbent.'
+          : 'Acquisition cost was supplied explicitly by the calling fixture.',
       });
     }
 
     // Determine canonical selected acquisition cost
-    const selectedAcquisition = step1Options.find((o) => o.isRecommended) ?? (step1Options.length > 0 ? step1Options[0] : undefined);
-    const selectedAcquisitionCost = baseCostChaos > 0 ? baseCostChaos : (selectedAcquisition?.costChaos ?? 0);
+    const selectedAcquisition = step1Options[0];
+    const selectedAcquisitionCost = acquisition?.costChaos ?? baseCostChaos;
 
     // Finishing divines
     const finishingDivines = this.divineAction.calculateExpectedFinishingCost(startState, this.target);

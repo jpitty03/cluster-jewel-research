@@ -1,23 +1,33 @@
 import type { TargetDefinition } from '../domain/TargetDefinition.ts';
 import type { BaseType, ItemState } from '../domain/ItemState.ts';
 import type { ModPool } from '../domain/ModPool.ts';
-import type { PriceBook } from '../domain/PriceBook.ts';
-import type { AcquisitionOption, AcquisitionBreakdown } from './expectedCost.ts';
+import type { PriceBook, PriceConfidence } from '../domain/PriceBook.ts';
+import type { ModRequirement } from '../domain/TargetDefinition.ts';
+import type { AcquisitionOption } from './expectedCost.ts';
 import { toRolledMod } from '../domain/Mod.ts';
 import { getAllTargetModRequirements, matchesModRequirement } from '../domain/TargetDefinition.ts';
-import { calculateTotalWeight } from '../rules/modEligibility.ts';
+import {
+  synthesizeAcquisition,
+  type AcquisitionSearchBudget,
+} from './acquisitionSynthesis.ts';
 
 export interface StrategyDiscoveryContext {
   pool?: ModPool;
   priceBook: PriceBook;
   marketFracturedPricesChaos?: Record<string, number>;
   cleanBaseCostChaos?: number;
+  cleanBasePriceConfidence?: PriceConfidence;
+  cleanBasePriceProvenance?: string;
+  acquisitionSearchBudget?: AcquisitionSearchBudget;
+  allowResearchFallbackPrices?: boolean;
 }
 
 export interface StartingStateCandidate {
   state: ItemState;
   label: string;
   acquisitions: AcquisitionOption[];
+  /** Present only for physical families that must be manufactured by self-fracture. */
+  fracturedRequirement?: ModRequirement;
 }
 
 export interface StartingCraftOption {
@@ -35,7 +45,9 @@ function formatStartingModDisplayName(mod: { name: string; tier: number; tierCou
  * Discovers and generates physical starting state candidates with their attached acquisition routes
  * from a TargetDefinition.
  *
- * Physical candidate state is separated from acquisition methods (Self-Fracture, Market Purchase).
+ * Physical candidate state is separated from acquisition methods. Fractured candidates deliberately
+ * have no acquisition method at this stage: executable synthesis must certify one before the family
+ * can enter economic ranking. Legacy market purchase and approximate-formula methods are not emitted.
  */
 export function generateStartingStateCandidates(
   target: TargetDefinition,
@@ -47,9 +59,7 @@ export function generateStartingStateCandidates(
 ): StartingStateCandidate[] {
   const candidates: StartingStateCandidate[] = [];
   const cleanBaseCost = context.cleanBaseCostChaos ?? 10;
-  const priceBook = context.priceBook;
   const pool = context.pool;
-  const fractureCost = priceBook.getRate('fracturing') || 359;
 
   // 1. Clean Base Physical State
   const cleanState: ItemState = {
@@ -115,50 +125,11 @@ export function generateStartingStateCandidates(
 
     const modDisplayName = formatStartingModDisplayName(matchedMod);
 
-    // Calculate self-fracture preparation cost based on mod pool weight
-    const sameGenMods = allMods.filter((m) => m.genType === matchedMod.genType);
-    const totalGenWeight = calculateTotalWeight(sameGenMods) || (matchedMod.genType === 'Prefix' ? 9476 : 15401);
-    const modWeight = matchedMod.weight || 300;
-    const hitRate = modWeight / totalGenWeight;
-    const expectedAlts = hitRate > 0 ? 1 / hitRate : 30;
-
-    // Alt/Aug/Regal/Bench prep formula
-    const prepCostPerAttempt = Number((expectedAlts * 0.11 + 10.0).toFixed(2));
-    const totalSelfFracCost = Number((4.0 * (cleanBaseCost + prepCostPerAttempt + fractureCost)).toFixed(1));
-
-    const selfFracBreakdown: AcquisitionBreakdown = {
-      cleanBaseCostChaos: cleanBaseCost,
-      prepCostChaos: prepCostPerAttempt,
-      fracturingOrbCostChaos: fractureCost,
-      successChance: 25.0,
-      expectedAttempts: 4.0,
-    };
-
-    const candidateAcquisitions: AcquisitionOption[] = [
-      {
-        type: 'self-fracture',
-        costChaos: totalSelfFracCost,
-        confidence: 'approximate',
-        breakdown: selfFracBreakdown,
-      },
-    ];
-
-    // Add Market Purchase if price is available
-    const marketPrice =
-      context.marketFracturedPricesChaos?.[groupKey] ??
-      context.marketFracturedPricesChaos?.[matchedMod.modId];
-    if (marketPrice !== undefined && marketPrice > 0) {
-      candidateAcquisitions.push({
-        type: 'market',
-        costChaos: marketPrice,
-        confidence: 'deterministic',
-      });
-    }
-
     candidates.push({
       state: fracState,
       label: modDisplayName,
-      acquisitions: candidateAcquisitions,
+      acquisitions: [],
+      fracturedRequirement: { ...poolRequirement },
     });
   }
 
@@ -186,10 +157,67 @@ export function generateStartingStrategies(
     passiveCount
   );
 
+  const cleanCandidate = candidates.find((candidate) => !candidate.fracturedRequirement);
+  if (!cleanCandidate) return [];
+  const fracturedCandidates = candidates.filter(
+    (candidate): candidate is StartingStateCandidate & { fracturedRequirement: ModRequirement } =>
+      candidate.fracturedRequirement !== undefined
+  );
+  const totalStateBudget = Math.max(
+    fracturedCandidates.length,
+    context.acquisitionSearchBudget?.maxStates ?? 5_001
+  );
+  const totalWallTimeMs = Math.max(
+    fracturedCandidates.length,
+    context.acquisitionSearchBudget?.maxWallTimeMs ?? 20_000
+  );
+  const stateQuotient = fracturedCandidates.length > 0
+    ? Math.floor(totalStateBudget / fracturedCandidates.length)
+    : 0;
+  const stateRemainder = fracturedCandidates.length > 0
+    ? totalStateBudget % fracturedCandidates.length
+    : 0;
+  const wallQuotient = fracturedCandidates.length > 0
+    ? Math.floor(totalWallTimeMs / fracturedCandidates.length)
+    : 0;
+  const wallRemainder = fracturedCandidates.length > 0
+    ? totalWallTimeMs % fracturedCandidates.length
+    : 0;
+
+  for (const [index, candidate] of fracturedCandidates.entries()) {
+    const synthesis = synthesizeAcquisition(
+      { pool: context.pool!, priceBook: context.priceBook },
+      {
+        cleanStartingState: cleanCandidate.state,
+        desiredPhysicalState: { fracturedMod: candidate.fracturedRequirement },
+        cleanBaseAcquisition: {
+          costChaos: context.cleanBaseCostChaos ?? 10,
+          confidence: context.cleanBasePriceConfidence ?? 'research-fallback',
+          provenance:
+            context.cleanBasePriceProvenance ??
+            'strategy-discovery clean-base research fallback',
+        },
+        searchBudget: {
+          maxStates: stateQuotient + (index < stateRemainder ? 1 : 0),
+          maxWallTimeMs: wallQuotient + (index < wallRemainder ? 1 : 0),
+          maxExpansionRounds: context.acquisitionSearchBudget?.maxExpansionRounds ?? 3,
+        },
+        allowResearchFallbackPrices: context.allowResearchFallbackPrices ?? true,
+      }
+    );
+    if (synthesis.status !== 'RESOLVED' || synthesis.expectedCostChaos === undefined) continue;
+    candidate.acquisitions.push({
+      type: 'self-fracture',
+      costChaos: synthesis.expectedCostChaos,
+      confidence: 'executable',
+      description: synthesis.explanation,
+    });
+  }
+
   const options: StartingCraftOption[] = [];
   for (const candidate of candidates) {
     for (const acq of candidate.acquisitions) {
-      const modeLabel = acq.type === 'market' ? 'Buy Fractured' : (acq.type === 'clean-base' ? 'Start Clean Base' : 'Self-Fracture');
+      const modeLabel = acq.type === 'clean-base' ? 'Start Clean Base' : 'Executable Self-Fracture';
       options.push({
         name: `${modeLabel} ${candidate.label}`,
         state: candidate.state,

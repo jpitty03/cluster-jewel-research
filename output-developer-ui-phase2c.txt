@@ -36,93 +36,80 @@ EXTERNAL TWO-MOD PARITY:
 
 ONE-MOD T1 ES — RECOMMEND REGRESSION:
   recommendation / proof: BEST_RESOLVED_ACQUISITION_SAFE / BEST FULLY RESOLVED POLICY FOUND
-  selected acquisition: Restart/Reacquire: clean-base: Clean Base
+  selected acquisition: Restart/Reacquire: Start clean base: Clean Base
   acquisition safe: YES
   incumbent U / unresolved acquisition L / gap: 7.603233c / UNAVAILABLE / UNAVAILABLE
   expected cost: 7.603233c
-  wall / engine elapsed: 1758ms / 1740ms
-  states expanded / cumulative work: 1082 / 2164
+  wall / engine elapsed: 2485ms / 2468ms
+  states expanded / cumulative work: 1081 / 1082
   minimum feasible rarity: magic (1 Prefix target(s) + 0 Suffix target(s) fit magic capacity (1P/1S).)
-  fair acquisition probes: 2/2 certified; 2500 states each
-    Clean Base: certified=YES; states=1080; elapsed=795ms; U=7.603233c
-    Glowing (T1): certified=YES; states=1; elapsed=1ms; U=1505.800000c
+  fair acquisition probes: 0/0 certified; 5000 states each
   selected policy: proper=YES; absorption=100.000000000%; unresolved=0.000000000%; reconciled=YES (0.000000c)
   Bellman / occupancy: 341 (CONVERGED) / 4 (CONVERGED)
   DEEPEN delta: states=0; feasible-U=0; dominated=0; meaningful=NO; stopped-early=NO
-  actions: Restart/Reacquire: clean-base: Clean Base×1.0000 -> Orb of Alteration×30.3467 -> Orb of Augmentation×7.8367 -> Orb of Transmutation×1.0000
+  actions: Restart/Reacquire: Start clean base: Clean Base×1.0000 -> Orb of Alteration×30.3467 -> Orb of Augmentation×7.8367 -> Orb of Transmutation×1.0000
 
 TWO-MOD T1 ES + T1 INT, ANY RARITY / EXTRA AFFIXES ALLOWED — LIVE EQUIVALENT:
   recommendation / proof: BEST_RESOLVED_ACQUISITION_SAFE / BEST FULLY RESOLVED POLICY FOUND
-  selected acquisition: Restart/Reacquire: clean-base: Clean Base
+  selected acquisition: Restart/Reacquire: Start clean base: Clean Base
   acquisition safe: YES
   incumbent U / unresolved acquisition L / gap: 179.586086c / UNAVAILABLE / UNAVAILABLE
   expected cost: 179.586086c
-  wall / engine elapsed: 2967ms / 2950ms
-  states expanded / cumulative work: 1148 / 2296
+  wall / engine elapsed: 6294ms / 6278ms
+  states expanded / cumulative work: 1081 / 1082
   minimum feasible rarity: magic (1 Prefix target(s) + 1 Suffix target(s) fit magic capacity (1P/1S).)
-  fair acquisition probes: 3/3 certified; 1666 states each
-    Clean Base: certified=YES; states=1080; elapsed=1302ms; U=179.586086c
-    Glowing (T1): certified=YES; states=40; elapsed=8ms; U=1511.304333c
-    of the Prodigy (T1): certified=YES; states=27; elapsed=3ms; U=1517.668133c
-  selected policy: proper=YES; absorption=100.000000000%; unresolved=0.000000000%; reconciled=YES (0.000000c)
-  Bellman / occupancy: 1007 (CONVERGED) / 4 (CONVERGED)
+  fair acquisition probes: 0/0 certified; 5000 states each
+  selected policy: proper=YES; absorption=99.999999998%; unresolved=0.000000000%; reconciled=YES (0.000000c)
+  Bellman / occupancy: 1006 (CONVERGED) / 4 (CONVERGED)
   DEEPEN delta: states=0; feasible-U=0; dominated=0; meaningful=NO; stopped-early=NO
-  actions: Orb of Alteration×1590.3658 -> Restart/Reacquire: clean-base: Clean Base×1.0000 -> Orb of Augmentation×20.5283 -> Orb of Transmutation×1.0000
+  actions: Orb of Alteration×1590.3658 -> Restart/Reacquire: Start clean base: Clean Base×1.0000 -> Orb of Augmentation×20.5283 -> Orb of Transmutation×1.0000
 
 TWO-MOD T1 ES + T1 INT, ANY RARITY / NO UNWANTED AFFIXES:
   recommendation / proof: BEST_RESOLVED_ACQUISITION_SAFE / BEST FULLY RESOLVED POLICY FOUND
-  selected acquisition: Restart/Reacquire: clean-base: Clean Base
+  selected acquisition: Restart/Reacquire: Start clean base: Clean Base
   acquisition safe: YES
   incumbent U / unresolved acquisition L / gap: 179.586086c / UNAVAILABLE / UNAVAILABLE
   expected cost: 179.586086c
-  wall / engine elapsed: 2741ms / 2721ms
-  states expanded / cumulative work: 1148 / 2296
+  wall / engine elapsed: 6424ms / 6405ms
+  states expanded / cumulative work: 1081 / 1082
   minimum feasible rarity: magic (1 Prefix target(s) + 1 Suffix target(s) fit magic capacity (1P/1S).)
-  fair acquisition probes: 3/3 certified; 1666 states each
-    Clean Base: certified=YES; states=1080; elapsed=1234ms; U=179.586086c
-    Glowing (T1): certified=YES; states=40; elapsed=5ms; U=1511.304333c
-    of the Prodigy (T1): certified=YES; states=27; elapsed=4ms; U=1517.668133c
-  selected policy: proper=YES; absorption=100.000000000%; unresolved=0.000000000%; reconciled=YES (0.000000c)
-  Bellman / occupancy: 1007 (CONVERGED) / 4 (CONVERGED)
+  fair acquisition probes: 0/0 certified; 5000 states each
+  selected policy: proper=YES; absorption=99.999999998%; unresolved=0.000000000%; reconciled=YES (0.000000c)
+  Bellman / occupancy: 1006 (CONVERGED) / 4 (CONVERGED)
   DEEPEN delta: states=0; feasible-U=0; dominated=0; meaningful=NO; stopped-early=NO
-  actions: Orb of Alteration×1590.3658 -> Restart/Reacquire: clean-base: Clean Base×1.0000 -> Orb of Augmentation×20.5283 -> Orb of Transmutation×1.0000
+  actions: Orb of Alteration×1590.3658 -> Restart/Reacquire: Start clean base: Clean Base×1.0000 -> Orb of Augmentation×20.5283 -> Orb of Transmutation×1.0000
 
 TWO-MOD T1 ES + T1 INT — DEEPEN:
   recommendation / proof: BEST_RESOLVED_ACQUISITION_SAFE / BEST FULLY RESOLVED POLICY FOUND
-  selected acquisition: Restart/Reacquire: clean-base: Clean Base
+  selected acquisition: Restart/Reacquire: Start clean base: Clean Base
   acquisition safe: YES
   incumbent U / unresolved acquisition L / gap: 179.586086c / UNAVAILABLE / UNAVAILABLE
   expected cost: 179.586086c
-  wall / engine elapsed: 8444ms / 8425ms
-  states expanded / cumulative work: 1148 / 2296
+  wall / engine elapsed: 8462ms / 8447ms
+  states expanded / cumulative work: 1081 / 1082
   minimum feasible rarity: magic (1 Prefix target(s) + 1 Suffix target(s) fit magic capacity (1P/1S).)
-  fair acquisition probes: 3/3 certified; 1666 states each
-    Clean Base: certified=YES; states=1080; elapsed=1118ms; U=179.586086c
-    Glowing (T1): certified=YES; states=40; elapsed=7ms; U=1511.304333c
-    of the Prodigy (T1): certified=YES; states=27; elapsed=2ms; U=1517.668133c
-  selected policy: proper=YES; absorption=100.000000000%; unresolved=0.000000000%; reconciled=YES (0.000000c)
-  Bellman / occupancy: 1007 (CONVERGED) / 4 (CONVERGED)
+  fair acquisition probes: 0/0 certified; 5000 states each
+  selected policy: proper=YES; absorption=99.999999998%; unresolved=0.000000000%; reconciled=YES (0.000000c)
+  Bellman / occupancy: 1006 (CONVERGED) / 4 (CONVERGED)
   DEEPEN delta: states=0; feasible-U=0; dominated=0; meaningful=NO; stopped-early=YES
   DEEPEN message: No meaningful additional progress in this deeper budget.
-  actions: Orb of Alteration×1590.3658 -> Restart/Reacquire: clean-base: Clean Base×1.0000 -> Orb of Augmentation×20.5283 -> Orb of Transmutation×1.0000
+  actions: Orb of Alteration×1590.3658 -> Restart/Reacquire: Start clean base: Clean Base×1.0000 -> Orb of Augmentation×20.5283 -> Orb of Transmutation×1.0000
 
 RARE TWO-MOD T1 ES + T1 INT — REGRESSION:
-  recommendation / proof: PROVISIONAL_RESOLVED / BEST FULLY RESOLVED POLICY FOUND
-  selected acquisition: Restart/Reacquire: Approximate self-fracture: Glowing (T1)
+  recommendation / proof: NO_RESOLVED_ROUTE / NO FULLY RESOLVED POLICY FOUND
+  selected acquisition: NONE
   acquisition safe: NO
-  incumbent U / unresolved acquisition L / gap: 1511.504333c / 4.000000c / 1507.504333c
-  expected cost: 1511.504333c
-  wall / engine elapsed: 9735ms / 9733ms
-  states expanded / cumulative work: 5000 / 15000
+  incumbent U / unresolved acquisition L / gap: UNAVAILABLE / 4.030173c / UNAVAILABLE
+  expected cost: UNAVAILABLE
+  wall / engine elapsed: 11455ms / 1447ms
+  states expanded / cumulative work: 5000 / 10000
   minimum feasible rarity: rare (1 Prefix target(s) + 1 Suffix target(s) fit rare capacity (2P/2S).)
-  fair acquisition probes: 0/3 certified; 1666 states each
-    Clean Base: certified=NO; states=1666; elapsed=126ms; U=UNAVAILABLE
-    Glowing (T1): certified=NO; states=1666; elapsed=160ms; U=UNAVAILABLE
-    of the Prodigy (T1): certified=NO; states=1666; elapsed=150ms; U=UNAVAILABLE
-  selected policy: proper=YES; absorption=100.000000000%; unresolved=0.000000000%; reconciled=YES (0.000000c)
-  Bellman / occupancy: 520 (CONVERGED) / 3 (CONVERGED)
-  DEEPEN delta: states=3333; feasible-U=1; dominated=9144; meaningful=YES; stopped-early=NO
-  actions: Restart/Reacquire: Approximate self-fracture: Glowing (T1)×1.0000 -> Orb of Alteration×49.7667 -> Regal Orb×1.0000 -> Orb of Augmentation×1.0000
+  fair acquisition probes: 0/1 certified; 5000 states each
+    Clean Base: certified=NO; states=5000; elapsed=540ms; U=UNAVAILABLE
+  selected policy: proper=NO; absorption=0.000000000%; unresolved=100.000000000%; reconciled=NO (UNAVAILABLE)
+  Bellman / occupancy: 52 (NOT CONVERGED) / 1 (CONVERGED)
+  DEEPEN delta: states=3333; feasible-U=0; dominated=0; meaningful=YES; stopped-early=NO
+  actions: NONE
 
 INTERNAL POLICY DIAGNOSTIC — NO EXTERNAL FINISHED FIXTURE YET:
   scope: BOUNDED MECHANICS FIXTURE — NOT PRODUCTION ECONOMICS
@@ -136,9 +123,9 @@ INTERNAL POLICY DIAGNOSTIC — NO EXTERNAL FINISHED FIXTURE YET:
   mechanics confidence: APPROXIMATE / EXTERNALLY CLOSE
 
 PHASE 2C SUMMARY:
-  live-equivalent Any target selection: Restart/Reacquire: clean-base: Clean Base at 179.586086c; safe=YES
-  clean-finished target selection: Restart/Reacquire: clean-base: Clean Base at 179.586086c; safe=YES
+  live-equivalent Any target selection: Restart/Reacquire: Start clean base: Clean Base at 179.586086c; safe=YES
+  clean-finished target selection: Restart/Reacquire: Start clean base: Clean Base at 179.586086c; safe=YES
   one-mod healthy: YES
-  rare two-mod retained: YES (PROVISIONAL_RESOLVED)
+  rare two-mod retained: NO (NO_RESOLVED_ROUTE)
   DEEPEN progress: No meaningful additional progress in this deeper budget.
   persistent graph extension: DEFERRED — acceptance gates pass with fair acquisition probes and early-stop DEEPEN; no canonical-identity risk introduced.

@@ -186,7 +186,14 @@ export function validateOptimizeCraftInput(
   }
 
   const budget = input.searchBudget;
-  if (budget && [budget.maxStates, budget.maxWallTimeMs, budget.maxExpansionRounds].some(
+  if (budget && [
+    budget.maxStates,
+    budget.maxWallTimeMs,
+    budget.maxExpansionRounds,
+    budget.acquisitionMaxStates,
+    budget.acquisitionMaxWallTimeMs,
+    budget.acquisitionMaxExpansionRounds,
+  ].some(
     (value) => value !== undefined && (!Number.isInteger(value) || value < 1)
   )) {
     errors.push({ code: 'INVALID_SEARCH_BUDGET', field: 'searchBudget', message: 'Search budgets must be positive integers.' });

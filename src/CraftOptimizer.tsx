@@ -79,7 +79,6 @@ function CraftOptimizer() {
   const [finishCondition, setFinishCondition] = useState<'allow-extra' | 'no-unwanted'>('allow-extra');
   const [modSearch, setModSearch] = useState('');
   const [cleanBaseCost, setCleanBaseCost] = useState('');
-  const [fracturedMarketPrices, setFracturedMarketPrices] = useState<Record<string, string>>({});
   const [saleValue, setSaleValue] = useState('');
   const pricingLeagues = useMemo(() => getOptimizerPricingLeagues(), []);
   const [league, setLeague] = useState(pricingLeagues[0] ?? '');
@@ -120,13 +119,6 @@ function CraftOptimizer() {
 
   const draftInput = useMemo((): OptimizeCraftInput => {
     const manualClean = cleanBaseCost.trim() === '' ? undefined : Number(cleanBaseCost);
-    const marketFracturedPricesChaos = Object.fromEntries(
-      selectedTargetIds.flatMap((modId) => {
-        const raw = fracturedMarketPrices[modId]?.trim();
-        const value = raw ? Number(raw) : NaN;
-        return Number.isFinite(value) && value > 0 ? [[modId, value]] : [];
-      })
-    );
     const parsedSaleValue = saleValue.trim() === '' ? undefined : Number(saleValue);
     return {
       baseType,
@@ -151,9 +143,6 @@ function CraftOptimizer() {
         cleanBasePriceProvenance: Number.isFinite(manualClean) && manualClean !== undefined
           ? 'manual clean-base override supplied in Developer UI'
           : marketPricing?.priceContext.cleanBasePriceProvenance,
-        marketFracturedPricesChaos: Object.keys(marketFracturedPricesChaos).length > 0
-          ? marketFracturedPricesChaos
-          : undefined,
       },
       marketContext: marketPricing?.marketContext,
       expectedSaleValueChaos: Number.isFinite(parsedSaleValue) && parsedSaleValue !== undefined && parsedSaleValue >= 0
@@ -170,7 +159,6 @@ function CraftOptimizer() {
     clusterType,
     effectiveRarity,
     finishCondition,
-    fracturedMarketPrices,
     itemLevel,
     marketPricing,
     maxExpansionRounds,
@@ -409,24 +397,10 @@ function CraftOptimizer() {
               Add modifier
             </button>
           )}
-          {selectedTargetIds.map((modId) => {
-            const mod = eligibleMods.find((candidate) => candidate.modId === modId);
-            return (
-              <label key={`fractured-${modId}`}>
-                <span>Fractured-base market price — {mod?.displayName ?? modId} (optional chaos)</span>
-                <input
-                  type="number"
-                  min="0"
-                  step="1"
-                  value={fracturedMarketPrices[modId] ?? ''}
-                  onChange={(event) => setFracturedMarketPrices((current) => ({
-                    ...current,
-                    [modId]: event.target.value,
-                  }))}
-                />
-              </label>
-            );
-          })}
+          <p className="muted">
+            Relevant fractured bases are manufactured through executable self-fracture synthesis;
+            no pre-fractured market quote is required or ranked.
+          </p>
         </div>
 
         <section className="target-summary">
@@ -540,7 +514,7 @@ function CraftOptimizer() {
                 <>
                   <p><strong>{selectedAcquisition?.label ?? result.recommended.name}</strong></p>
                   <p>{selectedMethod?.label} · {chaos(result.expectedCostChaos)}</p>
-                  {selectedMethod?.approximate && <p className="warning-text">Approximate self-fracture acquisition estimate</p>}
+                  {selectedMethod?.executable && <p>Executable search-derived self-fracture acquisition</p>}
                   {selectedMethod && <p className="muted">{selectedMethod.provenance}</p>}
                 </>
               ) : <p>No certified acquisition route is available under this budget.</p>}
@@ -598,6 +572,38 @@ function CraftOptimizer() {
             ) : <p>No alternative acquisition routes were generated.</p>}
           </section>
 
+          <section className="optimizer-card">
+            <h2>Self-fracture synthesis portfolio</h2>
+            <p className="muted">
+              Certified executable incumbents enter normal ranking. Unresolved synthesis remains
+              lower-bound evidence and is never replaced by the retired approximate formula.
+            </p>
+            <dl>
+              <dt>Stage mode</dt><dd>{result.acquisition.stage.mode}</dd>
+              <dt>Shared state budget</dt><dd>{result.acquisition.stage.totalStateBudget.toLocaleString()}</dd>
+              <dt>Shared wall-time budget</dt><dd>{result.acquisition.stage.totalWallTimeBudgetMs.toLocaleString()} ms</dd>
+              <dt>Certified candidates</dt><dd>{result.acquisition.stage.certifiedCandidates}/{result.acquisition.stage.candidateCount}</dd>
+              <dt>Exact-cache hits</dt><dd>{result.acquisition.stage.cacheHits}</dd>
+              <dt>Stage elapsed</dt><dd>{result.acquisition.stage.elapsedMs.toLocaleString()} ms</dd>
+            </dl>
+            {result.acquisition.candidates.some((candidate) => candidate.synthesis) ? (
+              <table><thead><tr><th>Physical family</th><th>Status</th><th>Executable U</th><th>Optimistic L</th><th>Fracturing Orbs</th><th>Restarts</th><th>Proof</th></tr></thead>
+                <tbody>{result.acquisition.candidates.filter((candidate) => candidate.synthesis).map((candidate) => {
+                  const synthesis = candidate.synthesis!;
+                  return <tr key={candidate.id}>
+                    <td>{candidate.label}</td>
+                    <td>{synthesis.status}</td>
+                    <td>{chaos(synthesis.expectedCostChaos)}</td>
+                    <td>{chaos(synthesis.lowerBoundChaos)}</td>
+                    <td>{synthesis.expectedFracturingOrbs === undefined ? '—' : count(synthesis.expectedFracturingOrbs)}</td>
+                    <td>{synthesis.expectedRestarts === undefined ? '—' : count(synthesis.expectedRestarts)}</td>
+                    <td>{synthesis.proof?.globalOptimality ?? synthesis.provenance}</td>
+                  </tr>;
+                })}</tbody>
+              </table>
+            ) : <p>No fractured physical family was mechanically relevant.</p>}
+          </section>
+
           <details className="optimizer-card policy-rules">
             <summary>On-policy rules ({result.policyRules.length})</summary>
             <table><thead><tr><th>Expected visits</th><th>State</th><th>Selected action</th><th>Continuation EV</th></tr></thead>
@@ -613,6 +619,7 @@ function CraftOptimizer() {
                 <dt>Expansion rounds</dt><dd>{result.search.expansionRounds}/{result.search.maxExpansionRounds}</dd>
                 <dt>Search intent</dt><dd>{result.search.intent}</dd>
                 <dt>Engine elapsed</dt><dd>{result.search.elapsedMs.toLocaleString()} ms</dd>
+                <dt>Total staged engine elapsed</dt><dd>{result.search.totalElapsedMs.toLocaleString()} ms</dd>
                 <dt>Worker round trip</dt><dd>{runtimeMs?.toFixed(0)} ms</dd>
                 <dt>Engine / host deadline</dt><dd>{result.search.engineDeadlineMs} / {result.search.hostGuardDeadlineMs} ms</dd>
                 <dt>First completed round</dt><dd>{result.search.timeToFirstCompletedRoundMs === undefined ? 'not reached' : `${result.search.timeToFirstCompletedRoundMs} ms`}</dd>

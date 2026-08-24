@@ -40,7 +40,7 @@ const result = synthesizeAcquisition(
       confidence: 'research-fallback',
       provenance: 'probe',
     },
-    searchBudget: { maxStates, maxWallTimeMs, maxExpansionRounds: Number(process.argv[5] ?? 8) },
+    searchBudget: { maxStates, maxWallTimeMs, maxExpansionRounds: Number(process.argv[5] ?? 3) },
     enabledActionIds: (process.env.ACT_IDS ?? '').length > 0 ? process.env.ACT_IDS!.split(',') : undefined,
     searchIntent: (process.env.INTENT as 'RECOMMEND' | 'DEEPEN' | 'PROVE') ?? undefined,
   }
