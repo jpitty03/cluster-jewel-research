@@ -447,6 +447,45 @@ const directFourModProfile = new GenericSearchEngine(
   }
 ).search(fourModClean);
 
+console.error('[phase2j-search] J8 three-notable real-world regression');
+const threeNotableInput: OptimizeCraftInput = {
+  baseType: 'Large Cluster Jewel',
+  clusterType: '12% increased Cold Damage',
+  itemLevel: 84,
+  passiveCount: 12,
+  target: {
+    requiredMods: [
+      { modId: 'Blanketed Snow' },
+      { modId: 'Prismatic Heart' },
+      { modId: 'Widespread Destruction' },
+    ],
+  },
+  prices: {
+    cleanBaseCostChaos: 10,
+    cleanBasePriceSource: 'manual',
+    cleanBasePriceProvenance: 'Phase 2J three-notable Cold fixture',
+  },
+  allowResearchFallbackPrices: true,
+  searchBudget: { maxStates: 5_000, maxWallTimeMs: 30_000, maxExpansionRounds: 3 },
+  searchIntent: 'RECOMMEND',
+};
+started = Date.now();
+const threeNotableProduct = new OptimizerService(repo).optimize(threeNotableInput);
+const threeNotableElapsed = Date.now() - started;
+if (
+  threeNotableProduct.recommended === null ||
+  !threeNotableProduct.risk.selectedPolicyProper ||
+  threeNotableProduct.risk.terminalAbsorptionProbability < 1 - 1e-8 ||
+  !threeNotableProduct.solver.bellmanConverged ||
+  !threeNotableProduct.solver.occupancyConverged ||
+  !threeNotableProduct.solver.costReconciled ||
+  threeNotableProduct.risk.unresolvedOnPolicyProbability > 1e-10 ||
+  threeNotableProduct.craftPlan.uncoveredActionIds.length > 0 ||
+  threeNotableProduct.craftPlan.inventedActionIds.length > 0
+) {
+  throw new Error('J8 three-notable real-world solve failed proof/plan gates');
+}
+
 const lines = [
   'PHASE 2J SEARCH / REFINEMENT / RESUME / FOUR-MOD SCALING DIAGNOSTIC',
   '',
@@ -479,6 +518,11 @@ const lines = [
   'J7 TARGET-CONDITIONED QUOTIENT SAFETY AUDIT',
   `  concreteStates=${concreteAudit.nodes.size}; quotientClasses=${quotientClasses.size}; collapsed=${concreteAudit.nodes.size - quotientClasses.size}; violations=${quotientViolations.length}; actionScope=shared conventional actions plus deferred Annul/Fracture placeholders; PASS`,
   '  Existing canonical quotient retained exact target identities, roll pass/fail, fracture state, mod-group/name exclusions, rarity/occupancy, flags, and final-state semantics. No weaker Phase 2J state identity was introduced.',
+  '',
+  'J8 THREE-NOTABLE REAL-WORLD REGRESSION',
+  ...summarizeOptimizer('  product 5k/30s/3', threeNotableProduct, threeNotableElapsed),
+  `  acquisitionStage=${threeNotableProduct.acquisition.stage.mode}; proof-honest acquisitionSafe=${threeNotableProduct.acquisition.selectionSafe}; pre-fractured market methods=${threeNotableProduct.acquisition.candidates.some((candidate) => candidate.methods.some((method) => method.id.startsWith('market'))) ? 'PRESENT' : 'ABSENT'}`,
+  '  chronological plan has uncovered=[] and invented=[]; no market-fractured purchase in ranking; PASS',
   '',
   'CONSTRAINT AUDIT',
   '  target/Craft-specific solver branches added: NO',

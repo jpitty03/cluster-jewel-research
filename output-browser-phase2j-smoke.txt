@@ -1,0 +1,48 @@
+PHASE 2J — PRODUCTION BROWSER / WORKER SMOKE & VALIDATION REPORT
+All 7 J14 test gates execute against the production browser worker engine with structured cloning and host guard verification.
+
+1. PHASE 2I CHRONOLOGICAL PLAN & ADVANCED EXACT POLICY RETENTION:
+  plan status: CERTIFIED; steps=8; uncovered=[]; invented=[]
+  exact branches hidden by default: 191; advanced policy rules: 1145
+  Result: PASS
+
+2. HERALD DEFAULT RECOMMEND (CONFIDENCE SEPARATION & BOUNDED REFINEMENT):
+  status: BEST_RESOLVED_ACQUISITION_SAFE; U=62.518070c; elapsed=6942ms
+  health: proper=true; absorption=1.000000000000; Bellman=true; occupancy=true; reconciled=true; unresolvedOnPolicy=0.000e+0
+  Starting acquisition confidence: "Acquisition-safe"
+  Crafting strategy confidence: "Current best — still improving at the search budget"
+  Refinement: firstU=214.520976c; finalU=62.518070c; improvement=152.002906c (70.857%)
+  Result: PASS
+
+3. SAME-WORKER RETRY DEEPER (EXACT-CONTEXT SESSION REUSE):
+  status: BEST_RESOLVED_ACQUISITION_SAFE; U=62.518070c; elapsed=20056ms
+  session: status=RESUMED; retainedStates=5000; retainedDistributions=17230
+  generated transitions: 18748; reused: 0
+  Result: PASS
+
+4. EXACT FOUR-MOD REAL-WORLD SOLVE (RWE-2) BEFORE HOST GUARD:
+  status: PROVISIONAL_RESOLVED; U=78487.604523c; elapsed=29048ms (host guard=30250ms)
+  health: proper=true; absorption=1.000000000000; Bellman=true; occupancy=true; reconciled=true; unresolvedOnPolicy=0.000e+0
+  plan: status=CERTIFIED; steps=8; uncovered=[]; invented=[]
+  finished before host guard: YES
+  Result: PASS
+
+5. DEFENSIVE TWO-MOD RUNTIME (T1 ARMOUR + T1 ES):
+  status: BEST_RESOLVED_ACQUISITION_SAFE; U=235.684630c; elapsed=6487ms
+  health: proper=true; absorption=1.000000000000; Bellman=true; occupancy=true; reconciled=true; unresolvedOnPolicy=0.000e+0
+  reused transition distributions: 412
+  completed inside practical window (< 15s): YES
+  Result: PASS
+
+6. NO-ROUTE MATERIAL SAFETY (CONSTRAINED BUDGET):
+  status: NO_RESOLVED_ROUTE; planStatus=UNCERTIFIED; steps=0
+  Result: PASS
+
+7. SPECIALIZED PLAN COVERAGE (SELF-FRACTURE & HARVEST INTEGRATION):
+  plan status: CERTIFIED; steps=8; uncovered=[]; invented=[]
+  selected start: Start clean base: Clean Base
+  Result: PASS
+
+================================================================================
+ALL 7 PRODUCTION BROWSER / WORKER SMOKES: ALL PASS
+================================================================================
