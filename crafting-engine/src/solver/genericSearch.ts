@@ -334,6 +334,12 @@ export interface SearchSummary {
   timeToFirstUsefulRecommendationMs?: number;
   expansionMode: 'REBUILT_EACH_ROUND' | 'PERSISTENT_EXTENDED';
   repeatedStatesExpanded: number;
+  /** Minimal proof-honest seed graph work performed before staged rounds. */
+  seedStatesExpanded: number;
+  /** Newly expanded canonical states in each completed staged round. */
+  newStatesByRound: number[];
+  /** Previously expanded canonical states retained with their generated edges in each round. */
+  retainedStatesReusedByRound: number[];
   optimisticLowerBoundIterations: number;
   optimisticLowerBoundConverged: boolean;
   optimisticLowerBoundMethod: 'KNOWN_PARTIAL_GRAPH_WITH_ZERO_COST_UNKNOWN_SUCCESSORS';
@@ -439,6 +445,12 @@ export interface GenericSearchOptions {
    * account for every omitted acquisition family with an independent sound bound before using it.
    */
   skipAcquisitionFeasibility?: boolean;
+  /**
+   * Optional correctness-scoped state quotient supplied by a specialized caller. Every state
+   * sharing a returned key must have equivalent modeled action values after successor aggregation.
+   * Normal product search uses the full canonical identity.
+   */
+  canonicalStateKey?: (state: ItemState, target: TargetDefinition) => string;
 }
 
 class StateExpansionQueue {
@@ -927,6 +939,11 @@ export class GenericSearchEngine {
   private defaultOptions: GenericSearchOptions;
   private minimumFeasibleRarity: MinimumFeasibleRarityResult;
 
+  private stateKey(state: ItemState): string {
+    return this.defaultOptions.canonicalStateKey?.(state, this.target) ??
+      getCanonicalStateKey(state, this.target);
+  }
+
   constructor(context: SolverContext, target: TargetDefinition, options: GenericSearchOptions = {}) {
     this.context = context;
     this.target = target;
@@ -966,7 +983,7 @@ export class GenericSearchEngine {
     searchIntent: SearchIntent = 'RECOMMEND',
     resolutionFrontierKeys?: ReadonlySet<string>
   ): number {
-    const key = getCanonicalStateKey(state, this.target);
+    const key = this.stateKey(state);
     // Completing the currently best partial route outranks widening the competitive
     // set, which in turn outranks generic target-progress scoring.
     const competitiveBonus = (resolutionFrontierKeys?.has(key) ? 4_000_000 : 0) +
@@ -1016,7 +1033,7 @@ export class GenericSearchEngine {
     const graphBuildStarted = Date.now();
     let transitionGenerationMs = 0;
     const normalizedStartState = normalizeItemState(startState);
-    const startKey = getCanonicalStateKey(normalizedStartState, this.target);
+    const startKey = this.stateKey(normalizedStartState);
     const excludedActionIdsKey = excludedActionIds ? [...excludedActionIds].sort().join(',') : '';
     if (session !== undefined && session.startKey === '') {
       session.startKey = startKey;
@@ -1156,7 +1173,7 @@ export class GenericSearchEngine {
         // Zero-mass analytical entries are not graph edges. Keeping one
         // can poison continuation arithmetic through 0 * Infinity = NaN.
         if (!Number.isFinite(out.probability) || out.probability <= 0) continue;
-        const outKey = getCanonicalStateKey(out.state, this.target);
+        const outKey = this.stateKey(out.state);
         actionLocalSuccessorKeys.get(adapter.id)?.add(outKey);
         const existing = aggMap.get(outKey);
         if (existing) {
@@ -1235,7 +1252,7 @@ export class GenericSearchEngine {
       !transitionGenerationInterrupted
     ) {
       const curr = queue.shift()!;
-      const key = getCanonicalStateKey(curr, this.target);
+      const key = this.stateKey(curr);
       if (nodes.has(key)) continue;
 
       const isTerminal = satisfiesTarget(curr, this.target);
@@ -1421,6 +1438,9 @@ export class GenericSearchEngine {
     aggregateTiming.seedResultMs = Date.now() - seedStarted;
     addStageTiming(aggregateTiming, result.stageTiming);
     cumulativeExpansionWork += result.graphBuild.statesExpandedThisRound;
+    const seedStatesExpanded = result.graphBuild.statesExpandedThisRound;
+    const newStatesByRound: number[] = [];
+    const retainedStatesReusedByRound: number[] = [];
     let wallTimeInterrupted = false;
     let recommendationSatisfied = false;
     let certifiedRecommendationFound = false;
@@ -1445,7 +1465,7 @@ export class GenericSearchEngine {
 
     const hasAcquisitionSafeCertifiedPolicy = (candidateResult: GenericSearchResult): boolean => {
       if (!hasCertifiedPolicy(candidateResult)) return false;
-      const startKey = getCanonicalStateKey(candidateResult.startingState, this.target);
+      const startKey = this.stateKey(candidateResult.startingState);
       const startDecision = candidateResult.policyMap.get(startKey);
       if (!startDecision) return false;
       return !startDecision.candidateQValues.some(
@@ -1456,7 +1476,7 @@ export class GenericSearchEngine {
       );
     };
     const progressSnapshot = (candidateResult: GenericSearchResult): SearchProgressSnapshot => {
-      const startKey = getCanonicalStateKey(candidateResult.startingState, this.target);
+      const startKey = this.stateKey(candidateResult.startingState);
       const acquisitionCandidatesAtStart = candidateResult.policyMap.get(startKey)?.candidateQValues
         .filter((candidate) => candidate.actionId.startsWith('acquire_')) ?? [];
       const resolved = acquisitionCandidatesAtStart.filter(
@@ -1557,7 +1577,7 @@ export class GenericSearchEngine {
           acquisitionFeasibilityAttempts.push({
             candidateId: candidate.id,
             label: candidate.label,
-            stateKey: getCanonicalStateKey(candidate.physicalState, this.target),
+            stateKey: this.stateKey(candidate.physicalState),
             statesExpanded: feasibilityResult.graphBuild.nodes.size,
             elapsedMs: Date.now() - attemptStarted,
             certified,
@@ -1572,7 +1592,7 @@ export class GenericSearchEngine {
           acquisitionFeasibilityAttempts.push({
             candidateId: candidate.id,
             label: candidate.label,
-            stateKey: getCanonicalStateKey(candidate.physicalState, this.target),
+            stateKey: this.stateKey(candidate.physicalState),
             statesExpanded: 0,
             elapsedMs: Date.now() - attemptStarted,
             certified: false,
@@ -1622,6 +1642,10 @@ export class GenericSearchEngine {
       result = completedRound;
       roundsExecuted++;
       cumulativeExpansionWork += result.graphBuild.statesExpandedThisRound;
+      newStatesByRound.push(result.graphBuild.statesExpandedThisRound);
+      retainedStatesReusedByRound.push(
+        Math.max(0, result.graphBuild.nodes.size - result.graphBuild.statesExpandedThisRound)
+      );
       const roundWorkMs = Date.now() - roundStarted;
       if (roundsExecuted > 1) priorCompletedRoundWorkMs += lastCompletedRoundWorkMs;
       lastCompletedRoundWorkMs = roundWorkMs;
@@ -1731,6 +1755,9 @@ export class GenericSearchEngine {
       timeToFirstUsefulRecommendationMs,
       expansionMode: persistentExpansion ? 'PERSISTENT_EXTENDED' : 'REBUILT_EACH_ROUND',
       repeatedStatesExpanded: Math.max(0, cumulativeExpansionWork - result.graphBuild.nodes.size),
+      seedStatesExpanded,
+      newStatesByRound,
+      retainedStatesReusedByRound,
       optimisticLowerBoundIterations: result.searchSummary.optimisticLowerBoundIterations,
       optimisticLowerBoundConverged: result.searchSummary.optimisticLowerBoundConverged,
       optimisticLowerBoundMethod: 'KNOWN_PARTIAL_GRAPH_WITH_ZERO_COST_UNKNOWN_SUCCESSORS',
@@ -1771,10 +1798,10 @@ export class GenericSearchEngine {
     const prioritized = new Set<string>();
     const nodes = result.graphBuild.nodes;
     const queue: Array<{ key: string; competitivePath: boolean }> = [{
-      key: getCanonicalStateKey(result.startingState, this.target),
+      key: this.stateKey(result.startingState),
       competitivePath: false,
     }];
-    const queuedOnPolicy = new Set([getCanonicalStateKey(result.startingState, this.target)]);
+    const queuedOnPolicy = new Set([this.stateKey(result.startingState)]);
     const queuedCompetitive = new Set<string>();
     const inspectedOnPolicy = new Set<string>();
     const inspectedCompetitive = new Set<string>();
@@ -1889,7 +1916,7 @@ export class GenericSearchEngine {
       throw new SearchRoundDeadlineExceeded();
     }
     const nodes = graphResult.nodes;
-    const startKey = getCanonicalStateKey(normalizedStartState, this.target);
+    const startKey = this.stateKey(normalizedStartState);
 
     // Initialize Value Function V(s): terminal = 0, non-terminal = a small optimistic
     // seed, i.e. strictly from below.
@@ -3216,6 +3243,9 @@ export class GenericSearchEngine {
         returnedAtBudget: graphResult.hitWallTimeLimit,
         expansionMode: graphResult.extendedPersistentGraph ? 'PERSISTENT_EXTENDED' : 'REBUILT_EACH_ROUND',
         repeatedStatesExpanded: 0,
+        seedStatesExpanded: 0,
+        newStatesByRound: [],
+        retainedStatesReusedByRound: [],
         optimisticLowerBoundIterations,
         optimisticLowerBoundConverged,
         optimisticLowerBoundMethod: 'KNOWN_PARTIAL_GRAPH_WITH_ZERO_COST_UNKNOWN_SUCCESSORS',

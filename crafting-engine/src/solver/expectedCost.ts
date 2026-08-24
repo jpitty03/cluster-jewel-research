@@ -205,7 +205,7 @@ export class ExpectedCostSolver {
     }
 
     // The acquisition price is supplied by strategy discovery. In particular, this solver never
-    // reconstructs the retired Alt/Aug/Regal/Bench + fixed-4x fracture estimate. Core discovery
+    // reconstructs the retired Alt/Aug/Regal + lump-sum preparation + fixed-4x fracture estimate. Core discovery
     // supplies a certified executable synthesis cost; historical fixtures may still explicitly
     // pass their own reference acquisition for regression reporting.
     const step1Options: AcquisitionOption[] = [];

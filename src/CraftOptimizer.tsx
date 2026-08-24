@@ -597,7 +597,12 @@ function CraftOptimizer() {
                     <td>{chaos(synthesis.lowerBoundChaos)}</td>
                     <td>{synthesis.expectedFracturingOrbs === undefined ? '—' : count(synthesis.expectedFracturingOrbs)}</td>
                     <td>{synthesis.expectedRestarts === undefined ? '—' : count(synthesis.expectedRestarts)}</td>
-                    <td>{synthesis.proof?.globalOptimality ?? synthesis.provenance}</td>
+                    <td>
+                      {synthesis.proof?.globalOptimality ?? synthesis.provenance}
+                      {synthesis.search?.canonicalStateIdentity && (
+                        <small>{synthesis.search.canonicalStateIdentity}</small>
+                      )}
+                    </td>
                   </tr>;
                 })}</tbody>
               </table>

@@ -29,6 +29,7 @@ import {
   type StartingStateCandidate,
 } from '../solver/strategyDiscovery.ts';
 import {
+  ACQUISITION_FRACTURE_PREPARATION_STATE_IDENTITY,
   DEFAULT_ACQUISITION_SYNTHESIS_ACTION_IDS,
   synthesizeAcquisition,
   type AcquisitionSynthesisResult,
@@ -494,6 +495,7 @@ function acquisitionCacheIdentity(
       ...(input.prices?.currencyRates ?? {}),
     }),
     enabledActionIds: [...DEFAULT_ACQUISITION_SYNTHESIS_ACTION_IDS],
+    acquisitionStateIdentity: ACQUISITION_FRACTURE_PREPARATION_STATE_IDENTITY,
     includeHarvest: false,
     allowResearchFallbackPrices: input.allowResearchFallbackPrices ?? true,
     searchIntent: input.searchIntent ?? 'RECOMMEND',
@@ -1132,7 +1134,8 @@ export class OptimizerService {
           cacheIdentity:
             'Exact JSON identity: clean physical signature + fractured requirement + clean-base ' +
             'cost/confidence/provenance + complete active currency rates + enabled synthesis actions ' +
-            '+ Harvest scope + fallback policy + search intent + exact per-candidate budget.',
+            '+ acquisition state-identity version + Harvest scope + fallback policy + search intent ' +
+            '+ exact per-candidate budget.',
         },
       },
       expectedCostChaos,

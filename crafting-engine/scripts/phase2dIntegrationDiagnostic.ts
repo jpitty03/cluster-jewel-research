@@ -64,7 +64,7 @@ function optimizerLines(label: string, result: OptimizeCraftResult, elapsedMs: n
     `  synthesis shared budget: states=${result.acquisition.stage.totalStateBudget}; wall=${result.acquisition.stage.totalWallTimeBudgetMs}ms; rounds/candidate=${result.acquisition.stage.maxExpansionRoundsPerCandidate}`,
     ...fractureCandidates.map((candidate) => {
       const synthesis = candidate.synthesis!;
-      return `  fracture ${candidate.label}: status=${synthesis.status}; U=${money(synthesis.expectedCostChaos)}; L=${money(synthesis.lowerBoundChaos)}; orbs=${synthesis.expectedFracturingOrbs?.toFixed(6) ?? 'N/A'}; restarts=${synthesis.expectedRestarts?.toFixed(6) ?? 'N/A'}; proper=${synthesis.risk?.selectedPolicyProper ?? 'N/A'}; global=${synthesis.proof?.globalOptimality ?? 'N/A'}; ranked executable method=${candidate.methods.some((method) => method.executable) ? 'YES' : 'NO'}`;
+      return `  fracture ${candidate.label}: status=${synthesis.status}; U=${money(synthesis.expectedCostChaos)}; L=${money(synthesis.lowerBoundChaos)}; orbs=${synthesis.expectedFracturingOrbs?.toFixed(6) ?? 'N/A'}; restarts=${synthesis.expectedRestarts?.toFixed(6) ?? 'N/A'}; proper=${synthesis.risk?.selectedPolicyProper ?? 'N/A'}; global=${synthesis.proof?.globalOptimality ?? 'N/A'}; identity=${synthesis.search?.canonicalStateIdentity ?? 'N/A'}; ranked executable method=${candidate.methods.some((method) => method.executable) ? 'YES' : 'NO'}`;
     }),
     `  fractured market methods present: ${result.acquisition.candidates.some((candidate) => candidate.methods.some((method) => method.id.startsWith('market'))) ? 'YES' : 'NO'}`,
   ];
@@ -224,6 +224,7 @@ lines.push(`  Bellman / occupancy: ${standalone.solver.bellmanConverged ? 'CONVE
 lines.push(`  EV reconciliation: ${money(standalone.solver.reconciliationDifferenceChaos)} (${standalone.solver.costReconciled ? 'PASS' : 'FAIL'})`);
 lines.push(`  states / runtime: ${standalone.search.statesExpanded} / ${standaloneElapsedMs}ms`);
 lines.push(`  expansion mode / cumulative work / repeated / rounds: ${standalone.search.expansionMode} / ${standalone.search.cumulativeExpansionWork} / ${standalone.search.repeatedStatesExpanded} / ${standalone.search.expansionRounds}`);
+lines.push(`  state identity / seed / new-by-round / retained-by-round: ${standalone.search.canonicalStateIdentity} / ${standalone.search.seedStatesExpanded} / ${standalone.search.newStatesByRound.join(',')} / ${standalone.search.retainedStatesReusedByRound.join(',')}`);
 lines.push(`  proof / global optimality: ${standalone.proof.selectedPolicyStatus} / ${standalone.proof.globalOptimality}`);
 lines.push(`  unresolved candidates could beat incumbent: ${standalone.proof.unresolvedCandidatesCouldBeatIncumbent ? 'YES' : 'NO'}`);
 
@@ -263,7 +264,7 @@ lines.push(`  executable certified incumbent: ${money(standalone.expectedCostCha
 lines.push(`  difference: ${money((standalone.expectedCostChaos ?? Number.NaN) - legacyApproximateReference)}`);
 lines.push(`  globalOptimality: ${standalone.proof.globalOptimality}`);
 lines.push(`  unresolvedCandidatesCouldBeatIncumbent: ${standalone.proof.unresolvedCandidatesCouldBeatIncumbent}`);
-lines.push('  explanation: the executable value is a certified proper route, not a global optimum. Unresolved cheaper branches may exist, active prices differ, and the modeled action set lacks an authoritative cheap Crafting Bench filler that the old +10c allowance assumed.');
+lines.push('  explanation: the executable value is a certified proper route, not a global optimum, and unresolved cheaper branches may exist. The historical formula was not an executable policy. Standard Crafting Bench is not treated as a source of the requested cluster modifier/notable and is not used to tune this result.');
 lines.push('  ranking policy: the legacy reference is diagnostic-only and is absent from core acquisition methods.');
 
 lines.push('');

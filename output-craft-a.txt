@@ -17716,7 +17716,7 @@ ALTERNATE STARTING ROUTES
 LABELED GAME MECHANICS ASSUMPTIONS
 ======================================================================
 1. Harvest Additional Affixes: Modeled as 50% chance of 1 additional affix / 50% chance of 2 additional affixes (PoE 4-mod rare cluster jewel affix distribution).
-2. Base Self-Fracture Model: Approximate Alteration/Augmentation/Regal/Bench preparation + Fracturing Orb (25% hit rate).
+2. Historical Base Self-Fracture Fixture: Approximate Alteration/Augmentation/Regal plus an unmodeled lump-sum preparation allowance and a fixed 25% Fracturing Orb hit rate. This fixture does not model the standard Crafting Bench as a cluster-jewel target-modifier source and is not used by normal optimizer ranking.
 3. Market Purchase Prices: Any unsupplied market price is reported as not supplied / unavailable rather than inferred.
 4. Allflame Crafting: Stateful Intangibility stacking remains deferred and disabled.
 

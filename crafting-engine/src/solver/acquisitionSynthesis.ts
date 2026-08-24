@@ -3,7 +3,10 @@ import type { ItemState } from '../domain/ItemState.ts';
 import { getAllAffixes, getPhysicalStateSignature, normalizeItemState } from '../domain/ItemState.ts';
 import type { PriceConfidence } from '../domain/PriceBook.ts';
 import type { ModRequirement, TargetDefinition } from '../domain/TargetDefinition.ts';
-import { matchesModRequirement } from '../domain/TargetDefinition.ts';
+import {
+  getAllTargetModRequirements,
+  matchesModRequirement,
+} from '../domain/TargetDefinition.ts';
 import { getCanonicalStateKey } from '../rules/actionDiscovery.ts';
 import type { SearchIntent } from '../service/searchRuntime.ts';
 import {
@@ -20,7 +23,7 @@ import {
  * Instead the reusable physical state is manufactured by the same shared `CraftMechanic`
  * registry the crafting policy uses: preparation (Transmutation / Alteration / Augmentation /
  * Regal / Exalt), the Fracturing Orb's authoritative uniform-over-affixes outcome distribution,
- * wrong-fracture recovery through modeled restart/reacquisition, and cleanup (Scour / Annul).
+ * wrong-fracture recovery through modeled restart/reacquisition, and cleanup (Scour).
  *
  * Nothing in this module knows about any particular modifier, cluster, or historical craft.
  */
@@ -29,6 +32,9 @@ import {
  * Shared mechanic ids that may legally participate in manufacturing a fractured reusable base.
  * `restart_reacquire` is required: a wrong fracture is permanent on that physical item, so the
  * only modeled recovery is abandoning the attempt and paying for another clean base.
+ * Annulment remains available to normal crafting, but is excluded here: before fracture it removes
+ * progress that must be refilled, after a desired fracture Scour is strictly cheaper and complete,
+ * and after a wrong fracture no removable-affix outcome can make a second fracture legal.
  */
 export const DEFAULT_ACQUISITION_SYNTHESIS_ACTION_IDS: readonly string[] = [
   'transmutation_orb',
@@ -36,12 +42,14 @@ export const DEFAULT_ACQUISITION_SYNTHESIS_ACTION_IDS: readonly string[] = [
   'augmentation_orb',
   'regal_orb',
   'exalted_orb',
-  'annulment_orb',
   'scouring_orb',
   'chaos_orb',
   'fracturing_orb',
   'restart_reacquire',
 ];
+
+export const ACQUISITION_FRACTURE_PREPARATION_STATE_IDENTITY =
+  'FRACTURE_PREPARATION_BISIMULATION_V1' as const;
 
 /** Human-readable statement of what "the acquisition is finished" means to the solver. */
 export const ACQUISITION_TERMINAL_STATE_SEMANTICS =
@@ -166,12 +174,16 @@ export interface AcquisitionSynthesisResult {
     repeatedStatesExpanded: number;
     expansionRounds: number;
     expansionMode: string;
+    seedStatesExpanded: number;
+    newStatesByRound: number[];
+    retainedStatesReusedByRound: number[];
     elapsedMs: number;
     budgetExhausted: boolean;
     maxStates: number;
     graphHitStateLimit: boolean;
     graphHitWallTimeLimit: boolean;
     unexpandedProbabilityMass: number;
+    canonicalStateIdentity: typeof ACQUISITION_FRACTURE_PREPARATION_STATE_IDENTITY;
   };
   priceConfidence: PriceConfidenceResult;
   mechanicsConfidence: MechanicsConfidenceResult;
@@ -202,6 +214,62 @@ export function buildAcquisitionTargetDefinition(
     requiredMods: [{ ...requirement.fracturedMod, mustBeFractured: true }],
     finalStateConstraints: { maxUnmatchedAffixes: requirement.maxUnmatchedAffixes ?? 0 },
   };
+}
+
+/**
+ * Correctness-scoped quotient for the single-mod fracture-acquisition subproblem.
+ *
+ * Target-absent states retain the full canonical identity because their modifier groups affect the
+ * probability of first rolling the requested modifier. Once that modifier is present, non-target
+ * filler identity cannot affect any enabled acquisition action's aggregate milestone transition:
+ * additions advance the explicit-affix count, Fracture selects uniformly by count, Scour
+ * removes every non-fractured filler, and restart returns to the exact clean state. Desired and
+ * wrong fractures remain distinct. This collapses only bisimilar filler permutations; it does not
+ * select an action or encode the fixed-policy diagnostic sequence.
+ */
+export function getAcquisitionFracturePreparationStateKey(
+  state: ItemState,
+  target: TargetDefinition
+): string {
+  const standardKey = getCanonicalStateKey(state, target);
+  const requirements = getAllTargetModRequirements(target);
+  const requirement = requirements.length === 1 ? requirements[0] : undefined;
+  const isExactAcquisitionShape =
+    requirement?.mustBeFractured === true &&
+    target.requiredMods.length === 1 &&
+    target.outcomeBranches === undefined &&
+    target.acceptableAnyOf === undefined &&
+    target.finalRollRequirements === undefined &&
+    target.requiredRarity === undefined &&
+    target.finalStateConstraints?.maxUnmatchedAffixes === 0;
+  if (!requirement || !isExactAcquisitionShape) return standardKey;
+
+  const desiredUnfractured: ModRequirement = {
+    ...requirement,
+    mustBeFractured: undefined,
+  };
+  const affixes = getAllAffixes(state);
+  const desired = affixes.find((mod) => matchesModRequirement(mod, desiredUnfractured));
+  const fractured = affixes.filter((mod) => mod.isFractured);
+  if (!desired && fractured.length === 0) return standardKey;
+
+  const fractureStatus = desired?.isFractured
+    ? 'DESIRED_FRACTURED'
+    : fractured.length > 0
+      ? `WRONG_FRACTURED_TARGET_${desired ? 'PRESENT' : 'ABSENT'}`
+      : 'DESIRED_UNFRACTURED';
+  return [
+    ACQUISITION_FRACTURE_PREPARATION_STATE_IDENTITY,
+    state.baseType,
+    state.clusterType,
+    state.itemLevel,
+    state.passiveCount ?? '',
+    state.rarity,
+    `affixes=${affixes.length}`,
+    fractureStatus,
+    `influenced=${state.flags?.influenced === true}`,
+    `synthesised=${state.flags?.synthesised === true}`,
+  ].join('|');
 }
 
 function describeState(state: ItemState): string {
@@ -241,6 +309,7 @@ export function synthesizeAcquisition(
       includeHarvest: request.includeHarvest ?? false,
       harvestTags: request.harvestTags,
       prioritizeTargetProgress: true,
+      canonicalStateKey: getAcquisitionFracturePreparationStateKey,
       searchIntent: request.searchIntent ?? 'RECOMMEND',
       restartReacquire: {
         destination: cleanStartingState,
@@ -268,7 +337,10 @@ export function synthesizeAcquisition(
       ? 'RESOLVED'
       : 'PROVISIONAL';
 
-  const startKey = getCanonicalStateKey(cleanStartingState, acquisitionTarget);
+  const startKey = getAcquisitionFracturePreparationStateKey(
+    cleanStartingState,
+    acquisitionTarget
+  );
   const startDecision = result.policyMap.get(startKey);
   const startLowerBound =
     startDecision && startDecision.candidateQValues.length > 0
@@ -432,12 +504,16 @@ export function synthesizeAcquisition(
       repeatedStatesExpanded: result.searchSummary.repeatedStatesExpanded,
       expansionRounds: result.searchSummary.expansionRounds,
       expansionMode: result.searchSummary.expansionMode,
+      seedStatesExpanded: result.searchSummary.seedStatesExpanded,
+      newStatesByRound: [...result.searchSummary.newStatesByRound],
+      retainedStatesReusedByRound: [...result.searchSummary.retainedStatesReusedByRound],
       elapsedMs: result.searchSummary.elapsedMs,
       budgetExhausted: result.searchSummary.budgetExhausted,
       maxStates: result.searchSummary.maxStates,
       graphHitStateLimit: result.graphBuild.hitStateLimit,
       graphHitWallTimeLimit: result.graphBuild.hitWallTimeLimit,
       unexpandedProbabilityMass: result.graphBuild.transitionProbabilityMassToUnexpandedStates,
+      canonicalStateIdentity: ACQUISITION_FRACTURE_PREPARATION_STATE_IDENTITY,
     },
     priceConfidence: result.priceConfidence,
     mechanicsConfidence: result.mechanicsConfidence,
