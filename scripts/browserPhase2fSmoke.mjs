@@ -127,17 +127,29 @@ async function setModifierSearch(value, expectedModId, excludedModId) {
 }
 
 async function runSearch(timeoutMs) {
+  const before = await evaluate('window.__phase2fOptimizerResults.length');
   const started = Date.now();
-  if (!(await clickButton('Optimize craft'))) throw new Error('Optimize craft button was unavailable');
-  await waitFor(`[...document.querySelectorAll('button')].some((button) => button.textContent?.trim() === 'Cancel')`, 2_000);
-  await waitFor(`![...document.querySelectorAll('button')].some((button) => button.textContent?.trim() === 'Cancel')`, timeoutMs);
-  return {
+  if (!(await clickButton('Find cheapest craft'))) throw new Error('Find cheapest craft button was unavailable');
+  await waitFor(`window.__phase2fOptimizerResults.length > ${before} || document.querySelector('.error') !== null`, timeoutMs);
+  const error = await evaluate(`document.querySelector('.error')?.innerText ?? ''`);
+  if (error) throw new Error(`Optimizer UI returned an error: ${error}`);
+  await evaluate(`(() => {
+    const advanced = document.querySelector('.advanced-optimizer-details');
+    if (advanced instanceof HTMLDetailsElement) advanced.open = true;
+  })()`);
+  const outcome = {
     elapsedMs: Date.now() - started,
     proof: await evaluate(`document.querySelector('.optimizer-proof')?.innerText ?? document.querySelector('.error')?.innerText ?? 'NO OUTCOME'`),
     summary: await evaluate(`document.querySelector('.optimizer-summary')?.innerText ?? ''`),
-    health: await evaluate(`[...document.querySelectorAll('.optimizer-card')].find((card) => card.querySelector('h2')?.textContent === 'Policy health')?.innerText ?? ''`),
+    health: await evaluate(`document.querySelector('.policy-health')?.innerText ?? ''`),
+    advanced: await evaluate(`document.querySelector('.advanced-optimizer-details')?.innerText ?? ''`),
     target: await evaluate(`document.querySelector('.target-summary')?.innerText ?? ''`),
   };
+  await evaluate(`(() => {
+    const advanced = document.querySelector('.advanced-optimizer-details');
+    if (advanced instanceof HTMLDetailsElement) advanced.open = false;
+  })()`);
+  return outcome;
 }
 
 const compact = (value) => value.replaceAll('\n', ' | ').replaceAll(/\s+/g, ' ').trim();
@@ -146,12 +158,23 @@ await command('Page.enable');
 await command('Runtime.enable');
 await command('Page.addScriptToEvaluateOnNewDocument', { source: `(() => {
   window.__phase2fOptimizerRequests = [];
+  window.__phase2fOptimizerResults = [];
   const originalPostMessage = Worker.prototype.postMessage;
   Worker.prototype.postMessage = function(message) {
     if (message?.type === 'OPTIMIZE') {
       window.__phase2fOptimizerRequests.push(JSON.parse(JSON.stringify(message)));
     }
     return Reflect.apply(originalPostMessage, this, arguments);
+  };
+  const originalAddEventListener = Worker.prototype.addEventListener;
+  Worker.prototype.addEventListener = function(type, listener, options) {
+    if (type !== 'message') return originalAddEventListener.call(this, type, listener, options);
+    const wrapped = function(event) {
+      if (event.data?.type === 'RESULT') window.__phase2fOptimizerResults.push(event.data.result.recommendationStatus);
+      if (typeof listener === 'function') return listener.call(this, event);
+      return listener.handleEvent(event);
+    };
+    return originalAddEventListener.call(this, type, wrapped, options);
   };
 })()` });
 await command('Page.navigate', { url: appUrl });
@@ -217,13 +240,13 @@ const exactIdentityPass = JSON.stringify(workerTargetIds) === JSON.stringify([
   [ES_ID, INT_ID],
   [ES_ID, INT_ID],
 ]);
-const oneModHealthy = oneMod.summary.includes('BEST_RESOLVED_ACQUISITION_SAFE') &&
+const oneModHealthy = oneMod.advanced.includes('BEST_RESOLVED_ACQUISITION_SAFE') &&
   oneMod.summary.includes('Clean Base') && oneMod.summary.includes('8.784c') &&
   oneMod.health.includes('100.000000%') && oneMod.health.includes('0.000000%') &&
   oneMod.health.includes('converged');
-const rawTwoModHealthy = rawTwoMod.summary.includes('BEST_RESOLVED_ACQUISITION_SAFE') &&
+const rawTwoModHealthy = rawTwoMod.advanced.includes('BEST_RESOLVED_ACQUISITION_SAFE') &&
   rawTwoMod.summary.includes('Clean Base') && rawTwoMod.summary.includes('228.790c') &&
-  rawTwoMod.summary.includes('Acquisition safe') && rawTwoMod.summary.includes('yes') &&
+  rawTwoMod.summary.includes('Recommendation confidence') && rawTwoMod.summary.includes('Acquisition-safe') &&
   rawTwoMod.health.includes('100.000000%');
 const cleanConstraintRendered = cleanTwoMod.summary.includes('No unwanted affixes');
 const cleanPolicyHealthy = cleanTwoMod.summary.includes('228.790c') &&
