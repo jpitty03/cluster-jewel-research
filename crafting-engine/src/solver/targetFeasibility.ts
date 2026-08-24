@@ -50,9 +50,14 @@ function targetRequirementSets(target: TargetDefinition): ModRequirement[][] {
 }
 
 function possibleGenTypes(requirement: ModRequirement, pool: ModPool): GenType[] {
+  // `mustBeFractured` describes an item-state property produced by mechanics (Fracturing Orb), not
+  // an identity of any pool modifier. Unrolled pool `Mod`s never carry `isFractured`, so leaving the
+  // flag on here would make every fracture-requiring branch look impossible and silently collapse to
+  // the conservative Rare fallback. Ask the pool only about affix identity/slot capacity.
+  const identity: ModRequirement = { ...requirement, mustBeFractured: undefined };
   const types = new Set(
     pool.getAllMods()
-      .filter((mod) => matchesModRequirement(mod, requirement))
+      .filter((mod) => matchesModRequirement(mod, identity))
       .map((mod) => mod.genType)
   );
   return [...types];

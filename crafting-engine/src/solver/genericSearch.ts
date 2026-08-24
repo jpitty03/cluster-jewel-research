@@ -166,6 +166,10 @@ export interface GraphBuildResult {
   stateCountsByAffixes: Record<string, number>;
   hasCycles: boolean;
   actionAttribution: Record<string, ActionStateAttribution>;
+  /** Distinct states expanded by this round only. Equals `nodes.size` for a fresh graph. */
+  statesExpandedThisRound: number;
+  /** True when this round extended a retained graph instead of rebuilding it. */
+  extendedPersistentGraph: boolean;
   timing: {
     transitionGenerationMs: number;
     graphAggregationAndSetupMs: number;
@@ -244,6 +248,14 @@ export interface ValueIterationConvergence {
   finalMaxResidual: number;
   epsilon: number;
   maxIterations: number;
+  /**
+   * How many times an improper greedy policy (a closed class that can never reach a
+   * terminal, whose exact cost is therefore +Infinity) was detected and eliminated
+   * during the solve, and how many states that removed. Zero on any solve whose greedy
+   * policy absorbs from the first check onwards.
+   */
+  improperPolicyEliminationPasses: number;
+  improperPolicyStatesPinned: number;
 }
 
 export interface ExpectedCostReconciliation {
@@ -279,6 +291,12 @@ export interface GenericSearchResult {
   searchSummary: SearchSummary;
   stageTiming: SearchStageTiming;
   isTargetSatisfied: boolean;
+  /**
+   * Unexpanded successor keys sitting on the tips of the currently most promising
+   * partial route (AO-star style best-partial-solution frontier). Expanding these,
+   * and only these, is what turns the incumbent route from optimistic into resolved.
+   */
+  optimisticResolutionFrontier: string[];
   explanation: string;
 }
 
@@ -314,7 +332,7 @@ export interface SearchSummary {
   timeToFirstCompletedRoundMs?: number;
   timeToFirstCertifiedPolicyMs?: number;
   timeToFirstUsefulRecommendationMs?: number;
-  expansionMode: 'REBUILT_EACH_ROUND';
+  expansionMode: 'REBUILT_EACH_ROUND' | 'PERSISTENT_EXTENDED';
   repeatedStatesExpanded: number;
   optimisticLowerBoundIterations: number;
   optimisticLowerBoundConverged: boolean;
@@ -376,6 +394,13 @@ export interface CanonicalGraphNode {
       immediateCostChaos: number;
       cost: CraftCost;
       isDirectlyResolved: boolean;
+      /**
+       * True when this edge is a placeholder for an action whose transition
+       * distribution was intentionally not generated in the round that first
+       * expanded the node. Persistent extension uses this to top the edge up
+       * later instead of rebuilding the whole graph.
+       */
+      deferred?: boolean;
       transitions: Array<{ targetKey: string; probability: number; nextState: ItemState; label?: string }>;
     }
   >;
@@ -400,6 +425,13 @@ export interface GenericSearchOptions {
   deferExpensiveProofActions?: boolean;
   /** Internal seed control; creates a minimal result without generating any successor distribution. */
   deferAllActions?: boolean;
+  /**
+   * Persistent graph extension within a single request. Rounds share one canonical
+   * node map and one live frontier and only expand states that are genuinely new.
+   * Defaults to true; set false to restore legacy rebuild-each-round behaviour for
+   * before/after comparison.
+   */
+  persistentExpansion?: boolean;
   /** Internal feasibility control; prevents a physical-state probe from abandoning into another acquisition. */
   excludeAcquisitionActions?: boolean;
 }
@@ -446,12 +478,95 @@ class StateExpansionQueue {
     return first.state;
   }
 
+  /**
+   * Re-scores every still-queued state in place and re-heapifies.
+   *
+   * Persistent extension keeps one frontier alive across expansion rounds, but the
+   * competitive-frontier set changes between rounds. Re-scoring the retained queue
+   * lets a later round honour the new priorities without re-expanding anything that
+   * is already in the graph. Original insertion sequence numbers are preserved so
+   * equal-priority ties keep their deterministic FIFO order.
+   */
+  reprioritize(score: (state: ItemState) => number): void {
+    for (const entry of this.heap) entry.priority = score(entry.state);
+    for (let index = Math.floor(this.heap.length / 2) - 1; index >= 0; index--) {
+      this.siftDown(index);
+    }
+  }
+
+  private siftDown(start: number): void {
+    const entry = this.heap[start];
+    let index = start;
+    while (true) {
+      const left = index * 2 + 1;
+      const right = left + 1;
+      if (left >= this.heap.length) break;
+      let child = left;
+      if (right < this.heap.length && this.precedes(this.heap[right], this.heap[left])) child = right;
+      if (this.precedes(entry, this.heap[child])) break;
+      this.heap[index] = this.heap[child];
+      index = child;
+    }
+    this.heap[index] = entry;
+  }
+
   private precedes(
     left: { priority: number; sequence: number },
     right: { priority: number; sequence: number }
   ): boolean {
     return left.priority > right.priority || (left.priority === right.priority && left.sequence < right.sequence);
   }
+}
+
+/**
+ * Retained expansion state for persistent graph extension inside a single request.
+ *
+ * Rounds share one canonical node map and one live frontier instead of rebuilding
+ * from the start state every round. Everything that can change canonical identity
+ * (base/ilvl/passives/flags, target and final-state constraints, fracture state,
+ * mod-group exclusions, roll sensitivity) is already folded into the canonical state
+ * key and into the engine instance itself, so a session is only ever valid for the
+ * exact engine, start state and action scope that created it. Deferred actions are
+ * the one round-varying dimension and are tracked per edge so they can be topped up
+ * rather than silently reused in a stale form.
+ */
+export function createPersistentExpansionSession(): PersistentExpansionSession {
+  return {
+    startKey: '',
+    excludedActionIdsKey: '',
+    nodes: new Map(),
+    queue: new StateExpansionQueue(),
+    queuedKeys: new Set(),
+    terminalStatesFound: 0,
+    stateCountsByRarity: { normal: 0, magic: 0, rare: 0 },
+    stateCountsByAffixes: {},
+    actionAttribution: {},
+    actionLocalSuccessorKeys: new Map(),
+    deferredEdges: new Set(),
+    statesExpandedThisRound: 0,
+    statesExpandedTotal: 0,
+    transitionGenerationMs: 0,
+  };
+}
+
+export interface PersistentExpansionSession {
+  startKey: string;
+  excludedActionIdsKey: string;
+  nodes: Map<string, CanonicalGraphNode>;
+  queue: StateExpansionQueue;
+  queuedKeys: Set<string>;
+  terminalStatesFound: number;
+  stateCountsByRarity: Record<string, number>;
+  stateCountsByAffixes: Record<string, number>;
+  actionAttribution: Record<string, ActionStateAttribution>;
+  actionLocalSuccessorKeys: Map<string, Set<string>>;
+  /** Deferred-edge ids (state key and action id, NUL-joined) still holding a placeholder. */
+  deferredEdges: Set<string>;
+  /** Distinct states expanded by the most recent round only. */
+  statesExpandedThisRound: number;
+  /** Distinct states expanded across every round that used this session. */
+  statesExpandedTotal: number;
+  transitionGenerationMs: number;
 }
 
 function directedGraphHasCycle(adjacency: Map<string, string[]>, deadlineMs?: number): boolean {
@@ -843,10 +958,14 @@ export class GenericSearchEngine {
   private expansionPriority(
     state: ItemState,
     prioritizedStateKeys?: ReadonlySet<string>,
-    searchIntent: SearchIntent = 'RECOMMEND'
+    searchIntent: SearchIntent = 'RECOMMEND',
+    resolutionFrontierKeys?: ReadonlySet<string>
   ): number {
     const key = getCanonicalStateKey(state, this.target);
-    const competitiveBonus = prioritizedStateKeys?.has(key) ? 1_000_000 : 0;
+    // Completing the currently best partial route outranks widening the competitive
+    // set, which in turn outranks generic target-progress scoring.
+    const competitiveBonus = (resolutionFrontierKeys?.has(key) ? 4_000_000 : 0) +
+      (prioritizedStateKeys?.has(key) ? 1_000_000 : 0);
     if (!this.defaultOptions.prioritizeTargetProgress) return competitiveBonus;
     const affixes = [...state.prefixes, ...state.suffixes];
     const requirements = getAllTargetModRequirements(this.target);
@@ -885,22 +1004,56 @@ export class GenericSearchEngine {
     deadlineMs?: number,
     deferredActionIds?: ReadonlySet<string>,
     searchIntent: SearchIntent = 'RECOMMEND',
-    excludedActionIds?: ReadonlySet<string>
+    excludedActionIds?: ReadonlySet<string>,
+    session?: PersistentExpansionSession,
+    resolutionFrontierKeys?: ReadonlySet<string>
   ): GraphBuildResult {
     const graphBuildStarted = Date.now();
     let transitionGenerationMs = 0;
     const normalizedStartState = normalizeItemState(startState);
-    const nodes = new Map<string, CanonicalGraphNode>();
-    const queue = new StateExpansionQueue();
-    queue.push(normalizedStartState, this.expansionPriority(normalizedStartState, prioritizedStateKeys, searchIntent));
-    const queuedKeys = new Set<string>();
-    queuedKeys.add(getCanonicalStateKey(normalizedStartState, this.target));
+    const startKey = getCanonicalStateKey(normalizedStartState, this.target);
+    const excludedActionIdsKey = excludedActionIds ? [...excludedActionIds].sort().join(',') : '';
+    if (session !== undefined && session.startKey === '') {
+      session.startKey = startKey;
+      session.excludedActionIdsKey = excludedActionIdsKey;
+    }
+    if (
+      session !== undefined &&
+      (session.startKey !== startKey || session.excludedActionIdsKey !== excludedActionIdsKey)
+    ) {
+      // A session is only ever valid for the exact start state and action scope that
+      // produced it. Refusing to reuse a mismatched session keeps canonical identity
+      // authoritative instead of trading correctness for reuse.
+      throw new Error('Persistent expansion session does not match the requested search scope.');
+    }
+    const nodes = session?.nodes ?? new Map<string, CanonicalGraphNode>();
+    const queue = session?.queue ?? new StateExpansionQueue();
+    const queuedKeys = session?.queuedKeys ?? new Set<string>();
+    // AO-star frontier tips describe only the *currently known* boundary of the best
+    // partial route. Expanding a tip does not end that route: the tip's own successors
+    // become the new boundary of the same route. A frozen frontier set therefore acts
+    // as a strict one-layer-per-round barrier, because the large frontier bonus makes
+    // every stale tip outrank every freshly discovered deeper state regardless of how
+    // promising it is. Letting frontier membership be inherited by successors lets a
+    // single round drive the incumbent route all the way down to a terminal, and leaves
+    // ordering *inside* that route to the target-progress score where it belongs.
+    const liveResolutionFrontier = new Set<string>(resolutionFrontierKeys ?? []);
+    if (session === undefined || !queuedKeys.has(startKey)) {
+      queuedKeys.add(startKey);
+      queue.push(normalizedStartState, this.expansionPriority(normalizedStartState, prioritizedStateKeys, searchIntent, liveResolutionFrontier));
+    } else {
+      // Retained frontier: re-score against this round's competitive set without
+      // re-expanding anything already in the graph.
+      queue.reprioritize((state) => this.expansionPriority(state, prioritizedStateKeys, searchIntent, liveResolutionFrontier));
+    }
 
-    let terminalStatesFound = 0;
-    const stateCountsByRarity: Record<string, number> = { normal: 0, magic: 0, rare: 0 };
-    const stateCountsByAffixes: Record<string, number> = {};
-    const actionAttribution: Record<string, ActionStateAttribution> = {};
-    const actionLocalSuccessorKeys = new Map<string, Set<string>>();
+    let terminalStatesFound = session?.terminalStatesFound ?? 0;
+    const stateCountsByRarity: Record<string, number> =
+      session?.stateCountsByRarity ?? { normal: 0, magic: 0, rare: 0 };
+    const stateCountsByAffixes: Record<string, number> = session?.stateCountsByAffixes ?? {};
+    const actionAttribution: Record<string, ActionStateAttribution> = session?.actionAttribution ?? {};
+    const actionLocalSuccessorKeys = session?.actionLocalSuccessorKeys ?? new Map<string, Set<string>>();
+    const statesExpandedBefore = nodes.size;
     const aggregatedDistributionCache = new WeakMap<
       TransitionDistribution,
       Array<{ targetKey: string; probability: number; nextState: ItemState; label?: string }>
@@ -908,21 +1061,173 @@ export class GenericSearchEngine {
     let transitionGenerationInterrupted = false;
 
     for (const adapter of this.adapters) {
-      actionAttribution[adapter.id] = {
-        actionId: adapter.id,
-        actionName: adapter.name,
-        actionLocalUniqueSuccessorKeysProduced: 0,
-        newGlobalStatesFirstDiscovered: 0,
-        onPolicyStatesSelectingAction: 0,
-        unresolvedOutgoingEdges: 0,
-      };
-      actionLocalSuccessorKeys.set(adapter.id, new Set());
+      const existing = actionAttribution[adapter.id];
+      if (existing === undefined) {
+        actionAttribution[adapter.id] = {
+          actionId: adapter.id,
+          actionName: adapter.name,
+          actionLocalUniqueSuccessorKeysProduced: 0,
+          newGlobalStatesFirstDiscovered: 0,
+          onPolicyStatesSelectingAction: 0,
+          unresolvedOutgoingEdges: 0,
+        };
+      } else {
+        // Discovery counters stay cumulative across a persistent session because they
+        // describe work actually performed. Counters that are recomputed from scratch
+        // over the whole graph every round must not accumulate.
+        existing.onPolicyStatesSelectingAction = 0;
+        existing.unresolvedOutgoingEdges = 0;
+      }
+      if (!actionLocalSuccessorKeys.has(adapter.id)) {
+        actionLocalSuccessorKeys.set(adapter.id, new Set());
+      }
     }
 
-    expansionLoop: while (
+    /**
+     * Generates one action edge on an already-created node. Returns false when
+     * transition generation was interrupted by the cooperative deadline.
+     */
+    const materializeAction = (
+      node: CanonicalGraphNode,
+      curr: ItemState,
+      key: string,
+      adapter: SolverCraftActionAdapter
+    ): boolean => {
+      if (deferredActionIds?.has(adapter.id)) {
+        const deferredKey = `__deferred_action__:${adapter.id}:${key}`;
+        actionLocalSuccessorKeys.get(adapter.id)?.add(deferredKey);
+        node.actions.set(adapter.id, {
+          action: adapter,
+          immediateCostChaos: adapter.getCost().costChaos,
+          cost: adapter.getCost(),
+          isDirectlyResolved: false,
+          deferred: true,
+          transitions: [{
+            targetKey: deferredKey,
+            probability: 1,
+            nextState: curr,
+            label: 'Deferred until DEEPEN/PROVE search intent',
+          }],
+        });
+        session?.deferredEdges.add(`${key}\u0000${adapter.id}`);
+        return true;
+      }
+      let dist: TransitionDistribution | undefined;
+      const transitionStarted = Date.now();
+      try {
+        dist = adapter.getTransitions(curr, deadlineMs);
+      } catch (error) {
+        if (error instanceof TransitionGenerationDeadlineExceeded) {
+          transitionGenerationInterrupted = true;
+          return false;
+        }
+        throw error;
+      } finally {
+        transitionGenerationMs += Date.now() - transitionStarted;
+      }
+      if (!dist || dist.outcomes.length === 0) return true;
+      const cachedTransitions = aggregatedDistributionCache.get(dist);
+      if (cachedTransitions) {
+        node.actions.set(adapter.id, {
+          action: adapter,
+          immediateCostChaos: dist.immediateCostChaos,
+          cost: adapter.getCost(),
+          isDirectlyResolved: true,
+          transitions: cachedTransitions,
+        });
+        return true;
+      }
+      const aggMap = new Map<string, { targetKey: string; probability: number; nextState: ItemState; label?: string }>();
+      for (let outcomeIndex = 0; outcomeIndex < dist.outcomes.length; outcomeIndex++) {
+        if (
+          (outcomeIndex & 255) === 0 &&
+          deadlineMs !== undefined &&
+          Date.now() >= deadlineMs
+        ) {
+          transitionGenerationInterrupted = true;
+          return false;
+        }
+        const out = dist.outcomes[outcomeIndex];
+        // Zero-mass analytical entries are not graph edges. Keeping one
+        // can poison continuation arithmetic through 0 * Infinity = NaN.
+        if (!Number.isFinite(out.probability) || out.probability <= 0) continue;
+        const outKey = getCanonicalStateKey(out.state, this.target);
+        actionLocalSuccessorKeys.get(adapter.id)?.add(outKey);
+        const existing = aggMap.get(outKey);
+        if (existing) {
+          existing.probability += out.probability;
+        } else {
+          aggMap.set(outKey, {
+            targetKey: outKey,
+            probability: out.probability,
+            nextState: out.state,
+            label: out.label,
+          });
+          if (!queuedKeys.has(outKey)) {
+            queuedKeys.add(outKey);
+            if (liveResolutionFrontier.has(key)) liveResolutionFrontier.add(outKey);
+            queue.push(out.state, this.expansionPriority(out.state, prioritizedStateKeys, searchIntent, liveResolutionFrontier));
+            if (actionAttribution[adapter.id]) {
+              actionAttribution[adapter.id].newGlobalStatesFirstDiscovered++;
+            }
+          }
+        }
+      }
+
+      const transitions = Array.from(aggMap.values());
+      if (transitions.length === 0) return true;
+      aggregatedDistributionCache.set(dist, transitions);
+      node.actions.set(adapter.id, {
+        action: adapter,
+        immediateCostChaos: dist.immediateCostChaos,
+        cost: adapter.getCost(),
+        isDirectlyResolved: true,
+        transitions,
+      });
+      return true;
+    };
+
+    // Persistent extension top-up: edges parked as deferred placeholders in an
+    // earlier round are regenerated in place as soon as the round no longer defers
+    // that action. Nodes without deferred edges are never revisited.
+    if (session !== undefined && session.deferredEdges.size > 0) {
+      for (const edgeId of [...session.deferredEdges]) {
+        if (deadlineMs !== undefined && Date.now() >= deadlineMs) break;
+        const separator = edgeId.indexOf('\u0000');
+        const nodeKey = edgeId.slice(0, separator);
+        const actionId = edgeId.slice(separator + 1);
+        if (deferredActionIds?.has(actionId)) continue;
+        const node = nodes.get(nodeKey);
+        if (!node) {
+          session.deferredEdges.delete(edgeId);
+          continue;
+        }
+        const adapter = this.adapters.find((candidate) => candidate.id === actionId);
+        if (!adapter || excludedActionIds?.has(actionId) || !adapter.applicable(node.state)) {
+          session.deferredEdges.delete(edgeId);
+          node.actions.delete(actionId);
+          continue;
+        }
+        const placeholder = node.actions.get(actionId);
+        node.actions.delete(actionId);
+        session.deferredEdges.delete(edgeId);
+        if (!materializeAction(node, node.state, nodeKey, adapter)) {
+          // Interrupted mid-generation. Restore the placeholder rather than leaving a
+          // node that silently looks as though the action does not exist at all.
+          if (placeholder) {
+            node.actions.set(actionId, placeholder);
+            session.deferredEdges.add(edgeId);
+          }
+          break;
+        }
+      }
+    }
+
+    while (
       queue.length > 0 &&
       nodes.size < maxStates &&
-      (deadlineMs === undefined || Date.now() < deadlineMs)
+      (deadlineMs === undefined || Date.now() < deadlineMs) &&
+      !transitionGenerationInterrupted
     ) {
       const curr = queue.shift()!;
       const key = getCanonicalStateKey(curr, this.target);
@@ -942,101 +1247,29 @@ export class GenericSearchEngine {
         actions: new Map(),
       };
 
+      let nodeInterrupted = false;
       if (!isTerminal) {
         for (const adapter of this.adapters) {
           if (excludedActionIds?.has(adapter.id)) continue;
-          if (adapter.applicable(curr)) {
-            if (deferredActionIds?.has(adapter.id)) {
-              const deferredKey = `__deferred_action__:${adapter.id}:${key}`;
-              actionLocalSuccessorKeys.get(adapter.id)?.add(deferredKey);
-              node.actions.set(adapter.id, {
-                action: adapter,
-                immediateCostChaos: adapter.getCost().costChaos,
-                cost: adapter.getCost(),
-                isDirectlyResolved: false,
-                transitions: [{
-                  targetKey: deferredKey,
-                  probability: 1,
-                  nextState: curr,
-                  label: 'Deferred until DEEPEN/PROVE search intent',
-                }],
-              });
-              continue;
-            }
-            let dist: TransitionDistribution | undefined;
-            const transitionStarted = Date.now();
-            try {
-              dist = adapter.getTransitions(curr, deadlineMs);
-            } catch (error) {
-              if (error instanceof TransitionGenerationDeadlineExceeded) {
-                transitionGenerationInterrupted = true;
-                break expansionLoop;
-              }
-              throw error;
-            } finally {
-              transitionGenerationMs += Date.now() - transitionStarted;
-            }
-            if (dist && dist.outcomes.length > 0) {
-              const cachedTransitions = aggregatedDistributionCache.get(dist);
-              if (cachedTransitions) {
-                node.actions.set(adapter.id, {
-                  action: adapter,
-                  immediateCostChaos: dist.immediateCostChaos,
-                  cost: adapter.getCost(),
-                  isDirectlyResolved: true,
-                  transitions: cachedTransitions,
-                });
-                continue;
-              }
-              const aggMap = new Map<string, { targetKey: string; probability: number; nextState: ItemState; label?: string }>();
-              for (let outcomeIndex = 0; outcomeIndex < dist.outcomes.length; outcomeIndex++) {
-                if (
-                  (outcomeIndex & 255) === 0 &&
-                  deadlineMs !== undefined &&
-                  Date.now() >= deadlineMs
-                ) {
-                  transitionGenerationInterrupted = true;
-                  break expansionLoop;
-                }
-                const out = dist.outcomes[outcomeIndex];
-                // Zero-mass analytical entries are not graph edges. Keeping one
-                // can poison continuation arithmetic through 0 * Infinity = NaN.
-                if (!Number.isFinite(out.probability) || out.probability <= 0) continue;
-                const outKey = getCanonicalStateKey(out.state, this.target);
-                actionLocalSuccessorKeys.get(adapter.id)?.add(outKey);
-                const existing = aggMap.get(outKey);
-                if (existing) {
-                  existing.probability += out.probability;
-                } else {
-                  aggMap.set(outKey, {
-                    targetKey: outKey,
-                    probability: out.probability,
-                    nextState: out.state,
-                    label: out.label,
-                  });
-                  if (!queuedKeys.has(outKey)) {
-                    queuedKeys.add(outKey);
-                    queue.push(out.state, this.expansionPriority(out.state, prioritizedStateKeys, searchIntent));
-                    if (actionAttribution[adapter.id]) {
-                      actionAttribution[adapter.id].newGlobalStatesFirstDiscovered++;
-                    }
-                  }
-                }
-              }
-
-              const transitions = Array.from(aggMap.values());
-              if (transitions.length === 0) continue;
-              aggregatedDistributionCache.set(dist, transitions);
-              node.actions.set(adapter.id, {
-                action: adapter,
-                immediateCostChaos: dist.immediateCostChaos,
-                cost: adapter.getCost(),
-                isDirectlyResolved: true,
-                transitions,
-              });
-            }
+          if (!adapter.applicable(curr)) continue;
+          if (!materializeAction(node, curr, key, adapter)) {
+            nodeInterrupted = true;
+            break;
           }
         }
+      }
+      if (nodeInterrupted) {
+        // Never commit a half-expanded node: a missing action is indistinguishable
+        // from an illegal action downstream and would corrupt the policy proof.
+        if (isTerminal) terminalStatesFound--;
+        stateCountsByRarity[curr.rarity] -= 1;
+        stateCountsByAffixes[affixKey] -= 1;
+        for (const [actionId] of node.actions) {
+          session?.deferredEdges.delete(`${key}\u0000${actionId}`);
+        }
+        // Keep the state on the retained frontier so a later round can expand it.
+        queue.push(curr, this.expansionPriority(curr, prioritizedStateKeys, searchIntent, liveResolutionFrontier));
+        break;
       }
 
       nodes.set(key, node);
@@ -1065,11 +1298,15 @@ export class GenericSearchEngine {
     for (const node of nodes.values()) {
       assertGraphDeadline();
       for (const [actId, act] of node.actions.entries()) {
+        // Recomputed from scratch every round: persistent extension can expand the
+        // missing successors of an edge that was unresolved in an earlier round, and
+        // that edge must be allowed to become resolved again.
+        let edgeResolved = act.deferred !== true;
         for (const t of act.transitions) {
           assertGraphDeadline();
           totalTransitionsCount++;
           if (!nodes.has(t.targetKey)) {
-            act.isDirectlyResolved = false;
+            edgeResolved = false;
             transitionsToUnexpandedStates++;
             totalUnexpandedProbMass += t.probability;
             if (actionAttribution[actId]) {
@@ -1077,6 +1314,7 @@ export class GenericSearchEngine {
             }
           }
         }
+        act.isDirectlyResolved = edgeResolved;
       }
     }
 
@@ -1102,6 +1340,14 @@ export class GenericSearchEngine {
       adjacency.set(key, targets);
     }
 
+    const statesExpandedThisRound = Math.max(0, nodes.size - statesExpandedBefore);
+    if (session !== undefined) {
+      session.terminalStatesFound = terminalStatesFound;
+      session.statesExpandedThisRound = statesExpandedThisRound;
+      session.statesExpandedTotal += statesExpandedThisRound;
+      session.transitionGenerationMs += transitionGenerationMs;
+    }
+
     return {
       nodes,
       maxStates,
@@ -1115,6 +1361,8 @@ export class GenericSearchEngine {
       stateCountsByAffixes,
       hasCycles: directedGraphHasCycle(adjacency, deadlineMs),
       actionAttribution,
+      statesExpandedThisRound,
+      extendedPersistentGraph: session !== undefined && statesExpandedBefore > 0,
       timing: {
         transitionGenerationMs,
         graphAggregationAndSetupMs: Math.max(
@@ -1143,6 +1391,9 @@ export class GenericSearchEngine {
       : 1;
     let roundStateBudget = Math.min(maxStates, statesPerRound);
     let prioritizedStateKeys = new Set<string>();
+    const persistentExpansion = effectiveOptions.persistentExpansion !== false;
+    const expansionSession = persistentExpansion ? createPersistentExpansionSession() : undefined;
+    let resolutionFrontierKeys = new Set<string>();
     let cumulativeExpansionWork = 0;
     let roundsExecuted = 0;
     const aggregateTiming = emptyStageTiming();
@@ -1158,11 +1409,13 @@ export class GenericSearchEngine {
         deferAllActions: true,
       },
       undefined,
+      undefined,
+      expansionSession,
       undefined
     );
     aggregateTiming.seedResultMs = Date.now() - seedStarted;
     addStageTiming(aggregateTiming, result.stageTiming);
-    cumulativeExpansionWork += result.graphBuild.nodes.size;
+    cumulativeExpansionWork += result.graphBuild.statesExpandedThisRound;
     let wallTimeInterrupted = false;
     let recommendationSatisfied = false;
     let certifiedRecommendationFound = false;
@@ -1342,7 +1595,9 @@ export class GenericSearchEngine {
             deferExpensiveProofActions: deferredThisRound,
           },
           prioritizedStateKeys,
-          roundDeadlineMs
+          roundDeadlineMs,
+          expansionSession,
+          resolutionFrontierKeys
         );
       } catch (error) {
         if (error instanceof SearchRoundDeadlineExceeded) {
@@ -1357,7 +1612,7 @@ export class GenericSearchEngine {
       }
       result = completedRound;
       roundsExecuted++;
-      cumulativeExpansionWork += result.graphBuild.nodes.size;
+      cumulativeExpansionWork += result.graphBuild.statesExpandedThisRound;
       const roundWorkMs = Date.now() - roundStarted;
       if (roundsExecuted > 1) priorCompletedRoundWorkMs += lastCompletedRoundWorkMs;
       lastCompletedRoundWorkMs = roundWorkMs;
@@ -1413,9 +1668,11 @@ export class GenericSearchEngine {
         (!deferredThisRound && !result.graphBuild.hitStateLimit && !result.graphBuild.hitWallTimeLimit)
       ) {
         prioritizedStateKeys = competitiveKeys;
+        resolutionFrontierKeys = new Set(result.optimisticResolutionFrontier);
         break;
       }
       prioritizedStateKeys = competitiveKeys;
+      resolutionFrontierKeys = new Set(result.optimisticResolutionFrontier);
       if (roundStateBudget >= maxStates) break;
       roundStateBudget = Math.min(maxStates, roundStateBudget + statesPerRound);
     }
@@ -1463,7 +1720,7 @@ export class GenericSearchEngine {
       timeToFirstCompletedRoundMs,
       timeToFirstCertifiedPolicyMs,
       timeToFirstUsefulRecommendationMs,
-      expansionMode: 'REBUILT_EACH_ROUND',
+      expansionMode: persistentExpansion ? 'PERSISTENT_EXTENDED' : 'REBUILT_EACH_ROUND',
       repeatedStatesExpanded: Math.max(0, cumulativeExpansionWork - result.graphBuild.nodes.size),
       optimisticLowerBoundIterations: result.searchSummary.optimisticLowerBoundIterations,
       optimisticLowerBoundConverged: result.searchSummary.optimisticLowerBoundConverged,
@@ -1573,7 +1830,9 @@ export class GenericSearchEngine {
     startState: ItemState,
     options: GenericSearchOptions = {},
     prioritizedStateKeys?: ReadonlySet<string>,
-    deadlineMs?: number
+    deadlineMs?: number,
+    session?: PersistentExpansionSession,
+    resolutionFrontierKeys?: ReadonlySet<string>
   ): GenericSearchResult {
     let absorptionMs = 0;
     const normalizedStartState = normalizeItemState(startState);
@@ -1613,7 +1872,9 @@ export class GenericSearchEngine {
         ? new Set(this.adapters
             .filter((adapter) => adapter.mechanic.actionType === 'RESTART_REACQUIRE')
             .map((adapter) => adapter.id))
-        : undefined
+        : undefined,
+      session,
+      resolutionFrontierKeys
     );
     if (deadlineMs !== undefined && Date.now() >= deadlineMs) {
       throw new SearchRoundDeadlineExceeded();
@@ -1621,11 +1882,148 @@ export class GenericSearchEngine {
     const nodes = graphResult.nodes;
     const startKey = getCanonicalStateKey(normalizedStartState, this.target);
 
-    // Initialize Value Function V(s): terminal = 0, non-terminal = initial estimate
+    // Initialize Value Function V(s): terminal = 0, non-terminal = a small optimistic
+    // seed, i.e. strictly from below.
+    //
+    // Stochastic shortest path with restart cycles must be solved from below. Seeding
+    // non-terminals with +Infinity looks attractive - improper cycles stay pinned at
+    // infinity - but value iteration from above converges to the GREATEST fixed point
+    // of the Bellman operator, and V = +Infinity on every non-terminal is itself a
+    // fixed point of exactly the shape self-fracture acquisition produces: the only
+    // route to a terminal runs through a Fracturing Orb whose unwanted outcomes can
+    // only recover by restarting on a fresh base, so every action at the staging state
+    // keeps a successor valued at infinity and nothing ever becomes finite. Starting
+    // below V* and rising is the only initialization that reaches the least fixed point
+    // (the true expected cost) for this class of graph.
+    //
+    // The cost of converging from below is that a truncated run can report a cheap
+    // finite value for an improper policy that never absorbs. That is handled where it
+    // belongs - by the policy trust machinery (terminal absorption, proper/absorbing
+    // certification and Bellman convergence reporting) - not by biasing the solve.
     const V = new Map<string, number>();
     for (const [key, node] of nodes.entries()) {
       V.set(key, node.isTerminal ? 0 : 20.0);
     }
+
+    // --- Improper greedy policy detection --------------------------------------------
+    //
+    // Impropriety is a reachability property, not a numeric one: under a fixed policy a
+    // state that cannot reach any terminal costs exactly +Infinity. Counting those states
+    // is therefore an exact policy-evaluation fact and is cheap, whereas waiting for value
+    // iteration to price the same cycle out costs one sweep per unit of cycle cost.
+    //
+    // Only states on-policy reachable from the start are considered, so a policy that
+    // already absorbs reports zero and leaves the solve bit-for-bit unchanged.
+    const countImproperOnPolicyStates = (): number => {
+      const greedy = new Map<string, ReadonlyArray<{ targetKey: string; probability: number; nextState: ItemState; label?: string }>>();
+      for (const [key, node] of nodes.entries()) {
+        if (node.isTerminal || node.actions.size === 0) continue;
+        let bestQ = Infinity;
+        let bestTransitions: ReadonlyArray<{ targetKey: string; probability: number; nextState: ItemState; label?: string }> | undefined;
+        for (const actData of node.actions.values()) {
+          if (!actData.isDirectlyResolved) continue;
+          let expCont = 0;
+          for (const t of actData.transitions) {
+            expCont += t.probability * (V.get(t.targetKey) ?? Infinity);
+          }
+          const q = actData.immediateCostChaos + expCont;
+          if (q < bestQ) {
+            bestQ = q;
+            bestTransitions = actData.transitions;
+          }
+        }
+        if (bestTransitions !== undefined) greedy.set(key, bestTransitions);
+      }
+
+      // States able to reach a terminal under the greedy policy (least fixpoint).
+      const predecessors = new Map<string, string[]>();
+      for (const [key, transitions] of greedy.entries()) {
+        for (const t of transitions) {
+          const bucket = predecessors.get(t.targetKey);
+          if (bucket) bucket.push(key);
+          else predecessors.set(t.targetKey, [key]);
+        }
+      }
+      const absorbing = new Set<string>();
+      const backward: string[] = [];
+      for (const [key, node] of nodes.entries()) {
+        if (!node.isTerminal) continue;
+        absorbing.add(key);
+        backward.push(key);
+      }
+      while (backward.length > 0) {
+        const key = backward.pop()!;
+        for (const predecessor of predecessors.get(key) ?? []) {
+          if (absorbing.has(predecessor)) continue;
+          absorbing.add(predecessor);
+          backward.push(predecessor);
+        }
+      }
+
+      // On-policy reachable set from the start state.
+      const onPolicy = new Set<string>([startKey]);
+      const forward: string[] = [startKey];
+      while (forward.length > 0) {
+        const key = forward.pop()!;
+        for (const t of greedy.get(key) ?? []) {
+          if (onPolicy.has(t.targetKey) || !nodes.has(t.targetKey)) continue;
+          onPolicy.add(t.targetKey);
+          forward.push(t.targetKey);
+        }
+      }
+
+      let improper = 0;
+      for (const key of onPolicy) {
+        const node = nodes.get(key);
+        if (!node || node.isTerminal) continue;
+        if (absorbing.has(key)) continue;
+        improper++;
+      }
+      return improper;
+    };
+
+    // --- Escaping an improper policy by re-seeding from above -------------------------
+    //
+    // Value iteration from below only removes an improper cycle from contention once the
+    // cycle has accumulated more cost than the real route, which takes one sweep per unit
+    // of per-visit cost: a 0.11c alteration loop needs several thousand sweeps before a
+    // ~1500c self-fracture route wins, and no truncated solve can pay that.
+    //
+    // Pinning the improper states at +Infinity is exact for the *current* policy but
+    // useless as an initialization, because the real route recovers from an unwanted
+    // fracture by restarting on a fresh base: pinning the clean base at infinity makes
+    // every route through it infinite too, and the solve deadlocks on the greatest fixed
+    // point. Re-seeding every non-terminal at a finite value *above* the answer avoids
+    // both traps - the Bellman operator is monotone, so it descends geometrically at the
+    // route's own failure rate instead of climbing linearly at the cycle's cost rate.
+    //
+    // The seed is derived, not hardcoded: it starts at the largest immediate action cost
+    // the modeled mechanics actually charge (the Fracturing Orb price, in the fracture
+    // case) and quadruples on every subsequent detection, so the search calibrates itself
+    // to the answer's magnitude rather than assuming it.
+    let improperEscapeSeedChaos = 0;
+    for (const node of nodes.values()) {
+      for (const actData of node.actions.values()) {
+        if (actData.immediateCostChaos > improperEscapeSeedChaos) {
+          improperEscapeSeedChaos = actData.immediateCostChaos;
+        }
+      }
+    }
+    if (!(improperEscapeSeedChaos > 0)) improperEscapeSeedChaos = 1;
+
+    const reseedAboveForImproperPolicy = (): void => {
+      for (const [key, node] of nodes.entries()) {
+        V.set(key, node.isTerminal ? 0 : improperEscapeSeedChaos);
+      }
+      improperEscapeSeedChaos *= 4;
+    };
+
+    const IMPROPER_POLICY_CHECK_INTERVAL = 25;
+    const IMPROPER_POLICY_DESCENT_BUDGET = 250;
+    const MAX_IMPROPER_POLICY_ELIMINATION_PASSES = 12;
+    let nextImproperPolicyCheck = IMPROPER_POLICY_CHECK_INTERVAL;
+    let improperPolicyEliminationPasses = 0;
+    let improperPolicyStatesPinned = 0;
 
     // Value Iteration Loop (solves stochastic shortest path with cycles)
     const bellmanStarted = Date.now();
@@ -1679,11 +2077,34 @@ export class GenericSearchEngine {
         if (Number.isFinite(bestQ) && Number.isFinite(prevV)) {
           const delta = Math.abs(bestQ - prevV);
           if (delta > maxDelta) maxDelta = delta;
+        } else if (Number.isFinite(bestQ) !== Number.isFinite(prevV)) {
+          // A state that just became finite (or lost finiteness) is a real change and
+          // must not be allowed to look like a converged sweep.
+          maxDelta = Infinity;
         }
         V.set(key, bestQ);
       }
 
-      if (maxDelta < epsilon) {
+      const converging = maxDelta < epsilon;
+      if (
+        improperPolicyEliminationPasses < MAX_IMPROPER_POLICY_ELIMINATION_PASSES &&
+        (converging || iteration + 1 >= nextImproperPolicyCheck)
+      ) {
+        const improper = countImproperOnPolicyStates();
+        if (improper > 0) {
+          improperPolicyEliminationPasses++;
+          improperPolicyStatesPinned += improper;
+          reseedAboveForImproperPolicy();
+          // Give the descent room to finish before judging the policy again, otherwise a
+          // mid-descent snapshot would escalate the seed for no reason.
+          nextImproperPolicyCheck = iteration + 1 + IMPROPER_POLICY_DESCENT_BUDGET;
+          maxDelta = Infinity;
+          continue;
+        }
+        nextImproperPolicyCheck = iteration + 1 + IMPROPER_POLICY_CHECK_INTERVAL;
+      }
+
+      if (converging) {
         break;
       }
     }
@@ -2116,6 +2537,58 @@ export class GenericSearchEngine {
       if (optimisticLowerBoundResidual < epsilon) break;
     }
     const optimisticLowerBoundConverged = optimisticLowerBoundResidual < epsilon;
+
+    // Best-partial-solution frontier (AO-star style).
+    //
+    // Unexpanded successors carry zero continuation cost, so the greedy policy over the
+    // optimistic values is exactly the "most promising route that is not yet proven".
+    // Its unexpanded tips are the states whose expansion can actually turn that route
+    // into a resolved one. A purely score-based expansion heuristic cannot express this:
+    // a region that already satisfies part of the target (for example every rare that
+    // already carries the requested fracture) keeps regenerating high-scoring siblings
+    // and starves the states the route still needs.
+    const optimisticResolutionFrontier = new Set<string>();
+    {
+      const visited = new Set<string>();
+      const stack: string[] = [startKey];
+      const frontierContinuationCache = new Map<
+        ReadonlyArray<{ targetKey: string; probability: number; nextState: ItemState; label?: string }>,
+        number
+      >();
+      let frontierWork = 0;
+      while (stack.length > 0) {
+        if ((frontierWork++ & 255) === 0) assertWithinDeadline();
+        const key = stack.pop()!;
+        if (visited.has(key)) continue;
+        visited.add(key);
+        const node = nodes.get(key);
+        if (!node || node.isTerminal) continue;
+        let bestTransitions:
+          | ReadonlyArray<{ targetKey: string; probability: number; nextState: ItemState; label?: string }>
+          | undefined;
+        let bestQ = Infinity;
+        for (const action of node.actions.values()) {
+          let continuation = frontierContinuationCache.get(action.transitions);
+          if (continuation === undefined) {
+            continuation = 0;
+            for (const transition of action.transitions) {
+              continuation += transition.probability * (optimisticValues.get(transition.targetKey) ?? 0);
+            }
+            frontierContinuationCache.set(action.transitions, continuation);
+          }
+          const q = action.immediateCostChaos + continuation;
+          if (q < bestQ) {
+            bestQ = q;
+            bestTransitions = action.transitions;
+          }
+        }
+        if (!bestTransitions) continue;
+        for (const transition of bestTransitions) {
+          if (nodes.has(transition.targetKey)) stack.push(transition.targetKey);
+          else optimisticResolutionFrontier.add(transition.targetKey);
+        }
+      }
+    }
 
     const candidateLowerBoundCache = new Map<
       ReadonlyArray<{ targetKey: string; probability: number; nextState: ItemState; label?: string }>,
@@ -2699,6 +3172,8 @@ export class GenericSearchEngine {
         finalMaxResidual: maxDelta,
         epsilon,
         maxIterations,
+        improperPolicyEliminationPasses,
+        improperPolicyStatesPinned,
       },
       reconciliation: {
         sumExpectedActionCostChaos,
@@ -2730,7 +3205,7 @@ export class GenericSearchEngine {
         roundBudgetExhausted: false,
         budgetExhausted: graphResult.hitStateLimit || graphResult.hitWallTimeLimit,
         returnedAtBudget: graphResult.hitWallTimeLimit,
-        expansionMode: 'REBUILT_EACH_ROUND',
+        expansionMode: graphResult.extendedPersistentGraph ? 'PERSISTENT_EXTENDED' : 'REBUILT_EACH_ROUND',
         repeatedStatesExpanded: 0,
         optimisticLowerBoundIterations,
         optimisticLowerBoundConverged,
@@ -2765,6 +3240,7 @@ export class GenericSearchEngine {
       },
       stageTiming,
       isTargetSatisfied,
+      optimisticResolutionFrontier: [...optimisticResolutionFrontier],
       explanation: lines.join('\n'),
     };
   }

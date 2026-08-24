@@ -245,7 +245,7 @@ export interface OptimizationSearchSummary {
   timeToFirstCompletedRoundMs?: number;
   timeToFirstCertifiedPolicyMs?: number;
   timeToFirstUsefulRecommendationMs?: number;
-  expansionMode: 'REBUILT_EACH_ROUND';
+  expansionMode: 'REBUILT_EACH_ROUND' | 'PERSISTENT_EXTENDED';
   repeatedStatesExpanded: number;
   optimisticLowerBoundIterations: number;
   optimisticLowerBoundConverged: boolean;
