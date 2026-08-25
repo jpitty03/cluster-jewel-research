@@ -152,6 +152,18 @@ const source: CraftPlanSource = {
     methodCount: 1,
     distinctPhysicalStateCount: 1,
     selectionSafe: true,
+    portfolioProof: {
+      status: 'PORTFOLIO_OPTIMAL',
+      selectedFullRouteUpperBoundChaos: search.totalExpectedCostChaos,
+      bestCompetitiveLowerBoundChaos: search.totalExpectedCostChaos,
+      potentialGapChaos: 0,
+      unresolvedCompetitiveCandidates: 0,
+      resolvedCompetitiveCandidates: 0,
+      dominatedCandidates: 0,
+      candidateEvidence: [],
+      tranches: [],
+      schedulerPolicy: 'No fracture candidates in controlled Harvest stage fixture.',
+    },
     stage: {
       mode: 'NO_FRACTURE_CANDIDATES',
       candidateCount: 0,

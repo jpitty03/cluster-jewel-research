@@ -260,6 +260,86 @@ export interface AcquisitionStageSummary {
   };
 }
 
+export type AcquisitionPortfolioProofStatus =
+  | 'PORTFOLIO_OPTIMAL'
+  | 'SELECTED_ACQUISITION_SAFE'
+  | 'BEST_RESOLVED_UNPROVEN'
+  | 'NO_EXECUTABLE_ROUTE';
+
+export type AcquisitionPortfolioCandidateLifecycle =
+  | 'NOT_STARTED'
+  | 'ACQUISITION_PROBING'
+  | 'ACQUISITION_RESOLVED'
+  | 'DOWNSTREAM_PROBING'
+  | 'FULL_ROUTE_RESOLVED'
+  | 'SELECTED'
+  | 'DOMINATED'
+  | 'COMPETITIVE_UNRESOLVED';
+
+export type AcquisitionPortfolioProofReason =
+  | 'DEEPEST_COMPETITOR_LOWER_BOUND'
+  | 'CAN_STILL_BEAT_INCUMBENT'
+  | 'INCUMBENT_CHANGED_REEVALUATE'
+  | 'RESOLVE_ACQUISITION_BEFORE_DOWNSTREAM'
+  | 'RESOLVE_DOWNSTREAM_AFTER_ACQUISITION'
+  | 'DEEPEST_ACQUISITION_PROOF_DEBT'
+  | 'DEEPEST_DOWNSTREAM_PROOF_DEBT'
+  | 'DOMINATED_BY_FULL_ROUTE_BOUND'
+  | 'SELECTED_EXECUTABLE_ROUTE'
+  | 'CLEAN_ROUTE_PROVEN'
+  | 'NO_EXECUTABLE_ROUTE';
+
+export interface AcquisitionPortfolioCandidateProofEvidence {
+  candidateId: string;
+  label: string;
+  kind: 'clean' | 'self-fracture';
+  acquisitionLowerBoundChaos: number;
+  downstreamLowerBoundChaos?: number;
+  fullRouteLowerBoundChaos: number;
+  acquisitionUpperBoundChaos?: number;
+  downstreamUpperBoundChaos?: number;
+  fullRouteUpperBoundChaos?: number;
+  status: AcquisitionPortfolioCandidateLifecycle;
+  proofReason: AcquisitionPortfolioProofReason;
+  acquisitionModeledOptimal: boolean;
+  downstreamModeledOptimal: boolean;
+  retainedAcquisitionStates: number;
+  retainedDownstreamStates: number;
+  acquisitionTransitionDistributionsGenerated: number;
+  downstreamTransitionDistributionsGenerated: number;
+}
+
+export interface AcquisitionPortfolioProofTranche {
+  candidateId: string;
+  label: string;
+  stage: 'ACQUISITION' | 'DOWNSTREAM' | 'DOWNSTREAM_BOUND';
+  reason: AcquisitionPortfolioProofReason;
+  allocatedMaxStates: number;
+  allocatedMaxWallTimeMs: number;
+  retainedStatesBefore: number;
+  retainedStatesAfter: number;
+  transitionDistributionsGeneratedBefore: number;
+  transitionDistributionsGeneratedAfter: number;
+  lowerBoundBeforeChaos: number;
+  lowerBoundAfterChaos: number;
+  upperBoundBeforeChaos?: number;
+  upperBoundAfterChaos?: number;
+  outcome: 'RESOLVED' | 'LOWER_BOUND_IMPROVED' | 'UPPER_BOUND_IMPROVED' | 'DOMINATED' | 'NO_PROOF_CHANGE';
+}
+
+export interface AcquisitionPortfolioProofSummary {
+  status: AcquisitionPortfolioProofStatus;
+  selectedFullRouteUpperBoundChaos?: number;
+  bestCompetitiveLowerBoundChaos?: number;
+  potentialGapChaos?: number;
+  unresolvedCompetitiveCandidates: number;
+  resolvedCompetitiveCandidates: number;
+  dominatedCandidates: number;
+  candidateEvidence: AcquisitionPortfolioCandidateProofEvidence[];
+  tranches: AcquisitionPortfolioProofTranche[];
+  schedulerPolicy: string;
+}
+
 export interface AcquisitionSummary {
   selectedCandidateId?: string;
   selectedMethodId?: string;
@@ -271,6 +351,7 @@ export interface AcquisitionSummary {
   bestUnresolvedLowerBoundChaos?: number;
   potentialGapChaos?: number;
   stage: AcquisitionStageSummary;
+  portfolioProof: AcquisitionPortfolioProofSummary;
 }
 
 export interface PriceConfidenceSummary {
@@ -352,6 +433,10 @@ export interface OptimizerProgressCandidate {
   status:
     | 'NOT_STARTED'
     | 'PROBING'
+    | 'ACQUISITION_PROBING'
+    | 'ACQUISITION_RESOLVED'
+    | 'DOWNSTREAM_PROBING'
+    | 'COMPETITIVE_UNRESOLVED'
     | 'UNRESOLVED'
     | 'PROVISIONAL'
     | 'RESOLVED'
@@ -359,10 +444,16 @@ export interface OptimizerProgressCandidate {
     | 'FULL_ROUTE_RESOLVED'
     | 'DOMINATED'
     | 'SELECTED';
+  acquisitionLowerBoundChaos?: number;
+  downstreamLowerBoundChaos?: number;
+  fullRouteLowerBoundChaos?: number;
   lowerBoundChaos?: number;
   acquisitionUpperBoundChaos?: number;
   downstreamUpperBoundChaos?: number;
   fullRouteUpperBoundChaos?: number;
+  proofReason?: AcquisitionPortfolioProofReason;
+  retainedAcquisitionStates?: number;
+  retainedDownstreamStates?: number;
   statesExpanded: number;
   retainedStates: number;
   elapsedMs: number;
@@ -394,6 +485,10 @@ export interface OptimizerProgressSnapshot {
   }>;
   candidates: OptimizerProgressCandidate[];
   recentMilestones: string[];
+  portfolioProofStatus?: AcquisitionPortfolioProofStatus;
+  unresolvedCompetitiveCandidates?: number;
+  resolvedCompetitiveCandidates?: number;
+  dominatedCandidates?: number;
   sessionReuseStatus: 'COLD' | 'RESUMED' | 'INVALIDATED';
   sessionReuseMessage?: string;
 }
@@ -820,6 +915,27 @@ function describePolicyCondition(state: ItemState, target: TargetDefinition): st
     `${state.suffixes.length} suffix(es), and ${matchedTargets}/${requirements.length} target modifier(s)`;
 }
 
+function genericSearchStartLowerBound(
+  result: GenericSearchResult,
+  state: ItemState,
+  target: TargetDefinition
+): number {
+  const decision = result.policyMap.get(getCanonicalStateKey(state, target));
+  const lowerBound = decision?.candidateQValues.reduce(
+    (minimum, candidate) => Math.min(minimum, candidate.lowerBoundChaos),
+    Infinity
+  );
+  return lowerBound !== undefined && Number.isFinite(lowerBound) && lowerBound >= 0
+    ? lowerBound
+    : 0;
+}
+
+function genericSearchModeledOptimal(result: GenericSearchResult): boolean {
+  return result.optimalityProof.modeledActionOptimalityProven &&
+    result.optimalityProof.selectedPolicyStatus ===
+      'FULLY RESOLVED / PROPER / ABSORBING / COST-RECONCILED';
+}
+
 function targetRequirementIdentity(
   requirement: ReturnType<typeof getAllTargetModRequirements>[number],
   index: number
@@ -945,6 +1061,25 @@ interface OptimizerSearchSessionRecord {
   };
   fractureAcquisitions: Map<string, GenericSearchContinuationSession>;
   fractureDownstreams: Map<string, GenericSearchContinuationSession>;
+  fractureDownstreamBounds: Map<string, {
+    restartLowerBoundChaos: number;
+    continuation: GenericSearchContinuationSession;
+  }>;
+  fractureProofs: Map<string, FracturePortfolioProofRecord>;
+}
+
+interface FracturePortfolioProofRecord {
+  acquisition?: AcquisitionSynthesisResult;
+  downstream?: GenericSearchResult;
+  acquisitionLowerBoundChaos: number;
+  downstreamLowerBoundChaos: number;
+  fullRouteLowerBoundChaos: number;
+  acquisitionUpperBoundChaos?: number;
+  downstreamUpperBoundChaos?: number;
+  fullRouteUpperBoundChaos?: number;
+  acquisitionModeledOptimal: boolean;
+  downstreamModeledOptimal: boolean;
+  lastAllocatedStage?: 'ACQUISITION' | 'DOWNSTREAM' | 'DOWNSTREAM_BOUND';
 }
 
 /** Serializable optimizer boundary intended for the thin Developer UI. */
@@ -1011,6 +1146,8 @@ export class OptimizerService {
         cleanDownstream: createGenericSearchContinuationSession(),
         fractureAcquisitions: new Map(),
         fractureDownstreams: new Map(),
+        fractureDownstreamBounds: new Map(),
+        fractureProofs: new Map(),
       };
       if (this.searchSessions.size >= 8) {
         const oldest = this.searchSessions.keys().next().value;
@@ -1184,14 +1321,47 @@ export class OptimizerService {
     for (const { start, candidateIndex } of fractureEntries) {
       const id = `candidate_${candidateIndex}`;
       const sessionKey = JSON.stringify(start.fracturedRequirement);
+      const structuralLowerBound = structuralBounds.get(candidateIndex)?.combinedLowerBoundChaos ?? 0;
+      let proofRecord = searchSessionRecord.fractureProofs.get(sessionKey);
+      if (!proofRecord) {
+        proofRecord = {
+          acquisitionLowerBoundChaos: structuralLowerBound,
+          downstreamLowerBoundChaos: 0,
+          fullRouteLowerBoundChaos: structuralLowerBound,
+          acquisitionModeledOptimal: false,
+          downstreamModeledOptimal: false,
+        };
+        searchSessionRecord.fractureProofs.set(sessionKey, proofRecord);
+      } else {
+        proofRecord.acquisitionLowerBoundChaos = Math.max(
+          proofRecord.acquisitionLowerBoundChaos,
+          structuralLowerBound
+        );
+        proofRecord.fullRouteLowerBoundChaos =
+          proofRecord.acquisitionLowerBoundChaos + proofRecord.downstreamLowerBoundChaos;
+      }
       const retainedAcqStates = searchSessionRecord.fractureAcquisitions.get(sessionKey)?.expansion.nodes.size ?? 0;
+      const retainedDownstreamStates = searchSessionRecord.fractureDownstreams.get(sessionKey)?.expansion.nodes.size ?? 0;
       progressCandidates.set(id, {
         id,
         label: start.label,
         kind: 'self-fracture',
         targetModName: describeModRequirement(start.fracturedRequirement!),
-        status: 'NOT_STARTED',
-        lowerBoundChaos: structuralBounds.get(candidateIndex)?.combinedLowerBoundChaos,
+        status: proofRecord.fullRouteUpperBoundChaos !== undefined
+          ? 'FULL_ROUTE_RESOLVED'
+          : proofRecord.acquisitionUpperBoundChaos !== undefined
+            ? 'ACQUISITION_RESOLVED'
+            : retainedAcqStates > 0 ? 'COMPETITIVE_UNRESOLVED' : 'NOT_STARTED',
+        acquisitionLowerBoundChaos: proofRecord.acquisitionLowerBoundChaos,
+        downstreamLowerBoundChaos: proofRecord.downstreamLowerBoundChaos,
+        fullRouteLowerBoundChaos: proofRecord.fullRouteLowerBoundChaos,
+        lowerBoundChaos: proofRecord.fullRouteLowerBoundChaos,
+        acquisitionUpperBoundChaos: proofRecord.acquisitionUpperBoundChaos,
+        downstreamUpperBoundChaos: proofRecord.downstreamUpperBoundChaos,
+        fullRouteUpperBoundChaos: proofRecord.fullRouteUpperBoundChaos,
+        proofReason: 'CAN_STILL_BEAT_INCUMBENT',
+        retainedAcquisitionStates: retainedAcqStates,
+        retainedDownstreamStates,
         statesExpanded: 0,
         retainedStates: retainedAcqStates,
         elapsedMs: 0,
@@ -1202,6 +1372,11 @@ export class OptimizerService {
     let currentBestUpperBound: number | undefined;
     let currentBestUnresolvedLowerBound: number | undefined;
     let currentPotentialGap: number | undefined;
+    let currentPortfolioProofStatus: AcquisitionPortfolioProofStatus | undefined;
+    let currentUnresolvedCompetitiveCandidates: number | undefined;
+    let currentResolvedCompetitiveCandidates: number | undefined;
+    let currentDominatedCandidates: number | undefined;
+    const portfolioProofTranches: AcquisitionPortfolioProofTranche[] = [];
 
     const emitProgress = (
       phase: OptimizerProgressSnapshot['phase'],
@@ -1225,8 +1400,16 @@ export class OptimizerService {
 
       if (phase !== 'COMPLETE') {
         const activeLowerBounds = candidateList
-          .filter((c) => c.status !== 'DOMINATED' && (c.status === 'NOT_STARTED' || c.status === 'PROBING' || c.status === 'UNRESOLVED'))
-          .map((c) => c.lowerBoundChaos)
+          .filter((c) => c.status !== 'DOMINATED' && (
+            c.status === 'NOT_STARTED' ||
+            c.status === 'PROBING' ||
+            c.status === 'ACQUISITION_PROBING' ||
+            c.status === 'ACQUISITION_RESOLVED' ||
+            c.status === 'DOWNSTREAM_PROBING' ||
+            c.status === 'COMPETITIVE_UNRESOLVED' ||
+            c.status === 'UNRESOLVED'
+          ))
+          .map((c) => c.fullRouteLowerBoundChaos ?? c.lowerBoundChaos)
           .filter((val): val is number => val !== undefined && Number.isFinite(val));
         currentBestUnresolvedLowerBound = activeLowerBounds.length > 0 ? Math.min(...activeLowerBounds) : undefined;
         currentPotentialGap = currentBestUpperBound !== undefined && currentBestUnresolvedLowerBound !== undefined
@@ -1252,6 +1435,10 @@ export class OptimizerService {
         incumbentHistory: [...progressIncumbents],
         candidates: candidateList,
         recentMilestones: [...recentMilestones],
+        portfolioProofStatus: currentPortfolioProofStatus,
+        unresolvedCompetitiveCandidates: currentUnresolvedCompetitiveCandidates,
+        resolvedCompetitiveCandidates: currentResolvedCompetitiveCandidates,
+        dominatedCandidates: currentDominatedCandidates,
         sessionReuseStatus,
         sessionReuseMessage: sessionReuseStatus === 'RESUMED'
           ? `Resumed from prior run (${totalRetained.toLocaleString()} states retained)`
@@ -1267,6 +1454,46 @@ export class OptimizerService {
     let bestFractureCandidateIndex: number | undefined;
     let bestFractureSessionReuse: SearchSessionReuseSummary | undefined;
 
+    for (const { start, candidateIndex } of fractureEntries) {
+      const sessionKey = JSON.stringify(start.fracturedRequirement);
+      const proofRecord = searchSessionRecord.fractureProofs.get(sessionKey);
+      if (!proofRecord) continue;
+      if (proofRecord.acquisition) {
+        synthesisResults.set(candidateIndex, proofRecord.acquisition);
+        synthesisSummaries.set(candidateIndex, summarizeSynthesis(
+          proofRecord.acquisition,
+          {
+            maxStates: proofRecord.acquisition.search.maxStates,
+            maxWallTimeMs: proofRecord.acquisition.search.elapsedMs,
+            maxExpansionRounds: proofRecord.acquisition.search.expansionRounds,
+          },
+          true,
+          sessionKey
+        ));
+        stageCacheHits++;
+      }
+      if (
+        proofRecord.downstream &&
+        proofRecord.fullRouteUpperBoundChaos !== undefined &&
+        (currentBestUpperBound === undefined ||
+          proofRecord.fullRouteUpperBoundChaos < currentBestUpperBound)
+      ) {
+        currentBestUpperBound = proofRecord.fullRouteUpperBoundChaos;
+        bestFractureDownstreamResult = proofRecord.downstream;
+        bestFractureCandidateIndex = candidateIndex;
+        const downSession = searchSessionRecord.fractureDownstreams.get(sessionKey);
+        const retainedStates = downSession?.expansion.nodes.size ?? 0;
+        bestFractureSessionReuse = {
+          status: retainedStates > 0 ? 'RESUMED' : 'COLD',
+          identityHash: searchIdentityHash,
+          retainedStates,
+          retainedTransitionDistributions:
+            downSession?.expansion.transitionDistributionsGeneratedTotal ?? 0,
+          scope: 'FRACTURE_DOWNSTREAM',
+        };
+      }
+    }
+
     if (
       fractureEntries.length > 0 &&
       !targetExplicitlyRequiresFracture &&
@@ -1275,9 +1502,9 @@ export class OptimizerService {
       const requestedIntent = input.searchIntent ?? 'RECOMMEND';
       const isComplexMultiMod = validation.normalizedInput.target.requiredMods.length >= 3;
       const fastWallTimeCeiling = requestedIntent === 'RECOMMEND'
-        ? (isComplexMultiMod ? Math.min(3_000, Math.floor(runtimeBudget.engineDeadlineMs * 0.15)) : Math.min(10_000, Math.floor(runtimeBudget.engineDeadlineMs * 0.35)))
+        ? (isComplexMultiMod ? Math.min(4_000, Math.floor(runtimeBudget.engineDeadlineMs * 0.18)) : Math.min(10_000, Math.floor(runtimeBudget.engineDeadlineMs * 0.35)))
         : isComplexMultiMod
-          ? Math.min(3_000, Math.floor(runtimeBudget.engineDeadlineMs * 0.15))
+          ? Math.min(20_000, Math.floor(runtimeBudget.engineDeadlineMs * 0.45))
           : Math.floor(runtimeBudget.engineDeadlineMs * 0.7);
       const fastWallTimeMs = Math.max(
         1,
@@ -1288,6 +1515,16 @@ export class OptimizerService {
       // shared mechanic and pays the clean-base price; the first clean base is added exactly once
       // at the service boundary below.
       const retainedCleanStates = searchSessionRecord.cleanDownstream.expansion.nodes.size;
+      const requestedCleanStates = input.searchBudget?.maxStates ?? 5_000;
+      const cleanProbeMaxStates = requestedIntent === 'DEEPEN' && isComplexMultiMod
+          ? Math.min(requestedCleanStates, retainedCleanStates + 3_000)
+          : requestedCleanStates;
+      const generatedCleanTransitions =
+        searchSessionRecord.cleanDownstream.expansion.transitionDistributionsGeneratedTotal;
+      const previousCleanResult = searchSessionRecord.cleanDownstream.lastResult;
+      const cleanLowerBoundBefore = cleanEvidence.costChaos + (previousCleanResult
+        ? genericSearchStartLowerBound(previousCleanResult, cleanStart.state, input.target)
+        : 0);
       selectedSessionReuse = {
         status: retainedCleanStates > 0
           ? 'RESUMED'
@@ -1314,13 +1551,13 @@ export class OptimizerService {
           harvestTags,
           prioritizeTargetProgress: true,
           allowResearchFallbackPrices: input.allowResearchFallbackPrices ?? true,
-          maxStates: input.searchBudget?.maxStates ?? 5_000,
+          maxStates: cleanProbeMaxStates,
           maxWallTimeMs: fastWallTimeMs,
           maxExpansionRounds: input.searchBudget?.maxExpansionRounds ?? 3,
-          searchIntent: input.searchIntent ?? 'RECOMMEND',
+          searchIntent: requestedIntent === 'DEEPEN' ? 'PROVE' : requestedIntent,
           persistentExpansion: true,
           continuationSession: searchSessionRecord.cleanDownstream,
-          recommendationRefinementRounds: 1,
+          recommendationRefinementRounds: requestedIntent === 'DEEPEN' ? 0 : 1,
           restartReacquire: {
             destination: cleanStart.state,
             acquisitionCostChaos: cleanEvidence.costChaos,
@@ -1340,31 +1577,36 @@ export class OptimizerService {
       cleanProg.elapsedMs = fastCleanResult.searchSummary.elapsedMs;
       cleanProg.isActive = false;
 
+      const cleanDownstreamLowerBound = genericSearchStartLowerBound(
+        fastCleanResult,
+        cleanStart.state,
+        input.target
+      );
+      const cleanFullRouteLowerBound = cleanEvidence.costChaos + cleanDownstreamLowerBound;
+      cleanProg.acquisitionLowerBoundChaos = cleanEvidence.costChaos;
+      cleanProg.downstreamLowerBoundChaos = cleanDownstreamLowerBound;
+      cleanProg.fullRouteLowerBoundChaos = cleanFullRouteLowerBound;
+      cleanProg.lowerBoundChaos = cleanFullRouteLowerBound;
+      cleanProg.proofReason = 'DEEPEST_COMPETITOR_LOWER_BOUND';
+
       const fastCertified = fastCleanResult.optimalityProof.selectedPolicyStatus ===
         'FULLY RESOLVED / PROPER / ABSORBING / COST-RECONCILED';
       if (fastCertified && Number.isFinite(fastCleanResult.totalExpectedCostChaos)) {
         const total = cleanEvidence.costChaos + fastCleanResult.totalExpectedCostChaos;
         cleanProg.status = 'RESOLVED';
         cleanProg.fullRouteUpperBoundChaos = total;
-        currentBestUpperBound = total;
-        progressIncumbents.push({
-          elapsedMs: Date.now() - optimizationStarted,
-          upperBoundChaos: total,
-          label: 'Clean Base',
-        });
+        if (currentBestUpperBound === undefined || total < currentBestUpperBound) {
+          currentBestUpperBound = total;
+          progressIncumbents.push({
+            elapsedMs: Date.now() - optimizationStarted,
+            upperBoundChaos: total,
+            label: 'Clean Base',
+          });
+        }
         emitProgress('CLEAN_PROBE', 'Clean route certified', `Clean Base certified: ${total.toFixed(2)}c`, true, `Clean base certified: ${total.toFixed(2)}c`);
 
-        const startDecision = fastCleanResult.policyMap.get(
-          getCanonicalStateKey(cleanStart.state, input.target)
-        );
-        const downstreamLowerBound = Math.min(
-          ...(startDecision?.candidateQValues
-            .map((candidate) => candidate.lowerBoundChaos)
-            .filter(Number.isFinite) ?? [])
-        );
-        const totalLowerBound = cleanEvidence.costChaos + (
-          Number.isFinite(downstreamLowerBound) ? downstreamLowerBound : 0
-        );
+        const totalLowerBound = cleanFullRouteLowerBound;
+        cleanProg.proofReason = 'CLEAN_ROUTE_PROVEN';
         fastCleanRoute = {
           actionId: `acquire_candidate_${cleanCandidateIndex}_clean-base_${cleanMethodIndex}`,
           name: cleanMethod.description ?? 'Start clean base: Clean Base',
@@ -1378,6 +1620,33 @@ export class OptimizerService {
           couldBeatResolvedIncumbent: false,
         };
       }
+      portfolioProofTranches.push({
+        candidateId: `candidate_${cleanCandidateIndex}`,
+        label: cleanStart.label,
+        stage: 'DOWNSTREAM',
+        reason: retainedCleanStates > 0
+          ? 'DEEPEST_COMPETITOR_LOWER_BOUND'
+          : 'RESOLVE_DOWNSTREAM_AFTER_ACQUISITION',
+        allocatedMaxStates: cleanProbeMaxStates,
+        allocatedMaxWallTimeMs: fastWallTimeMs,
+        retainedStatesBefore: retainedCleanStates,
+        retainedStatesAfter: searchSessionRecord.cleanDownstream.expansion.nodes.size,
+        transitionDistributionsGeneratedBefore: generatedCleanTransitions,
+        transitionDistributionsGeneratedAfter:
+          searchSessionRecord.cleanDownstream.expansion.transitionDistributionsGeneratedTotal,
+        lowerBoundBeforeChaos: cleanLowerBoundBefore,
+        lowerBoundAfterChaos: cleanFullRouteLowerBound,
+        upperBoundBeforeChaos: previousCleanResult?.optimalityProof.selectedPolicyStatus ===
+            'FULLY RESOLVED / PROPER / ABSORBING / COST-RECONCILED'
+          ? cleanEvidence.costChaos + previousCleanResult.totalExpectedCostChaos
+          : undefined,
+        upperBoundAfterChaos: fastCleanRoute?.expectedTotalCostChaos ?? undefined,
+        outcome: fastCertified
+          ? 'RESOLVED'
+          : cleanFullRouteLowerBound > cleanLowerBoundBefore + 1e-9
+            ? 'LOWER_BOUND_IMPROVED'
+            : 'NO_PROOF_CHANGE',
+      });
       if (
         fastCertified &&
         fastCleanRoute?.expectedTotalCostChaos !== null &&
@@ -1425,34 +1694,210 @@ export class OptimizerService {
       const acquisitionStarted = Date.now();
 
       if (fractureEntries.length > 0) {
-        let incumbentFullRouteU = fastCleanRoute?.expectedTotalCostChaos ?? Infinity;
-
-        // Sort candidates by lowest mandatory mechanics lower bound (most competitive first)
-        const sortedFractureEntries = [...fractureEntries].sort(
-          (a, b) => (structuralBounds.get(a.candidateIndex)?.combinedLowerBoundChaos ?? 0) -
-                    (structuralBounds.get(b.candidateIndex)?.combinedLowerBoundChaos ?? 0)
+        let incumbentFullRouteU = Math.min(
+          fastCleanRoute?.expectedTotalCostChaos ?? Infinity,
+          currentBestUpperBound ?? Infinity
         );
 
-        // Tranche 1: Probe each non-dominated fracture candidate
-        for (const { start, candidateIndex } of sortedFractureEntries) {
-          const bound = structuralBounds.get(candidateIndex)!;
+        const syncProgressFromProof = (
+          candidateIndex: number,
+          proofRecord: FracturePortfolioProofRecord
+        ): void => {
           const pCand = progressCandidates.get(`candidate_${candidateIndex}`)!;
-          if (bound.combinedLowerBoundChaos >= incumbentFullRouteU) {
+          const sessionKey = JSON.stringify(starts[candidateIndex].fracturedRequirement);
+          const acquisitionSession = searchSessionRecord.fractureAcquisitions.get(sessionKey);
+          const downstreamSession = searchSessionRecord.fractureDownstreams.get(sessionKey);
+          const boundSession = searchSessionRecord.fractureDownstreamBounds.get(sessionKey)?.continuation;
+          pCand.acquisitionLowerBoundChaos = proofRecord.acquisitionLowerBoundChaos;
+          pCand.downstreamLowerBoundChaos = proofRecord.downstreamLowerBoundChaos;
+          pCand.fullRouteLowerBoundChaos = proofRecord.fullRouteLowerBoundChaos;
+          pCand.lowerBoundChaos = proofRecord.fullRouteLowerBoundChaos;
+          pCand.acquisitionUpperBoundChaos = proofRecord.acquisitionUpperBoundChaos;
+          pCand.downstreamUpperBoundChaos = proofRecord.downstreamUpperBoundChaos;
+          pCand.fullRouteUpperBoundChaos = proofRecord.fullRouteUpperBoundChaos;
+          pCand.retainedAcquisitionStates = acquisitionSession?.expansion.nodes.size ?? 0;
+          pCand.retainedDownstreamStates =
+            (downstreamSession?.expansion.nodes.size ?? 0) +
+            (boundSession?.expansion.nodes.size ?? 0);
+          pCand.retainedStates =
+            (pCand.retainedAcquisitionStates ?? 0) + (pCand.retainedDownstreamStates ?? 0);
+        };
+
+        const runDownstreamBoundProbe = (
+          start: StartingStateCandidate,
+          candidateIndex: number,
+          reason: AcquisitionPortfolioProofReason,
+          allocation: { maxStates: number; maxWallTimeMs: number; maxExpansionRounds: number }
+        ): void => {
+          const sessionKey = JSON.stringify(start.fracturedRequirement);
+          const proofRecord = searchSessionRecord.fractureProofs.get(sessionKey)!;
+          let boundRecord = searchSessionRecord.fractureDownstreamBounds.get(sessionKey);
+          if (
+            !boundRecord ||
+            Math.abs(boundRecord.restartLowerBoundChaos - proofRecord.acquisitionLowerBoundChaos) > 1e-9
+          ) {
+            boundRecord = {
+              restartLowerBoundChaos: proofRecord.acquisitionLowerBoundChaos,
+              continuation: createGenericSearchContinuationSession(),
+            };
+            searchSessionRecord.fractureDownstreamBounds.set(sessionKey, boundRecord);
+          }
+          const continuation = boundRecord.continuation;
+          const retainedStatesBefore = continuation.expansion.nodes.size;
+          const generatedBefore = continuation.expansion.transitionDistributionsGeneratedTotal;
+          const lowerBoundBefore = proofRecord.fullRouteLowerBoundChaos;
+          const pCand = progressCandidates.get(`candidate_${candidateIndex}`)!;
+          pCand.status = 'DOWNSTREAM_PROBING';
+          pCand.proofReason = reason;
+          pCand.isActive = true;
+          emitProgress(
+            'FRACTURE_DEEPEN',
+            'Strengthening admissible full-route bound',
+            `Full-route bound: ${start.label}`,
+            true
+          );
+          const boundResult = new GenericSearchEngine(
+            { pool, priceBook },
+            input.target,
+            {
+              includeHarvest: harvestTags.length > 0,
+              harvestTags,
+              prioritizeTargetProgress: true,
+              allowResearchFallbackPrices: input.allowResearchFallbackPrices ?? true,
+              maxStates: allocation.maxStates,
+              maxWallTimeMs: allocation.maxWallTimeMs,
+              maxExpansionRounds: allocation.maxExpansionRounds,
+              searchIntent: 'PROVE',
+              persistentExpansion: true,
+              continuationSession: continuation,
+              recommendationRefinementRounds: 0,
+              restartReacquire: {
+                destination: start.state,
+                acquisitionCostChaos: proofRecord.acquisitionLowerBoundChaos,
+                confidence: 'research-fallback',
+                provenance:
+                  'Admissible Phase 2L downstream bound restart priced at the independently ' +
+                  'admissible acquisition lower bound.',
+                label: `Optimistic reacquisition lower bound for ${start.label}`,
+              },
+            }
+          ).search(start.state);
+          const downstreamLowerBound = genericSearchStartLowerBound(
+            boundResult,
+            start.state,
+            input.target
+          );
+          proofRecord.downstreamLowerBoundChaos = Math.max(
+            proofRecord.downstreamLowerBoundChaos,
+            downstreamLowerBound
+          );
+          proofRecord.fullRouteLowerBoundChaos =
+            proofRecord.acquisitionLowerBoundChaos + proofRecord.downstreamLowerBoundChaos;
+          proofRecord.lastAllocatedStage = 'DOWNSTREAM_BOUND';
+          syncProgressFromProof(candidateIndex, proofRecord);
+          pCand.isActive = false;
+          const improved = proofRecord.fullRouteLowerBoundChaos > lowerBoundBefore + 1e-9;
+          portfolioProofTranches.push({
+            candidateId: `candidate_${candidateIndex}`,
+            label: start.label,
+            stage: 'DOWNSTREAM_BOUND',
+            reason,
+            allocatedMaxStates: allocation.maxStates,
+            allocatedMaxWallTimeMs: allocation.maxWallTimeMs,
+            retainedStatesBefore,
+            retainedStatesAfter: continuation.expansion.nodes.size,
+            transitionDistributionsGeneratedBefore: generatedBefore,
+            transitionDistributionsGeneratedAfter:
+              continuation.expansion.transitionDistributionsGeneratedTotal,
+            lowerBoundBeforeChaos: lowerBoundBefore,
+            lowerBoundAfterChaos: proofRecord.fullRouteLowerBoundChaos,
+            upperBoundBeforeChaos: proofRecord.fullRouteUpperBoundChaos,
+            upperBoundAfterChaos: proofRecord.fullRouteUpperBoundChaos,
+            outcome: improved ? 'LOWER_BOUND_IMPROVED' : 'NO_PROOF_CHANGE',
+          });
+          stageTotalStateBudget += allocation.maxStates;
+          stageTotalWallTimeBudgetMs += allocation.maxWallTimeMs;
+          if (improved) {
+            emitProgress(
+              'FRACTURE_DEEPEN',
+              'Stronger full-route lower bound',
+              `${start.label}: L ${proofRecord.fullRouteLowerBoundChaos.toFixed(2)}c`,
+              true,
+              `Stronger full-route L for ${start.label}: ${proofRecord.fullRouteLowerBoundChaos.toFixed(2)}c`
+            );
+          }
+        };
+        const stagesAllocatedThisRequest = new Set<string>();
+        const proofDirectedResume = input.searchIntent === 'DEEPEN' &&
+          fractureEntries.some(({ start }) => {
+            const sessionKey = JSON.stringify(start.fracturedRequirement);
+            const proofRecord = searchSessionRecord.fractureProofs.get(sessionKey);
+            return proofRecord?.acquisition !== undefined ||
+              (searchSessionRecord.fractureAcquisitions.get(sessionKey)?.expansion.nodes.size ?? 0) > 0 ||
+              (searchSessionRecord.fractureDownstreams.get(sessionKey)?.expansion.nodes.size ?? 0) > 0;
+          });
+
+        // Establish an independently admissible downstream contribution for every fracture
+        // family. This graph uses the actual reusable fractured state and an optimistic restart
+        // price equal to acquisition L, so it cannot overstate full-route L.
+        for (const { start, candidateIndex } of fractureEntries) {
+          const sessionKey = JSON.stringify(start.fracturedRequirement);
+          const proofRecord = searchSessionRecord.fractureProofs.get(sessionKey)!;
+          if (proofRecord.downstreamLowerBoundChaos > 0) continue;
+          if (searchStopDeadline - Date.now() < 3_000) break;
+          runDownstreamBoundProbe(start, candidateIndex, 'DEEPEST_COMPETITOR_LOWER_BOUND', {
+            maxStates: Math.min(750, input.searchBudget?.maxStates ?? 5_000),
+            maxWallTimeMs: 600,
+            maxExpansionRounds: 1,
+          });
+          stagesAllocatedThisRequest.add(`${sessionKey}:DOWNSTREAM_BOUND`);
+        }
+
+        // Generic best-bound order; exact target identity is only a stable tie-breaker.
+        const sortedFractureEntries = [...fractureEntries].sort(
+          (a, b) => {
+            const aKey = JSON.stringify(a.start.fracturedRequirement);
+            const bKey = JSON.stringify(b.start.fracturedRequirement);
+            return searchSessionRecord.fractureProofs.get(aKey)!.fullRouteLowerBoundChaos -
+              searchSessionRecord.fractureProofs.get(bKey)!.fullRouteLowerBoundChaos ||
+              aKey.localeCompare(bKey);
+          }
+        );
+        const initialProbeEntries = proofDirectedResume
+          ? sortedFractureEntries.filter(({ start }) => {
+              const sessionKey = JSON.stringify(start.fracturedRequirement);
+              return searchSessionRecord.fractureProofs.get(sessionKey)?.acquisitionUpperBoundChaos === undefined;
+            }).slice(0, 1)
+          : sortedFractureEntries;
+
+        // RECOMMEND gives every family one bounded feasibility pass. Resumed DEEPEN gives this
+        // pass only to the strongest unresolved acquisition competitor before directed scheduling.
+        for (const { start, candidateIndex } of initialProbeEntries) {
+          const sessionKey = JSON.stringify(start.fracturedRequirement);
+          const proofRecord = searchSessionRecord.fractureProofs.get(sessionKey)!;
+          const pCand = progressCandidates.get(`candidate_${candidateIndex}`)!;
+          if (proofRecord.fullRouteLowerBoundChaos >= incumbentFullRouteU) {
             pCand.status = 'DOMINATED';
+            pCand.proofReason = 'DOMINATED_BY_FULL_ROUTE_BOUND';
             continue;
           }
           if (Date.now() >= searchStopDeadline) {
             pCand.status = pCand.retainedStates > 0 ? 'UNRESOLVED' : 'NOT_STARTED';
             break;
           }
-          const sessionKey = JSON.stringify(start.fracturedRequirement);
           let acqSession = searchSessionRecord.fractureAcquisitions.get(sessionKey);
           if (!acqSession) {
             acqSession = createGenericSearchContinuationSession();
             searchSessionRecord.fractureAcquisitions.set(sessionKey, acqSession);
           }
 
-          pCand.status = 'PROBING';
+          const retainedAcquisitionStatesBefore = acqSession.expansion.nodes.size;
+          const generatedAcquisitionBefore =
+            acqSession.expansion.transitionDistributionsGeneratedTotal;
+          const acquisitionLowerBoundBefore = proofRecord.fullRouteLowerBoundChaos;
+          const acquisitionUpperBoundBefore = proofRecord.fullRouteUpperBoundChaos;
+          pCand.status = 'ACQUISITION_PROBING';
+          pCand.proofReason = 'RESOLVE_ACQUISITION_BEFORE_DOWNSTREAM';
           pCand.isActive = true;
           emitProgress('FRACTURE_PROBE', 'Probing self-fracture acquisition', `Probing: ${start.label}`, true);
 
@@ -1482,19 +1927,58 @@ export class OptimizerService {
               } : undefined,
             }
           );
+          stagesAllocatedThisRequest.add(`${sessionKey}:ACQUISITION`);
 
           stageAttemptedCandidates++;
+          stageTotalStateBudget += probeAllocation.maxStates;
+          stageTotalWallTimeBudgetMs += probeAllocation.maxWallTimeMs;
           pCand.statesExpanded = synthesis.search.statesExpanded;
           pCand.elapsedMs = synthesis.search.elapsedMs;
-          pCand.lowerBoundChaos = synthesis.lowerBoundChaos;
+          if (proofRecord.acquisition?.status !== 'RESOLVED' || synthesis.status === 'RESOLVED') {
+            proofRecord.acquisition = synthesis;
+          }
+          proofRecord.acquisitionLowerBoundChaos = Math.max(
+            proofRecord.acquisitionLowerBoundChaos,
+            synthesis.lowerBoundChaos
+          );
+          proofRecord.acquisitionModeledOptimal = synthesis.proof.modeledActionOptimalityProven;
+          if (synthesis.status === 'RESOLVED' && synthesis.expectedCostChaos !== undefined) {
+            proofRecord.acquisitionUpperBoundChaos = synthesis.expectedCostChaos;
+          }
+          proofRecord.fullRouteLowerBoundChaos =
+            proofRecord.acquisitionLowerBoundChaos + proofRecord.downstreamLowerBoundChaos;
+          proofRecord.lastAllocatedStage = 'ACQUISITION';
+          syncProgressFromProof(candidateIndex, proofRecord);
           synthesisSummaries.set(
             candidateIndex,
             summarizeSynthesis(synthesis, probeAllocation, false, sessionKey)
           );
+          portfolioProofTranches.push({
+            candidateId: `candidate_${candidateIndex}`,
+            label: start.label,
+            stage: 'ACQUISITION',
+            reason: 'RESOLVE_ACQUISITION_BEFORE_DOWNSTREAM',
+            allocatedMaxStates: probeAllocation.maxStates,
+            allocatedMaxWallTimeMs: probeAllocation.maxWallTimeMs,
+            retainedStatesBefore: retainedAcquisitionStatesBefore,
+            retainedStatesAfter: acqSession.expansion.nodes.size,
+            transitionDistributionsGeneratedBefore: generatedAcquisitionBefore,
+            transitionDistributionsGeneratedAfter:
+              acqSession.expansion.transitionDistributionsGeneratedTotal,
+            lowerBoundBeforeChaos: acquisitionLowerBoundBefore,
+            lowerBoundAfterChaos: proofRecord.fullRouteLowerBoundChaos,
+            upperBoundBeforeChaos: acquisitionUpperBoundBefore,
+            upperBoundAfterChaos: proofRecord.fullRouteUpperBoundChaos,
+            outcome: synthesis.status === 'RESOLVED'
+              ? 'RESOLVED'
+              : proofRecord.fullRouteLowerBoundChaos > acquisitionLowerBoundBefore + 1e-9
+                ? 'LOWER_BOUND_IMPROVED'
+                : 'NO_PROOF_CHANGE',
+          });
 
           if (synthesis.status === 'RESOLVED' && synthesis.expectedCostChaos !== undefined) {
             synthesisResults.set(candidateIndex, synthesis);
-            pCand.status = 'RESOLVED';
+            pCand.status = 'ACQUISITION_RESOLVED';
             pCand.acquisitionUpperBoundChaos = synthesis.expectedCostChaos;
             emitProgress('FRACTURE_PROBE', 'Self-fracture acquisition resolved', `Acquisition resolved: ${start.label} (${synthesis.expectedCostChaos.toFixed(2)}c)`, true, `Acquisition resolved: ${start.label} (${synthesis.expectedCostChaos.toFixed(2)}c)`);
 
@@ -1505,6 +1989,10 @@ export class OptimizerService {
               searchSessionRecord.fractureDownstreams.set(sessionKey, downSession);
             }
             const retainedDownstreamStates = downSession.expansion.nodes.size;
+            const generatedDownstreamBefore =
+              downSession.expansion.transitionDistributionsGeneratedTotal;
+            const downstreamLowerBoundBefore = proofRecord.fullRouteLowerBoundChaos;
+            const downstreamUpperBoundBefore = proofRecord.fullRouteUpperBoundChaos;
             const downstreamSessionReuse: SearchSessionReuseSummary = {
               status: retainedDownstreamStates > 0
                 ? 'RESUMED'
@@ -1516,10 +2004,12 @@ export class OptimizerService {
                 downSession.expansion.transitionDistributionsGeneratedTotal,
               scope: 'FRACTURE_DOWNSTREAM',
             };
+            pCand.status = 'DOWNSTREAM_PROBING';
+            pCand.proofReason = 'RESOLVE_DOWNSTREAM_AFTER_ACQUISITION';
             pCand.isActive = true;
             emitProgress('DOWNSTREAM_SOLVE', 'Solving downstream craft from fractured state', `Downstream: ${start.label}`, true);
 
-            const downWallTimeMs = Math.min(5_000, Math.max(1_000, searchStopDeadline - Date.now() - 1_500));
+            const downWallTimeMs = Math.min(8_000, Math.max(1_000, searchStopDeadline - Date.now() - 1_500));
             const downstreamResult = new GenericSearchEngine(
               { pool, priceBook },
               input.target,
@@ -1544,6 +2034,13 @@ export class OptimizerService {
                 },
               }
             ).search(start.state);
+            stagesAllocatedThisRequest.add(`${sessionKey}:DOWNSTREAM`);
+
+            proofRecord.downstream = downstreamResult;
+            proofRecord.downstreamModeledOptimal = genericSearchModeledOptimal(downstreamResult);
+            proofRecord.lastAllocatedStage = 'DOWNSTREAM';
+            stageTotalStateBudget += input.searchBudget?.maxStates ?? 5_000;
+            stageTotalWallTimeBudgetMs += downWallTimeMs;
 
             if (
               downstreamResult.optimalityProof.selectedPolicyStatus === 'FULLY RESOLVED / PROPER / ABSORBING / COST-RECONCILED' &&
@@ -1553,6 +2050,8 @@ export class OptimizerService {
               pCand.status = 'FULL_ROUTE_RESOLVED';
               pCand.downstreamUpperBoundChaos = downstreamResult.totalExpectedCostChaos;
               pCand.fullRouteUpperBoundChaos = fullRouteCost;
+              proofRecord.downstreamUpperBoundChaos = downstreamResult.totalExpectedCostChaos;
+              proofRecord.fullRouteUpperBoundChaos = fullRouteCost;
               if (fullRouteCost < incumbentFullRouteU) {
                 incumbentFullRouteU = fullRouteCost;
                 currentBestUpperBound = fullRouteCost;
@@ -1564,147 +2063,377 @@ export class OptimizerService {
                   upperBoundChaos: fullRouteCost,
                   label: start.label,
                 });
-                emitProgress('DOWNSTREAM_SOLVE', 'New best full route resolved', `New best route: ${start.label} (${fullRouteCost.toFixed(2)}c)`, true, `New best route: ${start.label} (${fullRouteCost.toFixed(2)}c)`);
+                emitProgress(
+                  'DOWNSTREAM_SOLVE',
+                  'New incumbent; reconsidering all competitors',
+                  `New best route: ${start.label} (${fullRouteCost.toFixed(2)}c)`,
+                  true,
+                  `New incumbent ${start.label}: ${fullRouteCost.toFixed(2)}c; competitors reprioritized`
+                );
               }
             }
+            syncProgressFromProof(candidateIndex, proofRecord);
+            portfolioProofTranches.push({
+              candidateId: `candidate_${candidateIndex}`,
+              label: start.label,
+              stage: 'DOWNSTREAM',
+              reason: 'RESOLVE_DOWNSTREAM_AFTER_ACQUISITION',
+              allocatedMaxStates: input.searchBudget?.maxStates ?? 5_000,
+              allocatedMaxWallTimeMs: downWallTimeMs,
+              retainedStatesBefore: retainedDownstreamStates,
+              retainedStatesAfter: downSession.expansion.nodes.size,
+              transitionDistributionsGeneratedBefore: generatedDownstreamBefore,
+              transitionDistributionsGeneratedAfter:
+                downSession.expansion.transitionDistributionsGeneratedTotal,
+              lowerBoundBeforeChaos: downstreamLowerBoundBefore,
+              lowerBoundAfterChaos: proofRecord.fullRouteLowerBoundChaos,
+              upperBoundBeforeChaos: downstreamUpperBoundBefore,
+              upperBoundAfterChaos: proofRecord.fullRouteUpperBoundChaos,
+              outcome: proofRecord.fullRouteUpperBoundChaos !== undefined &&
+                  downstreamUpperBoundBefore === undefined
+                ? 'RESOLVED'
+                : proofRecord.fullRouteUpperBoundChaos !== undefined &&
+                    (downstreamUpperBoundBefore ?? Infinity) >
+                      proofRecord.fullRouteUpperBoundChaos + 1e-9
+                  ? 'UPPER_BOUND_IMPROVED'
+                  : 'NO_PROOF_CHANGE',
+            });
           }
           pCand.isActive = false;
         }
 
-        // Tranche 2: Deepen competitive candidates if time remains
-        const remainingForDeepen = searchStopDeadline - Date.now() - 2_000;
-        if (remainingForDeepen > 1_500) {
-          const competitiveCandidates = sortedFractureEntries
-            .filter(({ candidateIndex }) => {
-              const s = synthesisSummaries.get(candidateIndex);
-              const p = progressCandidates.get(`candidate_${candidateIndex}`);
-              return (s?.lowerBoundChaos ?? Infinity) < incumbentFullRouteU && p?.status !== 'FULL_ROUTE_RESOLVED';
+        // Incumbent-directed proof work. Every stage is allocated at most once per request;
+        // Retry Deeper resumes the exact acquisition or downstream graph that still carries debt.
+        while (searchStopDeadline - Date.now() > 2_500) {
+          const competitive = fractureEntries
+            .filter(({ start, candidateIndex }) => {
+              if (candidateIndex === bestFractureCandidateIndex) return false;
+              const sessionKey = JSON.stringify(start.fracturedRequirement);
+              const proofRecord = searchSessionRecord.fractureProofs.get(sessionKey)!;
+              return proofRecord.fullRouteLowerBoundChaos < incumbentFullRouteU;
             })
-            .sort((a, b) => (synthesisSummaries.get(a.candidateIndex)?.lowerBoundChaos ?? 0) - (synthesisSummaries.get(b.candidateIndex)?.lowerBoundChaos ?? 0));
+            .sort((a, b) => {
+              const aKey = JSON.stringify(a.start.fracturedRequirement);
+              const bKey = JSON.stringify(b.start.fracturedRequirement);
+              return searchSessionRecord.fractureProofs.get(aKey)!.fullRouteLowerBoundChaos -
+                searchSessionRecord.fractureProofs.get(bKey)!.fullRouteLowerBoundChaos ||
+                aKey.localeCompare(bKey);
+            });
+          if (competitive.length === 0) break;
 
-          for (const { start, candidateIndex } of competitiveCandidates) {
-            if (Date.now() + 1_000 >= searchStopDeadline) break;
+          let allocationTarget: {
+            start: StartingStateCandidate;
+            candidateIndex: number;
+            stage: 'ACQUISITION' | 'DOWNSTREAM' | 'DOWNSTREAM_BOUND';
+            reason: AcquisitionPortfolioProofReason;
+          } | undefined;
+          for (const { start, candidateIndex } of competitive) {
             const sessionKey = JSON.stringify(start.fracturedRequirement);
-            const acqSession = searchSessionRecord.fractureAcquisitions.get(sessionKey)!;
-            const pCand = progressCandidates.get(`candidate_${candidateIndex}`)!;
-            pCand.status = 'PROBING';
-            pCand.isActive = true;
-            emitProgress('FRACTURE_DEEPEN', 'Deepening competitive self-fracture acquisition', `Deepening: ${start.label}`, true);
-
-            const deepenWallTimeMs = Math.min(6_000, Math.max(1_000, searchStopDeadline - Date.now() - 1_500));
-            const deepenAllocation = {
-              maxStates: input.searchBudget?.maxStates ?? 5_000,
-              maxWallTimeMs: deepenWallTimeMs,
-              maxExpansionRounds: input.searchBudget?.maxExpansionRounds ?? 3,
+            const proofRecord = searchSessionRecord.fractureProofs.get(sessionKey)!;
+            const acquisitionGap = proofRecord.acquisitionUpperBoundChaos === undefined
+              ? Infinity
+              : Math.max(0, proofRecord.acquisitionUpperBoundChaos -
+                  proofRecord.acquisitionLowerBoundChaos);
+            const downstreamGap = proofRecord.downstreamUpperBoundChaos === undefined
+              ? Infinity
+              : Math.max(0, proofRecord.downstreamUpperBoundChaos -
+                  proofRecord.downstreamLowerBoundChaos);
+            const preferredStage = proofRecord.acquisitionUpperBoundChaos === undefined
+              ? 'ACQUISITION' as const
+              : proofRecord.downstreamUpperBoundChaos === undefined
+                ? 'DOWNSTREAM' as const
+                : acquisitionGap >= downstreamGap
+                  ? 'ACQUISITION' as const
+                  : 'DOWNSTREAM_BOUND' as const;
+            const fallbacks: Array<'ACQUISITION' | 'DOWNSTREAM' | 'DOWNSTREAM_BOUND'> =
+              preferredStage === 'ACQUISITION'
+                ? ['ACQUISITION', 'DOWNSTREAM_BOUND', 'DOWNSTREAM']
+                : preferredStage === 'DOWNSTREAM'
+                  ? ['DOWNSTREAM', 'DOWNSTREAM_BOUND', 'ACQUISITION']
+                  : ['DOWNSTREAM_BOUND', 'ACQUISITION', 'DOWNSTREAM'];
+            const stage = fallbacks.find(
+              (candidateStage) => !stagesAllocatedThisRequest.has(`${sessionKey}:${candidateStage}`) &&
+                (candidateStage !== 'DOWNSTREAM' ||
+                  proofRecord.acquisitionUpperBoundChaos !== undefined)
+            );
+            if (!stage) continue;
+            allocationTarget = {
+              start,
+              candidateIndex,
+              stage,
+              reason: stage === 'ACQUISITION'
+                ? proofRecord.acquisitionUpperBoundChaos === undefined
+                  ? 'RESOLVE_ACQUISITION_BEFORE_DOWNSTREAM'
+                  : 'DEEPEST_ACQUISITION_PROOF_DEBT'
+                : stage === 'DOWNSTREAM'
+                  ? 'RESOLVE_DOWNSTREAM_AFTER_ACQUISITION'
+                  : 'DEEPEST_DOWNSTREAM_PROOF_DEBT',
             };
+            break;
+          }
+          if (!allocationTarget) break;
 
+          const { start, candidateIndex, stage, reason } = allocationTarget;
+          const sessionKey = JSON.stringify(start.fracturedRequirement);
+          const proofRecord = searchSessionRecord.fractureProofs.get(sessionKey)!;
+          const remaining = searchStopDeadline - Date.now() - 1_500;
+          const allocatedWallTimeMs = Math.min(12_000, Math.max(1_000, remaining));
+          const allocatedMaxStates = input.searchBudget?.maxStates ?? 5_000;
+          const allocatedMaxExpansionRounds = input.searchBudget?.maxExpansionRounds ?? 3;
+          stagesAllocatedThisRequest.add(`${sessionKey}:${stage}`);
+
+          if (stage === 'DOWNSTREAM_BOUND') {
+            runDownstreamBoundProbe(start, candidateIndex, reason, {
+              maxStates: allocatedMaxStates,
+              maxWallTimeMs: allocatedWallTimeMs,
+              maxExpansionRounds: allocatedMaxExpansionRounds,
+            });
+            continue;
+          }
+
+          const pCand = progressCandidates.get(`candidate_${candidateIndex}`)!;
+          if (stage === 'ACQUISITION') {
+            let acqSession = searchSessionRecord.fractureAcquisitions.get(sessionKey);
+            if (!acqSession) {
+              acqSession = createGenericSearchContinuationSession();
+              searchSessionRecord.fractureAcquisitions.set(sessionKey, acqSession);
+            }
+            const retainedBefore = acqSession.expansion.nodes.size;
+            const generatedBefore = acqSession.expansion.transitionDistributionsGeneratedTotal;
+            const lowerBefore = proofRecord.fullRouteLowerBoundChaos;
+            const upperBefore = proofRecord.fullRouteUpperBoundChaos;
+            pCand.status = 'ACQUISITION_PROBING';
+            pCand.proofReason = reason;
+            pCand.isActive = true;
+            emitProgress(
+              'FRACTURE_DEEPEN',
+              'Deepening competitive acquisition proof',
+              `Acquisition proof: ${start.label}`,
+              true
+            );
+            const allocation = {
+              maxStates: allocatedMaxStates,
+              maxWallTimeMs: allocatedWallTimeMs,
+              maxExpansionRounds: allocatedMaxExpansionRounds,
+            };
             const synthesis = synthesizeAcquisition(
               { pool, priceBook },
               {
                 cleanStartingState: cleanStart.state,
                 desiredPhysicalState: { fracturedMod: start.fracturedRequirement! },
                 cleanBaseAcquisition: cleanEvidence,
-                searchBudget: deepenAllocation,
+                searchBudget: allocation,
                 allowResearchFallbackPrices: input.allowResearchFallbackPrices ?? true,
-                searchIntent: input.searchIntent ?? 'RECOMMEND',
+                searchIntent: input.searchIntent ?? 'DEEPEN',
                 continuationSession: acqSession,
                 persistentExpansion: true,
               }
             );
-
-            pCand.statesExpanded = synthesis.search.statesExpanded;
-            pCand.elapsedMs = synthesis.search.elapsedMs;
-            pCand.lowerBoundChaos = synthesis.lowerBoundChaos;
+            stageAttemptedCandidates++;
+            stageTotalStateBudget += allocation.maxStates;
+            stageTotalWallTimeBudgetMs += allocation.maxWallTimeMs;
+            proofRecord.acquisitionLowerBoundChaos = Math.max(
+              proofRecord.acquisitionLowerBoundChaos,
+              synthesis.lowerBoundChaos
+            );
+            proofRecord.fullRouteLowerBoundChaos =
+              proofRecord.acquisitionLowerBoundChaos + proofRecord.downstreamLowerBoundChaos;
+            proofRecord.acquisitionModeledOptimal = synthesis.proof.modeledActionOptimalityProven;
+            if (proofRecord.acquisition?.status !== 'RESOLVED' || synthesis.status === 'RESOLVED') {
+              proofRecord.acquisition = synthesis;
+            }
+            if (synthesis.status === 'RESOLVED' && synthesis.expectedCostChaos !== undefined) {
+              proofRecord.acquisitionUpperBoundChaos = synthesis.expectedCostChaos;
+              synthesisResults.set(candidateIndex, synthesis);
+            }
             synthesisSummaries.set(
               candidateIndex,
-              summarizeSynthesis(synthesis, deepenAllocation, false, sessionKey)
+              summarizeSynthesis(synthesis, allocation, false, sessionKey)
             );
+            proofRecord.lastAllocatedStage = 'ACQUISITION';
+            syncProgressFromProof(candidateIndex, proofRecord);
+            pCand.status = proofRecord.acquisitionUpperBoundChaos === undefined
+              ? 'COMPETITIVE_UNRESOLVED'
+              : proofRecord.fullRouteUpperBoundChaos === undefined
+                ? 'ACQUISITION_RESOLVED'
+                : 'FULL_ROUTE_RESOLVED';
+            pCand.isActive = false;
+            const outcome: AcquisitionPortfolioProofTranche['outcome'] =
+              upperBefore === undefined && proofRecord.acquisitionUpperBoundChaos !== undefined
+                ? 'RESOLVED'
+                : proofRecord.fullRouteLowerBoundChaos > lowerBefore + 1e-9
+                  ? 'LOWER_BOUND_IMPROVED'
+                  : 'NO_PROOF_CHANGE';
+            portfolioProofTranches.push({
+              candidateId: `candidate_${candidateIndex}`,
+              label: start.label,
+              stage,
+              reason,
+              allocatedMaxStates,
+              allocatedMaxWallTimeMs: allocatedWallTimeMs,
+              retainedStatesBefore: retainedBefore,
+              retainedStatesAfter: acqSession.expansion.nodes.size,
+              transitionDistributionsGeneratedBefore: generatedBefore,
+              transitionDistributionsGeneratedAfter:
+                acqSession.expansion.transitionDistributionsGeneratedTotal,
+              lowerBoundBeforeChaos: lowerBefore,
+              lowerBoundAfterChaos: proofRecord.fullRouteLowerBoundChaos,
+              upperBoundBeforeChaos: upperBefore,
+              upperBoundAfterChaos: proofRecord.fullRouteUpperBoundChaos,
+              outcome,
+            });
+            if (outcome === 'RESOLVED') {
+              emitProgress(
+                'FRACTURE_DEEPEN',
+                'Competitive acquisition resolved',
+                `Acquisition resolved: ${start.label}`,
+                true,
+                `Acquisition resolved: ${start.label}`
+              );
+            }
+            continue;
+          }
 
-            if (synthesis.status === 'RESOLVED' && synthesis.expectedCostChaos !== undefined) {
-              synthesisResults.set(candidateIndex, synthesis);
-              pCand.status = 'RESOLVED';
-              pCand.acquisitionUpperBoundChaos = synthesis.expectedCostChaos;
-
-              const downSession = searchSessionRecord.fractureDownstreams.get(sessionKey) ?? createGenericSearchContinuationSession();
-              searchSessionRecord.fractureDownstreams.set(sessionKey, downSession);
-              const retainedDownstreamStates = downSession.expansion.nodes.size;
-              const downstreamSessionReuse: SearchSessionReuseSummary = {
-                status: retainedDownstreamStates > 0
-                  ? 'RESUMED'
-                  : invalidationReason === undefined ? 'COLD' : 'INVALIDATED',
+          const acquisition = proofRecord.acquisition;
+          if (
+            !acquisition || acquisition.status !== 'RESOLVED' ||
+            acquisition.expectedCostChaos === undefined
+          ) continue;
+          let downSession = searchSessionRecord.fractureDownstreams.get(sessionKey);
+          if (!downSession) {
+            downSession = createGenericSearchContinuationSession();
+            searchSessionRecord.fractureDownstreams.set(sessionKey, downSession);
+          }
+          const retainedBefore = downSession.expansion.nodes.size;
+          const generatedBefore = downSession.expansion.transitionDistributionsGeneratedTotal;
+          const lowerBefore = proofRecord.fullRouteLowerBoundChaos;
+          const upperBefore = proofRecord.fullRouteUpperBoundChaos;
+          pCand.status = 'DOWNSTREAM_PROBING';
+          pCand.proofReason = reason;
+          pCand.isActive = true;
+          emitProgress(
+            'DOWNSTREAM_SOLVE',
+            'Deepening competitive downstream policy',
+            `Downstream proof: ${start.label}`,
+            true
+          );
+          const downstreamResult = new GenericSearchEngine(
+            { pool, priceBook },
+            input.target,
+            {
+              includeHarvest: harvestTags.length > 0,
+              harvestTags,
+              prioritizeTargetProgress: true,
+              allowResearchFallbackPrices: input.allowResearchFallbackPrices ?? true,
+              maxStates: allocatedMaxStates,
+              maxWallTimeMs: allocatedWallTimeMs,
+              maxExpansionRounds: allocatedMaxExpansionRounds,
+              searchIntent: input.searchIntent ?? 'DEEPEN',
+              persistentExpansion: true,
+              continuationSession: downSession,
+              recommendationRefinementRounds: 1,
+              restartReacquire: {
+                destination: start.state,
+                acquisitionCostChaos: acquisition.expectedCostChaos,
+                confidence: 'research-fallback',
+                provenance: 'Self-fracture acquisition',
+                label: `Abandon attempt and reacquire self-fracture ${start.label}`,
+              },
+            }
+          ).search(start.state);
+          stageTotalStateBudget += allocatedMaxStates;
+          stageTotalWallTimeBudgetMs += allocatedWallTimeMs;
+          proofRecord.downstream = downstreamResult;
+          proofRecord.downstreamModeledOptimal = genericSearchModeledOptimal(downstreamResult);
+          if (
+            downstreamResult.optimalityProof.selectedPolicyStatus ===
+                'FULLY RESOLVED / PROPER / ABSORBING / COST-RECONCILED' &&
+            Number.isFinite(downstreamResult.totalExpectedCostChaos)
+          ) {
+            proofRecord.downstreamUpperBoundChaos = downstreamResult.totalExpectedCostChaos;
+            proofRecord.fullRouteUpperBoundChaos =
+              acquisition.expectedCostChaos + downstreamResult.totalExpectedCostChaos;
+            if (proofRecord.fullRouteUpperBoundChaos < incumbentFullRouteU) {
+              incumbentFullRouteU = proofRecord.fullRouteUpperBoundChaos;
+              currentBestUpperBound = incumbentFullRouteU;
+              bestFractureDownstreamResult = downstreamResult;
+              bestFractureCandidateIndex = candidateIndex;
+              bestFractureSessionReuse = {
+                status: retainedBefore > 0 ? 'RESUMED' : 'COLD',
                 identityHash: searchIdentityHash,
-                missReason: retainedDownstreamStates > 0 ? undefined : invalidationReason,
-                retainedStates: retainedDownstreamStates,
-                retainedTransitionDistributions:
-                  downSession.expansion.transitionDistributionsGeneratedTotal,
+                retainedStates: retainedBefore,
+                retainedTransitionDistributions: generatedBefore,
                 scope: 'FRACTURE_DOWNSTREAM',
               };
-
-              const downstreamResult = new GenericSearchEngine(
-                { pool, priceBook },
-                input.target,
-                {
-                  includeHarvest: harvestTags.length > 0,
-                  harvestTags,
-                  prioritizeTargetProgress: true,
-                  allowResearchFallbackPrices: input.allowResearchFallbackPrices ?? true,
-                  maxStates: input.searchBudget?.maxStates ?? 5_000,
-                  maxWallTimeMs: Math.min(5_000, Math.max(1_000, searchStopDeadline - Date.now() - 1_000)),
-                  maxExpansionRounds: input.searchBudget?.maxExpansionRounds ?? 3,
-                  searchIntent: input.searchIntent ?? 'RECOMMEND',
-                  persistentExpansion: true,
-                  continuationSession: downSession,
-                  recommendationRefinementRounds: 1,
-                  restartReacquire: {
-                    destination: start.state,
-                    acquisitionCostChaos: synthesis.expectedCostChaos,
-                    confidence: 'research-fallback',
-                    provenance: 'Self-fracture acquisition',
-                    label: `Abandon attempt and reacquire self-fracture ${start.label}`,
-                  },
-                }
-              ).search(start.state);
-
-              if (
-                downstreamResult.optimalityProof.selectedPolicyStatus === 'FULLY RESOLVED / PROPER / ABSORBING / COST-RECONCILED' &&
-                Number.isFinite(downstreamResult.totalExpectedCostChaos)
-              ) {
-                const fullRouteCost = synthesis.expectedCostChaos + downstreamResult.totalExpectedCostChaos;
-                pCand.status = 'FULL_ROUTE_RESOLVED';
-                pCand.downstreamUpperBoundChaos = downstreamResult.totalExpectedCostChaos;
-                pCand.fullRouteUpperBoundChaos = fullRouteCost;
-                if (fullRouteCost < incumbentFullRouteU) {
-                  incumbentFullRouteU = fullRouteCost;
-                  currentBestUpperBound = fullRouteCost;
-                  bestFractureDownstreamResult = downstreamResult;
-                  bestFractureCandidateIndex = candidateIndex;
-                  bestFractureSessionReuse = downstreamSessionReuse;
-                  progressIncumbents.push({
-                    elapsedMs: Date.now() - optimizationStarted,
-                    upperBoundChaos: fullRouteCost,
-                    label: start.label,
-                  });
-                  emitProgress('DOWNSTREAM_SOLVE', 'New best full route resolved', `New best route: ${start.label} (${fullRouteCost.toFixed(2)}c)`, true, `New best route: ${start.label} (${fullRouteCost.toFixed(2)}c)`);
-                }
-              }
+              progressIncumbents.push({
+                elapsedMs: Date.now() - optimizationStarted,
+                upperBoundChaos: incumbentFullRouteU,
+                label: start.label,
+              });
+              emitProgress(
+                'DOWNSTREAM_SOLVE',
+                'New incumbent; reconsidering all competitors',
+                `New best route: ${start.label} (${incumbentFullRouteU.toFixed(2)}c)`,
+                true,
+                `New incumbent ${start.label}: ${incumbentFullRouteU.toFixed(2)}c; competitors reprioritized`
+              );
             }
-            pCand.isActive = false;
           }
+          proofRecord.lastAllocatedStage = 'DOWNSTREAM';
+          syncProgressFromProof(candidateIndex, proofRecord);
+          pCand.status = proofRecord.fullRouteUpperBoundChaos === undefined
+            ? 'COMPETITIVE_UNRESOLVED'
+            : 'FULL_ROUTE_RESOLVED';
+          pCand.isActive = false;
+          const outcome: AcquisitionPortfolioProofTranche['outcome'] =
+            upperBefore === undefined && proofRecord.fullRouteUpperBoundChaos !== undefined
+              ? 'RESOLVED'
+              : proofRecord.fullRouteUpperBoundChaos !== undefined &&
+                  (upperBefore ?? Infinity) > proofRecord.fullRouteUpperBoundChaos + 1e-9
+                ? 'UPPER_BOUND_IMPROVED'
+                : 'NO_PROOF_CHANGE';
+          portfolioProofTranches.push({
+            candidateId: `candidate_${candidateIndex}`,
+            label: start.label,
+            stage,
+            reason,
+            allocatedMaxStates,
+            allocatedMaxWallTimeMs: allocatedWallTimeMs,
+            retainedStatesBefore: retainedBefore,
+            retainedStatesAfter: downSession.expansion.nodes.size,
+            transitionDistributionsGeneratedBefore: generatedBefore,
+            transitionDistributionsGeneratedAfter:
+              downSession.expansion.transitionDistributionsGeneratedTotal,
+            lowerBoundBeforeChaos: lowerBefore,
+            lowerBoundAfterChaos: proofRecord.fullRouteLowerBoundChaos,
+            upperBoundBeforeChaos: upperBefore,
+            upperBoundAfterChaos: proofRecord.fullRouteUpperBoundChaos,
+            outcome,
+          });
         }
 
-        // Mark any remaining candidate whose lower bound cannot beat the best full route as dominated
-        for (const { candidateIndex } of fractureEntries) {
+        // Reconcile every family immediately against the final incumbent from this request.
+        for (const { start, candidateIndex } of fractureEntries) {
           const pCand = progressCandidates.get(`candidate_${candidateIndex}`);
-          const s = synthesisSummaries.get(candidateIndex);
-          if (pCand && s && s.lowerBoundChaos >= incumbentFullRouteU && pCand.status !== 'FULL_ROUTE_RESOLVED') {
+          const sessionKey = JSON.stringify(start.fracturedRequirement);
+          const proofRecord = searchSessionRecord.fractureProofs.get(sessionKey)!;
+          syncProgressFromProof(candidateIndex, proofRecord);
+          if (pCand && proofRecord.fullRouteLowerBoundChaos >= incumbentFullRouteU) {
             pCand.status = 'DOMINATED';
+            pCand.proofReason = 'DOMINATED_BY_FULL_ROUTE_BOUND';
+          } else if (pCand && candidateIndex !== bestFractureCandidateIndex) {
+            pCand.status = 'COMPETITIVE_UNRESOLVED';
+            pCand.proofReason = 'CAN_STILL_BEAT_INCUMBENT';
           }
         }
 
         // Mark winner
         if (bestFractureCandidateIndex !== undefined) {
           const winnerCand = progressCandidates.get(`candidate_${bestFractureCandidateIndex}`);
-          if (winnerCand) winnerCand.status = 'SELECTED';
+          if (winnerCand) {
+            winnerCand.status = 'SELECTED';
+            winnerCand.proofReason = 'SELECTED_EXECUTABLE_ROUTE';
+          }
         }
       }
       stageElapsedMs = (fastCleanResult?.searchSummary.elapsedMs ?? 0) +
@@ -1745,6 +2474,11 @@ export class OptimizerService {
     const bestFractureTotalCost = usesDirectFracturePolicy && bestFractureSynthesis?.expectedCostChaos !== undefined && bestFractureDownstreamResult?.totalExpectedCostChaos !== undefined
       ? bestFractureSynthesis.expectedCostChaos + bestFractureDownstreamResult.totalExpectedCostChaos
       : undefined;
+    const bestFractureProofRecord = bestFractureCandidateIndex === undefined
+      ? undefined
+      : searchSessionRecord.fractureProofs.get(
+          JSON.stringify(starts[bestFractureCandidateIndex].fracturedRequirement)
+        );
     const bestFractureRoute: RouteSummary | undefined = usesDirectFracturePolicy && bestFractureTotalCost !== undefined
       ? {
           actionId: `acquire_candidate_${bestFractureCandidateIndex}_self-fracture_executable`,
@@ -1752,9 +2486,15 @@ export class OptimizerService {
           acquisitionCandidateId: `candidate_${bestFractureCandidateIndex}`,
           acquisitionMethodId: 'self-fracture_executable',
           expectedTotalCostChaos: bestFractureTotalCost,
-          lowerBoundChaos: bestFractureSynthesis?.lowerBoundChaos ?? 0,
+          lowerBoundChaos: bestFractureProofRecord?.fullRouteLowerBoundChaos ??
+            bestFractureSynthesis?.lowerBoundChaos ?? 0,
           incumbentUpperBoundChaos: bestFractureTotalCost,
-          optimalityGapChaos: Math.max(0, bestFractureTotalCost - (bestFractureSynthesis?.lowerBoundChaos ?? 0)),
+          optimalityGapChaos: Math.max(
+            0,
+            bestFractureTotalCost -
+              (bestFractureProofRecord?.fullRouteLowerBoundChaos ??
+                bestFractureSynthesis?.lowerBoundChaos ?? 0)
+          ),
           status: 'RESOLVED',
           couldBeatResolvedIncumbent: false,
         }
@@ -1793,6 +2533,11 @@ export class OptimizerService {
     const synthesisEvidenceRoutes: RouteSummary[] = [...synthesisSummaries.entries()].flatMap(
       ([candidateIndex, synthesis]): RouteSummary[] => {
         const candidateId = `candidate_${candidateIndex}`;
+        const proofRecord = searchSessionRecord.fractureProofs.get(
+          JSON.stringify(starts[candidateIndex].fracturedRequirement)
+        );
+        const fullRouteLowerBound = proofRecord?.fullRouteLowerBoundChaos ??
+          synthesis.lowerBoundChaos;
         if (synthesis.status === 'SKIPPED_DOMINATED') {
           return [{
             actionId: `synthesis_bound_${candidateId}`,
@@ -1800,11 +2545,11 @@ export class OptimizerService {
             acquisitionCandidateId: candidateId,
             acquisitionMethodId: 'self-fracture_executable',
             expectedTotalCostChaos: null,
-            lowerBoundChaos: synthesis.lowerBoundChaos,
+            lowerBoundChaos: fullRouteLowerBound,
             incumbentUpperBoundChaos: incumbentUpperBound ?? null,
             optimalityGapChaos: incumbentUpperBound === undefined
               ? null
-              : Math.max(0, incumbentUpperBound - synthesis.lowerBoundChaos),
+              : Math.max(0, incumbentUpperBound - fullRouteLowerBound),
             status: 'DOMINATED_BY_BOUND',
             couldBeatResolvedIncumbent: false,
           }];
@@ -1817,7 +2562,7 @@ export class OptimizerService {
           return [];
         }
         const couldBeat = incumbentUpperBound !== undefined &&
-          synthesis.lowerBoundChaos < incumbentUpperBound;
+          fullRouteLowerBound < incumbentUpperBound;
         const dominatedByBound = incumbentUpperBound !== undefined && !couldBeat;
         return [{
           actionId: `synthesis_frontier_${candidateId}`,
@@ -1827,11 +2572,11 @@ export class OptimizerService {
           acquisitionCandidateId: candidateId,
           acquisitionMethodId: 'self-fracture_executable',
           expectedTotalCostChaos: null,
-          lowerBoundChaos: synthesis.lowerBoundChaos,
+          lowerBoundChaos: fullRouteLowerBound,
           incumbentUpperBoundChaos: incumbentUpperBound ?? null,
           optimalityGapChaos: incumbentUpperBound === undefined
             ? null
-            : Math.max(0, incumbentUpperBound - synthesis.lowerBoundChaos),
+            : Math.max(0, incumbentUpperBound - fullRouteLowerBound),
           status: dominatedByBound ? 'DOMINATED_BY_BOUND' : 'UNRESOLVED',
           couldBeatResolvedIncumbent: couldBeat,
         }];
@@ -1842,30 +2587,152 @@ export class OptimizerService {
         (left.expectedTotalCostChaos ?? Infinity) - (right.expectedTotalCostChaos ?? Infinity) ||
         left.lowerBoundChaos - right.lowerBoundChaos
       );
-    const unresolvedAcquisitionRoutes = acquisitionRoutes.filter(
-      (route) => route.status === 'UNRESOLVED' || route.couldBeatResolvedIncumbent
+    const portfolioCandidateEvidence: AcquisitionPortfolioCandidateProofEvidence[] = starts.map(
+      (start, candidateIndex) => {
+        const candidateId = `candidate_${candidateIndex}`;
+        const isClean = candidateIndex === cleanCandidateIndex;
+        const sessionKey = isClean ? undefined : JSON.stringify(start.fracturedRequirement);
+        const proofRecord = sessionKey === undefined
+          ? undefined
+          : searchSessionRecord.fractureProofs.get(sessionKey);
+        const acquisitionLowerBoundChaos = isClean
+          ? cleanEvidence.costChaos
+          : proofRecord?.acquisitionLowerBoundChaos ??
+            structuralBounds.get(candidateIndex)?.combinedLowerBoundChaos ?? 0;
+        const downstreamLowerBoundChaos = isClean
+          ? fastCleanResult
+            ? genericSearchStartLowerBound(fastCleanResult, cleanStart.state, input.target)
+            : 0
+          : proofRecord?.downstreamLowerBoundChaos ?? 0;
+        const fullRouteLowerBoundChaos = acquisitionLowerBoundChaos +
+          downstreamLowerBoundChaos;
+        const acquisitionUpperBoundChaos = isClean
+          ? cleanEvidence.costChaos
+          : proofRecord?.acquisitionUpperBoundChaos;
+        const downstreamUpperBoundChaos = isClean && fastCleanRoute?.expectedTotalCostChaos !== null &&
+            fastCleanRoute?.expectedTotalCostChaos !== undefined
+          ? fastCleanRoute.expectedTotalCostChaos - cleanEvidence.costChaos
+          : proofRecord?.downstreamUpperBoundChaos;
+        const fullRouteUpperBoundChaos = isClean
+          ? fastCleanRoute?.expectedTotalCostChaos ?? undefined
+          : proofRecord?.fullRouteUpperBoundChaos;
+        const selected = selectedParts.candidateId === candidateId;
+        const dominated = incumbentUpperBound !== undefined && !selected &&
+          fullRouteLowerBoundChaos >= incumbentUpperBound;
+        const competitive = incumbentUpperBound !== undefined && !selected && !dominated;
+        const status: AcquisitionPortfolioCandidateLifecycle = selected
+          ? 'SELECTED'
+          : dominated
+            ? 'DOMINATED'
+            : competitive
+              ? 'COMPETITIVE_UNRESOLVED'
+              : fullRouteUpperBoundChaos !== undefined
+                ? 'FULL_ROUTE_RESOLVED'
+                : acquisitionUpperBoundChaos !== undefined
+                  ? 'ACQUISITION_RESOLVED'
+                  : (searchSessionRecord.fractureAcquisitions.get(sessionKey ?? '')?.expansion.nodes.size ?? 0) > 0
+                    ? 'COMPETITIVE_UNRESOLVED'
+                    : 'NOT_STARTED';
+        const proofReason: AcquisitionPortfolioProofReason = selected
+          ? 'SELECTED_EXECUTABLE_ROUTE'
+          : dominated
+            ? 'DOMINATED_BY_FULL_ROUTE_BOUND'
+            : competitive
+              ? 'CAN_STILL_BEAT_INCUMBENT'
+              : isClean ? 'CLEAN_ROUTE_PROVEN' : 'NO_EXECUTABLE_ROUTE';
+        const acquisitionSession = sessionKey === undefined
+          ? undefined
+          : searchSessionRecord.fractureAcquisitions.get(sessionKey);
+        const downstreamSession = sessionKey === undefined
+          ? searchSessionRecord.cleanDownstream
+          : searchSessionRecord.fractureDownstreams.get(sessionKey);
+        const boundSession = sessionKey === undefined
+          ? undefined
+          : searchSessionRecord.fractureDownstreamBounds.get(sessionKey)?.continuation;
+        return {
+          candidateId,
+          label: start.label,
+          kind: isClean ? 'clean' : 'self-fracture',
+          acquisitionLowerBoundChaos,
+          downstreamLowerBoundChaos,
+          fullRouteLowerBoundChaos,
+          acquisitionUpperBoundChaos,
+          downstreamUpperBoundChaos,
+          fullRouteUpperBoundChaos,
+          status,
+          proofReason,
+          acquisitionModeledOptimal: isClean ? true : proofRecord?.acquisitionModeledOptimal ?? false,
+          downstreamModeledOptimal: isClean
+            ? fastCleanResult ? genericSearchModeledOptimal(fastCleanResult) : false
+            : proofRecord?.downstreamModeledOptimal ?? false,
+          retainedAcquisitionStates: acquisitionSession?.expansion.nodes.size ?? 0,
+          retainedDownstreamStates: (downstreamSession?.expansion.nodes.size ?? 0) +
+            (boundSession?.expansion.nodes.size ?? 0),
+          acquisitionTransitionDistributionsGenerated:
+            acquisitionSession?.expansion.transitionDistributionsGeneratedTotal ?? 0,
+          downstreamTransitionDistributionsGenerated:
+            (downstreamSession?.expansion.transitionDistributionsGeneratedTotal ?? 0) +
+            (boundSession?.expansion.transitionDistributionsGeneratedTotal ?? 0),
+        };
+      }
     );
-    const acquisitionSelectionThreats = unresolvedAcquisitionRoutes.filter(
-      (route) => route.acquisitionCandidateId !== selectedParts.candidateId
+    const acquisitionSelectionThreats = portfolioCandidateEvidence.filter(
+      (candidate) => candidate.status === 'COMPETITIVE_UNRESOLVED'
     );
-    const bestUnresolvedLowerBound = unresolvedAcquisitionRoutes.reduce(
-      (minimum, route) => Math.min(minimum, route.lowerBoundChaos),
+    const bestUnresolvedLowerBound = acquisitionSelectionThreats.reduce(
+      (minimum, candidate) => Math.min(minimum, candidate.fullRouteLowerBoundChaos),
       Infinity
     );
     const acquisitionSelectionSafe = incumbentUpperBound !== undefined &&
-      !acquisitionSelectionThreats.some((route) => route.lowerBoundChaos < incumbentUpperBound);
+      acquisitionSelectionThreats.length === 0;
     const acquisitionPotentialGap = incumbentUpperBound !== undefined && Number.isFinite(bestUnresolvedLowerBound)
       ? Math.max(0, incumbentUpperBound - bestUnresolvedLowerBound)
       : undefined;
+    const selectedPortfolioEvidence = portfolioCandidateEvidence.find(
+      (candidate) => candidate.candidateId === selectedParts.candidateId
+    );
+    const portfolioProofStatus: AcquisitionPortfolioProofStatus = incumbentUpperBound === undefined
+      ? 'NO_EXECUTABLE_ROUTE'
+      : acquisitionSelectionSafe && selectedPortfolioEvidence?.acquisitionModeledOptimal &&
+          selectedPortfolioEvidence.downstreamModeledOptimal
+        ? 'PORTFOLIO_OPTIMAL'
+        : acquisitionSelectionSafe
+          ? 'SELECTED_ACQUISITION_SAFE'
+          : 'BEST_RESOLVED_UNPROVEN';
+    const resolvedCompetitiveCandidates = acquisitionSelectionThreats.filter(
+      (candidate) => candidate.fullRouteUpperBoundChaos !== undefined
+    ).length;
+    const dominatedCandidates = portfolioCandidateEvidence.filter(
+      (candidate) => candidate.status === 'DOMINATED'
+    ).length;
+    const portfolioProof: AcquisitionPortfolioProofSummary = {
+      status: portfolioProofStatus,
+      selectedFullRouteUpperBoundChaos: incumbentUpperBound,
+      bestCompetitiveLowerBoundChaos: Number.isFinite(bestUnresolvedLowerBound)
+        ? bestUnresolvedLowerBound
+        : undefined,
+      potentialGapChaos: acquisitionPotentialGap,
+      unresolvedCompetitiveCandidates: acquisitionSelectionThreats.length,
+      resolvedCompetitiveCandidates,
+      dominatedCandidates,
+      candidateEvidence: portfolioCandidateEvidence,
+      tranches: portfolioProofTranches,
+      schedulerPolicy:
+        'Admissible best-bound scheduling: deepen only non-selected families whose full-route L ' +
+        'can beat incumbent U; resolve acquisition before executable downstream, then allocate to ' +
+        'the larger acquisition/downstream proof debt. Stable exact-identity ordering breaks ties.',
+    };
+    currentPortfolioProofStatus = portfolioProofStatus;
+    currentUnresolvedCompetitiveCandidates = acquisitionSelectionThreats.length;
+    currentResolvedCompetitiveCandidates = resolvedCompetitiveCandidates;
+    currentDominatedCandidates = dominatedCandidates;
     const selectedCandidateIndex = selectedParts.candidateId === undefined
       ? undefined
       : Number(/^candidate_(\d+)$/.exec(selectedParts.candidateId)?.[1]);
     const selectedSynthesis = selectedCandidateIndex === undefined || Number.isNaN(selectedCandidateIndex)
       ? undefined
       : synthesisSummaries.get(selectedCandidateIndex);
-    const synthesisFrontiersCouldBeat = acquisitionSelectionThreats.some(
-      (route) => route.couldBeatResolvedIncumbent
-    );
+    const synthesisFrontiersCouldBeat = acquisitionSelectionThreats.length > 0;
     const overallModeledActionOptimalityProven =
       result.optimalityProof.modeledActionOptimalityProven &&
       (selectedSynthesis?.proof?.modeledActionOptimalityProven ?? true) &&
@@ -1875,7 +2742,7 @@ export class OptimizerService {
       : 'NOT YET PROVEN';
     const overallUnresolvedCompetitorCount =
       result.optimalityProof.potentiallyCompetitiveUnresolvedCount +
-      acquisitionSelectionThreats.filter((route) => route.couldBeatResolvedIncumbent).length;
+      acquisitionSelectionThreats.length;
     const overallUnresolvedCouldBeat =
       result.optimalityProof.unresolvedCandidatesCouldBeatIncumbent ||
       synthesisFrontiersCouldBeat;
@@ -2078,7 +2945,7 @@ export class OptimizerService {
         : undefined,
       recommended !== null && !acquisitionSelectionSafe
         ? `ACQUISITION SELECTION IS PROVISIONAL: resolved incumbent ${incumbentUpperBound!.toFixed(3)}c; ` +
-          `best unresolved acquisition lower bound ${bestUnresolvedLowerBound.toFixed(3)}c; ` +
+          `best competitive full-route lower bound ${bestUnresolvedLowerBound.toFixed(3)}c; ` +
           `potential gap ${acquisitionPotentialGap!.toFixed(3)}c.`
         : undefined,
     ].filter((warning): warning is string => warning !== undefined);
@@ -2221,6 +3088,7 @@ export class OptimizerService {
           ? bestUnresolvedLowerBound
           : undefined,
         potentialGapChaos: acquisitionPotentialGap,
+        portfolioProof,
         stage: {
           mode: stageMode,
           candidateCount: fractureEntries.length,
@@ -2360,9 +3228,37 @@ export class OptimizerService {
     currentBestUpperBound = output.expectedCostChaos ?? undefined;
     currentBestUnresolvedLowerBound = output.acquisition.bestUnresolvedLowerBoundChaos;
     currentPotentialGap = output.acquisition.potentialGapChaos;
+    currentPortfolioProofStatus = output.acquisition.portfolioProof.status;
+    currentUnresolvedCompetitiveCandidates =
+      output.acquisition.portfolioProof.unresolvedCompetitiveCandidates;
+    currentResolvedCompetitiveCandidates =
+      output.acquisition.portfolioProof.resolvedCompetitiveCandidates;
+    currentDominatedCandidates = output.acquisition.portfolioProof.dominatedCandidates;
     for (const candidate of progressCandidates.values()) {
       candidate.isActive = false;
-      if (candidate.status === 'PROBING') candidate.status = 'UNRESOLVED';
+      if (
+        candidate.status === 'PROBING' ||
+        candidate.status === 'ACQUISITION_PROBING' ||
+        candidate.status === 'DOWNSTREAM_PROBING'
+      ) candidate.status = 'COMPETITIVE_UNRESOLVED';
+    }
+    for (const evidence of output.acquisition.portfolioProof.candidateEvidence) {
+      const progressId = evidence.kind === 'clean' ? 'clean' : evidence.candidateId;
+      const candidate = progressCandidates.get(progressId);
+      if (!candidate) continue;
+      candidate.status = evidence.status;
+      candidate.acquisitionLowerBoundChaos = evidence.acquisitionLowerBoundChaos;
+      candidate.downstreamLowerBoundChaos = evidence.downstreamLowerBoundChaos;
+      candidate.fullRouteLowerBoundChaos = evidence.fullRouteLowerBoundChaos;
+      candidate.lowerBoundChaos = evidence.fullRouteLowerBoundChaos;
+      candidate.acquisitionUpperBoundChaos = evidence.acquisitionUpperBoundChaos;
+      candidate.downstreamUpperBoundChaos = evidence.downstreamUpperBoundChaos;
+      candidate.fullRouteUpperBoundChaos = evidence.fullRouteUpperBoundChaos;
+      candidate.proofReason = evidence.proofReason;
+      candidate.retainedAcquisitionStates = evidence.retainedAcquisitionStates;
+      candidate.retainedDownstreamStates = evidence.retainedDownstreamStates;
+      candidate.retainedStates = evidence.retainedAcquisitionStates +
+        evidence.retainedDownstreamStates;
     }
     const selectedProgressId = output.acquisition.selectedCandidateId ===
         `candidate_${cleanCandidateIndex}`
@@ -2371,6 +3267,15 @@ export class OptimizerService {
     if (selectedProgressId) {
       const selectedProgress = progressCandidates.get(selectedProgressId);
       if (selectedProgress) selectedProgress.status = 'SELECTED';
+    }
+    const portfolioMilestone = output.acquisition.portfolioProof.status === 'PORTFOLIO_OPTIMAL'
+      ? 'Portfolio optimality proven over modeled acquisitions'
+      : output.acquisition.portfolioProof.status === 'SELECTED_ACQUISITION_SAFE'
+        ? 'Selected acquisition is safe against every modeled starting family'
+        : undefined;
+    if (portfolioMilestone && !recentMilestones.includes(portfolioMilestone)) {
+      recentMilestones.push(portfolioMilestone);
+      if (recentMilestones.length > 8) recentMilestones.shift();
     }
     const finalFocus = output.recommended === null
       ? 'Search finished without a resolved route'

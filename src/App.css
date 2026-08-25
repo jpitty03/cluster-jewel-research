@@ -877,6 +877,10 @@ td a {
   user-select: none;
 }
 
+.searchable-modifier-select.open {
+  z-index: 400;
+}
+
 .searchable-select-trigger {
   display: flex;
   align-items: center;
@@ -951,12 +955,20 @@ td a {
     }
 
     .search-clear-btn {
+      appearance: none;
+      border: 0;
+      background: transparent;
       font-size: 11px;
       color: #94a3b8;
       cursor: pointer;
       padding: 2px 4px;
       border-radius: 4px;
       transition: color 0.15s, background-color 0.15s;
+
+      &:focus-visible {
+        outline: 2px solid var(--accent);
+        outline-offset: 1px;
+      }
 
       &:hover {
         color: #f8fafc;
@@ -1040,6 +1052,9 @@ td a {
   }
 
   .clear-selection-btn {
+    appearance: none;
+    border: 0;
+    background: transparent;
     display: inline-flex;
     align-items: center;
     justify-content: center;
@@ -1051,6 +1066,11 @@ td a {
     cursor: pointer;
     transition: color 0.15s, background-color 0.15s;
 
+    &:focus-visible {
+      outline: 2px solid var(--accent);
+      outline-offset: 1px;
+    }
+
     &:hover {
       color: var(--danger);
       background: rgba(255, 107, 107, 0.15);
@@ -1058,16 +1078,42 @@ td a {
   }
 
   .trigger-chevron {
+    appearance: none;
+    border: 0;
+    background: transparent;
     font-size: 12px;
     color: var(--text-dim);
     cursor: pointer;
     padding: 2px;
     transition: transform 0.2s ease, color 0.15s ease;
 
+    &:focus-visible {
+      outline: 2px solid var(--accent);
+      outline-offset: 1px;
+    }
+
     &.rotated {
       transform: rotate(180deg);
       color: var(--accent-2);
     }
+  }
+}
+
+.searchable-modifier-select.open-upward {
+  .searchable-select-trigger.open {
+    border-radius: 0 0 8px 8px;
+    border-top-color: #242c3d;
+    border-bottom-color: var(--accent);
+  }
+
+  .searchable-dropdown-popup {
+    top: auto;
+    bottom: 100%;
+    border: 1px solid var(--accent);
+    border-bottom: none;
+    border-radius: 10px 10px 0 0;
+    box-shadow: 0 -16px 36px rgba(0, 0, 0, 0.9), 0 0 0 1px rgba(224, 179, 84, 0.25);
+    animation-name: dropdownSlideUp;
   }
 }
 
@@ -1114,6 +1160,17 @@ td a {
   from {
     opacity: 0;
     transform: translateY(-4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes dropdownSlideUp {
+  from {
+    opacity: 0;
+    transform: translateY(4px);
   }
   to {
     opacity: 1;
@@ -1275,6 +1332,66 @@ td a {
     margin-top: 4px;
     font-size: 11px;
     opacity: 0.7;
+  }
+}
+
+.sr-only {
+  position: absolute !important;
+  width: 1px !important;
+  height: 1px !important;
+  padding: 0 !important;
+  margin: -1px !important;
+  overflow: hidden !important;
+  clip: rect(0, 0, 0, 0) !important;
+  white-space: nowrap !important;
+  border: 0 !important;
+}
+
+@media (max-width: 420px) {
+  .target-row {
+    align-items: stretch;
+    flex-wrap: wrap;
+
+    .remove-target-btn {
+      width: 100%;
+      height: 34px;
+    }
+  }
+
+  .searchable-select-trigger {
+    padding: 0 8px;
+
+    .selected-mod-preview {
+      align-items: flex-start;
+      flex-direction: column;
+      gap: 2px;
+      padding: 4px 0;
+    }
+
+    .mod-display-name {
+      max-width: 100%;
+    }
+
+    .mod-badges {
+      max-width: 100%;
+      flex-wrap: wrap;
+    }
+  }
+
+  .dropdown-option-item {
+    .option-meta {
+      align-items: flex-start;
+      flex-direction: column;
+      gap: 2px;
+    }
+
+    .technical-name {
+      max-width: 100%;
+    }
+
+    .meta-badges {
+      flex-wrap: wrap;
+    }
   }
 }
 
@@ -2072,6 +2189,82 @@ td a {
   color: #facc15;
 }
 
+.portfolio-proof-meter {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 18px;
+  padding: 11px 14px;
+  border: 1px solid rgba(245, 158, 11, 0.32);
+  border-left: 4px solid #f59e0b;
+  border-radius: 8px;
+  background: rgba(245, 158, 11, 0.07);
+}
+
+.portfolio-proof-meter.portfolio_optimal,
+.portfolio-proof-meter.selected_acquisition_safe {
+  border-color: rgba(16, 185, 129, 0.34);
+  border-left-color: #10b981;
+  background: rgba(16, 185, 129, 0.07);
+}
+
+.portfolio-proof-meter.no_executable_route {
+  border-color: rgba(239, 68, 68, 0.34);
+  border-left-color: #ef4444;
+  background: rgba(239, 68, 68, 0.07);
+}
+
+.portfolio-proof-copy {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.portfolio-proof-copy strong {
+  color: var(--text-h);
+  font-size: 14px;
+}
+
+.portfolio-proof-copy > span:last-child {
+  color: var(--text-dim);
+  font-size: 12px;
+}
+
+.portfolio-proof-eyebrow {
+  color: #fbbf24;
+  font-size: 9.5px;
+  font-weight: 700;
+  letter-spacing: 0.7px;
+  text-transform: uppercase;
+}
+
+.portfolio-proof-counts {
+  display: flex;
+  gap: 14px;
+  margin: 0;
+  flex: 0 0 auto;
+}
+
+.portfolio-proof-counts div {
+  min-width: 58px;
+  text-align: center;
+}
+
+.portfolio-proof-counts dt {
+  color: var(--text-dim);
+  font-size: 9px;
+  letter-spacing: 0.45px;
+  text-transform: uppercase;
+}
+
+.portfolio-proof-counts dd {
+  margin: 1px 0 0;
+  color: var(--text-h);
+  font-size: 15px;
+  font-weight: 700;
+}
+
 /* Macro Markov-Bellman Acquisition Graph */
 .macro-graph-container {
   display: flex;
@@ -2157,12 +2350,15 @@ td a {
   color: var(--text-dim);
 }
 
-.candidate-status-chip.probing {
+.candidate-status-chip.probing,
+.candidate-status-chip.acquisition_probing,
+.candidate-status-chip.downstream_probing {
   background: rgba(245, 158, 11, 0.2);
   color: #fcd34d;
 }
 
 .candidate-status-chip.resolved,
+.candidate-status-chip.acquisition_resolved,
 .candidate-status-chip.full_route_resolved {
   background: rgba(56, 189, 248, 0.2);
   color: #7dd3fc;
@@ -2176,6 +2372,12 @@ td a {
 .candidate-status-chip.dominated {
   background: rgba(239, 68, 68, 0.15);
   color: #fca5a5;
+}
+
+.candidate-status-chip.competitive_unresolved,
+.candidate-status-chip.unresolved {
+  background: rgba(245, 158, 11, 0.14);
+  color: #fde68a;
 }
 
 .node-body {
@@ -2228,6 +2430,28 @@ td a {
 .bound-row.full-cost .bound-num.cost {
   color: #facc15;
   font-weight: 700;
+}
+
+.bound-row.proof-bound .bound-num {
+  color: #7dd3fc;
+}
+
+.candidate-proof-reason {
+  margin: 4px 0 0;
+  color: var(--text-dim);
+  font-size: 10.5px;
+  line-height: 1.35;
+}
+
+@media (max-width: 560px) {
+  .portfolio-proof-meter {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .portfolio-proof-counts {
+    justify-content: space-between;
+  }
 }
 
 .node-footer {

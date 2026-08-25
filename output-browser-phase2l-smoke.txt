@@ -1,0 +1,18 @@
+PHASE 2L — SEARCH ACTIVITY / MODIFIER SELECTOR BROWSER SMOKE
+URL: http://127.0.0.1:5173/
+
+L12 SEARCH ACTIVITY PROOF UI
+  terminal COMPLETE=PASS; candidate cards=2
+  Acquisition L/U + Full-route L/U=PASS
+  semantic proof status=PORTFOLIO PROOF Selected acquisition is safe Every competing acquisition family is resolved or bounded above the selected route. COMPETITIVE 0 EXECUTABLE RIVALS 0 DOMINATED 1
+  selected/dominated lifecycle=PASS; Retry Deeper callbacks=1
+
+L13 SEARCHABLE MODIFIER SELECTOR
+  exact duplicate-label selection=dup-b; disabled skip=true
+  aria controls/active descendant=true; Escape focus return=true
+  query identity safety=true; real clear buttons=true
+  live result announcement=0 modifiers available for this search.
+  four rows=4; 320px no overflow=true; upward popup=true/true
+
+ALL PHASE 2L BROWSER UI GATES: PASS
+Unit tests run: NO

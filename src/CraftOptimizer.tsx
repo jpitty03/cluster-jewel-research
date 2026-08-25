@@ -2,6 +2,8 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import type { BaseType } from '../crafting-engine/src/domain/ItemState.ts';
 import type {
   AcquisitionCandidateSummary,
+  AcquisitionPortfolioProofReason,
+  AcquisitionPortfolioProofStatus,
   OptimizeCraftInput,
   OptimizeCraftResult,
   OptimizerProgressSnapshot,
@@ -146,7 +148,43 @@ interface SearchActivityVisualizerProps {
   onCancel?: () => void;
 }
 
-function SearchActivityVisualizer({
+const PORTFOLIO_PROOF_COPY: Record<AcquisitionPortfolioProofStatus, {
+  title: string;
+  detail: string;
+}> = {
+  PORTFOLIO_OPTIMAL: {
+    title: 'Portfolio optimal',
+    detail: 'The selected route and every modeled acquisition family are proven at this depth.',
+  },
+  SELECTED_ACQUISITION_SAFE: {
+    title: 'Selected acquisition is safe',
+    detail: 'Every competing acquisition family is resolved or bounded above the selected route.',
+  },
+  BEST_RESOLVED_UNPROVEN: {
+    title: 'Best executable route found',
+    detail: 'At least one unresolved family still has a full-route lower bound below the incumbent.',
+  },
+  NO_EXECUTABLE_ROUTE: {
+    title: 'No executable route yet',
+    detail: 'The current search depth has not produced a finite full-route upper bound.',
+  },
+};
+
+const PROOF_REASON_COPY: Record<AcquisitionPortfolioProofReason, string> = {
+  DEEPEST_COMPETITOR_LOWER_BOUND: 'Deepening the strongest remaining competitor bound.',
+  CAN_STILL_BEAT_INCUMBENT: 'Its full-route lower bound can still beat the incumbent.',
+  INCUMBENT_CHANGED_REEVALUATE: 'A new incumbent changed this candidate\'s proof priority.',
+  RESOLVE_ACQUISITION_BEFORE_DOWNSTREAM: 'Acquisition must resolve before executable downstream work.',
+  RESOLVE_DOWNSTREAM_AFTER_ACQUISITION: 'Acquisition resolved; downstream route is next.',
+  DEEPEST_ACQUISITION_PROOF_DEBT: 'Acquisition has the larger unresolved proof gap.',
+  DEEPEST_DOWNSTREAM_PROOF_DEBT: 'Downstream has the larger unresolved proof gap.',
+  DOMINATED_BY_FULL_ROUTE_BOUND: 'Its admissible full-route lower bound cannot beat the incumbent.',
+  SELECTED_EXECUTABLE_ROUTE: 'This is the best executable full route found.',
+  CLEAN_ROUTE_PROVEN: 'The clean route is resolved at the current allocated depth.',
+  NO_EXECUTABLE_ROUTE: 'No executable full route has resolved for this family.',
+};
+
+export function SearchActivityVisualizer({
   progress,
   running,
   onRetryDeeper,
@@ -168,6 +206,8 @@ function SearchActivityVisualizer({
   const elapsed = progress ? (progress.elapsedMs / 1000).toFixed(1) : '0.0';
   const totalStates = progress?.totalStatesExpanded ?? 0;
   const retainedStates = progress?.retainedStatesReused ?? 0;
+  const proofStatus = progress?.portfolioProofStatus;
+  const proofCopy = proofStatus ? PORTFOLIO_PROOF_COPY[proofStatus] : undefined;
 
   return (
     <section className="optimizer-card search-activity-card" aria-label="Search Activity">
@@ -242,6 +282,34 @@ function SearchActivityVisualizer({
         </div>
       </div>
 
+      {proofStatus && proofCopy && (
+        <div
+          className={`portfolio-proof-meter ${proofStatus.toLowerCase()}`}
+          role="status"
+          aria-live="polite"
+        >
+          <div className="portfolio-proof-copy">
+            <span className="portfolio-proof-eyebrow">Portfolio proof</span>
+            <strong>{proofCopy.title}</strong>
+            <span>{proofCopy.detail}</span>
+          </div>
+          <dl className="portfolio-proof-counts">
+            <div>
+              <dt>Competitive</dt>
+              <dd>{progress?.unresolvedCompetitiveCandidates ?? 0}</dd>
+            </div>
+            <div>
+              <dt>Executable rivals</dt>
+              <dd>{progress?.resolvedCompetitiveCandidates ?? 0}</dd>
+            </div>
+            <div>
+              <dt>Dominated</dt>
+              <dd>{progress?.dominatedCandidates ?? 0}</dd>
+            </div>
+          </dl>
+        </div>
+      )}
+
       {/* Macro Markov-Bellman Graph */}
       <div className="macro-graph-container">
         <h3 className="macro-graph-title">Macro Markov-Bellman Acquisition Graph</h3>
@@ -253,7 +321,10 @@ function SearchActivityVisualizer({
           {progress?.candidates.map((cand) => {
             const isWinner = cand.status === 'SELECTED';
             const isDominated = cand.status === 'DOMINATED';
-            const isProbing = cand.status === 'PROBING' || cand.isActive;
+            const isProbing = cand.status === 'PROBING' ||
+              cand.status === 'ACQUISITION_PROBING' ||
+              cand.status === 'DOWNSTREAM_PROBING' ||
+              cand.isActive;
 
             return (
               <div
@@ -275,37 +346,44 @@ function SearchActivityVisualizer({
 
                   <div className="node-bounds-grid">
                     <div className="bound-row">
-                      <span className="bound-tag">Lower Bound L:</span>
+                      <span className="bound-tag">Acquisition L:</span>
                       <span className="bound-num">
-                        {cand.lowerBoundChaos !== undefined ? `${cand.lowerBoundChaos.toFixed(1)}c` : '—'}
+                        {cand.acquisitionLowerBoundChaos !== undefined ? `${cand.acquisitionLowerBoundChaos.toFixed(1)}c` : '—'}
                       </span>
                     </div>
 
-                    {cand.acquisitionUpperBoundChaos !== undefined && (
-                      <div className="bound-row">
-                        <span className="bound-tag">Acquisition U:</span>
-                        <span className="bound-num">{cand.acquisitionUpperBoundChaos.toFixed(1)}c</span>
-                      </div>
-                    )}
+                    <div className="bound-row">
+                      <span className="bound-tag">Acquisition U:</span>
+                      <span className="bound-num">
+                        {cand.acquisitionUpperBoundChaos !== undefined ? `${cand.acquisitionUpperBoundChaos.toFixed(1)}c` : '—'}
+                      </span>
+                    </div>
 
-                    {cand.downstreamUpperBoundChaos !== undefined && (
-                      <div className="bound-row">
-                        <span className="bound-tag">Downstream U:</span>
-                        <span className="bound-num">{cand.downstreamUpperBoundChaos.toFixed(1)}c</span>
-                      </div>
-                    )}
+                    <div className="bound-row proof-bound">
+                      <span className="bound-tag">Full-route L:</span>
+                      <span className="bound-num">
+                        {cand.fullRouteLowerBoundChaos !== undefined ? `${cand.fullRouteLowerBoundChaos.toFixed(1)}c` : '—'}
+                      </span>
+                    </div>
 
                     <div className="bound-row full-cost">
-                      <span className="bound-tag">Current Full Route U:</span>
+                      <span className="bound-tag">Current Full-route U:</span>
                       <span className="bound-num cost">
                         {cand.fullRouteUpperBoundChaos !== undefined ? `${cand.fullRouteUpperBoundChaos.toFixed(1)}c` : '—'}
                       </span>
                     </div>
                   </div>
+                  {cand.proofReason && (
+                    <p className="candidate-proof-reason">{PROOF_REASON_COPY[cand.proofReason]}</p>
+                  )}
                 </div>
 
                 <div className="node-footer">
-                  <span>{cand.statesExpanded.toLocaleString()} states</span>
+                  <span>
+                    {(((cand.retainedAcquisitionStates ?? 0) +
+                      (cand.retainedDownstreamStates ?? 0)) ||
+                      cand.statesExpanded).toLocaleString()} retained states
+                  </span>
                   <span>{cand.elapsedMs > 0 ? `${(cand.elapsedMs / 1000).toFixed(1)}s` : ''}</span>
                 </div>
               </div>

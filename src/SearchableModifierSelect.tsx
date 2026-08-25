@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState, useCallback } from 'react';
+import { useEffect, useId, useMemo, useRef, useState, useCallback } from 'react';
 import type { CraftingCatalogMod } from '../crafting-engine/src/service/craftingCatalog.ts';
 
 export interface SearchableModifierSelectProps {
@@ -86,12 +86,16 @@ export function SearchableModifierSelect({
   className = '',
 }: SearchableModifierSelectProps) {
   const [isOpen, setIsOpen] = useState(false);
+  const [opensUpward, setOpensUpward] = useState(false);
   const [query, setQuery] = useState('');
   const [highlightedIndex, setHighlightedIndex] = useState<number>(-1);
 
   const containerRef = useRef<HTMLDivElement | null>(null);
+  const triggerRef = useRef<HTMLDivElement | null>(null);
   const searchInputRef = useRef<HTMLInputElement | null>(null);
   const listRef = useRef<HTMLDivElement | null>(null);
+  const generatedId = useId();
+  const listboxId = `modifier-listbox-${generatedId.replace(/:/g, '')}`;
 
   const selectedMod = useMemo(
     () => eligibleMods.find((mod) => mod.modId === value),
@@ -144,28 +148,42 @@ export function SearchableModifierSelect({
   );
 
   const totalMatchingCount = flatVisibleMods.length;
+  const disabledModIdSet = useMemo(() => new Set(disabledModIds), [disabledModIds]);
+  const enabledIndices = useMemo(
+    () => flatVisibleMods.flatMap((mod, index) =>
+      disabledModIdSet.has(mod.modId) ? [] : [index]
+    ),
+    [disabledModIdSet, flatVisibleMods]
+  );
+  const activeDescendantId = highlightedIndex >= 0 &&
+      !disabledModIdSet.has(flatVisibleMods[highlightedIndex]?.modId ?? '')
+    ? `${listboxId}-option-${highlightedIndex}`
+    : undefined;
 
   const handleOpen = useCallback(() => {
     setIsOpen(true);
-    setHighlightedIndex(-1);
-  }, []);
+    setHighlightedIndex(enabledIndices[0] ?? -1);
+  }, [enabledIndices]);
 
-  const handleClose = useCallback(() => {
+  const handleClose = useCallback((returnFocus = false) => {
     setIsOpen(false);
     setQuery('');
     setHighlightedIndex(-1);
+    if (returnFocus) {
+      requestAnimationFrame(() => triggerRef.current?.focus());
+    }
   }, []);
 
   const handleSelectMod = useCallback(
     (modId: string) => {
       onChange(modId);
-      handleClose();
+      handleClose(true);
     },
     [onChange, handleClose]
   );
 
   const handleClearSelection = useCallback(
-    (e: React.MouseEvent) => {
+    (e: React.MouseEvent<HTMLButtonElement>) => {
       e.stopPropagation();
       onChange('');
       setQuery('');
@@ -183,6 +201,33 @@ export function SearchableModifierSelect({
       return () => clearTimeout(timer);
     }
   }, [isOpen]);
+
+  // Keep the connected popup inside the viewport when the selector sits near the bottom.
+  useEffect(() => {
+    if (!isOpen) return;
+    const updateDirection = () => {
+      const rect = containerRef.current?.getBoundingClientRect();
+      if (!rect) return;
+      const spaceBelow = window.innerHeight - rect.bottom;
+      const spaceAbove = rect.top;
+      setOpensUpward(spaceBelow < 280 && spaceAbove > spaceBelow);
+    };
+    const frame = requestAnimationFrame(updateDirection);
+    window.addEventListener('resize', updateDirection);
+    window.addEventListener('scroll', updateDirection, true);
+    return () => {
+      cancelAnimationFrame(frame);
+      window.removeEventListener('resize', updateDirection);
+      window.removeEventListener('scroll', updateDirection, true);
+    };
+  }, [isOpen]);
+
+  useEffect(() => {
+    if (!isOpen) return;
+    if (!enabledIndices.includes(highlightedIndex)) {
+      setHighlightedIndex(enabledIndices[0] ?? -1);
+    }
+  }, [enabledIndices, highlightedIndex, isOpen]);
 
   // Click outside to close
   useEffect(() => {
@@ -206,24 +251,27 @@ export function SearchableModifierSelect({
   // Keyboard navigation
   const handleKeyDown = (e: React.KeyboardEvent) => {
     if (!isOpen) {
-      if (e.key === 'Enter' || e.key === ' ' || e.key === 'ArrowDown') {
+      if (e.key === 'Enter' || e.key === ' ' || e.key === 'ArrowDown' || e.key === 'ArrowUp') {
         e.preventDefault();
         handleOpen();
+        if (e.key === 'ArrowUp') setHighlightedIndex(enabledIndices.at(-1) ?? -1);
       }
       return;
     }
 
     if (e.key === 'Escape') {
       e.preventDefault();
-      handleClose();
+      handleClose(true);
       return;
     }
 
     if (e.key === 'ArrowDown') {
       e.preventDefault();
       setHighlightedIndex((prev) => {
-        const next = prev + 1;
-        return next >= flatVisibleMods.length ? 0 : next;
+        const position = enabledIndices.indexOf(prev);
+        return enabledIndices[position < 0 || position === enabledIndices.length - 1
+          ? 0
+          : position + 1] ?? -1;
       });
       return;
     }
@@ -231,9 +279,23 @@ export function SearchableModifierSelect({
     if (e.key === 'ArrowUp') {
       e.preventDefault();
       setHighlightedIndex((prev) => {
-        const next = prev - 1;
-        return next < 0 ? flatVisibleMods.length - 1 : next;
+        const position = enabledIndices.indexOf(prev);
+        return enabledIndices[position <= 0
+          ? enabledIndices.length - 1
+          : position - 1] ?? -1;
       });
+      return;
+    }
+
+    if (e.key === 'Home') {
+      e.preventDefault();
+      setHighlightedIndex(enabledIndices[0] ?? -1);
+      return;
+    }
+
+    if (e.key === 'End') {
+      e.preventDefault();
+      setHighlightedIndex(enabledIndices.at(-1) ?? -1);
       return;
     }
 
@@ -241,12 +303,12 @@ export function SearchableModifierSelect({
       e.preventDefault();
       if (highlightedIndex >= 0 && highlightedIndex < flatVisibleMods.length) {
         const targetMod = flatVisibleMods[highlightedIndex];
-        if (targetMod && !disabledModIds.includes(targetMod.modId)) {
+        if (targetMod && !disabledModIdSet.has(targetMod.modId)) {
           handleSelectMod(targetMod.modId);
         }
-      } else if (flatVisibleMods.length === 1) {
-        const targetMod = flatVisibleMods[0];
-        if (targetMod && !disabledModIds.includes(targetMod.modId)) {
+      } else if (enabledIndices.length === 1) {
+        const targetMod = flatVisibleMods[enabledIndices[0]];
+        if (targetMod) {
           handleSelectMod(targetMod.modId);
         }
       }
@@ -269,13 +331,14 @@ export function SearchableModifierSelect({
 
   return (
     <div
-      className={`searchable-modifier-select ${isOpen ? 'open' : ''} ${className}`}
+      className={`searchable-modifier-select ${isOpen ? 'open' : ''} ${opensUpward ? 'open-upward' : ''} ${className}`}
       ref={containerRef}
       onKeyDown={handleKeyDown}
     >
       {/* Dropdown Trigger & Inline Search Bar */}
       <div
-        role="combobox"
+        ref={triggerRef}
+        role={isOpen ? undefined : 'combobox'}
         tabIndex={isOpen ? -1 : 0}
         className={`searchable-select-trigger ${isOpen ? 'open' : ''} ${
           selectedMod && !isOpen ? 'has-selection' : 'placeholder'
@@ -283,9 +346,10 @@ export function SearchableModifierSelect({
         onClick={() => {
           if (!isOpen) handleOpen();
         }}
-        aria-haspopup="listbox"
-        aria-expanded={isOpen}
-        aria-label={ariaLabel}
+        aria-haspopup={isOpen ? undefined : 'listbox'}
+        aria-expanded={isOpen ? undefined : false}
+        aria-controls={isOpen ? undefined : listboxId}
+        aria-label={isOpen ? undefined : ariaLabel}
       >
         {isOpen ? (
           <div className="active-search-box" onClick={(e) => e.stopPropagation()}>
@@ -293,28 +357,36 @@ export function SearchableModifierSelect({
             <input
               ref={searchInputRef}
               type="text"
+              role="combobox"
+              aria-label={`${ariaLabel} search`}
+              aria-autocomplete="list"
+              aria-haspopup="listbox"
+              aria-expanded="true"
+              aria-controls={listboxId}
+              aria-activedescendant={activeDescendantId}
               className="dropdown-search-input"
               value={query}
               placeholder="Search modifiers (name, stat, tier, ilvl)..."
               onChange={(e) => {
                 setQuery(e.target.value);
-                setHighlightedIndex(0);
+                setHighlightedIndex(-1);
               }}
             />
             {query && (
-              <span
-                role="button"
-                tabIndex={-1}
+              <button
+                type="button"
                 className="search-clear-btn"
                 onClick={(e) => {
                   e.stopPropagation();
                   setQuery('');
+                  setHighlightedIndex(-1);
                   searchInputRef.current?.focus();
                 }}
-                title="Clear search"
+                onKeyDown={(e) => e.stopPropagation()}
+                aria-label="Clear modifier search"
               >
                 ✕
-              </span>
+              </button>
             )}
           </div>
         ) : (
@@ -340,33 +412,49 @@ export function SearchableModifierSelect({
 
         <span className="trigger-actions">
           {!isOpen && selectedMod && (
-            <span
+            <button
+              type="button"
               className="clear-selection-btn"
               onClick={handleClearSelection}
-              title="Clear modifier"
-              role="button"
-              tabIndex={-1}
+              onKeyDown={(e) => e.stopPropagation()}
+              aria-label={`Clear ${selectedMod.displayName}`}
             >
               ✕
-            </span>
+            </button>
           )}
-          <span
+          <button
+            type="button"
             className={`trigger-chevron ${isOpen ? 'rotated' : ''}`}
             onClick={(e) => {
+              e.stopPropagation();
               if (isOpen) {
-                e.stopPropagation();
-                handleClose();
+                handleClose(true);
+              } else {
+                handleOpen();
               }
             }}
+            onKeyDown={(e) => e.stopPropagation()}
+            aria-label={isOpen ? 'Close modifier list' : 'Open modifier list'}
           >
             ▾
-          </span>
+          </button>
         </span>
       </div>
 
+      <span className="sr-only" role="status" aria-live="polite" aria-atomic="true">
+        {isOpen
+          ? `${totalMatchingCount} ${totalMatchingCount === 1 ? 'modifier' : 'modifiers'} available${query ? ' for this search' : ''}.`
+          : ''}
+      </span>
+
       {/* Connected Dropdown Popup */}
       {isOpen && (
-        <div className="searchable-dropdown-popup" role="listbox" aria-label={ariaLabel}>
+        <div
+          id={listboxId}
+          className="searchable-dropdown-popup"
+          role="listbox"
+          aria-label={ariaLabel}
+        >
           <div className="search-stats-bar">
             <span className="match-count">
               {totalMatchingCount} {totalMatchingCount === 1 ? 'modifier' : 'modifiers'}
@@ -393,12 +481,13 @@ export function SearchableModifierSelect({
                     {category.mods.map((mod) => {
                       const itemIndex = globalIndexCounter++;
                       const isSelected = mod.modId === value;
-                      const isDisabled = disabledModIds.includes(mod.modId);
+                      const isDisabled = disabledModIdSet.has(mod.modId);
                       const isHighlighted = itemIndex === highlightedIndex;
 
                       return (
                         <div
                           key={mod.modId}
+                          id={`${listboxId}-option-${itemIndex}`}
                           data-index={itemIndex}
                           data-mod-id={mod.modId}
                           className={`dropdown-option-item ${isSelected ? 'selected' : ''} ${
@@ -412,7 +501,9 @@ export function SearchableModifierSelect({
                               handleSelectMod(mod.modId);
                             }
                           }}
-                          onMouseEnter={() => setHighlightedIndex(itemIndex)}
+                          onMouseEnter={() => {
+                            if (!isDisabled) setHighlightedIndex(itemIndex);
+                          }}
                           role="option"
                           aria-selected={isSelected}
                           aria-disabled={isDisabled}
