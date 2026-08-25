@@ -22,6 +22,7 @@
     "lab:objectives": "tsx quality-lab/src/runner.ts --scenario objectives",
     "lab:responsive": "tsx quality-lab/src/runner.ts --scenario responsive",
     "lab:animation": "tsx quality-lab/src/runner.ts --scenario animation",
+    "lab:sharing": "tsx quality-lab/src/runner.ts --scenario sharing",
     "publish": "npm run scrape && npm run price && node scripts/publish.mjs"
   },
   "dependencies": {

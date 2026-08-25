@@ -1,0 +1,20 @@
+PHASE 2R — PRICING, SHARING, AND DATA FRESHNESS DIAGNOSTIC
+
+--- R1: URL Share Serialization Roundtrip ---
+Encoded URL String: JTdCJTIydmVyc2lvbiUyMiUzQSUyMjJSLjElMjIl... (length: 628)
+R1 PASS: Full craft target preserved across encode/decode and invalid payloads safely rejected.
+
+--- R2: Anonymized Bug Report Safety ---
+R2 PASS: Bug report bundle structured with complete diagnostics and zero credential leakage.
+
+--- R3: Pricing Invalidation Invariant ---
+Base Price 10c Total: 1495.33c
+Base Price 50c Total: 1655.33c
+R3 PASS: Price updates safely invalidate cached search sessions and update total costs (+160.0c total scaling).
+
+--- R4: Price Provenance Honesty ---
+Alteration (provided): 0.1c (confidence: known)
+Mirror (fallback): 100000c (confidence: research-fallback)
+R4 PASS: Strict separation of known market prices vs research fallback prices.
+
+=== ALL PHASE 2R ACCEPTANCE GATES PASS ===

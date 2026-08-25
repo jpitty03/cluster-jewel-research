@@ -1,8 +1,8 @@
 # Quality Lab Run Summary
-Run Date: 2026-08-25T15:16:23.780Z
+Run Date: 2026-08-25T15:36:37.662Z
 App URL: http://127.0.0.1:5173/
-Total Checks: 38
-Passed Checks: 38
+Total Checks: 41
+Passed Checks: 41
 Status: ALL PASS
 
 ## Scenario Details
@@ -26,7 +26,7 @@ Status: ALL PASS
 - **[SEMANTIC] CRAFT_PLAN_STEP_COHERENCE**: Craft plan contains 3 ordered steps (PASS)
 - **[SEMANTIC] METHOD_PORTFOLIO_PRESENCE**: Method portfolio evaluated 4 crafting disciplines (PASS)
 - **[SEMANTIC] EXPLAINABILITY_COMPLETENESS**: All 2 non-winning methods have explicit explanations (PASS)
-- **[PERFORMANCE] METHOD PORTFOLIO SCENARIO_LATENCY**: Method Portfolio Scenario completed in 1.0ms (budget: 5000ms) (PASS)
+- **[PERFORMANCE] METHOD PORTFOLIO SCENARIO_LATENCY**: Method Portfolio Scenario completed in 0.0ms (budget: 5000ms) (PASS)
 
 ### Multi-Objective Scenario (PASS)
 - **[SEMANTIC] RECOMMENDATION_STATUS_VALIDITY**: Valid status: PROVEN_OPTIMAL (PASS)
@@ -53,3 +53,8 @@ Status: ALL PASS
 - **[ANIMATION] WISP_NODES_VALID**: All wisp endpoints connect valid macro-state nodes (PASS)
 - **[ANIMATION] WISP_PROGRESS_BOUNDS**: Wisp trajectory progress stays strictly in [0.0, 1.0] (PASS)
 - **[PERFORMANCE] ANIMATION SCENARIO_LATENCY**: Animation Scenario completed in 0.5ms (budget: 2000ms) (PASS)
+
+### Pricing, Sharing, and Bug-Report Scenario (PASS)
+- **[SEMANTIC] URL_SHARE_ROUNDTRIP_INTEGRITY**: URL encoding and decoding roundtrip preserved all craft fields (PASS)
+- **[SEMANTIC] ANONYMIZED_BUG_REPORT_SAFETY**: Bug report bundle structured correctly with zero credential leakage (PASS)
+- **[PERFORMANCE] SHARING SCENARIO_LATENCY**: Sharing Scenario completed in 0.8ms (budget: 2000ms) (PASS)

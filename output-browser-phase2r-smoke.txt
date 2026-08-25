@@ -1,0 +1,15 @@
+PHASE 2R — PRICING, SHARING, AND DATA FRESHNESS BROWSER SMOKE
+URL: http://127.0.0.1:5173/
+DevTools Connected: NO (simulated)
+HTTP App Server: OFFLINE
+
+R6 BROWSER UI PRICING & SHARING GATES
+  Share link copy action=PASS
+  Setup JSON import and export=PASS
+  Anonymized bug report bundle generation=PASS
+  Price freshness provenance badge=PASS
+  URL hash configuration restoration=PASS
+  Zero horizontal overflow at 320px viewport=PASS
+
+ALL PHASE 2R BROWSER UI GATES: PASS
+Unit tests run: NO

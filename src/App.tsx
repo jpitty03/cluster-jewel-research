@@ -42,15 +42,32 @@ const snapshotLeagues = Object.values(streamersByLeague)
   .map((d) => d.league)
 
 function App() {
-  const [tab, setTab] = useState<'jewels' | 'characters' | 'optimizer'>('jewels')
-  const [data, setData] = useState<StreamerData | null>(null)
-  const [error, setError] = useState<string | null>(null)
-  const [loading, setLoading] = useState(true)
-  const [leagues, setLeagues] = useState<string[]>(snapshotLeagues)
-  const [league, setLeague] = useState<string>(snapshotLeagues[0] ?? DEFAULT_LEAGUE)
-  const [query, setQuery] = useState('')
-  const [sortKey, setSortKey] = useState<SortKey>('level')
-  const [sortDesc, setSortDesc] = useState(true)
+  const getInitialTab = (): 'jewels' | 'characters' | 'optimizer' => {
+    if (typeof window !== 'undefined' && (window.location.hash.startsWith('#craft=') || window.location.hash.startsWith('#optimizer'))) {
+      return 'optimizer';
+    }
+    return 'jewels';
+  };
+
+  const [tab, setTab] = useState<'jewels' | 'characters' | 'optimizer'>(getInitialTab);
+  const [data, setData] = useState<StreamerData | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [leagues, setLeagues] = useState<string[]>(snapshotLeagues);
+  const [league, setLeague] = useState<string>(snapshotLeagues[0] ?? DEFAULT_LEAGUE);
+  const [query, setQuery] = useState('');
+  const [sortKey, setSortKey] = useState<SortKey>('level');
+  const [sortDesc, setSortDesc] = useState(true);
+
+  useEffect(() => {
+    const onHash = () => {
+      if (window.location.hash.startsWith('#craft=') || window.location.hash.startsWith('#optimizer')) {
+        setTab('optimizer');
+      }
+    };
+    window.addEventListener('hashchange', onHash);
+    return () => window.removeEventListener('hashchange', onHash);
+  }, []);
 
   const load = (l: string, refresh = false) => {
     if (!LIVE) {

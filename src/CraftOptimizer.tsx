@@ -28,6 +28,12 @@ import {
 import { SearchableModifierSelect } from './SearchableModifierSelect.tsx';
 import { buildVisualizationGraph } from '../crafting-engine/src/domain/VisualizationGraph.ts';
 import { MarkovConstellation } from './components/MarkovConstellation.tsx';
+import {
+  encodeCraftToUrl,
+  decodeCraftFromUrl,
+  generateBugReportBundle,
+  type CraftSharePayload,
+} from '../crafting-engine/src/service/shareBundle.ts';
 
 const DEFAULT_ITEM_LEVEL = 84;
 const DEFAULT_BUDGET = { maxStates: 5000, maxWallTimeMs: 30_000, maxExpansionRounds: 3 };
@@ -452,6 +458,7 @@ function CraftOptimizer() {
   const [running, setRunning] = useState(false);
   const [runtimeMs, setRuntimeMs] = useState<number | null>(null);
   const workerRef = useRef<OptimizerWorkerClient | null>(null);
+  const fileInputRef = useRef<HTMLInputElement | null>(null);
 
   const marketPricing = useMemo(
     () => getBrowserOptimizerPricing(league, baseType, clusterType, passiveCount, itemLevel),
@@ -563,6 +570,29 @@ function CraftOptimizer() {
   useEffect(() => {
     const client = new OptimizerWorkerClient();
     workerRef.current = client;
+
+    // Load shared craft URL if present
+    if (typeof window !== 'undefined' && window.location.hash.startsWith('#craft=')) {
+      const encoded = window.location.hash.slice(7);
+      const decoded = decodeCraftFromUrl(encoded);
+      if (decoded) {
+        if (decoded.baseType) setBaseType(decoded.baseType);
+        if (decoded.clusterType) setClusterType(decoded.clusterType);
+        if (decoded.itemLevel) setItemLevel(decoded.itemLevel);
+        if (decoded.passiveCount) setPassiveCount(decoded.passiveCount);
+        if (Array.isArray(decoded.targetMods) && decoded.targetMods.length > 0) setTargetModIds(decoded.targetMods);
+        if (decoded.finalRarity) setFinalRarity(decoded.finalRarity);
+        if (decoded.objectiveSpec) {
+          setObjectiveKind(decoded.objectiveSpec.kind);
+        }
+        if (decoded.costConstraintType) setCostConstraintType(decoded.costConstraintType);
+        if (decoded.costConstraintValue) setCostConstraintValue(decoded.costConstraintValue);
+        if (decoded.valueOfTimeChaosPerMin) setValueOfTimeChaosPerMin(decoded.valueOfTimeChaosPerMin);
+        if (decoded.cleanBaseCostChaos !== undefined) setCleanBaseCost(String(decoded.cleanBaseCostChaos));
+        if (decoded.maxUnmatchedAffixes === 0) setFinishCondition('no-unwanted');
+      }
+    }
+
     return () => {
       client.dispose();
       if (workerRef.current === client) workerRef.current = null;
@@ -706,9 +736,98 @@ function CraftOptimizer() {
     setTimeout(() => setCopiedAction(null), 2500);
   };
 
+  const copyShareUrl = () => {
+    const payload: CraftSharePayload = {
+      version: '2R.1',
+      baseType,
+      clusterType,
+      itemLevel,
+      passiveCount,
+      targetMods: targetModIds.filter(Boolean),
+      finalRarity: effectiveRarity,
+      objectiveSpec: draftObjective,
+      costConstraintType,
+      costConstraintValue,
+      valueOfTimeChaosPerMin,
+      cleanBaseCostChaos: cleanBaseCost ? Number(cleanBaseCost) : undefined,
+      maxUnmatchedAffixes: finishCondition === 'no-unwanted' ? 0 : undefined,
+    };
+    const encoded = encodeCraftToUrl(payload);
+    const fullUrl = `${window.location.origin}${window.location.pathname}#craft=${encoded}`;
+    void navigator.clipboard.writeText(fullUrl);
+    setCopiedAction('SHARE_URL');
+    setTimeout(() => setCopiedAction(null), 2500);
+  };
+
+  const copyBugReport = (res?: OptimizeCraftResult) => {
+    const payload: CraftSharePayload = {
+      version: '2R.1',
+      baseType,
+      clusterType,
+      itemLevel,
+      passiveCount,
+      targetMods: targetModIds.filter(Boolean),
+      finalRarity: effectiveRarity,
+      objectiveSpec: draftObjective,
+      costConstraintType,
+      costConstraintValue,
+      valueOfTimeChaosPerMin,
+      cleanBaseCostChaos: cleanBaseCost ? Number(cleanBaseCost) : undefined,
+      maxUnmatchedAffixes: finishCondition === 'no-unwanted' ? 0 : undefined,
+    };
+    const bundle = generateBugReportBundle(payload, res, 'Phase2R');
+    void navigator.clipboard.writeText(JSON.stringify(bundle, null, 2));
+    setCopiedAction('BUG_REPORT');
+    setTimeout(() => setCopiedAction(null), 2500);
+  };
+
+  const importSetupJson = (file: File) => {
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      try {
+        const text = e.target?.result as string;
+        const parsed = JSON.parse(text);
+        const input = parsed.requestInput || parsed;
+
+        const targetMods: string[] = Array.isArray(input.targetMods)
+          ? input.targetMods
+          : Array.isArray(input.target?.requiredMods)
+            ? input.target.requiredMods.map((m: { modId: string }) => m.modId).filter(Boolean)
+            : [];
+
+        if (input.baseType) setBaseType(input.baseType);
+        if (input.clusterType) setClusterType(input.clusterType);
+        if (input.itemLevel) setItemLevel(input.itemLevel);
+        if (input.passiveCount) setPassiveCount(input.passiveCount);
+        if (targetMods.length > 0) setTargetModIds(targetMods);
+
+        const rarity = input.finalRarity || input.target?.requiredRarity;
+        if (rarity) setFinalRarity(rarity);
+
+        if (input.objectiveSpec) {
+          setObjectiveKind(input.objectiveSpec.kind);
+        } else if (input.objective) {
+          setObjectiveKind(typeof input.objective === 'string' ? input.objective : input.objective.kind);
+        }
+
+        if (input.costConstraintType) setCostConstraintType(input.costConstraintType);
+        if (input.costConstraintValue) setCostConstraintValue(input.costConstraintValue);
+        if (input.valueOfTimeChaosPerMin) setValueOfTimeChaosPerMin(input.valueOfTimeChaosPerMin);
+        if (input.cleanBaseCostChaos !== undefined) setCleanBaseCost(String(input.cleanBaseCostChaos));
+        if (input.target?.finalStateConstraints?.maxUnmatchedAffixes === 0 || input.maxUnmatchedAffixes === 0) {
+          setFinishCondition('no-unwanted');
+        }
+        setResult(null);
+      } catch (err) {
+        console.error('Failed to import craft JSON', err);
+      }
+    };
+    reader.readAsText(file);
+  };
+
   const exportSetupJson = (res: OptimizeCraftResult) => {
     const exportBundle = {
-      appVersion: 'Phase2N',
+      appVersion: 'Phase2R',
       exportedAt: new Date().toISOString(),
       requestInput: draftInput,
       resultSummary: {
@@ -766,7 +885,30 @@ function CraftOptimizer() {
       </p>
 
       <section className="optimizer-card optimizer-form" aria-labelledby="optimizer-input-title">
-        <h2 id="optimizer-input-title">Craft target</h2>
+        <div className="craft-guide-heading-row">
+          <h2 id="optimizer-input-title">Craft target</h2>
+          <div>
+            <button
+              type="button"
+              className="secondary export-btn"
+              onClick={() => fileInputRef.current?.click()}
+              aria-label="Import Setup JSON file"
+            >
+              📂 Import JSON
+            </button>
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept=".json"
+              className="sr-only"
+              tabIndex={-1}
+              onChange={(e) => {
+                const file = e.target.files?.[0];
+                if (file) importSetupJson(file);
+              }}
+            />
+          </div>
+        </div>
         <div className="optimizer-grid">
           <label>
             <span>Base type</span>
@@ -1324,6 +1466,14 @@ function CraftOptimizer() {
                   <button
                     type="button"
                     className="secondary export-btn"
+                    onClick={copyShareUrl}
+                    title="Copy shareable configuration URL to clipboard"
+                  >
+                    {copiedAction === 'SHARE_URL' ? '✓ Copied Share Link!' : '🔗 Share Link'}
+                  </button>
+                  <button
+                    type="button"
+                    className="secondary export-btn"
                     onClick={() => copyShoppingList(result)}
                   >
                     {copiedAction === 'SHOPPING_LIST' ? '✓ Copied Shopping List!' : '📋 Copy Shopping List'}
@@ -1341,6 +1491,14 @@ function CraftOptimizer() {
                     onClick={() => exportSetupJson(result)}
                   >
                     {copiedAction === 'EXPORT_JSON' ? '✓ Exported JSON!' : '💾 Export Setup JSON'}
+                  </button>
+                  <button
+                    type="button"
+                    className="secondary export-btn"
+                    onClick={() => copyBugReport(result)}
+                    title="Copy anonymized bug report bundle"
+                  >
+                    {copiedAction === 'BUG_REPORT' ? '✓ Copied Bug Report!' : '🐛 Bug Report'}
                   </button>
                 </div>
               )}

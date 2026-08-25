@@ -12,6 +12,7 @@ import { runMethodPortfolioScenario } from './scenarios/methodPortfolioScenario.
 import { runMultiObjectiveScenario } from './scenarios/multiObjectiveScenario.ts';
 import { runResponsiveScenario } from './scenarios/responsiveScenario.ts';
 import { runAnimationScenario } from './scenarios/animationScenario.ts';
+import { runSharingScenario } from './scenarios/sharingScenario.ts';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -58,6 +59,11 @@ async function main() {
   if (requestedScenario === 'all' || requestedScenario === 'animation' || requestedScenario === 'constellation') {
     console.log('Running Suite: Markov Constellation & Animation Scenario...');
     results.push(await runAnimationScenario(appUrl));
+  }
+
+  if (requestedScenario === 'all' || requestedScenario === 'sharing' || requestedScenario === 'pricing') {
+    console.log('Running Suite: Pricing, Sharing, and Bug-Report Scenario...');
+    results.push(await runSharingScenario(appUrl));
   }
 
   // Generate Report
