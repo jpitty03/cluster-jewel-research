@@ -427,12 +427,16 @@ const cleanSeed = new GenericSearchEngine(
     prioritizeTargetProgress: true,
     allowResearchFallbackPrices: allowCleanFallbackPrices,
     maxStates: 5_000,
-    maxWallTimeMs: 10_000,
+    // K6 compares the first certified clean control with the portfolio allocation.
+    // Give slower CI runners enough wall time to finish that expansion round, then
+    // return the certificate instead of starting a machine-dependent refinement.
+    // The retained DEEPEN probes below own the larger-state comparison.
+    maxWallTimeMs: 120_000,
     maxExpansionRounds: 3,
     searchIntent: 'RECOMMEND',
     persistentExpansion: true,
     continuationSession: cleanContinuation,
-    recommendationRefinementRounds: 1,
+    recommendationRefinementRounds: 0,
     restartReacquire: {
       destination: cleanState,
       acquisitionCostChaos: 10,

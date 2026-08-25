@@ -43,7 +43,7 @@ U14 — Stable visual evidence
 PASS: 7 committed real-browser camera/readability images are non-empty.
 
 U15 — Worker semantics and performance
-PASS: camera interaction added no Worker work; median frame=16.700ms, max long task=0.000ms, retained optimizer overhead=0.248%.
+PASS: camera interaction added no Worker work; median frame=16.700ms, max long task=0.000ms, retained optimizer overhead=-1.303%.
 
 U16 — Blocking CI release gate
 PASS: Pages deploy depends on the complete Phase 2T/2U real-browser matrix and Phase 2U diagnostic; nightly retains the extended matrix.

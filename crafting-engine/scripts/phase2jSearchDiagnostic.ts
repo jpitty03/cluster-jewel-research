@@ -81,18 +81,38 @@ const heraldInput: Omit<OptimizeCraftInput, 'searchBudget' | 'searchIntent'> = {
 console.error('[phase2j-search] J2 Herald bounded refinement');
 const resumedService = new OptimizerService(repo);
 let started = Date.now();
-const heraldRecommend = resumedService.optimize({
+let heraldRecommend = resumedService.optimize({
   ...heraldInput,
-  searchBudget: { maxStates: 5_000, maxWallTimeMs: 30_000, maxExpansionRounds: 3 },
+  // Wall allowances must let slower runners finish the same fixed state/round
+  // boundary; J3 asserts exact cold/resumed equality at that boundary.
+  searchBudget: { maxStates: 5_000, maxWallTimeMs: 120_000, maxExpansionRounds: 3 },
   searchIntent: 'RECOMMEND',
 });
-const heraldRecommendElapsed = Date.now() - started;
+let heraldRecommendElapsed = Date.now() - started;
+const heraldInitialRecommendStates = heraldRecommend.search.statesExpanded;
+let heraldPrefixCompletionElapsed = 0;
+if (heraldInitialRecommendStates < 5_000) {
+  // The production service intentionally returns a first useful clean policy on a
+  // short fast-path wall. Complete the same retained 5k prefix explicitly so J3
+  // compares cold/resumed work at a state boundary, never at a host-speed boundary.
+  started = Date.now();
+  heraldRecommend = resumedService.optimize({
+    ...heraldInput,
+    searchBudget: { maxStates: 5_000, maxWallTimeMs: 180_000, maxExpansionRounds: 3 },
+    searchIntent: 'DEEPEN',
+  });
+  heraldPrefixCompletionElapsed = Date.now() - started;
+  heraldRecommendElapsed += heraldPrefixCompletionElapsed;
+}
+if (heraldRecommend.search.statesExpanded !== 5_000) {
+  throw new Error(`J3 retained prefix did not reach the exact 5k state boundary (${heraldRecommend.search.statesExpanded})`);
+}
 
 console.error('[phase2j-search] J3 resumed DEEPEN');
 started = Date.now();
 const heraldResumed = resumedService.optimize({
   ...heraldInput,
-  searchBudget: { maxStates: 10_000, maxWallTimeMs: 60_000, maxExpansionRounds: 4 },
+  searchBudget: { maxStates: 10_000, maxWallTimeMs: 180_000, maxExpansionRounds: 4 },
   searchIntent: 'DEEPEN',
 });
 const heraldResumedElapsed = Date.now() - started;
@@ -101,7 +121,7 @@ console.error('[phase2j-search] J3 cold DEEPEN');
 started = Date.now();
 const heraldCold = new OptimizerService(repo).optimize({
   ...heraldInput,
-  searchBudget: { maxStates: 10_000, maxWallTimeMs: 60_000, maxExpansionRounds: 4 },
+  searchBudget: { maxStates: 10_000, maxWallTimeMs: 180_000, maxExpansionRounds: 4 },
   searchIntent: 'DEEPEN',
 });
 const heraldColdElapsed = Date.now() - started;
@@ -490,12 +510,13 @@ const lines = [
   'PHASE 2J SEARCH / REFINEMENT / RESUME / FOUR-MOD SCALING DIAGNOSTIC',
   '',
   'J2 HERALD POLICY REFINEMENT',
-  ...summarizeOptimizer('  RECOMMEND 5k/30s/3', heraldRecommend, heraldRecommendElapsed),
+  ...summarizeOptimizer('  RECOMMEND 5k/120s/3', heraldRecommend, heraldRecommendElapsed),
+  `  deterministic prefix completion: initialStates=${heraldInitialRecommendStates}; finalStates=${heraldRecommend.search.statesExpanded}; retainedDEEPEN=${heraldPrefixCompletionElapsed > 0}; additionalElapsed=${heraldPrefixCompletionElapsed}ms`,
   `  timeToFirstUseful=${heraldRecommend.search.timeToFirstUsefulRecommendationMs}ms; totalEngine=${heraldRecommend.search.elapsedMs}ms; bounded reserve=one completed post-certification round inside the existing total state/round/wall budget`,
   '',
   'J3 COLD VS RESUMED DEEPEN',
-  ...summarizeOptimizer('  resumed 10k/60s/4', heraldResumed, heraldResumedElapsed),
-  ...summarizeOptimizer('  cold 10k/60s/4', heraldCold, heraldColdElapsed),
+  ...summarizeOptimizer('  resumed 10k/180s/4', heraldResumed, heraldResumedElapsed),
+  ...summarizeOptimizer('  cold 10k/180s/4', heraldCold, heraldColdElapsed),
   `  EV difference=${coldResumedEvDifference.toExponential(6)}c; healthEquivalent=${coldResumedHealthEquivalent}; duplicate transition generation delta=${heraldCold.search.transitionDistributionsGenerated - heraldResumed.search.transitionDistributionsGenerated}; PASS`,
   '',
   'J4 SESSION INVALIDATION',

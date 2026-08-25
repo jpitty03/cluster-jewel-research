@@ -248,7 +248,7 @@ assert(Number(performance.medianFrameMs) < 25);
 assert(Number(performance.maxLongTaskMs) < 100);
 assert.equal(performance.workerMessagesAdded, 0);
 const phase2k1 = readFileSync(join(repositoryRoot, 'output-phase2k1-exact-fixture-diagnostic.txt'), 'utf8');
-const overheadMatch = phase2k1.match(/overhead=([\d.]+)%; target<=5%=PASS/);
+const overheadMatch = phase2k1.match(/overhead=(-?[\d.]+)%; target<=5%=PASS/);
 assert(overheadMatch && Number(overheadMatch[1]) <= 5, 'Retained optimizer median overhead gate is absent or failed');
 lines.push(`PASS: camera interaction added no Worker work; median frame=${Number(performance.medianFrameMs).toFixed(3)}ms, max long task=${Number(performance.maxLongTaskMs).toFixed(3)}ms, retained optimizer overhead=${overheadMatch[1]}%.`);
 

@@ -4,7 +4,7 @@ K1 EXACT FROZEN RWE FIXTURE
   base=Large Cluster Jewel; enchant=10% increased Attack Damage; ilvl=84; passives=12; rarity=rare; extraAffixes=ALLOWED
   targets=["AfflictionJewelSmallPassivesHaveIncreasedEffect2","AfflictionJewelSmallPassivesGrantInt3","AfflictionJewelSmallPassivesGrantES3","AfflictionJewelSmallPassivesGrantAttributes3"]
   frozenRates={"chaos":1,"divine":200,"fracturing":359,"annul":9,"exalt":1.2,"scour":0.5,"alteration":0.11,"transmutation":0.03,"augmentation":0.03,"regal":0.2,"wildLifeforce":0.07692307692307693,"vividLifeforce":0.038461538461538464,"primalLifeforce":0.020833333333333332,"crystallisedRancour":10}; cleanBase=10.000000c; marketFracturedPurchase=DISABLED
-  cold runtime=24664.487ms; status=PROVISIONAL_RESOLVED; selected=Start self-fracture: Glowing (T1); U=4793.659159c
+  cold runtime=24667.535ms; status=PROVISIONAL_RESOLVED; selected=Start self-fracture: Glowing (T1); U=4793.659159c
   health: proper=true; absorption=0.999999999995; Bellman=true; occupancy=true; reconciled=true; reconciliationDiff=1.819e-12; unresolvedOnPolicy=0.000e+0
   acquisition safety=false; incumbentU=4793.659159c; unresolvedL=10.230843c; potentialGap=4783.428316c; proof={"selectedPolicyStatus":"FULLY RESOLVED / PROPER / ABSORBING / COST-RECONCILED","proofLevel":"BEST FULLY RESOLVED POLICY FOUND","globalOptimality":"NOT YET PROVEN","modeledActionOptimalityProven":false,"unresolvedCompetitiveCandidates":492,"unresolvedCompetitorsMayBeCheaper":true}
   candidate table:
@@ -16,7 +16,7 @@ K1 EXACT FROZEN RWE FIXTURE
 
 K2 COLD / SAME-WORKER RESUMED / INVALIDATION
   cold progress=COLD -> COMPLETE; snapshots=22; selected=Start self-fracture: Glowing (T1); U=4793.659159c
-  resumed progress=RESUMED -> COMPLETE; resultReuse=RESUMED; retainedStates=2610; retainedTransitions=8270; snapshots=10; runtime=23985.066ms; selected=Start self-fracture: Glowing (T1); U=4793.659159c
+  resumed progress=RESUMED -> COMPLETE; resultReuse=RESUMED; retainedStates=2610; retainedTransitions=8270; snapshots=10; runtime=24043.261ms; selected=Start self-fracture: Glowing (T1); U=4793.659159c
   selected acquisition U cold/resumed=1496.542933c / 1496.542933c; equivalentOrImproved=true
   economic identity change: progress=INVALIDATED; retained=0; identity=phase2j-86be3202
   mechanics identity change: progress=INVALIDATED; retained=0; identity=phase2j-b17a70a2
@@ -29,18 +29,18 @@ K4 TERMINAL TELEMETRY
 
 K5 TELEMETRY ON/OFF EQUIVALENCE AND OVERHEAD
   repetitions=7 after warmup; eventsPerOnRun=6
-  OFF samples ms=633.805, 612.708, 621.576, 624.164, 611.649, 591.928, 615.596
-  ON samples ms=637.923, 617.120, 613.077, 632.105, 625.967, 607.263, 612.976
-  OFF median=615.596ms; ON median=617.120ms; overhead=0.248%; target<=5%=PASS
+  OFF samples ms=748.082, 715.297, 745.976, 720.352, 688.908, 720.027, 715.890
+  ON samples ms=764.200, 703.856, 710.645, 703.044, 711.873, 709.828, 718.618
+  OFF median=720.027ms; ON median=710.645ms; overhead=-1.303%; target<=5%=PASS
   equality=PASS: acquisition/action, expected cost, health, proof, candidate ranking, policy decisions, and graph/search decision semantics
 
 K6 CURRENT-DEPTH CLEAN U VERSUS MATURE CLEAN-ONLY U
   matched action set: Harvest=true; tags=["attribute","defences","energy_shield"]; allowResearchFallbackPrices=true
   portfolio current-depth Clean U=213866.185599c; clean probe states=3334; elapsed=4006ms
   mature certified clean-only U=213866.185599c; source=clean-only seed; states=3334; rounds=2; policy=FULLY RESOLVED / PROPER / ABSORBING / COST-RECONCILED; proper=true; absorption=1.000000000000; Bellman=true; occupancy=true; reconciled=true
-  clean-only seed: U=213866.185599c; retained states=3334; stop=WALL_TIME; runtime=10006.815ms
-  exploratory DEEPEN: U=213866.185599c; certified=true; states=7501; rounds=1; stop=STABLE; runtime=31659.340ms; an uncertified incumbent is not reported as executable
-  final DEEPEN: U=213866.185599c; certified=true; states=14001; rounds=1; stop=STABLE; runtime=58063.840ms
+  clean-only seed: U=213866.185599c; retained states=3334; stop=FIRST_USEFUL_RETURNED; runtime=3396.054ms
+  exploratory DEEPEN: U=123.320130c; certified=false; states=7501; rounds=1; stop=NO_EXECUTABLE_POLICY; runtime=33832.992ms; an uncertified incumbent is not reported as executable
+  final DEEPEN: U=140.542980c; certified=false; states=14001; rounds=1; stop=NO_EXECUTABLE_POLICY; runtime=77851.621ms
   portfolio selected U=4793.659159c; scheduler evidence=the generic complex-target clean allocation was bounded before fracture evaluation, then remaining budget evaluated 4/4 acquisition candidates and resolved a fracture route below current-depth Clean U
   interpretation=Clean is an executable upper bound at allocated portfolio depth, not a mature clean-policy estimate; the mature comparison uses the same action set.
 
