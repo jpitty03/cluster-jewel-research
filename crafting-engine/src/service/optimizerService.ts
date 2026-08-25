@@ -404,7 +404,7 @@ export interface SearchSessionReuseSummary {
   missReason?: string;
   retainedStates: number;
   retainedTransitionDistributions: number;
-  scope: 'CLEAN_DOWNSTREAM' | 'ACQUISITION_PORTFOLIO';
+  scope: 'CLEAN_DOWNSTREAM' | 'FRACTURE_DOWNSTREAM' | 'ACQUISITION_PORTFOLIO';
 }
 
 export interface OptimizationSearchSummary {
@@ -1223,14 +1223,20 @@ export class OptimizerService {
         (searchSessionRecord?.cleanDownstream.expansion.nodes.size ?? 0);
       const totalRetained = candidateList.reduce((sum, c) => sum + c.retainedStates, 0);
 
-      const activeLowerBounds = candidateList
-        .filter((c) => c.status !== 'DOMINATED' && (c.status === 'NOT_STARTED' || c.status === 'PROBING' || c.status === 'UNRESOLVED'))
-        .map((c) => c.lowerBoundChaos)
-        .filter((val): val is number => val !== undefined && Number.isFinite(val));
-      currentBestUnresolvedLowerBound = activeLowerBounds.length > 0 ? Math.min(...activeLowerBounds) : undefined;
-      currentPotentialGap = currentBestUpperBound !== undefined && currentBestUnresolvedLowerBound !== undefined
-        ? Math.max(0, currentBestUpperBound - currentBestUnresolvedLowerBound)
-        : undefined;
+      if (phase !== 'COMPLETE') {
+        const activeLowerBounds = candidateList
+          .filter((c) => c.status !== 'DOMINATED' && (c.status === 'NOT_STARTED' || c.status === 'PROBING' || c.status === 'UNRESOLVED'))
+          .map((c) => c.lowerBoundChaos)
+          .filter((val): val is number => val !== undefined && Number.isFinite(val));
+        currentBestUnresolvedLowerBound = activeLowerBounds.length > 0 ? Math.min(...activeLowerBounds) : undefined;
+        currentPotentialGap = currentBestUpperBound !== undefined && currentBestUnresolvedLowerBound !== undefined
+          ? Math.max(0, currentBestUpperBound - currentBestUnresolvedLowerBound)
+          : undefined;
+      }
+
+      const sessionReuseStatus = totalRetained > 0
+        ? 'RESUMED'
+        : invalidationReason ? 'INVALIDATED' : 'COLD';
 
       onProgress({
         phase,
@@ -1246,13 +1252,11 @@ export class OptimizerService {
         incumbentHistory: [...progressIncumbents],
         candidates: candidateList,
         recentMilestones: [...recentMilestones],
-        sessionReuseStatus: invalidationReason === undefined && totalRetained > 0
-          ? 'RESUMED'
-          : invalidationReason ? 'INVALIDATED' : 'COLD',
-        sessionReuseMessage: invalidationReason
-          ? `Restarted — ${invalidationReason.toLowerCase().replace(/_/g, ' ')}`
-          : totalRetained > 0
-            ? `Resumed from prior run (${totalRetained.toLocaleString()} states retained)`
+        sessionReuseStatus,
+        sessionReuseMessage: sessionReuseStatus === 'RESUMED'
+          ? `Resumed from prior run (${totalRetained.toLocaleString()} states retained)`
+          : sessionReuseStatus === 'INVALIDATED'
+            ? `Restarted — ${invalidationReason!.toLowerCase().replace(/_/g, ' ')}`
             : undefined,
       });
     };
@@ -1261,6 +1265,7 @@ export class OptimizerService {
 
     let bestFractureDownstreamResult: GenericSearchResult | undefined;
     let bestFractureCandidateIndex: number | undefined;
+    let bestFractureSessionReuse: SearchSessionReuseSummary | undefined;
 
     if (
       fractureEntries.length > 0 &&
@@ -1271,7 +1276,9 @@ export class OptimizerService {
       const isComplexMultiMod = validation.normalizedInput.target.requiredMods.length >= 3;
       const fastWallTimeCeiling = requestedIntent === 'RECOMMEND'
         ? (isComplexMultiMod ? Math.min(3_000, Math.floor(runtimeBudget.engineDeadlineMs * 0.15)) : Math.min(10_000, Math.floor(runtimeBudget.engineDeadlineMs * 0.35)))
-        : Math.floor(runtimeBudget.engineDeadlineMs * 0.7);
+        : isComplexMultiMod
+          ? Math.min(3_000, Math.floor(runtimeBudget.engineDeadlineMs * 0.15))
+          : Math.floor(runtimeBudget.engineDeadlineMs * 0.7);
       const fastWallTimeMs = Math.max(
         1,
         Math.min(fastWallTimeCeiling, searchStopDeadline - Date.now() - 4_000)
@@ -1321,11 +1328,11 @@ export class OptimizerService {
             provenance: cleanEvidence.provenance,
             label: 'Abandon attempt and reacquire a clean base',
           },
-          onProgress: (ev) => {
+          onProgress: onProgress ? (ev) => {
             cleanProg.statesExpanded = ev.statesExpanded;
             cleanProg.elapsedMs = ev.elapsedMs;
             emitProgress('CLEAN_PROBE', 'Certifying physical clean-base route', `Clean Base: Round ${ev.currentRound}/${ev.totalRounds}`, false, ev.milestone);
-          },
+          } : undefined,
         }
       ).search(cleanStart.state);
 
@@ -1403,7 +1410,10 @@ export class OptimizerService {
             allocatedMaxExpansionRounds: stageMaxExpansionRounds,
           });
         }
-        emitProgress('COMPLETE', 'Clean route dominates all self-fractures', `Optimization complete (Clean Base: ${fastCleanRoute.expectedTotalCostChaos.toFixed(2)}c)`, true, 'Clean route dominates all fracture families');
+        // The one terminal COMPLETE snapshot is emitted at the serialization boundary below,
+        // after the final route, bounds, proof, and candidate statuses are known.
+        recentMilestones.push('Clean route dominates all fracture families');
+        if (recentMilestones.length > 8) recentMilestones.shift();
       }
     }
 
@@ -1427,9 +1437,13 @@ export class OptimizerService {
         for (const { start, candidateIndex } of sortedFractureEntries) {
           const bound = structuralBounds.get(candidateIndex)!;
           const pCand = progressCandidates.get(`candidate_${candidateIndex}`)!;
-          if (bound.combinedLowerBoundChaos >= incumbentFullRouteU || Date.now() >= searchStopDeadline) {
+          if (bound.combinedLowerBoundChaos >= incumbentFullRouteU) {
             pCand.status = 'DOMINATED';
             continue;
+          }
+          if (Date.now() >= searchStopDeadline) {
+            pCand.status = pCand.retainedStates > 0 ? 'UNRESOLVED' : 'NOT_STARTED';
+            break;
           }
           const sessionKey = JSON.stringify(start.fracturedRequirement);
           let acqSession = searchSessionRecord.fractureAcquisitions.get(sessionKey);
@@ -1461,11 +1475,11 @@ export class OptimizerService {
               searchIntent: input.searchIntent ?? 'RECOMMEND',
               continuationSession: acqSession,
               persistentExpansion: true,
-              onProgress: (ev) => {
+              onProgress: onProgress ? (ev) => {
                 pCand.statesExpanded = ev.statesExpanded;
                 pCand.elapsedMs = ev.elapsedMs;
                 emitProgress('FRACTURE_PROBE', 'Probing self-fracture acquisition', `${start.label}: ${ev.statesExpanded} states`, false, ev.milestone);
-              },
+              } : undefined,
             }
           );
 
@@ -1490,6 +1504,18 @@ export class OptimizerService {
               downSession = createGenericSearchContinuationSession();
               searchSessionRecord.fractureDownstreams.set(sessionKey, downSession);
             }
+            const retainedDownstreamStates = downSession.expansion.nodes.size;
+            const downstreamSessionReuse: SearchSessionReuseSummary = {
+              status: retainedDownstreamStates > 0
+                ? 'RESUMED'
+                : invalidationReason === undefined ? 'COLD' : 'INVALIDATED',
+              identityHash: searchIdentityHash,
+              missReason: retainedDownstreamStates > 0 ? undefined : invalidationReason,
+              retainedStates: retainedDownstreamStates,
+              retainedTransitionDistributions:
+                downSession.expansion.transitionDistributionsGeneratedTotal,
+              scope: 'FRACTURE_DOWNSTREAM',
+            };
             pCand.isActive = true;
             emitProgress('DOWNSTREAM_SOLVE', 'Solving downstream craft from fractured state', `Downstream: ${start.label}`, true);
 
@@ -1532,6 +1558,7 @@ export class OptimizerService {
                 currentBestUpperBound = fullRouteCost;
                 bestFractureDownstreamResult = downstreamResult;
                 bestFractureCandidateIndex = candidateIndex;
+                bestFractureSessionReuse = downstreamSessionReuse;
                 progressIncumbents.push({
                   elapsedMs: Date.now() - optimizationStarted,
                   upperBoundChaos: fullRouteCost,
@@ -1600,6 +1627,18 @@ export class OptimizerService {
 
               const downSession = searchSessionRecord.fractureDownstreams.get(sessionKey) ?? createGenericSearchContinuationSession();
               searchSessionRecord.fractureDownstreams.set(sessionKey, downSession);
+              const retainedDownstreamStates = downSession.expansion.nodes.size;
+              const downstreamSessionReuse: SearchSessionReuseSummary = {
+                status: retainedDownstreamStates > 0
+                  ? 'RESUMED'
+                  : invalidationReason === undefined ? 'COLD' : 'INVALIDATED',
+                identityHash: searchIdentityHash,
+                missReason: retainedDownstreamStates > 0 ? undefined : invalidationReason,
+                retainedStates: retainedDownstreamStates,
+                retainedTransitionDistributions:
+                  downSession.expansion.transitionDistributionsGeneratedTotal,
+                scope: 'FRACTURE_DOWNSTREAM',
+              };
 
               const downstreamResult = new GenericSearchEngine(
                 { pool, priceBook },
@@ -1639,6 +1678,7 @@ export class OptimizerService {
                   currentBestUpperBound = fullRouteCost;
                   bestFractureDownstreamResult = downstreamResult;
                   bestFractureCandidateIndex = candidateIndex;
+                  bestFractureSessionReuse = downstreamSessionReuse;
                   progressIncumbents.push({
                     elapsedMs: Date.now() - optimizationStarted,
                     upperBoundChaos: fullRouteCost,
@@ -1695,6 +1735,9 @@ export class OptimizerService {
     const usesDirectFracturePolicy = stageMode === 'EXECUTABLE_SYNTHESIS' &&
       bestFractureCandidateIndex !== undefined &&
       bestFractureDownstreamResult !== undefined;
+    if (usesDirectFracturePolicy && bestFractureSessionReuse) {
+      selectedSessionReuse = bestFractureSessionReuse;
+    }
 
     const bestFractureSynthesis = usesDirectFracturePolicy
       ? synthesisResults.get(bestFractureCandidateIndex!)
@@ -2313,6 +2356,34 @@ export class OptimizerService {
     JSON.stringify(output);
     output.search.stageTimingMs.serializationMs = Date.now() - serializationStarted;
     JSON.stringify(output);
+
+    currentBestUpperBound = output.expectedCostChaos ?? undefined;
+    currentBestUnresolvedLowerBound = output.acquisition.bestUnresolvedLowerBoundChaos;
+    currentPotentialGap = output.acquisition.potentialGapChaos;
+    for (const candidate of progressCandidates.values()) {
+      candidate.isActive = false;
+      if (candidate.status === 'PROBING') candidate.status = 'UNRESOLVED';
+    }
+    const selectedProgressId = output.acquisition.selectedCandidateId ===
+        `candidate_${cleanCandidateIndex}`
+      ? 'clean'
+      : output.acquisition.selectedCandidateId;
+    if (selectedProgressId) {
+      const selectedProgress = progressCandidates.get(selectedProgressId);
+      if (selectedProgress) selectedProgress.status = 'SELECTED';
+    }
+    const finalFocus = output.recommended === null
+      ? 'Search finished without a resolved route'
+      : `Selected route: ${output.recommended.name}`;
+    emitProgress(
+      'COMPLETE',
+      'Search finished',
+      finalFocus,
+      true,
+      output.recommended === null
+        ? 'Search finished without a resolved route'
+        : `Selected route: ${output.recommended.name}`
+    );
     return output;
   }
 }

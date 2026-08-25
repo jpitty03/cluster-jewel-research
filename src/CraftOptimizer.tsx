@@ -230,13 +230,13 @@ function SearchActivityVisualizer({
         <div className="search-metric-item highlight">
           <span className="metric-label">Best Executable (U)</span>
           <span className="metric-value cost">
-            {progress?.bestExecutableUpperBoundChaos ? `${progress.bestExecutableUpperBoundChaos.toFixed(1)}c` : '—'}
+            {progress?.bestExecutableUpperBoundChaos !== undefined ? `${progress.bestExecutableUpperBoundChaos.toFixed(1)}c` : '—'}
           </span>
         </div>
         <div className="search-metric-item">
           <span className="metric-label">Active Bound (L)</span>
           <span className="metric-value">
-            {progress?.bestUnresolvedLowerBoundChaos ? `${progress.bestUnresolvedLowerBoundChaos.toFixed(1)}c` : '—'}
+            {progress?.bestUnresolvedLowerBoundChaos !== undefined ? `${progress.bestUnresolvedLowerBoundChaos.toFixed(1)}c` : '—'}
           </span>
         </div>
         <div className="search-metric-item">
@@ -250,6 +250,10 @@ function SearchActivityVisualizer({
       {/* Macro Markov-Bellman Graph */}
       <div className="macro-graph-container">
         <h3 className="macro-graph-title">Macro Markov-Bellman Acquisition Graph</h3>
+        <p className="muted">
+          Non-selected route costs are current executable upper bounds at their allocated search
+          depth; they are not necessarily mature policy costs.
+        </p>
         <div className="macro-graph-nodes-grid">
           {progress?.candidates.map((cand) => {
             const isWinner = cand.status === 'SELECTED';
@@ -297,7 +301,7 @@ function SearchActivityVisualizer({
                     )}
 
                     <div className="bound-row full-cost">
-                      <span className="bound-tag">Full Route:</span>
+                      <span className="bound-tag">Current Full Route U:</span>
                       <span className="bound-num cost">
                         {cand.fullRouteUpperBoundChaos !== undefined ? `${cand.fullRouteUpperBoundChaos.toFixed(1)}c` : '—'}
                       </span>

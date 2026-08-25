@@ -1,6 +1,7 @@
 import { ClusterModRepository } from '../src/data/loadClusterMods.ts';
 import { OptimizerService, type OptimizerProgressSnapshot } from '../src/service/optimizerService.ts';
 import type { OptimizeCraftInput } from '../src/service/optimizerService.ts';
+import { createPhase2k1ExactFixture } from './phase2k1ExactFixture.ts';
 
 async function main() {
   console.log('=== PHASE 2K FRACTURE PORTFOLIO & TELEMETRY SEARCH DIAGNOSTIC ===\n');
@@ -10,27 +11,14 @@ async function main() {
 
   // 1. Real Four-Mod Fixture (Self-Fracture vs Clean Incumbent)
   console.log('--- TEST 1: Real Four-Mod Fixture (Competitive Self-Fracture vs Clean Base) ---');
-  const fourModInput: OptimizeCraftInput = {
-    baseType: 'Large Cluster Jewel',
-    clusterType: '12% increased Attack Damage while Dual Wielding',
-    itemLevel: 84,
-    passiveCount: 8,
-    target: {
-      requiredMods: [
-        { modId: 'AfflictionJewelSmallPassivesGrantInt3' },
-        { modId: 'AfflictionJewelSmallPassivesHaveIncreasedEffect2' },
-        { modId: 'AfflictionJewelSmallPassivesGrantAttributes3' },
-        { modId: 'AfflictionJewelSmallPassivesGrantES3' },
-      ],
-      finalStateConstraints: { maxUnmatchedAffixes: 0 },
-    },
+  const fourModInput: OptimizeCraftInput = createPhase2k1ExactFixture({
     searchBudget: {
       maxStates: 5000,
       maxWallTimeMs: 25000,
       maxExpansionRounds: 3,
     },
     searchIntent: 'RECOMMEND',
-  };
+  });
 
   const progressEvents: OptimizerProgressSnapshot[] = [];
   const start1 = Date.now();

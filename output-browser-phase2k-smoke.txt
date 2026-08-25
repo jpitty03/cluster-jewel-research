@@ -1,27 +1,20 @@
-PHASE 2K — PRODUCTION BROWSER / WORKER SMOKE & VALIDATION REPORT
-Validation of Phase 2K multi-tranche resumable self-fracture acquisition, full-route ranking against clean incumbent, and live progress telemetry.
+PHASE 2K.1 — ACTUAL BROWSER WORKER-BOUNDARY SMOKE
+URL: http://127.0.0.1:5173/
 
---- 1. FOUR-MOD REAL WORLD FIXTURE ---
-Request elapsed: 20412ms (host guard: 25250ms)
-Recommendation status: PROVISIONAL_RESOLVED
-Recommended start: Start self-fracture: of the Prodigy (T1)
-Recommended expected cost: 5535.164210c
-Health: proper=true; absorption=1.000000000000; Bellman=true; occupancy=true; reconciled=true; unresolvedOnPolicy=0.000e+0
-Telemetry snapshots captured: 15
-Final progress phase: FRACTURE_PROBE
-Final progress candidates: Clean Base (PROBING), of the Prodigy (T1) (FULL_ROUTE_RESOLVED), Powerful (T1) (RESOLVED), of the Meteor (T1) (PROBING), Glowing (T1) (PROBING)
-Recent milestones: ["Certified policy: 1496.42c","Acquisition resolved: of the Prodigy (T1) (1506.42c)","New best route: of the Prodigy (T1) (5535.16c)","Certified policy: 1491.30c","Acquisition resolved: Powerful (T1) (1501.30c)"]
+K3/K4 REAL OptimizerWorkerClient -> optimizer.worker.ts MESSAGE ORDER
+  request=optimizer_1; worker=1; elapsed=20954.700ms
+  sequence=PROGRESS:INITIALIZING -> PROGRESS:CLEAN_PROBE -> PROGRESS:CLEAN_PROBE -> PROGRESS:CLEAN_PROBE -> PROGRESS:CLEAN_PROBE -> PROGRESS:FRACTURE_PROBE -> PROGRESS:FRACTURE_PROBE -> PROGRESS:FRACTURE_PROBE -> PROGRESS:FRACTURE_PROBE -> PROGRESS:DOWNSTREAM_SOLVE -> PROGRESS:DOWNSTREAM_SOLVE -> PROGRESS:FRACTURE_PROBE -> PROGRESS:FRACTURE_PROBE -> PROGRESS:FRACTURE_PROBE -> PROGRESS:FRACTURE_PROBE -> PROGRESS:DOWNSTREAM_SOLVE -> PROGRESS:DOWNSTREAM_SOLVE -> PROGRESS:FRACTURE_PROBE -> PROGRESS:FRACTURE_PROBE -> PROGRESS:FRACTURE_PROBE -> PROGRESS:FRACTURE_PROBE -> PROGRESS:DOWNSTREAM_SOLVE -> PROGRESS:FRACTURE_PROBE -> PROGRESS:FRACTURE_PROBE -> PROGRESS:FRACTURE_PROBE -> PROGRESS:FRACTURE_PROBE -> PROGRESS:DOWNSTREAM_SOLVE -> PROGRESS:COMPLETE -> RESULT
+  last PROGRESS before RESULT=COMPLETE; progress after RESULT=false; selected=Start self-fracture: of the Prodigy (T1); U=3926.335455c
+  exact fixture candidates=5; executable fracture full routes in terminal progress=4; selected acquisition=self-fracture_executable
+  requestId routing=PASS over 29 unfiltered actual-worker events; structured clone=PASS; messageerror count=0
+  unknown request progress ignored=PASS; stale post-RESULT progress ignored=PASS
 
---- 2. SAME-WORKER RETRY DEEPER CONTINUATION RETENTION ---
-Request elapsed: 20408ms (host guard: 25250ms)
-Session reuse status: RESUMED
-Retained states from prior request: 1667
-Recommended expected cost: 5535.164210c
-Health: proper=true; absorption=1.000000000000; Bellman=true; occupancy=true; reconciled=true; unresolvedOnPolicy=0.000e+0
+CANCEL / HOST-GUARD / ERROR HYGIENE
+  Cancel: error=AbortError; workerTerminated=true; callbacks at cancel/after stale=1/1; COMPLETE synthesized=false
+  Host guard: error=SearchWallTimeExceededError; workerTerminated=true; callbacks at replacement/after stale=0/0; recovery=BEST_RESOLVED_ACQUISITION_SAFE/COMPLETE
+  ERROR: type=ERROR; request=phase2k1_error_request; name=OptimizerInputValidationError; COMPLETE before ERROR=false; progress after ERROR=false
+  workers created=4; terminated worker IDs=[1,2,4,3]
 
---- 3. CONTROL FIXTURE: CLEAN-DOMINANCE OPTIMIZATION ---
-Request elapsed: 553ms (host guard: 10250ms)
-Acquisition stage mode: CLEAN_ROUTE_DOMINANCE
-Recommended start: Start clean base: Clean Base
-Recommended expected cost: 27.370425c
-Health: proper=true; absorption=1.000000000000; Bellman=true; occupancy=true; reconciled=true; unresolvedOnPolicy=0.000e+0
+ALL PHASE 2K.1 ACTUAL WORKER-BOUNDARY GATES: PASS
+Direct executeOptimizerWorkerRequest smoke substitution: NO
+Unit tests run: NO

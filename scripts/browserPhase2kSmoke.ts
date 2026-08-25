@@ -1,155 +1,504 @@
 import { writeFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
-import { executeOptimizerWorkerRequest } from '../src/crafting/optimizerWorkerEngine.ts';
-import { getSearchRuntimeBudget } from '../crafting-engine/src/service/searchRuntime.ts';
-import type {
-  OptimizeCraftInput,
-  OptimizeCraftResult,
-  OptimizerProgressSnapshot,
-} from '../crafting-engine/src/service/optimizerService.ts';
+import type { OptimizeCraftInput } from '../crafting-engine/src/service/optimizerService.ts';
+import {
+  createPhase2k1ExactFixture,
+  PHASE2K1_FROZEN_CURRENCY_RATES,
+} from '../crafting-engine/scripts/phase2k1ExactFixture.ts';
 
+const debugPort = process.env.BROWSER_DEBUG_PORT ?? '9222';
+const appUrl = process.env.PHASE2_APP_URL ?? 'http://127.0.0.1:5173/';
 const outputPath = fileURLToPath(new URL('../output-browser-phase2k-smoke.txt', import.meta.url));
+const sleep = (milliseconds: number) => new Promise((resolve) => setTimeout(resolve, milliseconds));
 
-function finite(value: number | null | undefined): string {
-  return value === null || value === undefined || !Number.isFinite(value)
-    ? 'NONE'
-    : `${value.toFixed(6)}c`;
+function requireGate(condition: unknown, message: string): asserts condition {
+  if (!condition) throw new Error(message);
 }
 
-function health(result: OptimizeCraftResult): string {
-  return [
-    `proper=${result.risk.selectedPolicyProper}`,
-    `absorption=${result.risk.terminalAbsorptionProbability.toFixed(12)}`,
-    `Bellman=${result.solver.bellmanConverged}`,
-    `occupancy=${result.solver.occupancyConverged}`,
-    `reconciled=${result.solver.costReconciled}`,
-    `unresolvedOnPolicy=${result.risk.unresolvedOnPolicyProbability.toExponential(3)}`,
-  ].join('; ');
+async function waitForJsonEndpoint(): Promise<string> {
+  for (let attempt = 0; attempt < 100; attempt++) {
+    try {
+      const pages = await fetch(`http://127.0.0.1:${debugPort}/json/list`)
+        .then((response) => response.json()) as Array<{
+          type: string;
+          url: string;
+          webSocketDebuggerUrl?: string;
+        }>;
+      const page = pages.find((candidate) =>
+        candidate.type === 'page' && !candidate.url.startsWith('chrome://')
+      );
+      if (page?.webSocketDebuggerUrl) return page.webSocketDebuggerUrl;
+    } catch {}
+    await sleep(100);
+  }
+  throw new Error('Chrome DevTools endpoint did not become ready');
 }
 
-function runSimulatedWorker(
-  requestId: string,
-  input: OptimizeCraftInput
-): {
-  result: OptimizeCraftResult;
-  elapsedMs: number;
-  hostGuardDeadlineMs: number;
-  progressHistory: OptimizerProgressSnapshot[];
-} {
-  const budget = getSearchRuntimeBudget(input.searchBudget?.maxWallTimeMs);
-  const progressHistory: OptimizerProgressSnapshot[] = [];
-  const started = Date.now();
-  const rawResponse = executeOptimizerWorkerRequest(
-    {
-      type: 'OPTIMIZE',
-      requestId,
-      input,
-    },
-    (progress) => {
-      progressHistory.push(JSON.parse(JSON.stringify(progress)));
-    }
-  );
-  const elapsedMs = Date.now() - started;
-  if (rawResponse.type === 'ERROR') {
-    throw new Error(`Worker error in ${requestId}: ${rawResponse.error.message}`);
-  }
-  if (elapsedMs > budget.hostGuardDeadlineMs) {
-    throw new Error(`Worker execution exceeded host guard deadline: ${elapsedMs}ms > ${budget.hostGuardDeadlineMs}ms`);
-  }
-  const serialized = JSON.stringify(rawResponse);
-  const deserialized = JSON.parse(serialized);
-  return {
-    result: deserialized.result,
-    elapsedMs,
-    hostGuardDeadlineMs: budget.hostGuardDeadlineMs,
-    progressHistory,
+const socket = new WebSocket(await waitForJsonEndpoint());
+await new Promise<void>((resolve, reject) => {
+  socket.addEventListener('open', () => resolve(), { once: true });
+  socket.addEventListener('error', () => reject(new Error('Chrome DevTools socket failed')), {
+    once: true,
+  });
+});
+
+let nextCommandId = 1;
+const pending = new Map<number, {
+  resolve: (value: unknown) => void;
+  reject: (error: Error) => void;
+}>();
+socket.addEventListener('message', (event) => {
+  const message = JSON.parse(String(event.data)) as {
+    id?: number;
+    error?: { message: string };
+    result?: unknown;
   };
+  if (message.id === undefined) return;
+  const request = pending.get(message.id);
+  if (!request) return;
+  pending.delete(message.id);
+  if (message.error) request.reject(new Error(message.error.message));
+  else request.resolve(message.result);
+});
+
+function command(method: string, params: Record<string, unknown> = {}): Promise<unknown> {
+  const id = nextCommandId++;
+  return new Promise((resolve, reject) => {
+    pending.set(id, { resolve, reject });
+    socket.send(JSON.stringify({ id, method, params }));
+  });
 }
 
-const lines: string[] = [
-  'PHASE 2K — PRODUCTION BROWSER / WORKER SMOKE & VALIDATION REPORT',
-  'Validation of Phase 2K multi-tranche resumable self-fracture acquisition, full-route ranking against clean incumbent, and live progress telemetry.',
-  '',
-];
+async function evaluate<T>(expression: string): Promise<T> {
+  const response = await command('Runtime.evaluate', {
+    expression,
+    awaitPromise: true,
+    returnByValue: true,
+  }) as {
+    exceptionDetails?: { text: string; exception?: { description?: string } };
+    result: { value: T };
+  };
+  if (response.exceptionDetails) {
+    throw new Error(
+      response.exceptionDetails.exception?.description ?? response.exceptionDetails.text
+    );
+  }
+  return response.result.value;
+}
 
-console.error('[browser-phase2k-smoke] 1. Four-Mod Real World Fixture with Live Telemetry');
-const fourModInput: OptimizeCraftInput = {
-  baseType: 'Large Cluster Jewel',
-  clusterType: '12% increased Attack Damage while Dual Wielding',
-  itemLevel: 84,
-  passiveCount: 8,
-  target: {
-    requiredMods: [
-      { modId: 'AfflictionJewelSmallPassivesGrantInt3' },
-      { modId: 'AfflictionJewelSmallPassivesHaveIncreasedEffect2' },
-      { modId: 'AfflictionJewelSmallPassivesGrantAttributes3' },
-      { modId: 'AfflictionJewelSmallPassivesGrantES3' },
-    ],
-    finalStateConstraints: { maxUnmatchedAffixes: 0 },
-  },
-  searchBudget: { maxStates: 5_000, maxWallTimeMs: 25_000, maxExpansionRounds: 3 },
-  searchIntent: 'RECOMMEND',
-};
+const instrumentation = `(() => {
+  const NativeWorker = window.Worker;
+  const state = window.__phase2k1WorkerSmoke = {
+    events: [],
+    requests: [],
+    terminations: [],
+    workerCount: 0,
+    workers: new Map(),
+    workerMetadata: new Map(),
+    messageErrors: 0,
+    swallowNextOptimize: false,
+    unknownInjected: false,
+    lastProgress: null,
+  };
+  window.Worker = class Phase2K1ObservedWorker extends NativeWorker {
+    constructor(url, options) {
+      super(url, options);
+      const workerId = ++state.workerCount;
+      this.__phase2k1WorkerId = workerId;
+      state.workers.set(workerId, this);
+      state.workerMetadata.set(workerId, { url: String(url), options });
+      super.addEventListener('message', (event) => {
+        const data = event.data;
+        state.events.push({
+          sequence: state.events.length,
+          workerId,
+          type: data?.type ?? 'UNKNOWN',
+          requestId: data?.requestId,
+          phase: data?.progress?.phase,
+          focus: data?.progress?.currentFocus,
+          injected: data?.__phase2k1Injected === true,
+        });
+        if (data?.type === 'PROGRESS' && data?.progress) {
+          state.lastProgress = structuredClone(data.progress);
+          if (!state.unknownInjected && data.__phase2k1Injected !== true) {
+            state.unknownInjected = true;
+            this.dispatchEvent(new MessageEvent('message', {
+              data: {
+                ...data,
+                requestId: 'phase2k1_unknown_request',
+                progress: { ...data.progress, currentFocus: 'INJECTED UNKNOWN PROGRESS' },
+                __phase2k1Injected: true,
+              },
+            }));
+          }
+        }
+      });
+      super.addEventListener('messageerror', () => { state.messageErrors += 1; });
+    }
+    postMessage(message, transfer) {
+      if (message?.type === 'OPTIMIZE') {
+        state.requests.push({
+          sequence: state.requests.length,
+          workerId: this.__phase2k1WorkerId,
+          requestId: message.requestId,
+        });
+        if (state.swallowNextOptimize) {
+          state.swallowNextOptimize = false;
+          return;
+        }
+      }
+      return transfer === undefined
+        ? super.postMessage(message)
+        : super.postMessage(message, transfer);
+    }
+    terminate() {
+      state.terminations.push(this.__phase2k1WorkerId);
+      return super.terminate();
+    }
+  };
+  state.injectProgress = (workerId, requestId, focus) => {
+    const worker = state.workers.get(workerId);
+    const progress = state.lastProgress;
+    if (!worker || !progress) return false;
+    worker.dispatchEvent(new MessageEvent('message', {
+      data: {
+        type: 'PROGRESS',
+        requestId,
+        progress: { ...progress, currentFocus: focus },
+        __phase2k1Injected: true,
+      },
+    }));
+    return true;
+  };
+})()`;
 
-const fourMod1 = runSimulatedWorker('four-mod-recommend', fourModInput);
-lines.push(
-  '--- 1. FOUR-MOD REAL WORLD FIXTURE ---',
-  `Request elapsed: ${fourMod1.elapsedMs}ms (host guard: ${fourMod1.hostGuardDeadlineMs}ms)`,
-  `Recommendation status: ${fourMod1.result.recommendationStatus}`,
-  `Recommended start: ${fourMod1.result.recommended?.name}`,
-  `Recommended expected cost: ${finite(fourMod1.result.expectedCostChaos)}`,
-  `Health: ${health(fourMod1.result)}`,
-  `Telemetry snapshots captured: ${fourMod1.progressHistory.length}`,
-  `Final progress phase: ${fourMod1.progressHistory.at(-1)?.phase}`,
-  `Final progress candidates: ${fourMod1.progressHistory.at(-1)?.candidates.map((c) => `${c.label} (${c.status})`).join(', ')}`,
-  `Recent milestones: ${JSON.stringify(fourMod1.progressHistory.at(-1)?.recentMilestones)}`,
-  ''
+await command('Page.enable');
+await command('Runtime.enable');
+await command('Page.addScriptToEvaluateOnNewDocument', { source: instrumentation });
+await command('Page.navigate', { url: appUrl });
+
+for (let attempt = 0; attempt < 100; attempt++) {
+  if (await evaluate<boolean>("document.readyState === 'complete'")) break;
+  await sleep(100);
+}
+requireGate(
+  await evaluate<boolean>('Boolean(window.__phase2k1WorkerSmoke)'),
+  'Worker instrumentation was not installed'
 );
 
-console.error('[browser-phase2k-smoke] 2. Same-Worker Retry Deeper Continuation Retention');
-const deeperInput: OptimizeCraftInput = {
-  ...fourModInput,
-  searchBudget: { maxStates: 10_000, maxWallTimeMs: 25_000, maxExpansionRounds: 4 },
-  searchIntent: 'DEEPEN',
-};
-
-const fourMod2 = runSimulatedWorker('four-mod-deepen', deeperInput);
-lines.push(
-  '--- 2. SAME-WORKER RETRY DEEPER CONTINUATION RETENTION ---',
-  `Request elapsed: ${fourMod2.elapsedMs}ms (host guard: ${fourMod2.hostGuardDeadlineMs}ms)`,
-  `Session reuse status: ${fourMod2.result.search.sessionReuse.status}`,
-  `Retained states from prior request: ${fourMod2.result.search.sessionReuse.retainedStates}`,
-  `Recommended expected cost: ${finite(fourMod2.result.expectedCostChaos)}`,
-  `Health: ${health(fourMod2.result)}`,
-  ''
-);
-
-console.error('[browser-phase2k-smoke] 3. Control Fixture: Clean-Dominance Optimization');
-const controlInput: OptimizeCraftInput = {
+const quickWorkerFixture: OptimizeCraftInput = {
   baseType: 'Medium Cluster Jewel',
   clusterType: '10% increased Damage while affected by a Herald',
   itemLevel: 84,
   passiveCount: 4,
   target: {
-    requiredMods: [
-      { modId: 'Endbringer' },
-    ],
-    finalStateConstraints: { maxUnmatchedAffixes: 0 },
+    requiredRarity: 'rare',
+    requiredMods: [{ modId: 'Empowered Envoy' }, { modId: 'Endbringer' }],
+    finalStateConstraints: {},
   },
-  searchBudget: { maxStates: 3_000, maxWallTimeMs: 10_000, maxExpansionRounds: 2 },
+  prices: {
+    currencyRates: { ...PHASE2K1_FROZEN_CURRENCY_RATES },
+    cleanBaseCostChaos: 10,
+    cleanBasePriceSource: 'manual',
+    cleanBasePriceProvenance: 'Phase 2K.1 frozen actual-worker fixture',
+  },
+  allowResearchFallbackPrices: false,
+  searchBudget: { maxStates: 3_000, maxWallTimeMs: 15_000, maxExpansionRounds: 3 },
   searchIntent: 'RECOMMEND',
 };
+const exactWorkerFixture = createPhase2k1ExactFixture();
+const cancelFixture = createPhase2k1ExactFixture();
 
-const control1 = runSimulatedWorker('control-clean-dominance', controlInput);
-lines.push(
-  '--- 3. CONTROL FIXTURE: CLEAN-DOMINANCE OPTIMIZATION ---',
-  `Request elapsed: ${control1.elapsedMs}ms (host guard: ${control1.hostGuardDeadlineMs}ms)`,
-  `Acquisition stage mode: ${control1.result.acquisition.stage.mode}`,
-  `Recommended start: ${control1.result.recommended?.name}`,
-  `Recommended expected cost: ${finite(control1.result.expectedCostChaos)}`,
-  `Health: ${health(control1.result)}`,
-  ''
+const harnessExpression = `(() => {
+  const exactWorkerFixture = ${JSON.stringify(exactWorkerFixture)};
+  const quickWorkerFixture = ${JSON.stringify(quickWorkerFixture)};
+  const cancelFixture = ${JSON.stringify(cancelFixture)};
+  const delay = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+  return import('/src/crafting/optimizerWorkerClient.ts').then(async ({ OptimizerWorkerClient }) => {
+    const state = window.__phase2k1WorkerSmoke;
+    const client = new OptimizerWorkerClient();
+
+    const successCallbacks = [];
+    const successStarted = performance.now();
+    const successResult = await client.optimize(exactWorkerFixture, (progress) => {
+      successCallbacks.push(structuredClone(progress));
+    });
+    const successElapsedMs = performance.now() - successStarted;
+    await delay(100);
+    const successRequest = state.requests.at(-1);
+    const successEvents = state.events.filter((event) =>
+      event.requestId === successRequest.requestId && !event.injected
+    );
+    const successObservedWorkerEvents = state.events.filter((event) =>
+      event.workerId === successRequest.workerId && !event.injected
+    );
+    const successCallbackCountBeforeStale = successCallbacks.length;
+    state.injectProgress(
+      successRequest.workerId,
+      successRequest.requestId,
+      'INJECTED STALE POST-RESULT PROGRESS'
+    );
+    await delay(0);
+
+    let cancelFirstProgressResolve;
+    const cancelFirstProgress = new Promise((resolve) => { cancelFirstProgressResolve = resolve; });
+    const cancelCallbacks = [];
+    const cancelPromise = client.optimize(cancelFixture, (progress) => {
+      cancelCallbacks.push(structuredClone(progress));
+      cancelFirstProgressResolve();
+    });
+    await Promise.race([
+      cancelFirstProgress,
+      delay(5_000).then(() => { throw new Error('Cancel fixture produced no progress'); }),
+    ]);
+    const cancelRequest = state.requests.at(-1);
+    const cancelCallbackCountAtCancel = cancelCallbacks.length;
+    client.cancel();
+    let cancelError;
+    try { await cancelPromise; } catch (error) {
+      cancelError = { name: error.name, message: error.message };
+    }
+    state.injectProgress(
+      cancelRequest.workerId,
+      cancelRequest.requestId,
+      'INJECTED OLD CANCELLED PROGRESS'
+    );
+    await delay(100);
+
+    state.swallowNextOptimize = true;
+    const guardCallbacks = [];
+    const guardInput = {
+      ...quickWorkerFixture,
+      searchBudget: { maxStates: 3_000, maxWallTimeMs: 100, maxExpansionRounds: 3 },
+    };
+    const guardPromise = client.optimize(guardInput, (progress) => {
+      guardCallbacks.push(structuredClone(progress));
+    });
+    const guardRequest = state.requests.at(-1);
+    let guardError;
+    try { await guardPromise; } catch (error) {
+      guardError = { name: error.name, message: error.message, code: error.code };
+    }
+    const guardCallbackCountAtReplacement = guardCallbacks.length;
+    state.injectProgress(
+      guardRequest.workerId,
+      guardRequest.requestId,
+      'INJECTED OLD HOST-GUARD PROGRESS'
+    );
+    await delay(100);
+
+    const recoveryCallbacks = [];
+    const recoveryResult = await client.optimize(quickWorkerFixture, (progress) => {
+      recoveryCallbacks.push(structuredClone(progress));
+    });
+    const recoveryRequest = state.requests.at(-1);
+    await delay(100);
+
+    const latestMetadata = state.workerMetadata.get(state.workerCount);
+    const errorWorker = new Worker(latestMetadata.url, latestMetadata.options);
+    const errorWorkerId = errorWorker.__phase2k1WorkerId;
+    const errorRequestId = 'phase2k1_error_request';
+    const errorResponse = await new Promise((resolve, reject) => {
+      const timeout = setTimeout(() => reject(new Error('Worker ERROR fixture timed out')), 5_000);
+      errorWorker.addEventListener('message', (event) => {
+        if (event.data?.requestId !== errorRequestId || event.data?.type !== 'ERROR') return;
+        clearTimeout(timeout);
+        resolve(structuredClone(event.data));
+      });
+      errorWorker.postMessage({
+        type: 'OPTIMIZE',
+        requestId: errorRequestId,
+        input: { ...quickWorkerFixture, clusterType: 'NOT A REAL CLUSTER TYPE' },
+      });
+    });
+    await delay(100);
+    errorWorker.terminate();
+
+    client.dispose();
+    return {
+      success: {
+        elapsedMs: successElapsedMs,
+        request: successRequest,
+        events: successEvents,
+        observedWorkerEvents: successObservedWorkerEvents,
+        callbackPhases: successCallbacks.map((progress) => progress.phase),
+        callbackFocuses: successCallbacks.map((progress) => progress.currentFocus),
+        callbackCountBeforeStale: successCallbackCountBeforeStale,
+        callbackCountAfterStale: successCallbacks.length,
+        selected: successResult.recommended?.name,
+        selectedAcquisitionMethodId: successResult.recommended?.acquisitionMethodId,
+        expectedCostChaos: successResult.expectedCostChaos,
+        candidateCount: successResult.acquisition.candidates.length,
+        terminalFractureFullRouteCount: successCallbacks.at(-1)?.candidates.filter(
+          (candidate) => candidate.kind === 'self-fracture' &&
+            candidate.fullRouteUpperBoundChaos !== undefined
+        ).length ?? 0,
+        structuredCloneSucceeded: Boolean(structuredClone(successResult)),
+      },
+      cancel: {
+        request: cancelRequest,
+        error: cancelError,
+        callbackCountAtCancel: cancelCallbackCountAtCancel,
+        callbackCountAfterInjectedStale: cancelCallbacks.length,
+        phases: cancelCallbacks.map((progress) => progress.phase),
+        workerTerminated: state.terminations.includes(cancelRequest.workerId),
+      },
+      guard: {
+        request: guardRequest,
+        error: guardError,
+        callbackCountAtReplacement: guardCallbackCountAtReplacement,
+        callbackCountAfterInjectedStale: guardCallbacks.length,
+        workerTerminated: state.terminations.includes(guardRequest.workerId),
+        recoveryRequest,
+        recoveryStatus: recoveryResult.recommendationStatus,
+        recoveryLastPhase: recoveryCallbacks.at(-1)?.phase,
+      },
+      error: {
+        workerId: errorWorkerId,
+        response: errorResponse,
+        events: state.events.filter((event) =>
+          event.requestId === errorRequestId && !event.injected
+        ),
+      },
+      unknownInjected: state.unknownInjected,
+      messageErrors: state.messageErrors,
+      workerCount: state.workerCount,
+      terminations: state.terminations,
+    };
+  });
+})()`;
+
+interface BrowserSmokeResult {
+  success: {
+    elapsedMs: number;
+    request: { workerId: number; requestId: string };
+    events: Array<{ type: string; requestId: string; phase?: string }>;
+    observedWorkerEvents: Array<{ type: string; requestId: string; phase?: string }>;
+    callbackPhases: string[];
+    callbackFocuses: string[];
+    callbackCountBeforeStale: number;
+    callbackCountAfterStale: number;
+    selected?: string;
+    selectedAcquisitionMethodId?: string;
+    expectedCostChaos?: number;
+    candidateCount: number;
+    terminalFractureFullRouteCount: number;
+    structuredCloneSucceeded: boolean;
+  };
+  cancel: {
+    request: { workerId: number; requestId: string };
+    error?: { name: string; message: string };
+    callbackCountAtCancel: number;
+    callbackCountAfterInjectedStale: number;
+    phases: string[];
+    workerTerminated: boolean;
+  };
+  guard: {
+    request: { workerId: number; requestId: string };
+    error?: { name: string; message: string; code?: string };
+    callbackCountAtReplacement: number;
+    callbackCountAfterInjectedStale: number;
+    workerTerminated: boolean;
+    recoveryRequest: { workerId: number; requestId: string };
+    recoveryStatus: string;
+    recoveryLastPhase?: string;
+  };
+  error: {
+    workerId: number;
+    response: { type: string; requestId: string; error: { name: string; message: string } };
+    events: Array<{ type: string; requestId: string; phase?: string }>;
+  };
+  unknownInjected: boolean;
+  messageErrors: number;
+  workerCount: number;
+  terminations: number[];
+}
+
+console.error('[browser-phase2k-smoke] actual browser Worker / client boundary');
+const smoke = await evaluate<BrowserSmokeResult>(harnessExpression);
+
+const resultIndex = smoke.success.events.findIndex((event) => event.type === 'RESULT');
+const lastProgressBeforeResult = smoke.success.events
+  .slice(0, resultIndex)
+  .filter((event) => event.type === 'PROGRESS')
+  .at(-1);
+const actualProgressAfterResult = smoke.success.events
+  .slice(resultIndex + 1)
+  .some((event) => event.type === 'PROGRESS');
+const errorIndex = smoke.error.events.findIndex((event) => event.type === 'ERROR');
+const completeBeforeError = smoke.error.events
+  .slice(0, errorIndex)
+  .some((event) => event.type === 'PROGRESS' && event.phase === 'COMPLETE');
+const progressAfterError = smoke.error.events
+  .slice(errorIndex + 1)
+  .some((event) => event.type === 'PROGRESS');
+
+requireGate(resultIndex > 0, 'K3 actual Worker did not deliver RESULT after progress');
+requireGate(lastProgressBeforeResult?.phase === 'COMPLETE', 'K4 last PROGRESS before RESULT was not COMPLETE');
+requireGate(!actualProgressAfterResult, 'K3 actual progress arrived after terminal RESULT');
+requireGate(
+  smoke.success.observedWorkerEvents.length === smoke.success.events.length &&
+    smoke.success.observedWorkerEvents.every(
+      (event) => event.requestId === smoke.success.request.requestId
+    ),
+  'K3 actual Worker response requestId routing failed'
+);
+requireGate(
+  smoke.success.candidateCount === 5 && smoke.success.terminalFractureFullRouteCount > 0,
+  'K3 actual Worker success did not carry the exact five-candidate fracture portfolio'
+);
+requireGate(smoke.success.structuredCloneSucceeded && smoke.messageErrors === 0, 'K3 structured clone failed');
+requireGate(
+  smoke.unknownInjected &&
+    !smoke.success.callbackFocuses.includes('INJECTED UNKNOWN PROGRESS') &&
+    smoke.success.callbackCountAfterStale === smoke.success.callbackCountBeforeStale,
+  'K3 unknown or stale progress mutated the client callback state'
+);
+requireGate(
+  smoke.cancel.error?.name === 'AbortError' &&
+    smoke.cancel.workerTerminated &&
+    smoke.cancel.callbackCountAfterInjectedStale === smoke.cancel.callbackCountAtCancel &&
+    !smoke.cancel.phases.includes('COMPLETE'),
+  'K3 Cancel did not terminate/replace cleanly or accepted old progress'
+);
+requireGate(
+  smoke.guard.error?.name === 'SearchWallTimeExceededError' &&
+    smoke.guard.workerTerminated &&
+    smoke.guard.callbackCountAfterInjectedStale === smoke.guard.callbackCountAtReplacement &&
+    smoke.guard.recoveryLastPhase === 'COMPLETE',
+  'K3 host guard did not replace/recover cleanly or accepted old progress'
+);
+requireGate(
+  smoke.error.response.type === 'ERROR' &&
+    smoke.error.response.requestId === 'phase2k1_error_request' &&
+    !completeBeforeError &&
+    !progressAfterError,
+  'K3 ERROR terminal-message hygiene failed'
 );
 
-writeFileSync(outputPath, lines.join('\n'), 'utf8');
-console.error(`[browser-phase2k-smoke] Written to ${outputPath}`);
+const lines = [
+  'PHASE 2K.1 — ACTUAL BROWSER WORKER-BOUNDARY SMOKE',
+  `URL: ${appUrl}`,
+  '',
+  'K3/K4 REAL OptimizerWorkerClient -> optimizer.worker.ts MESSAGE ORDER',
+  `  request=${smoke.success.request.requestId}; worker=${smoke.success.request.workerId}; elapsed=${smoke.success.elapsedMs.toFixed(3)}ms`,
+  `  sequence=${smoke.success.events.map((event) => event.type === 'PROGRESS' ? `PROGRESS:${event.phase}` : event.type).join(' -> ')}`,
+  `  last PROGRESS before RESULT=${lastProgressBeforeResult?.phase}; progress after RESULT=${actualProgressAfterResult}; selected=${smoke.success.selected}; U=${smoke.success.expectedCostChaos?.toFixed(6)}c`,
+  `  exact fixture candidates=${smoke.success.candidateCount}; executable fracture full routes in terminal progress=${smoke.success.terminalFractureFullRouteCount}; selected acquisition=${smoke.success.selectedAcquisitionMethodId}`,
+  `  requestId routing=PASS over ${smoke.success.observedWorkerEvents.length} unfiltered actual-worker events; structured clone=PASS; messageerror count=${smoke.messageErrors}`,
+  '  unknown request progress ignored=PASS; stale post-RESULT progress ignored=PASS',
+  '',
+  'CANCEL / HOST-GUARD / ERROR HYGIENE',
+  `  Cancel: error=${smoke.cancel.error?.name}; workerTerminated=${smoke.cancel.workerTerminated}; callbacks at cancel/after stale=${smoke.cancel.callbackCountAtCancel}/${smoke.cancel.callbackCountAfterInjectedStale}; COMPLETE synthesized=${smoke.cancel.phases.includes('COMPLETE')}`,
+  `  Host guard: error=${smoke.guard.error?.name}; workerTerminated=${smoke.guard.workerTerminated}; callbacks at replacement/after stale=${smoke.guard.callbackCountAtReplacement}/${smoke.guard.callbackCountAfterInjectedStale}; recovery=${smoke.guard.recoveryStatus}/${smoke.guard.recoveryLastPhase}`,
+  `  ERROR: type=${smoke.error.response.type}; request=${smoke.error.response.requestId}; name=${smoke.error.response.error.name}; COMPLETE before ERROR=${completeBeforeError}; progress after ERROR=${progressAfterError}`,
+  `  workers created=${smoke.workerCount}; terminated worker IDs=${JSON.stringify(smoke.terminations)}`,
+  '',
+  'ALL PHASE 2K.1 ACTUAL WORKER-BOUNDARY GATES: PASS',
+  'Direct executeOptimizerWorkerRequest smoke substitution: NO',
+  'Unit tests run: NO',
+];
+
+writeFileSync(outputPath, `${lines.join('\n')}\n`, 'utf8');
+console.log(lines.join('\n'));
+socket.close();
