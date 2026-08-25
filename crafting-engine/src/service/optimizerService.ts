@@ -881,10 +881,10 @@ function buildHarvestComparisonSummary(
     consideredHarvestActions: enabledHarvestCrafts,
     resolvedHarvestRoute,
     conventionalRoute,
-    status: resolvedHarvestRoute ? 'HARVEST_SELECTED' : 'HARVEST_MORE_EXPENSIVE',
+    status: resolvedHarvestRoute ? 'HARVEST_SELECTED' : 'HARVEST_NO_RESOLVED_POLICY',
     explanation: resolvedHarvestRoute
       ? 'Harvest route resolved successfully.'
-      : 'Harvest reforges were modeled but proved more expensive than conventional Alteration rolling at current lifeforce prices.',
+      : 'Harvest route was unresolved within the allocated state budget.',
   };
 }
 
@@ -892,6 +892,7 @@ function buildMethodPortfolio(
   pool: ModPool,
   allResolvedRoutes: RouteSummary[],
   recommended: RouteSummary | null,
+  recommendationStatus: RecommendationStatus,
   fastCleanRoute: RouteSummary | undefined,
   bestFractureRoute: RouteSummary | undefined,
   synthesisSummaries: Map<number, AcquisitionSynthesisSummary>,
@@ -916,7 +917,9 @@ function buildMethodPortfolio(
     route: recommended ?? undefined,
     craftPlan,
     whyNotSelectedExplanation: recommended
-      ? 'Optimal choice under the selected objective.'
+      ? recommendationStatus === 'PROVEN_OPTIMAL'
+        ? 'Optimal choice under the selected objective.'
+        : 'Best resolved crafting path found within search budget.'
       : 'Search budget was reached before proof completion.',
   });
 
@@ -929,6 +932,23 @@ function buildMethodPortfolio(
     const actionsSaved = (conventionalRoute.metrics?.expectedPhysicalActions ?? 0) - (recommended?.metrics?.expectedPhysicalActions ?? 0);
     const timeSavedMs = (conventionalRoute.metrics?.estimatedManualTimeMs ?? 0) - (recommended?.metrics?.estimatedManualTimeMs ?? 0);
 
+    let status: MethodFamilyStatus = 'DOMINATED';
+    let explanation: string | undefined;
+
+    if (isWinner) {
+      status = 'SELECTED_WINNER';
+      explanation = 'Selected as the most effective path under the chosen objective.';
+    } else if (costDelta > 0.05) {
+      status = 'MORE_EXPENSIVE';
+      explanation = `+${costDelta.toFixed(1)}c (+${costDeltaPct.toFixed(0)}%) more expensive than ${recommended?.name ?? 'recommended route'}.`;
+    } else if (actionsSaved > 0) {
+      status = 'MORE_EXPENSIVE';
+      explanation = `Requires ~${Math.round(actionsSaved)} more physical actions (~${Math.max(0, Math.round(timeSavedMs / 1000))}s manual time) than the selected route.`;
+    } else {
+      status = 'DOMINATED';
+      explanation = `Dominated by other starting methods.`;
+    }
+
     results.push({
       spec: {
         id: 'family_conventional',
@@ -938,17 +958,13 @@ function buildMethodPortfolio(
         badge: 'Alt + Regal',
         forcedAcquisitionType: 'CLEAN',
       },
-      status: isWinner ? 'SELECTED_WINNER' : costDelta > 0.05 ? 'MORE_EXPENSIVE' : 'DOMINATED',
+      status,
       route: conventionalRoute,
       costDifferenceChaos: costDelta,
       costDifferencePercent: costDeltaPct,
       actionsSaved: -actionsSaved,
       timeSavedMs: -timeSavedMs,
-      whyNotSelectedExplanation: isWinner
-        ? 'Selected as the most cost-effective path.'
-        : costDelta > 0.05
-          ? `+${costDelta.toFixed(1)}c (+${costDeltaPct.toFixed(0)}%) more expensive than ${recommended?.name ?? 'recommended route'}.`
-          : undefined,
+      whyNotSelectedExplanation: explanation,
     });
   } else {
     results.push({
@@ -1013,7 +1029,8 @@ function buildMethodPortfolio(
     const modId = start.fracturedRequirement.modId;
     const mod = pool.findModById(modId);
     const modName = mod ? `${mod.name} (T${mod.tier})` : modId;
-    const candidateRoute = allResolvedRoutes.find((r) => r.actionId.includes(`candidate_${idx}`) || (bestFractureRoute && bestFractureRoute.actionId.includes(`candidate_${idx}`)));
+    const candidateRoute = allResolvedRoutes.find((r) => r.actionId.includes(`candidate_${idx}`)) ??
+      (bestFractureRoute?.actionId.includes(`candidate_${idx}`) ? bestFractureRoute : undefined);
     const synthSummary = synthesisSummaries.get(idx);
 
     const isWinner = Boolean(recommended && recommended.actionId.includes(`candidate_${idx}`));
@@ -1062,13 +1079,14 @@ function buildMethodPortfolio(
 
   // Deduplicate method families that resolved to the exact same route
   const seenRouteIds = new Set<string>();
+  if (recommended?.actionId) {
+    seenRouteIds.add(recommended.actionId);
+  }
   return results.filter((family) => {
     if (family.spec.kind === 'OPEN') return true;
     if (!family.route?.actionId) return true;
     if (seenRouteIds.has(family.route.actionId)) {
-      if (family.spec.kind === 'CONVENTIONAL' && results[0].route?.actionId === family.route.actionId) {
-        return false;
-      }
+      return false;
     }
     seenRouteIds.add(family.route.actionId);
     return true;
@@ -3829,6 +3847,7 @@ export class OptimizerService {
       pool,
       allResolvedRoutes,
       recommended,
+      outputWithoutCraftPlan.recommendationStatus,
       fastCleanRoute,
       bestFractureRoute,
       synthesisSummaries,

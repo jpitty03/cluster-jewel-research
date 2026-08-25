@@ -655,10 +655,11 @@ function CraftOptimizer() {
     lines.push(`Expected Total Cost: ~${chaos(res.expectedCostChaos)}`);
     lines.push('\nEstimated Materials & Bases:');
 
-    const cleanCand = res.acquisition.candidates.find((c) => c.id === 'candidate_clean');
-    const cleanCost = cleanCand?.methods.find((m) => m.id === 'clean-base')?.costChaos;
-    if (cleanCost !== undefined) {
-      lines.push(`- 1x ${baseType} (ilvl ${itemLevel}, ${passiveCount} passives) (~${cleanCost.toFixed(1)}c)`);
+    const cleanMethod = res.acquisition.candidates
+      .flatMap((c) => c.methods)
+      .find((m) => m.id.startsWith('clean-base'));
+    if (cleanMethod?.costChaos !== undefined) {
+      lines.push(`- 1x ${baseType} (ilvl ${itemLevel}, ${passiveCount} passives) (~${cleanMethod.costChaos.toFixed(1)}c)`);
     }
 
     const currencies = res.expectedCurrencies ?? {};
@@ -687,6 +688,15 @@ function CraftOptimizer() {
       if (step.actionIds.length > 0) {
         lines.push(`Action: ${step.actionNames.join(', ')}`);
       }
+      if (step.decisionDetails && step.decisionDetails.length > 0) {
+        lines.push('Decisions:');
+        step.decisionDetails.forEach((group) => {
+          lines.push(`  - When ${group.summary}:`);
+          group.options.forEach((opt) => {
+            lines.push(`      * ${opt.action} (~${opt.expectedVisits.toFixed(1)} visits)`);
+          });
+        });
+      }
     });
 
     void navigator.clipboard.writeText(lines.join('\n'));
@@ -698,14 +708,7 @@ function CraftOptimizer() {
     const exportBundle = {
       appVersion: 'Phase2N',
       exportedAt: new Date().toISOString(),
-      baseType,
-      clusterType,
-      itemLevel,
-      passiveCount,
-      targetMods: targetModIds.filter(Boolean),
-      finalRarity,
-      objective: draftObjective,
-      prices: res.marketContext,
+      requestInput: draftInput,
       resultSummary: {
         expectedCostChaos: res.expectedCostChaos,
         recommendationStatus: res.recommendationStatus,
@@ -1254,7 +1257,9 @@ function CraftOptimizer() {
                           {isWinner
                             ? 'Recommended'
                             : isMoreExpensive
-                              ? `+${method.costDifferenceChaos !== undefined ? method.costDifferenceChaos.toFixed(1) : ''}c (${method.costDifferencePercent !== undefined ? `+${method.costDifferencePercent.toFixed(0)}%` : ''})`
+                              ? method.costDifferenceChaos !== undefined
+                                ? `+${method.costDifferenceChaos.toFixed(1)}c${method.costDifferencePercent !== undefined ? ` (+${method.costDifferencePercent.toFixed(0)}%)` : ''}`
+                                : 'More Expensive'
                               : isDominated
                                 ? 'Dominated'
                                 : isNotEligible

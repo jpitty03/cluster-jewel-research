@@ -2,13 +2,13 @@ PHASE 2P — CORRECTNESS, PROOF, AND PERFORMANCE CLOSURE DIAGNOSTIC
 
 --- P1: Frozen Fixture Corpus Verification ---
 Fixture [single_mod] (Single Mod (T1 Energy Shield)):
-  Status: BEST_RESOLVED_ACQUISITION_SAFE, Cost: 13.3c, Time: 326ms
+  Status: BEST_RESOLVED_ACQUISITION_SAFE, Cost: 13.3c, Time: 337ms
 Fixture [two_mod_prefix_suffix] (Two-Mod Prefix + Suffix (T1 ES + T1 Int)):
-  Status: BEST_RESOLVED_ACQUISITION_SAFE, Cost: 169.7c, Time: 872ms
+  Status: BEST_RESOLVED_ACQUISITION_SAFE, Cost: 169.7c, Time: 825ms
 Fixture [two_mod_same_generation_prefixes] (Two-Mod Same Generation Prefixes (T1 Armour + T1 ES)):
-  Status: BEST_RESOLVED_ACQUISITION_SAFE, Cost: 254.2c, Time: 3778ms
+  Status: BEST_RESOLVED_ACQUISITION_SAFE, Cost: 254.2c, Time: 3441ms
 Fixture [two_mod_herald] (Herald Speed + T1 ES):
-  Status: BEST_RESOLVED_ACQUISITION_SAFE, Cost: 274.8c, Time: 698ms
+  Status: BEST_RESOLVED_ACQUISITION_SAFE, Cost: 274.8c, Time: 708ms
 P1 PASS: All frozen fixtures resolved with certified recommendation status.
 
 --- P2: Metamorphic Symmetry (Input Order) ---

@@ -29,20 +29,30 @@ async function main() {
     console.log(`App not responding on ${appUrl}, running simulated black-box quality run\n`);
   }
 
+  const scenarioArgIndex = process.argv.indexOf('--scenario');
+  const requestedScenario = scenarioArgIndex >= 0 ? process.argv[scenarioArgIndex + 1]?.toLowerCase() : 'all';
+
   const results = [];
 
-  // Run all suites
-  console.log('Running Suite 1: Smoke Scenario...');
-  results.push(await runSmokeScenario(appUrl));
+  if (requestedScenario === 'all' || requestedScenario === 'smoke') {
+    console.log('Running Suite: Smoke Scenario...');
+    results.push(await runSmokeScenario(appUrl));
+  }
 
-  console.log('Running Suite 2: Method Portfolio Scenario...');
-  results.push(await runMethodPortfolioScenario(appUrl));
+  if (requestedScenario === 'all' || requestedScenario === 'methods' || requestedScenario === 'portfolio') {
+    console.log('Running Suite: Method Portfolio Scenario...');
+    results.push(await runMethodPortfolioScenario(appUrl));
+  }
 
-  console.log('Running Suite 3: Multi-Objective Scenario...');
-  results.push(await runMultiObjectiveScenario(appUrl));
+  if (requestedScenario === 'all' || requestedScenario === 'objectives' || requestedScenario === 'multiobjective') {
+    console.log('Running Suite: Multi-Objective Scenario...');
+    results.push(await runMultiObjectiveScenario(appUrl));
+  }
 
-  console.log('Running Suite 4: Responsive & Accessibility Scenario...');
-  results.push(await runResponsiveScenario(appUrl));
+  if (requestedScenario === 'all' || requestedScenario === 'responsive' || requestedScenario === 'accessibility') {
+    console.log('Running Suite: Responsive & Accessibility Scenario...');
+    results.push(await runResponsiveScenario(appUrl));
+  }
 
   // Generate Report
   const totalChecks = results.flatMap((r) => r.checks);

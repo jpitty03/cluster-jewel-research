@@ -16,6 +16,11 @@
     "build:trade-stats": "node scripts/build-trade-stats.mjs",
     "price": "tsx scripts/price.ts",
     "test": "vitest run",
+    "lab": "tsx quality-lab/src/runner.ts",
+    "lab:smoke": "tsx quality-lab/src/runner.ts --scenario smoke",
+    "lab:methods": "tsx quality-lab/src/runner.ts --scenario methods",
+    "lab:objectives": "tsx quality-lab/src/runner.ts --scenario objectives",
+    "lab:responsive": "tsx quality-lab/src/runner.ts --scenario responsive",
     "publish": "npm run scrape && npm run price && node scripts/publish.mjs"
   },
   "dependencies": {

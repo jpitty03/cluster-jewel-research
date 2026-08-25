@@ -19,7 +19,9 @@ export class WorkerOracle {
 
     // 1. Worker Lifecycle
     const hasSpawn = events.some((e) => e.type === 'WORKER_SPAWN');
-    const hasRequest = events.some((e) => e.type === 'POST_MESSAGE_TO_WORKER' && e.payload?.type === 'OPTIMIZE_REQUEST');
+    const hasRequest = events.some(
+      (e) => e.type === 'POST_MESSAGE_TO_WORKER' && (e.payload?.type === 'OPTIMIZE' || e.payload?.type === 'OPTIMIZE_REQUEST')
+    );
     const hasResult = events.some((e) => e.type === 'MESSAGE_FROM_WORKER' && e.payload?.type === 'RESULT');
     const hasErrors = events.some((e) => e.type === 'WORKER_ERROR' || (e.type === 'MESSAGE_FROM_WORKER' && e.payload?.type === 'ERROR'));
 
@@ -54,7 +56,13 @@ export class WorkerOracle {
     // 2. Progress Monotonicity
     const progressEvents = events
       .filter((e) => e.type === 'MESSAGE_FROM_WORKER' && e.payload?.type === 'PROGRESS')
-      .map((e) => e.payload.snapshot);
+      .map((e) => {
+        const snap = e.payload?.progress ?? e.payload?.snapshot ?? {};
+        return {
+          expandedStates: snap.totalStatesExpanded ?? snap.expandedStates ?? 0,
+          elapsedWallTimeMs: snap.elapsedMs ?? snap.elapsedWallTimeMs ?? 0,
+        };
+      });
 
     if (progressEvents.length > 1) {
       let monotonicStates = true;
