@@ -1,5 +1,5 @@
 # Quality Lab Run Summary
-Run Date: 2026-08-25T15:36:37.662Z
+Run Date: 2026-08-25T15:55:42.457Z
 App URL: http://127.0.0.1:5173/
 Total Checks: 41
 Passed Checks: 41
@@ -26,7 +26,7 @@ Status: ALL PASS
 - **[SEMANTIC] CRAFT_PLAN_STEP_COHERENCE**: Craft plan contains 3 ordered steps (PASS)
 - **[SEMANTIC] METHOD_PORTFOLIO_PRESENCE**: Method portfolio evaluated 4 crafting disciplines (PASS)
 - **[SEMANTIC] EXPLAINABILITY_COMPLETENESS**: All 2 non-winning methods have explicit explanations (PASS)
-- **[PERFORMANCE] METHOD PORTFOLIO SCENARIO_LATENCY**: Method Portfolio Scenario completed in 0.0ms (budget: 5000ms) (PASS)
+- **[PERFORMANCE] METHOD PORTFOLIO SCENARIO_LATENCY**: Method Portfolio Scenario completed in 1.0ms (budget: 5000ms) (PASS)
 
 ### Multi-Objective Scenario (PASS)
 - **[SEMANTIC] RECOMMENDATION_STATUS_VALIDITY**: Valid status: PROVEN_OPTIMAL (PASS)

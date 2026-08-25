@@ -3180,3 +3180,122 @@ td a {
   cursor: pointer;
 }
 
+/* ==========================================================================
+   Phase 2S: Onboarding Modal, Presets, and Release Footer
+   ========================================================================== */
+
+.onboarding-modal-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(3, 7, 18, 0.85);
+  backdrop-filter: blur(8px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 9999;
+  padding: 16px;
+}
+
+.onboarding-modal-content {
+  background: #0f172a;
+  border: 1px solid #1e293b;
+  border-radius: 12px;
+  max-width: 680px;
+  width: 100%;
+  max-height: 90vh;
+  overflow-y: auto;
+  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.7);
+  display: flex;
+  flex-direction: column;
+}
+
+.onboarding-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 20px 24px;
+  border-bottom: 1px solid #1e293b;
+}
+
+.onboarding-header h2 {
+  margin: 0;
+  font-size: 1.25rem;
+  color: #f8fafc;
+}
+
+.onboarding-body {
+  padding: 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.onboarding-section h3 {
+  margin: 0 0 6px;
+  font-size: 1rem;
+  color: #38bdf8;
+}
+
+.onboarding-section p {
+  margin: 0;
+  font-size: 0.9rem;
+  line-height: 1.5;
+  color: #94a3b8;
+}
+
+.onboarding-footer {
+  padding: 16px 24px;
+  border-top: 1px solid #1e293b;
+  display: flex;
+  justify-content: flex-end;
+  background: #090d16;
+}
+
+.target-presets-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin: 12px 0 16px;
+}
+
+.preset-chip {
+  background: rgba(30, 41, 59, 0.7);
+  border: 1px solid #334155;
+  color: #cbd5e1;
+  font-size: 12px;
+  padding: 4px 10px;
+  border-radius: 9999px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.preset-chip:hover {
+  background: #334155;
+  border-color: #38bdf8;
+  color: #f8fafc;
+}
+
+.release-footer {
+  margin-top: 48px;
+  padding: 24px 16px;
+  border-top: 1px solid #1e293b;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  font-size: 12px;
+  color: #64748b;
+  text-align: center;
+}
+
+.release-footer a {
+  color: #38bdf8;
+  text-decoration: none;
+}
+
+.release-footer a:hover {
+  text-decoration: underline;
+}
+
+

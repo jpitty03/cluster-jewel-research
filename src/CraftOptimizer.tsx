@@ -28,6 +28,7 @@ import {
 import { SearchableModifierSelect } from './SearchableModifierSelect.tsx';
 import { buildVisualizationGraph } from '../crafting-engine/src/domain/VisualizationGraph.ts';
 import { MarkovConstellation } from './components/MarkovConstellation.tsx';
+import { OnboardingModal } from './components/OnboardingModal.tsx';
 import {
   encodeCraftToUrl,
   decodeCraftFromUrl,
@@ -420,7 +421,9 @@ export function SearchActivityVisualizer({
   );
 }
 
-function CraftOptimizer() {
+export const APP_RELEASE_VERSION = '2S.1';
+
+export function CraftOptimizer() {
   const baseTypes = useMemo(() => browserCraftingCatalog.getBaseTypes(), []);
   const initialBase = baseTypes[0] ?? 'Large Cluster Jewel';
   const [baseType, setBaseType] = useState<BaseType>(initialBase);
@@ -435,18 +438,18 @@ function CraftOptimizer() {
   );
   const [passiveCount, setPassiveCount] = useState(passiveCounts.at(-1) ?? 12);
   const [itemLevel, setItemLevel] = useState(DEFAULT_ITEM_LEVEL);
-  const eligibleMods = useMemo(
-    () => browserCraftingCatalog.getEligibleMods(baseType, clusterType, itemLevel),
-    [baseType, clusterType, itemLevel],
-  );
   const [targetModIds, setTargetModIds] = useState(['']);
   const [finalRarity, setFinalRarity] = useState<'any' | 'magic' | 'rare'>('any');
-  const [finishCondition, setFinishCondition] = useState<'allow-extra' | 'no-unwanted'>('allow-extra');
+  const [finishCondition, setFinishCondition] = useState<'any-match' | 'no-unwanted'>('any-match');
   const [cleanBaseCost, setCleanBaseCost] = useState('');
   const [saleValue, setSaleValue] = useState('');
   const pricingLeagues = useMemo(() => getOptimizerPricingLeagues(), []);
   const [league, setLeague] = useState(pricingLeagues[0] ?? '');
   const [allowFallback, setAllowFallback] = useState(true);
+  const eligibleMods = useMemo(
+    () => browserCraftingCatalog.getEligibleMods(baseType, clusterType, itemLevel),
+    [baseType, clusterType, itemLevel],
+  );
   const [maxStates, setMaxStates] = useState(DEFAULT_BUDGET.maxStates);
   const [maxWallTimeMs, setMaxWallTimeMs] = useState(DEFAULT_BUDGET.maxWallTimeMs);
   const [maxExpansionRounds, setMaxExpansionRounds] = useState(DEFAULT_BUDGET.maxExpansionRounds);
@@ -472,6 +475,38 @@ function CraftOptimizer() {
   const [costConstraintValue, setCostConstraintValue] = useState('20');
   const [valueOfTimeChaosPerMin, setValueOfTimeChaosPerMin] = useState('50');
   const [copiedAction, setCopiedAction] = useState<string | null>(null);
+  const [showHelpModal, setShowHelpModal] = useState<boolean>(false);
+
+  const applyPreset = (preset: 'attack-large' | 'es-small') => {
+    if (preset === 'attack-large') {
+      const base: BaseType = 'Large Cluster Jewel';
+      const cluster = '10% increased Attack Damage';
+      setBaseType(base);
+      setClusterType(cluster);
+      setItemLevel(84);
+      setPassiveCount(8);
+      const eligible = browserCraftingCatalog.getEligibleMods(base, cluster, 84);
+      const m1 = eligible.find((m) => m.isNotable && m.displayName === 'Feed the Fury')?.modId;
+      const m2 = eligible.find((m) => m.isNotable && m.displayName === 'Fuel the Fight')?.modId;
+      const fallbackNotables = eligible.filter((m) => m.isNotable);
+      setTargetModIds([
+        m1 || fallbackNotables[0]?.modId || '',
+        m2 || fallbackNotables[1]?.modId || '',
+      ]);
+      setFinalRarity('rare');
+    } else if (preset === 'es-small') {
+      const base: BaseType = 'Small Cluster Jewel';
+      const cluster = '6% increased maximum Energy Shield';
+      setBaseType(base);
+      setClusterType(cluster);
+      setItemLevel(84);
+      setPassiveCount(2);
+      const eligible = browserCraftingCatalog.getEligibleMods(base, cluster, 84);
+      setTargetModIds([eligible[0]?.modId || '']);
+      setFinalRarity('magic');
+    }
+    setResult(null);
+  };
 
   const draftObjective = useMemo<OptimizationObjectiveSpec>(() => {
     switch (objectiveKind) {
@@ -775,7 +810,7 @@ function CraftOptimizer() {
       cleanBaseCostChaos: cleanBaseCost ? Number(cleanBaseCost) : undefined,
       maxUnmatchedAffixes: finishCondition === 'no-unwanted' ? 0 : undefined,
     };
-    const bundle = generateBugReportBundle(payload, res, 'Phase2R');
+    const bundle = generateBugReportBundle(payload, res, APP_RELEASE_VERSION);
     void navigator.clipboard.writeText(JSON.stringify(bundle, null, 2));
     setCopiedAction('BUG_REPORT');
     setTimeout(() => setCopiedAction(null), 2500);
@@ -827,7 +862,7 @@ function CraftOptimizer() {
 
   const exportSetupJson = (res: OptimizeCraftResult) => {
     const exportBundle = {
-      appVersion: 'Phase2R',
+      appVersion: APP_RELEASE_VERSION,
       exportedAt: new Date().toISOString(),
       requestInput: draftInput,
       resultSummary: {
@@ -887,7 +922,15 @@ function CraftOptimizer() {
       <section className="optimizer-card optimizer-form" aria-labelledby="optimizer-input-title">
         <div className="craft-guide-heading-row">
           <h2 id="optimizer-input-title">Craft target</h2>
-          <div>
+          <div style={{ display: 'flex', gap: '8px' }}>
+            <button
+              type="button"
+              className="secondary export-btn"
+              onClick={() => setShowHelpModal(true)}
+              aria-label="Open Optimizer Guide and FAQ"
+            >
+              ❓ Guide & Engine FAQ
+            </button>
             <button
               type="button"
               className="secondary export-btn"
@@ -908,6 +951,16 @@ function CraftOptimizer() {
               }}
             />
           </div>
+        </div>
+
+        <div className="target-presets-row" aria-label="Popular Craft Target Presets">
+          <span style={{ fontSize: '12px', color: '#94a3b8' }}>⚡ Quick Presets:</span>
+          <button type="button" className="preset-chip" onClick={() => applyPreset('attack-large')}>
+            Large Attack (8p / 2-Notable)
+          </button>
+          <button type="button" className="preset-chip" onClick={() => applyPreset('es-small')}>
+            Small Energy Shield (2p / Magic)
+          </button>
         </div>
         <div className="optimizer-grid">
           <label>
@@ -1933,6 +1986,18 @@ function CraftOptimizer() {
           </details>
         </div>
       )}
+
+      <footer className="release-footer" role="contentinfo">
+        <p>
+          <strong>Cluster Jewel Craft Optimizer</strong> — Release Candidate {APP_RELEASE_VERSION} (Public Beta)
+        </p>
+        <p>
+          Powered by Markov Decision Processes & Bellman Dynamic Programming.
+          Trade prices from bundled snapshot (league: <em>{league}</em>{marketPricing?.marketContext.snapshotAt ? `, snapshot date: ${marketPricing.marketContext.snapshotAt}` : ''}).
+        </p>
+      </footer>
+
+      <OnboardingModal isOpen={showHelpModal} onClose={() => setShowHelpModal(false)} />
     </main>
   );
 }
