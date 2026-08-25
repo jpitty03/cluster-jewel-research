@@ -21,15 +21,10 @@ import {
   OptimizerWorkerClient,
   SearchWallTimeExceededError,
 } from './crafting/optimizerWorkerClient.ts';
+import { SearchableModifierSelect } from './SearchableModifierSelect.tsx';
 
 const DEFAULT_ITEM_LEVEL = 84;
 const DEFAULT_BUDGET = { maxStates: 5000, maxWallTimeMs: 30_000, maxExpansionRounds: 3 };
-const TARGET_MOD_GROUP_ORDER = [
-  'Ordinary Prefix',
-  'Ordinary Suffix',
-  'Notable Prefix',
-  'Notable Suffix',
-] as const;
 
 const STATUS_COPY: Record<RecommendationStatus, { title: string; detail: string }> = {
   PROVEN_OPTIMAL: {
@@ -359,7 +354,6 @@ function CraftOptimizer() {
   const [targetModIds, setTargetModIds] = useState(['']);
   const [finalRarity, setFinalRarity] = useState<'any' | 'magic' | 'rare'>('any');
   const [finishCondition, setFinishCondition] = useState<'allow-extra' | 'no-unwanted'>('allow-extra');
-  const [modSearch, setModSearch] = useState('');
   const [cleanBaseCost, setCleanBaseCost] = useState('');
   const [saleValue, setSaleValue] = useState('');
   const pricingLeagues = useMemo(() => getOptimizerPricingLeagues(), []);
@@ -383,25 +377,6 @@ function CraftOptimizer() {
   );
   const selectedTargetIds = useMemo(() => targetModIds.filter(Boolean), [targetModIds]);
   const effectiveRarity = selectedTargetIds.length >= 3 ? 'rare' : finalRarity;
-  const groupedEligibleMods = useMemo(() => {
-    const needle = modSearch.trim().toLowerCase();
-    const filtered = eligibleMods.filter((mod) =>
-      selectedTargetIds.includes(mod.modId) ||
-      needle.length === 0 ||
-      mod.searchAliases.some((alias) => alias.toLowerCase().includes(needle))
-    );
-    const groups = new Map<string, typeof filtered>();
-    for (const mod of filtered) {
-      const key = `${mod.isNotable ? 'Notable' : 'Ordinary'} ${mod.genType}`;
-      const entries = groups.get(key) ?? [];
-      entries.push(mod);
-      groups.set(key, entries);
-    }
-    return [...groups.entries()].sort(([left], [right]) =>
-      TARGET_MOD_GROUP_ORDER.indexOf(left as typeof TARGET_MOD_GROUP_ORDER[number]) -
-      TARGET_MOD_GROUP_ORDER.indexOf(right as typeof TARGET_MOD_GROUP_ORDER[number])
-    );
-  }, [eligibleMods, modSearch, selectedTargetIds]);
 
   const draftInput = useMemo((): OptimizeCraftInput => {
     const manualClean = cleanBaseCost.trim() === '' ? undefined : Number(cleanBaseCost);
@@ -675,45 +650,36 @@ function CraftOptimizer() {
         </details>
 
         <div className="target-list">
-          <h3>Desired exact modifiers ({targetModIds.length}/4)</h3>
-          <label>
-            <span>Search modifiers</span>
-            <input
-              type="search"
-              value={modSearch}
-              placeholder="Granted stat, internal name, mod ID, tier…"
-              onChange={(event) => setModSearch(event.target.value)}
-            />
-          </label>
+          <h3>Desired exact modifiers ({selectedTargetIds.length}/4)</h3>
           {targetModIds.map((modId, index) => (
             <div className="target-row" key={index}>
-              <select value={modId} onChange={(event) => updateTarget(index, event.target.value)} aria-label={`Desired modifier ${index + 1}`}>
-                <option value="">Select an eligible modifier…</option>
-                {groupedEligibleMods.map(([group, mods]) => (
-                  <optgroup key={group} label={group}>
-                    {mods.map((mod) => (
-                      <option
-                        key={mod.modId}
-                        value={mod.modId}
-                        data-primary-label={mod.displayName}
-                        data-technical-name={mod.technicalName}
-                      >
-                        {mod.selectionLabel}
-                      </option>
-                    ))}
-                  </optgroup>
-                ))}
-              </select>
+              <SearchableModifierSelect
+                value={modId}
+                onChange={(nextModId) => updateTarget(index, nextModId)}
+                eligibleMods={eligibleMods}
+                disabledModIds={targetModIds.filter((id, i) => i !== index && Boolean(id))}
+                ariaLabel={`Desired modifier ${index + 1}`}
+                placeholder="Select an eligible modifier…"
+              />
               {targetModIds.length > 1 && (
-                <button type="button" className="secondary" onClick={() => setTargetModIds((current) => current.filter((_, i) => i !== index))}>
+                <button
+                  type="button"
+                  className="secondary remove-target-btn"
+                  onClick={() => setTargetModIds((current) => current.filter((_, i) => i !== index))}
+                  title="Remove modifier slot"
+                >
                   Remove
                 </button>
               )}
             </div>
           ))}
           {targetModIds.length < 4 && (
-            <button type="button" className="secondary" onClick={() => setTargetModIds((current) => [...current, ''])}>
-              Add modifier
+            <button
+              type="button"
+              className="secondary add-target-btn"
+              onClick={() => setTargetModIds((current) => [...current, ''])}
+            >
+              + Add modifier
             </button>
           )}
           <p className="muted">
