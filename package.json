@@ -31,6 +31,7 @@
     "diagnostic:mature": "tsx scripts/matureDiagnostics.ts",
     "diagnostic:phase2t": "tsx scripts/phase2tDiagnostics.ts",
     "diagnostic:phase2u": "tsx scripts/phase2uDiagnostics.ts",
+    "diagnostic:phase2u:committed": "tsx scripts/phase2uDiagnostics.ts --committed-evidence",
     "browser:smoke": "tsx scripts/browserPhase2sSmoke.ts",
     "publish": "npm run scrape && npm run price && node scripts/publish.mjs"
   },

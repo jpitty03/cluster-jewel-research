@@ -19,3 +19,5 @@ Focused suites are available as `lab:smoke`, `lab:methods`, `lab:objectives`, `l
 The Phase 2U matrix drives real mouse, touch, wheel, button, and keyboard input; measures rendered DOM label geometry; verifies player-facing modifier vocabulary and Technical exact-ID disclosure; captures stable camera/readability screenshots; and proves camera-only interaction does not change the Worker result. The full release matrix retains every Phase 2T solver, accounting, method-family, responsive, and animation gate.
 
 Transient traces, videos, downloads, and paired frames are written to `quality-lab/artifacts/` and ignored by Git. The structured gate result and stable review evidence are written to `quality-lab/reports/`.
+
+The full mature diagnostics and real-browser matrices are authoritative local release gates. Automatic GitHub Pages builds run build, lint, diff hygiene, and a committed-evidence contract audit; they do not rerun wall-clock-sensitive solver/browser work on a shared hosted runner. The extended GitHub Actions matrix is retained only as an unscheduled, explicitly dispatched troubleshooting option.

@@ -51,6 +51,7 @@ const outputPath = join(
 const reportPath = join(repositoryRoot, 'quality-lab', 'reports', 'release-gate.json');
 const evidenceDirectory = join(repositoryRoot, 'quality-lab', 'reports', 'evidence');
 const scenario = 'phase2u-interaction-label-readability';
+const committedEvidenceMode = process.argv.includes('--committed-evidence');
 const lines = ['PHASE 2U — CONSTELLATION INTERACTION, READABILITY, AND PLAYER LABELS DIAGNOSTIC'];
 
 function requireGate(report: BrowserReport, id: string): BrowserCheck {
@@ -70,7 +71,10 @@ assert(existsSync(reportPath), 'Real-browser report is missing; run npm run lab:
 const report = JSON.parse(readFileSync(reportPath, 'utf8')) as BrowserReport;
 assert.equal(report.status, 'PASSED', 'Latest real-browser report did not pass');
 assert(['release', 'nightly'].includes(report.requestedScenario), 'Latest browser report is not a full release/nightly matrix');
-assert(Date.now() - Date.parse(report.startedAt) < 60 * 60 * 1000, 'Latest browser report is older than one hour');
+if (!committedEvidenceMode) {
+  assert(Date.now() - Date.parse(report.startedAt) < 60 * 60 * 1000, 'Latest browser report is older than one hour');
+}
+lines.push(`Evidence mode: ${committedEvidenceMode ? 'COMMITTED LOCAL RELEASE AUDIT' : 'FRESH LOCAL RELEASE'}`);
 
 lines.push('\nU1 — Phase 2T preservation');
 const phase2tOutput = readFileSync(join(repositoryRoot, 'output-phase2t-release-truthfulness-diagnostic.txt'), 'utf8');
@@ -252,18 +256,24 @@ const overheadMatch = phase2k1.match(/overhead=(-?[\d.]+)%; target<=5%=PASS/);
 assert(overheadMatch && Number(overheadMatch[1]) <= 5, 'Retained optimizer median overhead gate is absent or failed');
 lines.push(`PASS: camera interaction added no Worker work; median frame=${Number(performance.medianFrameMs).toFixed(3)}ms, max long task=${Number(performance.maxLongTaskMs).toFixed(3)}ms, retained optimizer overhead=${overheadMatch[1]}%.`);
 
-lines.push('\nU16 — Blocking CI release gate');
+lines.push('\nU16 — Local release evidence and lean hosted deploy policy');
 const deploy = readFileSync(join(repositoryRoot, '.github', 'workflows', 'deploy.yml'), 'utf8');
 const nightly = readFileSync(join(repositoryRoot, '.github', 'workflows', 'nightly-quality.yml'), 'utf8');
 const runner = readFileSync(join(repositoryRoot, 'quality-lab', 'src', 'runner.ts'), 'utf8');
-for (const command of ['npm run build', 'npm run lint', 'git diff --check', 'npm run diagnostic:mature', 'npm run lab:no-fallback-probe', 'npm run lab:release', 'npm run diagnostic:phase2t', 'npm run diagnostic:phase2u']) {
+for (const command of ['npm run build', 'npm run lint', 'git diff --check', 'npm run diagnostic:phase2u:committed']) {
   assert(deploy.includes(command), `Deploy validation lacks ${command}`);
+}
+for (const localOnlyCommand of ['npm run diagnostic:mature', 'npm run lab:no-fallback-probe', 'npm run lab:release', 'npm run diagnostic:phase2t']) {
+  assert(!deploy.includes(`run: ${localOnlyCommand}`), `Automatic deploy unexpectedly runs local-only gate ${localOnlyCommand}`);
 }
 assert(/deploy:\s+[\s\S]*needs: validate-and-build/.test(deploy));
 assert(runner.includes('await runPhase2U(page, evidence'));
 assert(runner.includes("requested === 'phase2u-quick' ? 5_000 : 300_000"));
-assert(nightly.includes('npm run lab:nightly') && nightly.includes('npm run diagnostic:phase2u'));
-lines.push('PASS: Pages deploy depends on the complete Phase 2T/2U real-browser matrix and Phase 2U diagnostic; nightly retains the extended matrix.');
+assert(!nightly.includes('schedule:'), 'The heavyweight remote matrix must not run on a schedule');
+for (const optInCommand of ['npm run diagnostic:mature', 'npm run lab:no-fallback-probe', 'npm run lab:nightly', 'npm run diagnostic:phase2t', 'npm run diagnostic:phase2u']) {
+  assert(nightly.includes(optInCommand), `Manual troubleshooting matrix lacks ${optInCommand}`);
+}
+lines.push('PASS: the full fresh browser/solver matrix is a mandatory local completion gate; automatic Pages CI blocks on build/lint/diff plus committed-evidence integrity, and the remote extended matrix is unscheduled/opt-in.');
 
 lines.push('\nU17 — Build hygiene and prohibited-change audit');
 assert(!/npm (?:run )?test|vitest/.test(deploy));
@@ -287,5 +297,5 @@ lines.push('Hardcoded fracture target/winner added: NO');
 lines.push('Pre-fractured market ranking reintroduced: NO');
 
 const output = `${lines.join('\n')}\n`;
-writeFileSync(outputPath, output, 'utf8');
+if (!committedEvidenceMode) writeFileSync(outputPath, output, 'utf8');
 console.log(output);

@@ -1,8 +1,6 @@
-name: Nightly Phase 2U Quality Matrix
+name: Manual Phase 2U Quality Matrix
 
 on:
-  schedule:
-    - cron: '17 10 * * *'
   workflow_dispatch:
 
 permissions:

@@ -25,26 +25,11 @@ jobs:
           node-version: 24
           cache: npm
       - run: npm ci
-      - run: npm ci --prefix quality-lab
-      - run: npx --prefix quality-lab playwright install --with-deps chromium
       - run: npm run build
       - run: npm run lint
       - run: git diff --check
-      - run: npm run diagnostic:mature
-      - run: npm run lab:no-fallback-probe
-      - name: Phase 2T release and Phase 2U interaction matrix
-        run: npm run lab:release
-      - run: npm run diagnostic:phase2t
-      - run: npm run diagnostic:phase2u
-      - name: Upload real-browser evidence
-        if: always()
-        uses: actions/upload-artifact@v6
-        with:
-          name: phase2u-quality-lab
-          path: |
-            quality-lab/artifacts/
-            quality-lab/reports/
-          if-no-files-found: error
+      - name: Audit committed local release evidence
+        run: npm run diagnostic:phase2u:committed
       - uses: actions/upload-pages-artifact@v5
         with:
           path: dist

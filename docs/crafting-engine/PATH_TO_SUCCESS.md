@@ -6,6 +6,8 @@ Baseline reviewed: `4b75cfe52f441114fca63aaa7bd4b9868cd30350` on `main`.
 
 > **Phase 2U superseding status (2026-08-25):** Phase 2S public-beta certification remains reopened. The current product status is **Browser-Verified Release Candidate 2U.1**. Phase 2T solver, accounting, method-family, Worker, and real-browser release behavior remains authoritative and is now joined by the real interaction, rendered-label geometry, player-vocabulary, and exact-identity disclosure gates defined by `POST_PHASE2T_REVIEW_AND_PHASE2U_CONSTELLATION_INTERACTION_READABILITY_AND_PLAYER_LABELS_PLAN.md`.
 
+> **Validation execution policy (2026-08-25):** Fresh mature diagnostics and the full Playwright release matrix are required local completion gates. Automatic Pages CI is intentionally limited to build, lint, diff hygiene, and auditing the committed local evidence contract; the extended hosted matrix is unscheduled and opt-in. This user-approved execution-policy exception supersedes the automatic hosted execution described in Phase 2T T14 and Phase 2U U16, without changing any browser assertion or solver behavior.
+
 This document is the high-level roadmap for taking the current research-grade optimizer to a trustworthy, efficient, polished application that ordinary players can use. Detailed phase documents remain the source of truth for their individual implementations; this file defines the final product, the order of work, the quality strategy, and the release gates.
 
 The immediate detailed implementation plan is:

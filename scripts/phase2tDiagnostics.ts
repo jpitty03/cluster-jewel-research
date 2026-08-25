@@ -117,7 +117,7 @@ assert(/throw new Error\(`Built production entry is unavailable/.test(launcher))
 assert(/browser = await chromium\.launch/.test(runner));
 assert(!/running simulated|simulation fallback/i.test(runner));
 requireBrowserGate(browserReport, 'release-process', 'runtime-error-audit');
-lines.push(`PASS: ${browserReport.browser} ${browserReport.browserVersion}; strict launcher and no-fallback probe are mandatory CI steps.`);
+lines.push(`PASS: ${browserReport.browser} ${browserReport.browserVersion}; strict launcher and no-fallback probe are mandatory local release steps.`);
 
 lines.push('\nT3 — Real Worker event stream');
 requireBrowserGate(browserReport, 'real-browser-smoke', 'import-and-real-worker-result');
@@ -267,15 +267,21 @@ assert(constellationPerformance && Number(constellationPerformance.fps) >= 30);
 assert(statSync(join(repositoryRoot, 'quality-lab', 'reports', 'evidence', 'constellation-real-frame.png')).size > 0);
 lines.push(`PASS: actual canvas frame, node focus, route focus/zoom/pause/speed/reduced-motion/fullscreen behavior, deterministic frames, and ${Number(constellationPerformance.fps).toFixed(2)} FPS were observed.`);
 
-lines.push('\nT14 — CI gate audit');
+lines.push('\nT14 — Hosted deploy and local release policy audit');
 const deployWorkflow = readFileSync(join(repositoryRoot, '.github', 'workflows', 'deploy.yml'), 'utf8');
 const nightlyWorkflow = readFileSync(join(repositoryRoot, '.github', 'workflows', 'nightly-quality.yml'), 'utf8');
-for (const required of ['npm run build', 'npm run lint', 'git diff --check', 'npm run diagnostic:mature', 'npm run lab:no-fallback-probe', 'npm run lab:release', 'npm run diagnostic:phase2t', 'npm run diagnostic:phase2u']) {
+for (const required of ['npm run build', 'npm run lint', 'git diff --check', 'npm run diagnostic:phase2u:committed']) {
   assert(deployWorkflow.includes(required), `Deploy validation lacks ${required}`);
 }
+for (const localOnlyCommand of ['npm run diagnostic:mature', 'npm run lab:no-fallback-probe', 'npm run lab:release', 'npm run diagnostic:phase2t']) {
+  assert(!deployWorkflow.includes(`run: ${localOnlyCommand}`), `Automatic deploy unexpectedly runs local-only gate ${localOnlyCommand}`);
+}
 assert(/deploy:\s+[\s\S]*needs: validate-and-build/.test(deployWorkflow));
-assert(nightlyWorkflow.includes('npm run lab:nightly'));
-lines.push('PASS: deployment depends on build/lint/diff/mature/no-fallback/real-browser/Phase2T preservation and Phase2U validation; nightly extended matrix is scheduled.');
+assert(!nightlyWorkflow.includes('schedule:'), 'The heavyweight remote matrix must not run on a schedule');
+for (const optInCommand of ['npm run diagnostic:mature', 'npm run lab:no-fallback-probe', 'npm run lab:nightly', 'npm run diagnostic:phase2t', 'npm run diagnostic:phase2u']) {
+  assert(nightlyWorkflow.includes(optInCommand), `Manual troubleshooting matrix lacks ${optInCommand}`);
+}
+lines.push('PASS: deployment depends on build/lint/diff and committed local-release evidence; heavyweight browser/solver gates remain local, with an unscheduled remote troubleshooting matrix.');
 
 lines.push('\nT15 — Mature regression matrix');
 const requiredOutputs = [
