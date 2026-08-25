@@ -132,4 +132,19 @@ export class PriceBook {
   getFinishedPrice(key: string): number | undefined {
     return this.finishedItemPrices.get(key);
   }
+
+  /**
+   * Calculates the Lifeforce unit price in Chaos at which a Harvest route would equal
+   * the conventional route in expected total Chaos cost.
+   */
+  calculateHarvestCrossoverPrice(
+    conventionalChaosCost: number,
+    harvestNonLifeforceChaosCost: number,
+    lifeforceUnitsUsed: number
+  ): number | undefined {
+    if (lifeforceUnitsUsed <= 0) return undefined;
+    const diff = conventionalChaosCost - harvestNonLifeforceChaosCost;
+    if (diff <= 0) return undefined;
+    return diff / lifeforceUnitsUsed;
+  }
 }

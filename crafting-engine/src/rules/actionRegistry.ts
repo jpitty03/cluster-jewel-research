@@ -76,6 +76,8 @@ export interface CraftMechanic {
   actionType: DiscoveredActionType;
   name: string;
   category: 'base-prep' | 'core-reforge' | 'cleanup' | 'slam' | 'finishing' | 'terminal';
+  physicalActionCount?: number;
+  estimatedManualTimeMs?: number;
   isLegal(state: ItemState, target: TargetDefinition, context: SolverContext): boolean;
   getCost(context: SolverContext): CraftCost;
   parameters?: Record<string, any>;
@@ -98,6 +100,8 @@ export interface RestartReacquireDefinition {
   confidence: PriceConfidence;
   provenance: string;
   label?: string;
+  physicalActionCount?: number;
+  estimatedManualTimeMs?: number;
 }
 
 export interface AcquisitionMethodDefinition {
@@ -298,6 +302,8 @@ export function createRestartReacquireMechanic(definition: RestartReacquireDefin
     actionType: 'RESTART_REACQUIRE',
     name: definition.label ?? 'Abandon + Reacquire',
     category: 'base-prep',
+    physicalActionCount: definition.physicalActionCount ?? 1,
+    estimatedManualTimeMs: definition.estimatedManualTimeMs ?? 5000,
     isLegal: (state) => getPhysicalStateSignature(state) !== destinationSignature,
     getCost: () => ({
       costChaos: definition.acquisitionCostChaos,
@@ -328,6 +334,8 @@ export function createAcquisitionPortfolioMechanics(
       actionType: 'RESTART_REACQUIRE' as const,
       name: `Restart/Reacquire: ${method.label}`,
       category: 'base-prep' as const,
+      physicalActionCount: 0, // Virtual portfolio transition contributes 0 physical actions
+      estimatedManualTimeMs: 0,
       isLegal: (state: ItemState) =>
         state.flags?.acquisitionMenu === true ||
         getPhysicalStateSignature(state) !== destinationSignature,
@@ -535,6 +543,8 @@ export const CRAFT_MECHANICS: CraftMechanic[] = [
     actionType: 'TRANSFORMATION_ORB',
     name: 'Orb of Transmutation',
     category: 'base-prep',
+    physicalActionCount: 1,
+    estimatedManualTimeMs: 400,
     isLegal: (state) => state.rarity === 'normal',
     getCost: (ctx) => ctx.priceBook.evaluateRate('transmutation', 0.03),
     getTransitions: (state, _target, context, control) => {
@@ -552,6 +562,8 @@ export const CRAFT_MECHANICS: CraftMechanic[] = [
     actionType: 'AUGMENTATION_ORB',
     name: 'Orb of Augmentation',
     category: 'base-prep',
+    physicalActionCount: 1,
+    estimatedManualTimeMs: 400,
     isLegal: (state) => state.rarity === 'magic' && (canAcceptPrefix(state) || canAcceptSuffix(state)),
     getCost: (ctx) => ctx.priceBook.evaluateRate('augmentation', 0.03),
     getTransitions: (state, _target, context, control) => {
@@ -621,6 +633,8 @@ export const CRAFT_MECHANICS: CraftMechanic[] = [
     actionType: 'ALTERATION_ORB',
     name: 'Orb of Alteration',
     category: 'base-prep',
+    physicalActionCount: 1,
+    estimatedManualTimeMs: 400,
     isLegal: (state) => state.rarity === 'magic',
     getCost: (ctx) => ctx.priceBook.evaluateRate('alteration', 0.11),
     getTransitions: (state, _target, context, control) => {
@@ -636,6 +650,8 @@ export const CRAFT_MECHANICS: CraftMechanic[] = [
     actionType: 'REGAL_ORB',
     name: 'Regal Orb',
     category: 'base-prep',
+    physicalActionCount: 1,
+    estimatedManualTimeMs: 400,
     isLegal: (state) => state.rarity === 'magic' && state.prefixes.length + state.suffixes.length >= 1,
     getCost: (ctx) => ctx.priceBook.evaluateRate('regal', 0.20),
     getTransitions: (state, _target, context, control) => {
@@ -716,6 +732,8 @@ export const CRAFT_MECHANICS: CraftMechanic[] = [
     actionType: 'SCOURING_ORB',
     name: 'Orb of Scouring',
     category: 'base-prep',
+    physicalActionCount: 1,
+    estimatedManualTimeMs: 400,
     isLegal: (state) => state.rarity !== 'normal' && getRemovableAffixes(state).length > 0,
     getCost: (ctx) => ctx.priceBook.evaluateRate('scour', 0.5),
     getTransitions: (state, _target, context, control) => {
@@ -749,6 +767,8 @@ export const CRAFT_MECHANICS: CraftMechanic[] = [
     actionType: 'CHAOS_ORB',
     name: 'Chaos Orb',
     category: 'core-reforge',
+    physicalActionCount: 1,
+    estimatedManualTimeMs: 400,
     isLegal: (state) => state.rarity === 'rare',
     getCost: (ctx) => {
       const cost = ctx.priceBook.toChaos(1, 'chaos');
@@ -763,6 +783,8 @@ export const CRAFT_MECHANICS: CraftMechanic[] = [
     actionType: 'ANNULMENT_ORB',
     name: 'Orb of Annulment',
     category: 'cleanup',
+    physicalActionCount: 1,
+    estimatedManualTimeMs: 400,
     isLegal: (state) => state.rarity === 'rare' && getRemovableAffixes(state).length > 0,
     getCost: (ctx) => {
       const cost = ctx.priceBook.toChaos(1, 'annul');
@@ -811,6 +833,8 @@ export const CRAFT_MECHANICS: CraftMechanic[] = [
     actionType: 'EXALTED_ORB',
     name: 'Exalted Orb Slam',
     category: 'slam',
+    physicalActionCount: 1,
+    estimatedManualTimeMs: 400,
     isLegal: (state, _target, context) =>
       state.rarity === 'rare' &&
       (canAcceptPrefix(state) || canAcceptSuffix(state)) &&
@@ -852,6 +876,8 @@ export const CRAFT_MECHANICS: CraftMechanic[] = [
     actionType: 'FRACTURING_ORB',
     name: 'Fracturing Orb',
     category: 'base-prep',
+    physicalActionCount: 1,
+    estimatedManualTimeMs: 1500,
     createsState: ['FRACTURED_AFFIX'],
     isLegal: (state) => {
       const alreadyFractured = getAllAffixes(state).some(
@@ -935,6 +961,8 @@ export function createHarvestReforgeMechanics(
         actionType: 'HARVEST_REFORGE',
         name: def.name,
         category: 'core-reforge',
+        physicalActionCount: 1,
+        estimatedManualTimeMs: 2000,
         isLegal: (state) =>
           state.rarity === 'rare' &&
           getTaggedModsForCluster(context.pool, tag, state.itemLevel).length > 0,

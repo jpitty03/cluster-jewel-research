@@ -4,6 +4,8 @@ import type {
   AcquisitionCandidateSummary,
   AcquisitionPortfolioProofReason,
   AcquisitionPortfolioProofStatus,
+  OptimizationObjectiveKind,
+  OptimizationObjectiveSpec,
   OptimizeCraftInput,
   OptimizeCraftResult,
   OptimizerProgressSnapshot,
@@ -456,6 +458,42 @@ function CraftOptimizer() {
   const selectedTargetIds = useMemo(() => targetModIds.filter(Boolean), [targetModIds]);
   const effectiveRarity = selectedTargetIds.length >= 3 ? 'rare' : finalRarity;
 
+  const [objectiveKind, setObjectiveKind] = useState<OptimizationObjectiveKind>('CHEAPEST_CHAOS');
+  const [costConstraintType, setCostConstraintType] = useState<'PREMIUM_PERCENT' | 'PREMIUM_CHAOS' | 'ABSOLUTE'>('PREMIUM_PERCENT');
+  const [costConstraintValue, setCostConstraintValue] = useState('20');
+  const [valueOfTimeChaosPerMin, setValueOfTimeChaosPerMin] = useState('50');
+
+  const draftObjective = useMemo<OptimizationObjectiveSpec>(() => {
+    switch (objectiveKind) {
+      case 'FEWEST_ACTIONS_WITHIN_COST':
+      case 'FASTEST_WITHIN_COST': {
+        const numVal = parseFloat(costConstraintValue);
+        if (costConstraintType === 'ABSOLUTE' && Number.isFinite(numVal) && numVal >= 0) {
+          return { kind: objectiveKind, maxExpectedCostChaos: numVal };
+        }
+        if (costConstraintType === 'PREMIUM_CHAOS' && Number.isFinite(numVal) && numVal >= 0) {
+          return { kind: objectiveKind, maxPremiumChaos: numVal };
+        }
+        if (costConstraintType === 'PREMIUM_PERCENT' && Number.isFinite(numVal) && numVal >= 0) {
+          return { kind: objectiveKind, maxPremiumFraction: numVal / 100 };
+        }
+        return { kind: objectiveKind };
+      }
+      case 'BALANCED_VALUE_OF_TIME': {
+        const cpm = parseFloat(valueOfTimeChaosPerMin);
+        return {
+          kind: objectiveKind,
+          valueOfTimeChaosPerMinute: Number.isFinite(cpm) && cpm > 0 ? cpm : 50,
+        };
+      }
+      case 'UNCONSTRAINED_FEWEST_ACTIONS':
+      case 'UNCONSTRAINED_FASTEST':
+      case 'CHEAPEST_CHAOS':
+      default:
+        return { kind: objectiveKind };
+    }
+  }, [objectiveKind, costConstraintType, costConstraintValue, valueOfTimeChaosPerMin]);
+
   const draftInput = useMemo((): OptimizeCraftInput => {
     const manualClean = cleanBaseCost.trim() === '' ? undefined : Number(cleanBaseCost);
     const parsedSaleValue = saleValue.trim() === '' ? undefined : Number(saleValue);
@@ -488,6 +526,7 @@ function CraftOptimizer() {
         ? parsedSaleValue
         : undefined,
       allowResearchFallbackPrices: allowFallback,
+      objective: draftObjective,
       searchBudget: { maxStates, maxWallTimeMs, maxExpansionRounds },
       searchIntent,
     };
@@ -496,6 +535,7 @@ function CraftOptimizer() {
     baseType,
     cleanBaseCost,
     clusterType,
+    draftObjective,
     effectiveRarity,
     finishCondition,
     itemLevel,
@@ -789,6 +829,72 @@ function CraftOptimizer() {
           {validation.notices.map((notice) => <p className="muted" key={notice.code}>{notice.message}</p>)}
         </section>
 
+        <section className="optimizer-section objective-section">
+          <h3>Optimization Objective</h3>
+          <div className="optimizer-grid">
+            <label>
+              <span>Optimization goal</span>
+              <select
+                value={objectiveKind}
+                onChange={(e) => setObjectiveKind(e.target.value as OptimizationObjectiveKind)}
+              >
+                <option value="CHEAPEST_CHAOS">Cheapest (minimize chaos cost)</option>
+                <option value="FEWEST_ACTIONS_WITHIN_COST">Fewest actions (within cost ceiling)</option>
+                <option value="FASTEST_WITHIN_COST">Estimated fastest (within cost ceiling)</option>
+                <option value="BALANCED_VALUE_OF_TIME">Balanced (currency + value of time)</option>
+                <option value="UNCONSTRAINED_FEWEST_ACTIONS">Advanced: Unconstrained fewest actions (ignores cost)</option>
+                <option value="UNCONSTRAINED_FASTEST">Advanced: Unconstrained fastest (ignores cost)</option>
+              </select>
+            </label>
+
+            {(objectiveKind === 'FEWEST_ACTIONS_WITHIN_COST' || objectiveKind === 'FASTEST_WITHIN_COST') && (
+              <>
+                <label>
+                  <span>Cost ceiling type</span>
+                  <select
+                    value={costConstraintType}
+                    onChange={(e) => setCostConstraintType(e.target.value as 'PREMIUM_PERCENT' | 'PREMIUM_CHAOS' | 'ABSOLUTE')}
+                  >
+                    <option value="PREMIUM_PERCENT">Percentage premium over cheapest (%)</option>
+                    <option value="PREMIUM_CHAOS">Chaos premium over cheapest (+chaos)</option>
+                    <option value="ABSOLUTE">Absolute maximum cost (chaos)</option>
+                  </select>
+                </label>
+                <label>
+                  <span>
+                    {costConstraintType === 'PREMIUM_PERCENT' ? 'Max premium (%)' : costConstraintType === 'PREMIUM_CHAOS' ? 'Max premium (chaos)' : 'Max total cost (chaos)'}
+                  </span>
+                  <input
+                    type="number"
+                    min="0"
+                    step={costConstraintType === 'PREMIUM_PERCENT' ? '5' : '10'}
+                    value={costConstraintValue}
+                    onChange={(e) => setCostConstraintValue(e.target.value)}
+                  />
+                </label>
+              </>
+            )}
+
+            {objectiveKind === 'BALANCED_VALUE_OF_TIME' && (
+              <label>
+                <span>Player time value (chaos / minute)</span>
+                <input
+                  type="number"
+                  min="1"
+                  step="10"
+                  value={valueOfTimeChaosPerMin}
+                  onChange={(e) => setValueOfTimeChaosPerMin(e.target.value)}
+                />
+              </label>
+            )}
+          </div>
+          {(objectiveKind === 'UNCONSTRAINED_FEWEST_ACTIONS' || objectiveKind === 'UNCONSTRAINED_FASTEST') && (
+            <p className="warning-note">
+              ⚠️ Warning: Unconstrained mode ignores currency cost and may recommend expensive Fracturing Orbs even for simple crafts.
+            </p>
+          )}
+        </section>
+
         <details className="advanced-controls">
           <summary>Advanced search settings</summary>
           <p>Defaults: 5,000 states, 30,000 ms, 3 lazy-expansion rounds.</p>
@@ -814,7 +920,7 @@ function CraftOptimizer() {
         {validationError && <div className="optimizer-validation">{validationError}</div>}
         <div className="optimizer-actions">
           <button type="button" onClick={() => void optimize()} disabled={running || validationError !== null || workerRef.current === null}>
-            {running ? 'Searching…' : 'Find cheapest craft'}
+            {running ? 'Searching…' : objectiveKind === 'CHEAPEST_CHAOS' ? 'Find cheapest craft' : 'Optimize craft'}
           </button>
           {running && <button type="button" className="secondary" onClick={cancel}>Cancel</button>}
         </div>
@@ -860,6 +966,32 @@ function CraftOptimizer() {
             <dl className="recommendation-facts">
               <dt>{result.recommendationStatus === 'NO_RESOLVED_ROUTE' ? 'Resolved start' : 'Recommended start'}</dt><dd>{recommendedStart}</dd>
               <dt>Expected cost</dt><dd className="recommendation-cost">{chaos(result.expectedCostChaos)}</dd>
+              <dt>Expected physical actions</dt>
+              <dd>{result.recommended?.metrics?.expectedPhysicalActions !== undefined ? `${Math.round(result.recommended.metrics.expectedPhysicalActions).toLocaleString()} actions` : '—'}</dd>
+              <dt>Estimated manual time</dt>
+              <dd>{result.recommended?.metrics?.estimatedManualTimeMs !== undefined ? `${(result.recommended.metrics.estimatedManualTimeMs / 1000).toFixed(1)}s` : '—'}</dd>
+              {result.objective && (
+                <>
+                  <dt>Optimization objective</dt>
+                  <dd>
+                    {result.objective.kind === 'CHEAPEST_CHAOS'
+                      ? 'Cheapest currency cost'
+                      : result.objective.kind === 'FEWEST_ACTIONS_WITHIN_COST'
+                        ? `Fewest actions (Cost ceiling: ${result.costCeilingChaos ? `${result.costCeilingChaos.toFixed(1)}c` : 'none'})`
+                        : result.objective.kind === 'FASTEST_WITHIN_COST'
+                          ? `Estimated fastest (Cost ceiling: ${result.costCeilingChaos ? `${result.costCeilingChaos.toFixed(1)}c` : 'none'})`
+                          : result.objective.kind === 'BALANCED_VALUE_OF_TIME'
+                            ? `Balanced (${result.objective.valueOfTimeChaosPerMinute ?? 50}c/min time value)`
+                            : result.objective.kind}
+                  </dd>
+                </>
+              )}
+              {result.objectiveProofStatus && (
+                <>
+                  <dt>Objective proof status</dt>
+                  <dd>{result.objectiveProofStatus}</dd>
+                </>
+              )}
               {result.expectedSaleValueChaos !== undefined && <><dt>Expected sale value</dt><dd>{chaos(result.expectedSaleValueChaos)}</dd></>}
               {result.expectedProfitChaos !== undefined && <><dt>Expected profit</dt><dd>{chaos(result.expectedProfitChaos)}</dd></>}
               <dt>Starting acquisition confidence</dt>
@@ -920,6 +1052,100 @@ function CraftOptimizer() {
             )}
           </section>
 
+          {result.paretoAlternatives && result.paretoAlternatives.length > 0 && (
+            <section className="optimizer-card pareto-comparison-card" aria-labelledby="pareto-card-title">
+              <h2 id="pareto-card-title">Multi-Objective Tradeoffs &amp; Alternatives</h2>
+              <p className="muted">
+                These non-dominated alternatives represent the optimal trade-off frontier between currency cost, physical crafting operations, and manual crafting time.
+              </p>
+              <div className="pareto-grid">
+                {result.paretoAlternatives.map((alt, idx) => (
+                  <div
+                    key={idx}
+                    className={`pareto-alternative-card ${alt.isRequestedObjective ? 'selected-objective' : ''}`}
+                  >
+                    <div className="pareto-card-header">
+                      <span className="pareto-route-name">{alt.route.name}</span>
+                      <div className="pareto-badges">
+                        {alt.isCheapest && <span className="badge badge-cheapest">Cheapest</span>}
+                        {alt.isFewestActions && <span className="badge badge-actions">Fewest Actions</span>}
+                        {alt.isFastest && <span className="badge badge-fastest">Fastest</span>}
+                        {alt.isRequestedObjective && <span className="badge badge-selected">Selected Goal</span>}
+                      </div>
+                    </div>
+                    <dl className="pareto-metrics">
+                      <div>
+                        <dt>Expected Cost</dt>
+                        <dd className="cost-val">{chaos(alt.route.expectedTotalCostChaos)}</dd>
+                      </div>
+                      <div>
+                        <dt>Physical Actions</dt>
+                        <dd>{alt.route.metrics?.expectedPhysicalActions !== undefined ? Math.round(alt.route.metrics.expectedPhysicalActions).toLocaleString() : '—'}</dd>
+                      </div>
+                      <div>
+                        <dt>Estimated Time</dt>
+                        <dd>{alt.route.metrics?.estimatedManualTimeMs !== undefined ? `${(alt.route.metrics.estimatedManualTimeMs / 1000).toFixed(1)}s` : '—'}</dd>
+                      </div>
+                    </dl>
+                    <p className="pareto-tradeoff-text">{alt.tradeoffSummary}</p>
+                  </div>
+                ))}
+              </div>
+            </section>
+          )}
+
+          {result.harvestComparison && (
+            <section className="optimizer-card harvest-comparison-card" aria-labelledby="harvest-card-title">
+              <div className="harvest-card-heading">
+                <h2 id="harvest-card-title">Harvest Crafting Comparison</h2>
+                <span className={`harvest-status-badge ${result.harvestComparison.status.toLowerCase()}`}>
+                  {result.harvestComparison.status === 'HARVEST_SELECTED'
+                    ? 'Harvest Route Recommended'
+                    : result.harvestComparison.status === 'HARVEST_MORE_EXPENSIVE'
+                      ? 'Harvest More Expensive'
+                      : result.harvestComparison.status === 'HARVEST_NOT_ELIGIBLE'
+                        ? 'Not Eligible for Target'
+                        : 'Harvest Crafts Disabled'}
+                </span>
+              </div>
+              <p className="harvest-explanation">{result.harvestComparison.explanation}</p>
+              {result.harvestComparison.costDifferenceChaos !== undefined && (
+                <div className="harvest-comparison-grid">
+                  <div className="harvest-stat-box">
+                    <span className="stat-label">Currency Delta</span>
+                    <strong className={`stat-value ${result.harvestComparison.costDifferenceChaos <= 0 ? 'good' : 'more-cost'}`}>
+                      {result.harvestComparison.costDifferenceChaos > 0 ? `+${result.harvestComparison.costDifferenceChaos.toFixed(1)}c` : `${result.harvestComparison.costDifferenceChaos.toFixed(1)}c`}
+                    </strong>
+                  </div>
+                  <div className="harvest-stat-box">
+                    <span className="stat-label">Physical Actions Saved</span>
+                    <strong className="stat-value good">
+                      {result.harvestComparison.actionsSaved !== undefined && result.harvestComparison.actionsSaved > 0
+                        ? `${Math.round(result.harvestComparison.actionsSaved).toLocaleString()}`
+                        : '0'}
+                    </strong>
+                  </div>
+                  <div className="harvest-stat-box">
+                    <span className="stat-label">Manual Time Saved</span>
+                    <strong className="stat-value good">
+                      {result.harvestComparison.timeSavedMs !== undefined && result.harvestComparison.timeSavedMs > 0
+                        ? `${(result.harvestComparison.timeSavedMs / 1000).toFixed(0)}s`
+                        : '0s'}
+                    </strong>
+                  </div>
+                  {result.harvestComparison.lifeforceCrossoverPriceChaosPerUnit !== undefined && result.harvestComparison.lifeforceCrossoverPriceChaosPerUnit > 0 && (
+                    <div className="harvest-stat-box crossover-box">
+                      <span className="stat-label">Lifeforce Crossover Price</span>
+                      <strong className="stat-value crossover">
+                        {result.harvestComparison.lifeforceCrossoverPriceChaosPerUnit.toFixed(4)}c / unit
+                      </strong>
+                    </div>
+                  )}
+                </div>
+              )}
+            </section>
+          )}
+
           <section className="optimizer-card craft-guide" aria-labelledby="craft-guide-title">
             <h2 id="craft-guide-title">How to craft it</h2>
             {result.recommended && result.craftPlan.status === 'CERTIFIED' ? (
@@ -946,9 +1172,23 @@ function CraftOptimizer() {
                     >
                       <span className="craft-plan-number" aria-hidden="true">{stepIndex + 1}</span>
                       <div className="craft-plan-step-body">
-                        <h3>{preferredTargets.length > 0
-                          ? `${step.title}: ${preferredTargets.join(' + ')}`
-                          : step.title}</h3>
+                        <div className="step-title-row">
+                          <h3>{preferredTargets.length > 0
+                            ? `${step.title}: ${preferredTargets.join(' + ')}`
+                            : step.title}</h3>
+                          <div className="step-effort-badges">
+                            {step.expectedPhysicalActions !== undefined && (
+                              <span className="step-effort-pill actions">
+                                ~{Math.round(step.expectedPhysicalActions)} actions
+                              </span>
+                            )}
+                            {step.estimatedManualTimeMs !== undefined && (
+                              <span className="step-effort-pill time">
+                                ~{(step.estimatedManualTimeMs / 1000).toFixed(1)}s
+                              </span>
+                            )}
+                          </div>
+                        </div>
                         <p>{step.instruction}</p>
                         {step.actionIds.length > 0 && (
                           <p className="craft-plan-actions"><strong>Selected actions:</strong>{' '}

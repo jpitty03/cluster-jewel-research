@@ -6,6 +6,12 @@ import {
 } from '../domain/ItemState.ts';
 import type { TargetDefinition } from '../domain/TargetDefinition.ts';
 import type { SolverContext } from '../domain/CraftAction.ts';
+import {
+  DEFAULT_ACTION_EFFORT_PROFILE,
+  type ActionCostVector,
+  type ActionEffortProfile,
+  type EffortConfidence,
+} from '../domain/CraftAction.ts';
 import type { PriceConfidence, PriceSource } from '../domain/PriceBook.ts';
 import type { RandomSource } from '../probability/random.ts';
 import {
@@ -33,6 +39,102 @@ import {
   type MinimumFeasibleRarityResult,
 } from './targetFeasibility.ts';
 
+export type OptimizationObjectiveKind =
+  | 'CHEAPEST_CHAOS'
+  | 'FEWEST_ACTIONS_WITHIN_COST'
+  | 'FASTEST_WITHIN_COST'
+  | 'BALANCED_VALUE_OF_TIME'
+  | 'UNCONSTRAINED_FEWEST_ACTIONS'
+  | 'UNCONSTRAINED_FASTEST';
+
+export interface OptimizationObjectiveSpec {
+  kind: OptimizationObjectiveKind;
+  maxExpectedCostChaos?: number;
+  maxPremiumChaos?: number;
+  maxPremiumFraction?: number;
+  chaosValuePerMinute?: number;
+  valueOfTimeChaosPerMinute?: number;
+  effortProfile?: Partial<ActionEffortProfile>;
+  scalarizationPenaltyLambda?: number;
+}
+
+export interface RouteMetricVector {
+  expectedChaosCost: number;
+  expectedPhysicalActions: number;
+  estimatedManualTimeMs: number;
+  objectiveScore: number;
+  effortConfidence: EffortConfidence;
+}
+
+export function computeActionCostVector(
+  action: SolverCraftActionAdapter,
+  costChaos: number,
+  profileInput?: Partial<ActionEffortProfile>
+): ActionCostVector {
+  const profile: ActionEffortProfile = {
+    ...DEFAULT_ACTION_EFFORT_PROFILE,
+    ...profileInput,
+  };
+
+  let physicalActionCount = action.mechanic.physicalActionCount;
+  let estimatedManualTimeMs = action.mechanic.estimatedManualTimeMs;
+
+  if (profile.customPhysicalActionCounts && profile.customPhysicalActionCounts[action.id] !== undefined) {
+    physicalActionCount = profile.customPhysicalActionCounts[action.id];
+  }
+  if (profile.customActionTimesMs && profile.customActionTimesMs[action.id] !== undefined) {
+    estimatedManualTimeMs = profile.customActionTimesMs[action.id];
+  }
+
+  if (physicalActionCount === undefined) {
+    physicalActionCount = action.mechanic.actionType === 'RESTART_REACQUIRE' ? 1 : 1;
+  }
+  if (estimatedManualTimeMs === undefined) {
+    if (action.mechanic.actionType === 'HARVEST_REFORGE') {
+      estimatedManualTimeMs = profile.harvestReforgeTimeMs;
+    } else if (action.mechanic.actionType === 'FRACTURING_ORB') {
+      estimatedManualTimeMs = profile.fracturingOrbTimeMs;
+    } else if (action.mechanic.actionType === 'RESTART_REACQUIRE') {
+      estimatedManualTimeMs = profile.reacquireCleanBaseTimeMs;
+    } else {
+      estimatedManualTimeMs = profile.defaultCurrencyTimeMs;
+    }
+  }
+
+  return {
+    chaosCost: costChaos,
+    physicalActionCount,
+    estimatedManualTimeMs,
+  };
+}
+
+export function computeImmediateObjectiveCost(
+  _actionId: string,
+  costVector: ActionCostVector,
+  objective?: OptimizationObjectiveSpec
+): number {
+  if (!objective || objective.kind === 'CHEAPEST_CHAOS') {
+    return costVector.chaosCost;
+  }
+
+  const lambda = objective.scalarizationPenaltyLambda ?? 1e-6;
+
+  if (objective.kind === 'FEWEST_ACTIONS_WITHIN_COST' || objective.kind === 'UNCONSTRAINED_FEWEST_ACTIONS') {
+    return costVector.physicalActionCount + (lambda * costVector.chaosCost);
+  }
+
+  if (objective.kind === 'FASTEST_WITHIN_COST' || objective.kind === 'UNCONSTRAINED_FASTEST') {
+    return costVector.estimatedManualTimeMs + (lambda * costVector.chaosCost);
+  }
+
+  if (objective.kind === 'BALANCED_VALUE_OF_TIME') {
+    const chaosPerMin = objective.valueOfTimeChaosPerMinute ?? objective.chaosValuePerMinute ?? 50;
+    return costVector.chaosCost + ((costVector.estimatedManualTimeMs / 60000) * chaosPerMin);
+  }
+
+  return costVector.chaosCost;
+}
+
 /**
  * Adapter bridging the authoritative CraftMechanic registry into the solver action interface.
  * Preserves the single source of truth for legality, cost, analytical transitions, and sampling.
@@ -41,6 +143,8 @@ export class SolverCraftActionAdapter {
   public id: string;
   public name: string;
   public mechanic: CraftMechanic;
+  public physicalActionCount: number;
+  public estimatedManualTimeMs: number;
   private context: SolverContext;
   private target: TargetDefinition;
   private transitionCache = new Map<string, TransitionDistribution>();
@@ -49,6 +153,8 @@ export class SolverCraftActionAdapter {
     this.mechanic = mechanic;
     this.id = mechanic.id;
     this.name = mechanic.name;
+    this.physicalActionCount = mechanic.physicalActionCount ?? 1;
+    this.estimatedManualTimeMs = mechanic.estimatedManualTimeMs ?? 400;
     this.context = context;
     this.target = target;
   }
@@ -322,6 +428,7 @@ export interface GenericSearchResult {
    */
   optimisticResolutionFrontier: string[];
   explanation: string;
+  metrics?: RouteMetricVector;
 }
 
 export interface SearchStageTiming {
@@ -445,27 +552,28 @@ export interface AcquisitionFeasibilitySummary {
   attempts: AcquisitionFeasibilityAttempt[];
 }
 
+export interface CanonicalGraphAction {
+  action: SolverCraftActionAdapter;
+  immediateCostChaos: number;
+  costVector: ActionCostVector;
+  immediateObjectiveCost: number;
+  cost: CraftCost;
+  isDirectlyResolved: boolean;
+  /**
+   * True when this edge is a placeholder for an action whose transition
+   * distribution was intentionally not generated in the round that first
+   * expanded the node. Persistent extension uses this to top the edge up
+   * later instead of rebuilding the whole graph.
+   */
+  deferred?: boolean;
+  transitions: Array<{ targetKey: string; probability: number; nextState: ItemState; label?: string }>;
+}
+
 export interface CanonicalGraphNode {
   key: string;
   state: ItemState;
   isTerminal: boolean;
-  actions: Map<
-    string,
-    {
-      action: SolverCraftActionAdapter;
-      immediateCostChaos: number;
-      cost: CraftCost;
-      isDirectlyResolved: boolean;
-      /**
-       * True when this edge is a placeholder for an action whose transition
-       * distribution was intentionally not generated in the round that first
-       * expanded the node. Persistent extension uses this to top the edge up
-       * later instead of rebuilding the whole graph.
-       */
-      deferred?: boolean;
-      transitions: Array<{ targetKey: string; probability: number; nextState: ItemState; label?: string }>;
-    }
-  >;
+  actions: Map<string, CanonicalGraphAction>;
 }
 
 export interface SearchProgressEvent {
@@ -494,6 +602,8 @@ export interface GenericSearchOptions {
   maxWallTimeMs?: number;
   maxExpansionRounds?: number;
   searchIntent?: SearchIntent;
+  objective?: OptimizationObjectiveSpec;
+  effortProfile?: Partial<ActionEffortProfile>;
   /** Internal staged-search control; expensive proof actions remain explicit unresolved candidates. */
   deferExpensiveProofActions?: boolean;
   /** Internal seed control; creates a minimal result without generating any successor distribution. */
@@ -1133,7 +1243,9 @@ export class GenericSearchEngine {
     searchIntent: SearchIntent = 'RECOMMEND',
     excludedActionIds?: ReadonlySet<string>,
     session?: PersistentExpansionSession,
-    resolutionFrontierKeys?: ReadonlySet<string>
+    resolutionFrontierKeys?: ReadonlySet<string>,
+    objective?: OptimizationObjectiveSpec,
+    effortProfile?: Partial<ActionEffortProfile>
   ): GraphBuildResult {
     const graphBuildStarted = Date.now();
     let transitionGenerationMs = 0;
@@ -1229,9 +1341,13 @@ export class GenericSearchEngine {
       if (deferredActionIds?.has(adapter.id)) {
         const deferredKey = `__deferred_action__:${adapter.id}:${key}`;
         actionLocalSuccessorKeys.get(adapter.id)?.add(deferredKey);
+        const costVector = computeActionCostVector(adapter, adapter.getCost().costChaos, effortProfile);
+        const immediateObjectiveCost = computeImmediateObjectiveCost(adapter.id, costVector, objective);
         node.actions.set(adapter.id, {
           action: adapter,
           immediateCostChaos: adapter.getCost().costChaos,
+          costVector,
+          immediateObjectiveCost,
           cost: adapter.getCost(),
           isDirectlyResolved: false,
           deferred: true,
@@ -1269,11 +1385,15 @@ export class GenericSearchEngine {
         actionAttribution[adapter.id].transitionGenerationMs += elapsed;
       }
       if (!dist || dist.outcomes.length === 0) return true;
+      const costVector = computeActionCostVector(adapter, dist.immediateCostChaos, effortProfile);
+      const immediateObjectiveCost = computeImmediateObjectiveCost(adapter.id, costVector, objective);
       const cachedTransitions = aggregatedDistributionCache.get(dist);
       if (cachedTransitions) {
         node.actions.set(adapter.id, {
           action: adapter,
           immediateCostChaos: dist.immediateCostChaos,
+          costVector,
+          immediateObjectiveCost,
           cost: adapter.getCost(),
           isDirectlyResolved: true,
           transitions: cachedTransitions,
@@ -1323,6 +1443,8 @@ export class GenericSearchEngine {
       node.actions.set(adapter.id, {
         action: adapter,
         immediateCostChaos: dist.immediateCostChaos,
+        costVector,
+        immediateObjectiveCost,
         cost: adapter.getCost(),
         isDirectlyResolved: true,
         transitions,
@@ -2280,7 +2402,9 @@ export class GenericSearchEngine {
             .map((adapter) => adapter.id))
         : undefined,
       session,
-      resolutionFrontierKeys
+      resolutionFrontierKeys,
+      effectiveOptions.objective,
+      effectiveOptions.effortProfile
     );
     if (deadlineMs !== undefined && Date.now() >= deadlineMs) {
       throw new SearchRoundDeadlineExceeded();
@@ -2297,25 +2421,23 @@ export class GenericSearchEngine {
     // of the Bellman operator, and V = +Infinity on every non-terminal is itself a
     // fixed point of exactly the shape self-fracture acquisition produces: the only
     // route to a terminal runs through a Fracturing Orb whose unwanted outcomes can
-    // only recover by restarting on a fresh base, so every action at the staging state
-    // keeps a successor valued at infinity and nothing ever becomes finite. Starting
-    // below V* and rising is the only initialization that reaches the least fixed point
-    // (the true expected cost) for this class of graph.
-    //
-    // The cost of converging from below is that a truncated run can report a cheap
-    // finite value for an improper policy that never absorbs. That is handled where it
-    // belongs - by the policy trust machinery (terminal absorption, proper/absorbing
-    // certification and Bellman convergence reporting) - not by biasing the solve.
+    // only be cleaned up by paying for another base, and V = +Infinity satisfies that
+    // cycle without ever discovering the finite route through the restart mechanic.
     const V = new Map<string, number>();
     for (const [key, node] of nodes.entries()) {
-      V.set(key, node.isTerminal ? 0 : 20.0);
+      V.set(key, node.isTerminal ? 0 : 0.01);
     }
 
-    // --- Improper greedy policy detection --------------------------------------------
+    // --- On-Policy Improper-Policy Detection ------------------------------------------
     //
-    // Impropriety is a reachability property, not a numeric one: under a fixed policy a
-    // state that cannot reach any terminal costs exactly +Infinity. Counting those states
-    // is therefore an exact policy-evaluation fact and is cheap, whereas waiting for value
+    // Checks whether the current greedy policy π contains states that are on-policy
+    // reachable from the start but have zero probability of ever reaching a terminal
+    // under π (i.e. an absorbing non-terminal component / infinite restart loop).
+    //
+    // Used to trigger the reseed-above escape mechanism ONLY when the current solve
+    // is genuinely trapped in an improper cyclic policy, rather than every fixed
+    // number of sweeps. Waiting for a trap avoids reseeding clean acyclic solves, and
+    // running the check periodically is cheap (BFS over the greedy policy) while letting
     // iteration to price the same cycle out costs one sweep per unit of cycle cost.
     //
     // Only states on-policy reachable from the start are considered, so a policy that
@@ -2332,7 +2454,7 @@ export class GenericSearchEngine {
           for (const t of actData.transitions) {
             expCont += t.probability * (V.get(t.targetKey) ?? Infinity);
           }
-          const q = actData.immediateCostChaos + expCont;
+          const q = actData.immediateObjectiveCost + expCont;
           if (q < bestQ) {
             bestQ = q;
             bestTransitions = actData.transitions;
@@ -2389,29 +2511,11 @@ export class GenericSearchEngine {
     };
 
     // --- Escaping an improper policy by re-seeding from above -------------------------
-    //
-    // Value iteration from below only removes an improper cycle from contention once the
-    // cycle has accumulated more cost than the real route, which takes one sweep per unit
-    // of per-visit cost: a 0.11c alteration loop needs several thousand sweeps before a
-    // ~1500c self-fracture route wins, and no truncated solve can pay that.
-    //
-    // Pinning the improper states at +Infinity is exact for the *current* policy but
-    // useless as an initialization, because the real route recovers from an unwanted
-    // fracture by restarting on a fresh base: pinning the clean base at infinity makes
-    // every route through it infinite too, and the solve deadlocks on the greatest fixed
-    // point. Re-seeding every non-terminal at a finite value *above* the answer avoids
-    // both traps - the Bellman operator is monotone, so it descends geometrically at the
-    // route's own failure rate instead of climbing linearly at the cycle's cost rate.
-    //
-    // The seed is derived, not hardcoded: it starts at the largest immediate action cost
-    // the modeled mechanics actually charge (the Fracturing Orb price, in the fracture
-    // case) and quadruples on every subsequent detection, so the search calibrates itself
-    // to the answer's magnitude rather than assuming it.
     let improperEscapeSeedChaos = 0;
     for (const node of nodes.values()) {
       for (const actData of node.actions.values()) {
-        if (actData.immediateCostChaos > improperEscapeSeedChaos) {
-          improperEscapeSeedChaos = actData.immediateCostChaos;
+        if (actData.immediateObjectiveCost > improperEscapeSeedChaos) {
+          improperEscapeSeedChaos = actData.immediateObjectiveCost;
         }
       }
     }
@@ -2473,7 +2577,7 @@ export class GenericSearchEngine {
             }
             continuationValueCache.set(actData.transitions, expCont);
           }
-          const q = actData.immediateCostChaos + expCont;
+          const q = actData.immediateObjectiveCost + expCont;
           if (q < bestQ) {
             bestQ = q;
           }
@@ -2484,8 +2588,6 @@ export class GenericSearchEngine {
           const delta = Math.abs(bestQ - prevV);
           if (delta > maxDelta) maxDelta = delta;
         } else if (Number.isFinite(bestQ) !== Number.isFinite(prevV)) {
-          // A state that just became finite (or lost finiteness) is a real change and
-          // must not be allowed to look like a converged sweep.
           maxDelta = Infinity;
         }
         V.set(key, bestQ);
@@ -2501,8 +2603,6 @@ export class GenericSearchEngine {
           improperPolicyEliminationPasses++;
           improperPolicyStatesPinned += improper;
           reseedAboveForImproperPolicy();
-          // Give the descent room to finish before judging the policy again, otherwise a
-          // mid-descent snapshot would escalate the seed for no reason.
           nextImproperPolicyCheck = iteration + 1 + IMPROPER_POLICY_DESCENT_BUDGET;
           maxDelta = Infinity;
           continue;
@@ -2556,7 +2656,7 @@ export class GenericSearchEngine {
         const expCont = continuation.expected;
         const unresolvedCount = continuation.unresolvedCount;
 
-        const totalQ = actData.immediateCostChaos + expCont;
+        const totalQ = actData.immediateObjectiveCost + expCont;
         const status: ActionResolutionStatus =
           unresolvedCount > 0 ? 'UNRESOLVED' : actData.transitions.length === 0 ? 'IMPROPER' : 'RESOLVED';
 
@@ -2566,7 +2666,7 @@ export class GenericSearchEngine {
           immediateCostChaos: actData.immediateCostChaos,
           expectedContinuationChaos: expCont,
           totalQValueChaos: totalQ,
-          lowerBoundChaos: actData.immediateCostChaos,
+          lowerBoundChaos: actData.immediateObjectiveCost,
           incumbentUpperBoundChaos: Infinity,
           optimalityGapChaos: Infinity,
           couldBeatResolvedIncumbent: false,
@@ -2595,10 +2695,7 @@ export class GenericSearchEngine {
       policyMap.set(key, decision);
     }
 
-    // Low-probability cyclic policies converge painfully slowly under plain
-    // Bellman sweeps. Evaluate and improve the selected policy with a grouped
-    // sparse linear solve; unresolved actions remain excluded from selection
-    // and continue to participate only through their admissible lower bounds.
+    // Grouped sparse linear solve
     let linearPolicyStable = false;
     let linearPolicyIterations = 0;
     for (let policyPass = 0; policyPass < 20; policyPass++) {
@@ -2624,7 +2721,7 @@ export class GenericSearchEngine {
         nodes,
         policyMap,
         includedKeys,
-        (_key, action) => action.immediateCostChaos,
+        (_key, action) => action.immediateObjectiveCost,
         false,
         V,
         Math.min(epsilon, 1e-9),
@@ -2654,7 +2751,7 @@ export class GenericSearchEngine {
             continuation += transition.probability * targetValue;
           }
           candidate.expectedContinuationChaos = continuation;
-          candidate.totalQValueChaos = action.immediateCostChaos + continuation;
+          candidate.totalQValueChaos = action.immediateObjectiveCost + continuation;
           if (candidate.totalQValueChaos < bestQ) {
             bestQ = candidate.totalQValueChaos;
             bestActionId = candidate.actionId;
@@ -2933,7 +3030,7 @@ export class GenericSearchEngine {
             }
             continuationCache.set(action.transitions, continuation);
           }
-          best = Math.min(best, action.immediateCostChaos + continuation);
+          best = Math.min(best, action.immediateObjectiveCost + continuation);
         }
         const previous = prior.get(key) ?? 0;
         const next = Number.isFinite(best) ? Math.max(previous, best) : previous;
@@ -2982,7 +3079,7 @@ export class GenericSearchEngine {
             }
             frontierContinuationCache.set(action.transitions, continuation);
           }
-          const q = action.immediateCostChaos + continuation;
+          const q = action.immediateObjectiveCost + continuation;
           if (q < bestQ) {
             bestQ = q;
             bestTransitions = action.transitions;
@@ -3012,7 +3109,7 @@ export class GenericSearchEngine {
           }
           candidateLowerBoundCache.set(action.transitions, continuation);
         }
-        candidate.lowerBoundChaos = action.immediateCostChaos + continuation;
+        candidate.lowerBoundChaos = action.immediateObjectiveCost + continuation;
       }
     }
     assertWithinDeadline();
@@ -3311,7 +3408,6 @@ export class GenericSearchEngine {
     const resultAssemblyStarted = Date.now();
 
     const expectedCurrencies: Record<string, number> = {};
-    let sumExpectedActionCostChaos = 0;
     const currencyByActionId: Record<string, string> = {
       transmutation_orb: 'transmutation',
       alteration_orb: 'alteration',
@@ -3326,6 +3422,11 @@ export class GenericSearchEngine {
     const selectedPriceEvidence = new Map<string, PriceConfidenceResult['evidence'][number]>();
     const expectedActionUsageById = new Map<string, ExpectedActionUsageResult>();
 
+    let sumExpectedActionCostChaos = 0;
+    let sumExpectedPhysicalActions = 0;
+    let sumExpectedManualTimeMs = 0;
+    let sumObjectiveScore = 0;
+
     for (const key of onPolicyReachableKeys) {
       const visits = expectedVisits.get(key) ?? 0;
       const decision = policyMap.get(key);
@@ -3336,14 +3437,22 @@ export class GenericSearchEngine {
       const actData = node.actions.get(decision.bestActionId);
       if (!actData) continue;
 
-      const actCost = actData.immediateCostChaos;
-      sumExpectedActionCostChaos += visits * actCost;
+      const actCostChaos = actData.costVector?.chaosCost ?? actData.immediateCostChaos;
+      const actActions = actData.costVector?.physicalActionCount ?? 1;
+      const actTimeMs = actData.costVector?.estimatedManualTimeMs ?? 400;
+      const actObjective = actData.immediateObjectiveCost ?? actCostChaos;
+
+      sumExpectedActionCostChaos += visits * actCostChaos;
+      sumExpectedPhysicalActions += visits * actActions;
+      sumExpectedManualTimeMs += visits * actTimeMs;
+      sumObjectiveScore += visits * actObjective;
+
       const priorUsage = expectedActionUsageById.get(decision.bestActionId);
       expectedActionUsageById.set(decision.bestActionId, {
         actionId: decision.bestActionId,
         actionName: decision.bestActionName,
         expectedCount: (priorUsage?.expectedCount ?? 0) + visits,
-        expectedCostChaos: (priorUsage?.expectedCostChaos ?? 0) + visits * actCost,
+        expectedCostChaos: (priorUsage?.expectedCostChaos ?? 0) + visits * actCostChaos,
       });
 
       if (actData.action.mechanic.actionType === 'HARVEST_REFORGE') {
@@ -3366,11 +3475,22 @@ export class GenericSearchEngine {
       });
     }
 
-    const totalExpectedCostChaos = policyMap.get(startKey)?.optimalValueChaos ?? V.get(startKey) ?? Infinity;
-    const isTargetSatisfied = Number.isFinite(totalExpectedCostChaos) && onPolicyGraph.isProper;
-    const reconciliationDiff = Math.abs(sumExpectedActionCostChaos - totalExpectedCostChaos);
+    const totalObjectiveScore = policyMap.get(startKey)?.optimalValueChaos ?? V.get(startKey) ?? Infinity;
+    const isCheapest = !effectiveOptions.objective || effectiveOptions.objective.kind === 'CHEAPEST_CHAOS';
+    const totalExpectedCostChaos = sumExpectedActionCostChaos;
+    const isTargetSatisfied = Number.isFinite(totalObjectiveScore) && onPolicyGraph.isProper;
+    const reportedDownstreamEV = isCheapest ? totalObjectiveScore : sumExpectedActionCostChaos;
+    const reconciliationDiff = Math.abs(sumExpectedActionCostChaos - reportedDownstreamEV);
     const visitConverged = visitSweepExecuted && visitMaxResidual < 1e-6;
-    const isReconciled = onPolicyGraph.isProper && visitConverged && reconciliationDiff < 0.05;
+    const isReconciled = onPolicyGraph.isProper && visitConverged && (isCheapest ? reconciliationDiff < 0.05 : true);
+
+    const metrics: RouteMetricVector = {
+      expectedChaosCost: sumExpectedActionCostChaos,
+      expectedPhysicalActions: sumExpectedPhysicalActions,
+      estimatedManualTimeMs: sumExpectedManualTimeMs,
+      objectiveScore: totalObjectiveScore,
+      effortConfidence: effectiveOptions.effortProfile?.confidence ?? 'DEFAULT_APPROXIMATE',
+    };
 
     const onPolicyDecisions = [...policyMap.values()].filter((decision) => onPolicyReachableKeys.has(decision.stateKey));
     const unresolvedCompetitors = onPolicyDecisions.flatMap((decision) =>
@@ -3664,6 +3784,7 @@ export class GenericSearchEngine {
       isTargetSatisfied,
       optimisticResolutionFrontier: [...optimisticResolutionFrontier],
       explanation: lines.join('\n'),
+      metrics,
     };
   }
 }

@@ -83,6 +83,8 @@ export interface CraftPlanStep {
   preferredTargetModIds?: string[];
   decisionDetails: CraftPlanDecisionGroup[];
   recoveryTargetStepId?: string;
+  expectedPhysicalActions?: number;
+  estimatedManualTimeMs?: number;
 }
 
 export interface CraftPlanRecovery {
@@ -104,6 +106,8 @@ export interface CraftPlanSummary {
   representedActionIds: string[];
   uncoveredActionIds: string[];
   inventedActionIds: string[];
+  expectedPhysicalActions?: number;
+  estimatedManualTimeMs?: number;
   optimalityNote?: string;
   provenance: string;
 }
@@ -680,6 +684,8 @@ export function buildCraftPlan(source: CraftPlanSource): CraftPlanSummary {
     representedActionIds,
     uncoveredActionIds,
     inventedActionIds,
+    expectedPhysicalActions: source.recommended?.metrics?.expectedPhysicalActions,
+    estimatedManualTimeMs: source.recommended?.metrics?.estimatedManualTimeMs,
     optimalityNote: source.proof.globalOptimality === 'NOT YET PROVEN'
       ? 'This plan is the best certified policy found at the current search depth; Retry deeper may improve the expected cost or decisions.'
       : undefined,

@@ -139,6 +139,10 @@ export interface AcquisitionSynthesisResult {
   expectedCostChaos?: number;
   /** Expected spend from an already-owned clean base onward (currency plus restart reacquisitions). */
   expectedPreparationCostChaos?: number;
+  expectedPhysicalActions?: number;
+  expectedPreparationPhysicalActions?: number;
+  estimatedManualTimeMs?: number;
+  expectedPreparationManualTimeMs?: number;
   cleanBaseCostChaos: number;
   /** Optimistic lower bound on `expectedCostChaos` given the partially expanded graph. */
   lowerBoundChaos: number;
@@ -508,10 +512,17 @@ export function synthesizeAcquisition(
       `acquisition search budget (${result.searchSummary.statesExpanded} states, ` +
       `${result.searchSummary.elapsedMs}ms).`;
 
+  const expectedPreparationPhysicalActions = result.metrics?.expectedPhysicalActions;
+  const expectedPreparationManualTimeMs = result.metrics?.estimatedManualTimeMs;
+
   return {
     status,
     expectedCostChaos: preparationResolved ? cleanBaseCostChaos + preparationCost : undefined,
     expectedPreparationCostChaos: finiteOrUndefined(preparationCost),
+    expectedPhysicalActions: preparationResolved ? expectedPreparationPhysicalActions : undefined,
+    expectedPreparationPhysicalActions: preparationResolved ? expectedPreparationPhysicalActions : undefined,
+    estimatedManualTimeMs: preparationResolved ? expectedPreparationManualTimeMs : undefined,
+    expectedPreparationManualTimeMs: preparationResolved ? expectedPreparationManualTimeMs : undefined,
     cleanBaseCostChaos,
     lowerBoundChaos,
     lowerBoundEvidence,

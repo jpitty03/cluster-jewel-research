@@ -205,6 +205,34 @@ export function validateOptimizeCraftInput(
     errors.push({ code: 'INVALID_SEARCH_INTENT', field: 'searchIntent', message: 'Choose Recommend, Deepen, or Prove search intent.' });
   }
 
+  if (input.objective !== undefined) {
+    const validKinds = [
+      'CHEAPEST_CHAOS',
+      'FEWEST_ACTIONS_WITHIN_COST',
+      'FASTEST_WITHIN_COST',
+      'BALANCED_VALUE_OF_TIME',
+      'UNCONSTRAINED_FEWEST_ACTIONS',
+      'UNCONSTRAINED_FASTEST',
+    ];
+    if (!validKinds.includes(input.objective.kind)) {
+      errors.push({
+        code: 'INVALID_OBJECTIVE_KIND',
+        field: 'target.requiredMods' as OptimizerValidationField,
+        message: `Optimization objective kind '${input.objective.kind}' is not supported.`,
+      });
+    }
+    if (
+      input.objective.maxExpectedCostChaos !== undefined &&
+      (!Number.isFinite(input.objective.maxExpectedCostChaos) || input.objective.maxExpectedCostChaos < 0)
+    ) {
+      errors.push({
+        code: 'INVALID_COST_CEILING',
+        field: 'target.requiredMods' as OptimizerValidationField,
+        message: 'Maximum expected chaos cost must be a non-negative number.',
+      });
+    }
+  }
+
   return { valid: errors.length === 0, errors, notices, normalizedInput };
 }
 

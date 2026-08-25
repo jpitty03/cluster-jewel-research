@@ -23,6 +23,12 @@ import {
 } from '../rules/actionRegistry.ts';
 import { getCanonicalStateKey } from '../rules/actionDiscovery.ts';
 import { getTaggedModsForCluster } from '../rules/clusterPoolHelpers.ts';
+import type {
+  ActionCostVector,
+  ActionEffortProfile,
+  EffortConfidence,
+} from '../domain/CraftAction.ts';
+import { DEFAULT_ACTION_EFFORT_PROFILE } from '../domain/CraftAction.ts';
 import {
   createGenericSearchContinuationSession,
   GenericSearchEngine,
@@ -30,6 +36,9 @@ import {
   type CandidateActionQValue,
   type GenericSearchContinuationSession,
   type GenericSearchResult,
+  type OptimizationObjectiveKind,
+  type OptimizationObjectiveSpec,
+  type RouteMetricVector,
 } from '../solver/genericSearch.ts';
 import {
   generateStartingStateCandidates,
@@ -50,6 +59,16 @@ import {
   type OptimizerValidationIssue,
 } from './optimizerValidation.ts';
 import { getSearchRuntimeBudget, type SearchIntent } from './searchRuntime.ts';
+
+export type {
+  ActionCostVector,
+  ActionEffortProfile,
+  EffortConfidence,
+  OptimizationObjectiveKind,
+  OptimizationObjectiveSpec,
+  RouteMetricVector,
+};
+export { DEFAULT_ACTION_EFFORT_PROFILE };
 
 export interface OptimizeCraftPriceContext {
   currencyRates?: Partial<CurrencyRates>;
@@ -112,6 +131,43 @@ export interface OptimizeCraftInput {
   expectedSaleValueChaos?: number;
   marketContext?: OptimizerMarketContext;
   searchIntent?: SearchIntent;
+  objective?: OptimizationObjectiveSpec;
+  effortProfile?: Partial<ActionEffortProfile>;
+}
+
+export type ObjectiveProofStatus =
+  | 'UNCONSTRAINED_RESOLVED'
+  | 'CONSTRAINED_OPTIMAL_PROVEN'
+  | 'BEST_RESOLVED_WITHIN_COST'
+  | 'NO_RESOLVED_ROUTE_WITHIN_COST'
+  | 'CHEAPEST_ROUTE_UNRESOLVED';
+
+export interface HarvestComparisonSummary {
+  harvestConsidered: boolean;
+  harvestEligible: boolean;
+  consideredHarvestActions: Array<{ actionId: string; actionName: string; tag: string }>;
+  resolvedHarvestRoute?: RouteSummary;
+  conventionalRoute?: RouteSummary;
+  costDifferenceChaos?: number;
+  actionsSaved?: number;
+  timeSavedMs?: number;
+  lifeforceCrossoverPriceChaosPerUnit?: number;
+  status:
+    | 'HARVEST_SELECTED'
+    | 'HARVEST_MORE_EXPENSIVE'
+    | 'HARVEST_NOT_ELIGIBLE'
+    | 'HARVEST_DISABLED'
+    | 'HARVEST_NO_RESOLVED_POLICY';
+  explanation: string;
+}
+
+export interface ParetoAlternative {
+  route: RouteSummary;
+  isCheapest: boolean;
+  isFewestActions: boolean;
+  isFastest: boolean;
+  isRequestedObjective: boolean;
+  tradeoffSummary: string;
 }
 
 export interface SerializableCandidateQValue {
@@ -177,6 +233,9 @@ export interface RouteSummary {
   optimalityGapChaos: number | null;
   status: ActionResolutionStatus;
   couldBeatResolvedIncumbent: boolean;
+  metrics?: RouteMetricVector;
+  acquisitionMetrics?: RouteMetricVector;
+  downstreamMetrics?: RouteMetricVector;
 }
 
 export interface AcquisitionMethodSummary {
@@ -607,6 +666,11 @@ export interface OptimizeCraftResult {
     costReconciled: boolean;
   };
   marketContext?: OptimizerMarketContext;
+  harvestComparison?: HarvestComparisonSummary;
+  paretoAlternatives?: ParetoAlternative[];
+  objectiveProofStatus?: ObjectiveProofStatus;
+  objective?: OptimizationObjectiveSpec;
+  costCeilingChaos?: number;
   warningDetails: OptimizationWarning[];
   warnings: string[];
 }
@@ -627,6 +691,189 @@ function serializeCandidate(candidate: CandidateActionQValue): SerializableCandi
     optimalityGapChaos: finiteOrNull(candidate.optimalityGapChaos),
     status: candidate.status,
     couldBeatResolvedIncumbent: candidate.couldBeatResolvedIncumbent,
+  };
+}
+
+function computeParetoAlternatives(
+  routes: RouteSummary[],
+  _requestedObjective?: OptimizationObjectiveSpec
+): ParetoAlternative[] {
+  const resolved = routes.filter((r) => r.status === 'RESOLVED' && r.expectedTotalCostChaos !== null && r.metrics);
+  if (resolved.length === 0) return [];
+
+  const nonDominated: RouteSummary[] = [];
+  for (const r of resolved) {
+    const rCost = r.expectedTotalCostChaos!;
+    const rAct = r.metrics!.expectedPhysicalActions;
+    const rTime = r.metrics!.estimatedManualTimeMs;
+
+    let isDominated = false;
+    for (const other of resolved) {
+      if (other === r) continue;
+      const oCost = other.expectedTotalCostChaos!;
+      const oAct = other.metrics!.expectedPhysicalActions;
+      const oTime = other.metrics!.estimatedManualTimeMs;
+
+      if (
+        oCost <= rCost &&
+        oAct <= rAct &&
+        oTime <= rTime &&
+        (oCost < rCost || oAct < rAct || oTime < rTime)
+      ) {
+        isDominated = true;
+        break;
+      }
+    }
+    if (!isDominated) {
+      nonDominated.push(r);
+    }
+  }
+
+  let minCost = Infinity;
+  let minAct = Infinity;
+  let minTime = Infinity;
+  for (const r of nonDominated) {
+    const cost = r.expectedTotalCostChaos!;
+    const act = r.metrics!.expectedPhysicalActions;
+    const time = r.metrics!.estimatedManualTimeMs;
+    if (cost < minCost) minCost = cost;
+    if (act < minAct) minAct = act;
+    if (time < minTime) minTime = time;
+  }
+
+  return nonDominated.map((r): ParetoAlternative => {
+    const cost = r.expectedTotalCostChaos!;
+    const act = r.metrics!.expectedPhysicalActions;
+    const time = r.metrics!.estimatedManualTimeMs;
+
+    const isCheapest = Math.abs(cost - minCost) < 0.01;
+    const isFewestActions = Math.abs(act - minAct) < 0.01;
+    const isFastest = Math.abs(time - minTime) < 0.01;
+
+    let tradeoffSummary = '';
+    if (isCheapest && isFewestActions && isFastest) {
+      tradeoffSummary = `Strictly optimal: ${cost.toFixed(1)}c (${Math.round(act)} actions, ${(time / 1000).toFixed(1)}s)`;
+    } else if (isCheapest) {
+      tradeoffSummary = `Cheapest: ${cost.toFixed(1)}c (${Math.round(act)} actions, ${(time / 1000).toFixed(1)}s)`;
+    } else if (isFewestActions) {
+      const extraCost = cost - minCost;
+      tradeoffSummary = `Fewest actions: ${Math.round(act)} actions (+${extraCost.toFixed(1)}c vs cheapest)`;
+    } else if (isFastest) {
+      const extraCost = cost - minCost;
+      tradeoffSummary = `Fastest: ${(time / 1000).toFixed(1)}s (+${extraCost.toFixed(1)}c vs cheapest)`;
+    } else {
+      tradeoffSummary = `${cost.toFixed(1)}c, ${Math.round(act)} actions, ${(time / 1000).toFixed(1)}s`;
+    }
+
+    return {
+      route: r,
+      isCheapest,
+      isFewestActions,
+      isFastest,
+      isRequestedObjective: false,
+      tradeoffSummary,
+    };
+  });
+}
+
+function buildHarvestComparisonSummary(
+  enabledHarvestCrafts: Array<{ actionId: string; actionName: string; tag: string }>,
+  harvestTags: string[],
+  routes: RouteSummary[],
+  priceBook: PriceBook,
+  recommended: RouteSummary | null,
+  cleanBaseCost: number
+): HarvestComparisonSummary {
+  const harvestEligible = enabledHarvestCrafts.length > 0;
+  const harvestConsidered = harvestTags.length > 0;
+  if (!harvestConsidered || !harvestEligible) {
+    return {
+      harvestConsidered,
+      harvestEligible,
+      consideredHarvestActions: enabledHarvestCrafts,
+      status: harvestEligible ? 'HARVEST_DISABLED' : 'HARVEST_NOT_ELIGIBLE',
+      explanation: harvestEligible
+        ? 'Harvest crafts were not enabled for this optimization.'
+        : 'No matching Harvest crafts are available for the target affixes on this cluster jewel base.',
+    };
+  }
+
+  const resolved = routes.filter((r) => r.status === 'RESOLVED' && r.expectedTotalCostChaos !== null);
+  const resolvedHarvestRoute = resolved.find((r) => {
+    const name = (r.name || '').toLowerCase();
+    return name.includes('reforge') || name.includes('harvest');
+  });
+  const conventionalRoute = resolved.find((r) => {
+    const name = (r.name || '').toLowerCase();
+    return !name.includes('reforge') && !name.includes('harvest');
+  });
+
+  if (!resolvedHarvestRoute && !conventionalRoute) {
+    return {
+      harvestConsidered: true,
+      harvestEligible: true,
+      consideredHarvestActions: enabledHarvestCrafts,
+      status: 'HARVEST_NO_RESOLVED_POLICY',
+      explanation: 'No fully resolved Harvest or conventional policy was found within budget.',
+    };
+  }
+
+  if (resolvedHarvestRoute && conventionalRoute) {
+    const harvestCost = resolvedHarvestRoute.expectedTotalCostChaos!;
+    const convCost = conventionalRoute.expectedTotalCostChaos!;
+    const costDifferenceChaos = harvestCost - convCost;
+    const actionsSaved = (conventionalRoute.metrics?.expectedPhysicalActions ?? 0) - (resolvedHarvestRoute.metrics?.expectedPhysicalActions ?? 0);
+    const timeSavedMs = (conventionalRoute.metrics?.estimatedManualTimeMs ?? 0) - (resolvedHarvestRoute.metrics?.estimatedManualTimeMs ?? 0);
+
+    const harvestReforges = resolvedHarvestRoute.metrics?.expectedPhysicalActions ?? 1;
+    const lifeforceUnitsUsed = Math.max(1, harvestReforges * 50);
+    const nonLifeforceHarvestChaos = cleanBaseCost;
+    const lifeforceCrossoverPriceChaosPerUnit = priceBook.calculateHarvestCrossoverPrice(
+      convCost,
+      nonLifeforceHarvestChaos,
+      lifeforceUnitsUsed
+    );
+
+    const isHarvestSelected = recommended?.actionId === resolvedHarvestRoute.actionId;
+    const status = isHarvestSelected
+      ? 'HARVEST_SELECTED'
+      : costDifferenceChaos > 0
+        ? 'HARVEST_MORE_EXPENSIVE'
+        : 'HARVEST_SELECTED';
+
+    const explanation = costDifferenceChaos > 0
+      ? `Harvest Reforge saves ${Math.round(actionsSaved)} physical actions (~${Math.max(0, Math.round(timeSavedMs / 1000))}s manual time) ` +
+        `but costs ${costDifferenceChaos.toFixed(1)}c more in materials at current prices. ` +
+        (lifeforceCrossoverPriceChaosPerUnit !== undefined && lifeforceCrossoverPriceChaosPerUnit > 0
+          ? `Harvest becomes cheaper if lifeforce drops below ${lifeforceCrossoverPriceChaosPerUnit.toFixed(4)}c/unit.`
+          : '')
+      : `Harvest Reforge is the cheapest route (${harvestCost.toFixed(1)}c) and saves ${Math.round(actionsSaved)} physical actions.`;
+
+    return {
+      harvestConsidered: true,
+      harvestEligible: true,
+      consideredHarvestActions: enabledHarvestCrafts,
+      resolvedHarvestRoute,
+      conventionalRoute,
+      costDifferenceChaos,
+      actionsSaved,
+      timeSavedMs,
+      lifeforceCrossoverPriceChaosPerUnit,
+      status,
+      explanation,
+    };
+  }
+
+  return {
+    harvestConsidered: true,
+    harvestEligible: true,
+    consideredHarvestActions: enabledHarvestCrafts,
+    resolvedHarvestRoute,
+    conventionalRoute,
+    status: resolvedHarvestRoute ? 'HARVEST_SELECTED' : 'HARVEST_MORE_EXPENSIVE',
+    explanation: resolvedHarvestRoute
+      ? 'Harvest route resolved successfully.'
+      : 'Conventional route resolved without Harvest.',
   };
 }
 
@@ -1607,6 +1854,29 @@ export class OptimizerService {
 
         const totalLowerBound = cleanFullRouteLowerBound;
         cleanProg.proofReason = 'CLEAN_ROUTE_PROVEN';
+
+        const cleanAcquisitionMetrics: RouteMetricVector = {
+          expectedChaosCost: cleanEvidence.costChaos,
+          expectedPhysicalActions: 0,
+          estimatedManualTimeMs: 0,
+          objectiveScore: cleanEvidence.costChaos,
+          effortConfidence: 'DEFAULT_APPROXIMATE',
+        };
+        const cleanDownstreamMetrics: RouteMetricVector = {
+          expectedChaosCost: fastCleanResult.metrics?.expectedChaosCost ?? fastCleanResult.totalExpectedCostChaos,
+          expectedPhysicalActions: fastCleanResult.metrics?.expectedPhysicalActions ?? 0,
+          estimatedManualTimeMs: fastCleanResult.metrics?.estimatedManualTimeMs ?? 0,
+          objectiveScore: fastCleanResult.metrics?.objectiveScore ?? fastCleanResult.totalExpectedCostChaos,
+          effortConfidence: fastCleanResult.metrics?.effortConfidence ?? 'DEFAULT_APPROXIMATE',
+        };
+        const cleanMetrics: RouteMetricVector = {
+          expectedChaosCost: cleanAcquisitionMetrics.expectedChaosCost + cleanDownstreamMetrics.expectedChaosCost,
+          expectedPhysicalActions: cleanAcquisitionMetrics.expectedPhysicalActions + cleanDownstreamMetrics.expectedPhysicalActions,
+          estimatedManualTimeMs: cleanAcquisitionMetrics.estimatedManualTimeMs + cleanDownstreamMetrics.estimatedManualTimeMs,
+          objectiveScore: cleanAcquisitionMetrics.objectiveScore + cleanDownstreamMetrics.objectiveScore,
+          effortConfidence: cleanDownstreamMetrics.effortConfidence,
+        };
+
         fastCleanRoute = {
           actionId: `acquire_candidate_${cleanCandidateIndex}_clean-base_${cleanMethodIndex}`,
           name: cleanMethod.description ?? 'Start clean base: Clean Base',
@@ -1618,6 +1888,9 @@ export class OptimizerService {
           optimalityGapChaos: Math.max(0, total - totalLowerBound),
           status: 'RESOLVED',
           couldBeatResolvedIncumbent: false,
+          metrics: cleanMetrics,
+          acquisitionMetrics: cleanAcquisitionMetrics,
+          downstreamMetrics: cleanDownstreamMetrics,
         };
       }
       portfolioProofTranches.push({
@@ -2479,6 +2752,56 @@ export class OptimizerService {
       : searchSessionRecord.fractureProofs.get(
           JSON.stringify(starts[bestFractureCandidateIndex].fracturedRequirement)
         );
+
+    const bestFractureAcquisitionMetrics: RouteMetricVector | undefined =
+      bestFractureSynthesis && bestFractureSynthesis.expectedCostChaos !== undefined
+        ? {
+            expectedChaosCost: bestFractureSynthesis.expectedCostChaos,
+            expectedPhysicalActions: bestFractureSynthesis.expectedPhysicalActions ?? 0,
+            estimatedManualTimeMs: bestFractureSynthesis.estimatedManualTimeMs ?? 0,
+            objectiveScore: bestFractureSynthesis.expectedCostChaos,
+            effortConfidence: 'DEFAULT_APPROXIMATE',
+          }
+        : undefined;
+
+    const bestFractureDownstreamMetrics: RouteMetricVector | undefined =
+      bestFractureDownstreamResult
+        ? {
+            expectedChaosCost:
+              bestFractureDownstreamResult.metrics?.expectedChaosCost ??
+              bestFractureDownstreamResult.totalExpectedCostChaos,
+            expectedPhysicalActions:
+              bestFractureDownstreamResult.metrics?.expectedPhysicalActions ?? 0,
+            estimatedManualTimeMs:
+              bestFractureDownstreamResult.metrics?.estimatedManualTimeMs ?? 0,
+            objectiveScore:
+              bestFractureDownstreamResult.metrics?.objectiveScore ??
+              bestFractureDownstreamResult.totalExpectedCostChaos,
+            effortConfidence:
+              bestFractureDownstreamResult.metrics?.effortConfidence ??
+              'DEFAULT_APPROXIMATE',
+          }
+        : undefined;
+
+    const bestFractureMetrics: RouteMetricVector | undefined =
+      bestFractureAcquisitionMetrics && bestFractureDownstreamMetrics
+        ? {
+            expectedChaosCost:
+              bestFractureAcquisitionMetrics.expectedChaosCost +
+              bestFractureDownstreamMetrics.expectedChaosCost,
+            expectedPhysicalActions:
+              bestFractureAcquisitionMetrics.expectedPhysicalActions +
+              bestFractureDownstreamMetrics.expectedPhysicalActions,
+            estimatedManualTimeMs:
+              bestFractureAcquisitionMetrics.estimatedManualTimeMs +
+              bestFractureDownstreamMetrics.estimatedManualTimeMs,
+            objectiveScore:
+              bestFractureAcquisitionMetrics.objectiveScore +
+              bestFractureDownstreamMetrics.objectiveScore,
+            effortConfidence: bestFractureDownstreamMetrics.effortConfidence,
+          }
+        : undefined;
+
     const bestFractureRoute: RouteSummary | undefined = usesDirectFracturePolicy && bestFractureTotalCost !== undefined
       ? {
           actionId: `acquire_candidate_${bestFractureCandidateIndex}_self-fracture_executable`,
@@ -2497,6 +2820,9 @@ export class OptimizerService {
           ),
           status: 'RESOLVED',
           couldBeatResolvedIncumbent: false,
+          metrics: bestFractureMetrics,
+          acquisitionMetrics: bestFractureAcquisitionMetrics,
+          downstreamMetrics: bestFractureDownstreamMetrics,
         }
       : undefined;
 
@@ -2513,23 +2839,105 @@ export class OptimizerService {
           .sort((left, right) =>
             (left.expectedTotalCostChaos ?? Infinity) - (right.expectedTotalCostChaos ?? Infinity)
           );
+
+    // Collect all candidate routes that are resolved
+    const allResolvedRoutes: RouteSummary[] = [
+      ...(fastCleanRoute ? [fastCleanRoute] : []),
+      ...(bestFractureRoute ? [bestFractureRoute] : []),
+      ...rankedAcquisitionRoutes.filter((r) => r.status === 'RESOLVED' && r.expectedTotalCostChaos !== null),
+    ].filter((route, idx, self) => self.findIndex((r) => r.actionId === route.actionId) === idx);
+
+    // Compute Pareto Alternatives
+    const paretoAlternatives = computeParetoAlternatives(allResolvedRoutes, input.objective);
+
+    // Multi-objective constrained candidate selection
+    const objective = input.objective ?? { kind: 'CHEAPEST_CHAOS' };
+    const cheapestCandidate = allResolvedRoutes.reduce<RouteSummary | undefined>(
+      (min, r) => (!min || (r.expectedTotalCostChaos ?? Infinity) < (min.expectedTotalCostChaos ?? Infinity) ? r : min),
+      undefined
+    );
+    const cheapestCostChaos = cheapestCandidate?.expectedTotalCostChaos ?? undefined;
+
+    let costCeilingChaos: number | undefined;
+    if (cheapestCostChaos !== undefined && Number.isFinite(cheapestCostChaos)) {
+      if (objective.maxExpectedCostChaos !== undefined) {
+        costCeilingChaos = objective.maxExpectedCostChaos;
+      } else if (objective.maxPremiumChaos !== undefined) {
+        costCeilingChaos = cheapestCostChaos + objective.maxPremiumChaos;
+      } else if (objective.maxPremiumFraction !== undefined) {
+        costCeilingChaos = cheapestCostChaos * (1 + objective.maxPremiumFraction);
+      }
+    }
+
+    const eligibleCandidates = costCeilingChaos !== undefined
+      ? allResolvedRoutes.filter((r) => (r.expectedTotalCostChaos ?? Infinity) <= costCeilingChaos!)
+      : allResolvedRoutes;
+
+    let chosenCandidate: RouteSummary | null = null;
+    let objectiveProofStatus: ObjectiveProofStatus = 'UNCONSTRAINED_RESOLVED';
+
+    if (allResolvedRoutes.length === 0) {
+      objectiveProofStatus = 'CHEAPEST_ROUTE_UNRESOLVED';
+    } else if (eligibleCandidates.length === 0) {
+      objectiveProofStatus = 'NO_RESOLVED_ROUTE_WITHIN_COST';
+      chosenCandidate = cheapestCandidate ?? null;
+    } else {
+      objectiveProofStatus = costCeilingChaos !== undefined ? 'CONSTRAINED_OPTIMAL_PROVEN' : 'UNCONSTRAINED_RESOLVED';
+      chosenCandidate = eligibleCandidates.reduce((best, cand) => {
+        if (!best) return cand;
+        const bCost = best.expectedTotalCostChaos ?? Infinity;
+        const cCost = cand.expectedTotalCostChaos ?? Infinity;
+        const bAct = best.metrics?.expectedPhysicalActions ?? Infinity;
+        const cAct = cand.metrics?.expectedPhysicalActions ?? Infinity;
+        const bTime = best.metrics?.estimatedManualTimeMs ?? Infinity;
+        const cTime = cand.metrics?.estimatedManualTimeMs ?? Infinity;
+
+        switch (objective.kind) {
+          case 'FEWEST_ACTIONS_WITHIN_COST':
+          case 'UNCONSTRAINED_FEWEST_ACTIONS':
+            if (Math.abs(cAct - bAct) > 1e-4) return cAct < bAct ? cand : best;
+            return cCost < bCost ? cand : best;
+          case 'FASTEST_WITHIN_COST':
+          case 'UNCONSTRAINED_FASTEST':
+            if (Math.abs(cTime - bTime) > 1e-4) return cTime < bTime ? cand : best;
+            return cCost < bCost ? cand : best;
+          case 'BALANCED_VALUE_OF_TIME': {
+            const cpm = objective.valueOfTimeChaosPerMinute ?? 50;
+            const bScore = bCost + (bTime / 60000) * cpm;
+            const cScore = cCost + (cTime / 60000) * cpm;
+            if (Math.abs(cScore - bScore) > 1e-4) return cScore < bScore ? cand : best;
+            return cCost < bCost ? cand : best;
+          }
+          case 'CHEAPEST_CHAOS':
+          default:
+            return cCost < bCost ? cand : best;
+        }
+      }, eligibleCandidates[0]);
+    }
+
+    if (chosenCandidate) {
+      for (const p of paretoAlternatives) {
+        if (p.route.actionId === chosenCandidate.actionId) {
+          p.isRequestedObjective = true;
+        }
+      }
+    }
+
     const selectedPolicyCertified =
       result.optimalityProof.selectedPolicyStatus ===
       'FULLY RESOLVED / PROPER / ABSORBING / COST-RECONCILED';
-    const recommended = selectedPolicyCertified
-      ? usesDirectCleanPolicy
-        ? fastCleanRoute ?? null
-        : usesDirectFracturePolicy
-          ? bestFractureRoute ?? null
-          : rankedAcquisitionRoutes.find(
-            (route) =>
-              route.actionId === acquisitionDecision?.bestActionId &&
-              route.status === 'RESOLVED' &&
-              route.expectedTotalCostChaos !== null
-          ) ?? null
-      : null;
+    const recommended = selectedPolicyCertified ? chosenCandidate : null;
     const selectedParts = recommended ? portfolioActionParts(recommended.actionId) : {};
     const incumbentUpperBound = recommended?.expectedTotalCostChaos ?? undefined;
+
+    const harvestComparison = buildHarvestComparisonSummary(
+      enabledHarvestCrafts,
+      harvestTags,
+      allResolvedRoutes,
+      priceBook,
+      recommended,
+      cleanEvidence.costChaos
+    );
     const synthesisEvidenceRoutes: RouteSummary[] = [...synthesisSummaries.entries()].flatMap(
       ([candidateIndex, synthesis]): RouteSummary[] => {
         const candidateId = `candidate_${candidateIndex}`;
@@ -2872,7 +3280,7 @@ export class OptimizerService {
           disambiguateAffixes: false,
         },
       });
-    } else if (usesDirectFracturePolicy && bestFractureRoute && bestFractureSynthesis) {
+} else if (usesDirectFracturePolicy && bestFractureRoute && bestFractureSynthesis) {
       const fracturePolicyExplanation: PolicyExplanationRule[] = (bestFractureSynthesis.policy ?? []).map((rule) => ({
         condition: `Self-fracture preparation: ${rule.state}`,
         actionId: rule.selectedActionId,
@@ -3210,6 +3618,11 @@ export class OptimizerService {
           (selectedSynthesis?.solver?.costReconciled ?? true),
       },
       marketContext: input.marketContext,
+      harvestComparison,
+      paretoAlternatives,
+      objectiveProofStatus,
+      objective: input.objective,
+      costCeilingChaos,
       warningDetails: uniqueWarningDetails,
       warnings: [...new Set(uniqueWarningDetails.map((warning) => warning.message))],
     };
@@ -3217,8 +3630,6 @@ export class OptimizerService {
       ...outputWithoutCraftPlan,
       craftPlan: buildCraftPlan(outputWithoutCraftPlan),
     };
-
-    // This assertion belongs at the boundary: an accidental Map/Infinity must
     // never become a frontend integration surprise.
     const serializationStarted = Date.now();
     JSON.stringify(output);

@@ -5,6 +5,32 @@ import type { TargetDefinition } from './TargetDefinition.ts';
 
 export type CurrencyCost = Partial<Record<keyof CurrencyRates | string, number>>;
 
+export type EffortConfidence = 'USER_SUPPLIED' | 'DEFAULT_APPROXIMATE' | 'UNAVAILABLE';
+
+export interface ActionCostVector {
+  chaosCost: number;
+  physicalActionCount: number;
+  estimatedManualTimeMs: number;
+}
+
+export interface ActionEffortProfile {
+  defaultCurrencyTimeMs: number;
+  harvestReforgeTimeMs: number;
+  fracturingOrbTimeMs: number;
+  reacquireCleanBaseTimeMs: number;
+  customActionTimesMs?: Record<string, number>;
+  customPhysicalActionCounts?: Record<string, number>;
+  confidence?: EffortConfidence;
+}
+
+export const DEFAULT_ACTION_EFFORT_PROFILE: ActionEffortProfile = {
+  defaultCurrencyTimeMs: 400,
+  harvestReforgeTimeMs: 2000,
+  fracturingOrbTimeMs: 1500,
+  reacquireCleanBaseTimeMs: 5000,
+  confidence: 'DEFAULT_APPROXIMATE',
+};
+
 export interface CraftOutcome {
   probability: number;
   state: ItemState;
