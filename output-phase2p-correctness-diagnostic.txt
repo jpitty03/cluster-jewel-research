@@ -1,0 +1,30 @@
+PHASE 2P — CORRECTNESS, PROOF, AND PERFORMANCE CLOSURE DIAGNOSTIC
+
+--- P1: Frozen Fixture Corpus Verification ---
+Fixture [single_mod] (Single Mod (T1 Energy Shield)):
+  Status: BEST_RESOLVED_ACQUISITION_SAFE, Cost: 13.3c, Time: 326ms
+Fixture [two_mod_prefix_suffix] (Two-Mod Prefix + Suffix (T1 ES + T1 Int)):
+  Status: BEST_RESOLVED_ACQUISITION_SAFE, Cost: 169.7c, Time: 872ms
+Fixture [two_mod_same_generation_prefixes] (Two-Mod Same Generation Prefixes (T1 Armour + T1 ES)):
+  Status: BEST_RESOLVED_ACQUISITION_SAFE, Cost: 254.2c, Time: 3778ms
+Fixture [two_mod_herald] (Herald Speed + T1 ES):
+  Status: BEST_RESOLVED_ACQUISITION_SAFE, Cost: 274.8c, Time: 698ms
+P1 PASS: All frozen fixtures resolved with certified recommendation status.
+
+--- P2: Metamorphic Symmetry (Input Order) ---
+Order [A, B] Cost: 185.79c, Route: Start clean base: Clean Base
+Order [B, A] Cost: 185.79c, Route: Start clean base: Clean Base
+P2 PASS: Mod input ordering produces identical mathematical costs and policy decisions.
+
+--- P3: Metamorphic Monotonicity ---
+Base Prices Route Cost: 165.2c
+Higher Prices Route Cost: 339.7c
+P3 PASS: Increasing material costs monotonically increases expected route cost.
+
+--- P4: Wrong-Fracture Recovery Invariant ---
+P4 PASS: Wrong-fracture states safely reacquire/resell and never perform illegal scour operations.
+
+--- P5: Session Cache Memory Bounds (20 Sequential Searches) ---
+P5 PASS: 20 sequential optimizer queries executed without memory degradation or leak.
+
+=== ALL PHASE 2P ACCEPTANCE GATES PASS ===

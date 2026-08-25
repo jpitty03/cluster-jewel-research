@@ -1,0 +1,54 @@
+{
+  "version": "Phase2P-Corpus",
+  "fixtures": [
+    {
+      "id": "single_mod",
+      "name": "Single Mod (T1 Energy Shield)",
+      "baseType": "Large Cluster Jewel",
+      "clusterType": "10% increased Attack Damage",
+      "itemLevel": 84,
+      "passiveCount": 8,
+      "targetMods": ["AfflictionJewelSmallPassivesGrantES3"],
+      "expectedStatus": "PROVEN_OPTIMAL"
+    },
+    {
+      "id": "two_mod_prefix_suffix",
+      "name": "Two-Mod Prefix + Suffix (T1 ES + T1 Int)",
+      "baseType": "Large Cluster Jewel",
+      "clusterType": "10% increased Attack Damage",
+      "itemLevel": 84,
+      "passiveCount": 8,
+      "targetMods": [
+        "AfflictionJewelSmallPassivesGrantES3",
+        "AfflictionJewelSmallPassivesGrantInt3"
+      ],
+      "expectedStatus": "PROVEN_OPTIMAL"
+    },
+    {
+      "id": "two_mod_same_generation_prefixes",
+      "name": "Two-Mod Same Generation Prefixes (T1 Armour + T1 ES)",
+      "baseType": "Large Cluster Jewel",
+      "clusterType": "10% increased Attack Damage",
+      "itemLevel": 84,
+      "passiveCount": 8,
+      "targetMods": [
+        "AfflictionJewelSmallPassivesGrantArmour3_",
+        "AfflictionJewelSmallPassivesGrantES3"
+      ],
+      "expectedStatus": "PROVEN_OPTIMAL"
+    },
+    {
+      "id": "two_mod_herald",
+      "name": "Herald Speed + T1 ES",
+      "baseType": "Medium Cluster Jewel",
+      "clusterType": "10% increased Damage while affected by a Herald",
+      "itemLevel": 84,
+      "passiveCount": 4,
+      "targetMods": [
+        "Added Small Passive Skills also grant: #% increased Attack and Cast Speed while affected by a Herald_T1",
+        "AfflictionJewelSmallPassivesGrantES3"
+      ],
+      "expectedStatus": "PROVEN_OPTIMAL"
+    }
+  ]
+}
