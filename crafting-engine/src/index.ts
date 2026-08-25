@@ -13,6 +13,17 @@ import {
 import { OptimizerService } from './service/optimizerService.ts';
 
 export type { ResolvedCraftSolution, ResolvedCraftPolicy };
+export {
+  compactModifierStatText,
+  playerizeModifierText,
+  requirementDisplayFallback,
+  resolveModifierDisplayDescriptor,
+  resolveRequirementModifierDescriptor,
+} from './domain/ModifierDisplay.ts';
+export type {
+  ModifierDisplayDescriptor,
+  ModifierDisplaySource,
+} from './domain/ModifierDisplay.ts';
 
 export type { StartingCraftOption };
 

@@ -759,7 +759,7 @@ export interface OptimizeCraftResult {
 }
 
 export interface CanonicalResultPresentation {
-  schemaVersion: '2T.1';
+  schemaVersion: '2U.1';
   releaseStatus: 'RELEASE_CANDIDATE_BROWSER_VERIFIED';
   selectedRouteName?: string;
   selectedRouteStatus: RecommendationStatus;
@@ -4590,7 +4590,7 @@ export class OptimizerService {
     };
     for (const family of methodPortfolio) methodFamilyCounts[family.status]++;
     const presentation: CanonicalResultPresentation = {
-      schemaVersion: '2T.1',
+      schemaVersion: '2U.1',
       releaseStatus: 'RELEASE_CANDIDATE_BROWSER_VERIFIED',
       selectedRouteName: canonicalRecommended?.name,
       selectedRouteStatus: recommendationStatus,

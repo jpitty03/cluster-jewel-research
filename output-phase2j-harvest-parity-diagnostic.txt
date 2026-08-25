@@ -14,7 +14,7 @@ PINNED CONTROLLED ENGINE FIXTURE (NOT CLAIMED AS RECOVERED SCREENSHOT METADATA)
 
 J-H1 HARVEST ANALYTICAL / MC / EXTERNAL OBSERVATION
   Harvest Reforge Defences: external=0.297719% (98/32917; Wilson95=[0.244380%, 0.362656%]); analytical=0.317341%; MC=0.306000% (918/300000); absoluteDiff=0.019623%; relativeDiff=6.591%
-  analytical outcomes after proof-safe internal aggregation=204642; analytical generation=3377ms; MC=2477ms; mechanicsConfidence=APPROXIMATE / EXTERNALLY CLOSE
+  analytical outcomes after proof-safe internal aggregation=204642; analytical generation=3307ms; MC=2627ms; mechanicsConfidence=APPROXIMATE / EXTERNALLY CLOSE
   weights were read from the eligible committed pool; external data was not used as a mechanics input
 
 J-H2 CONVENTIONAL CONDITIONAL STAGES
@@ -34,8 +34,8 @@ J-H3 IDENTICAL-PRICE ECONOMICS / J10 LIFEFORCE CROSSOVER
   strategy switch is the minimum Bellman repeat-policy Q-value; no Harvest-specific winner/crossover branch exists
 
 J11 DEFENSIVE TWO-MOD RUNTIME / DUPLICATE WORK PROFILE
-  Harvest distribution first generation=3031ms; same post-reset mechanical state reuse=0ms; reused=true; retained outcomes=204642
-  product optimizer status=PROVISIONAL_RESOLVED; U=1553.799139c; elapsed=24731ms; stageTiming={"seedResultMs":0,"transitionGenerationMs":20,"graphAggregationAndSetupMs":188,"bellmanMs":3890,"candidateClassificationAndTrustMs":91,"absorptionMs":12,"occupancyMs":7,"competitiveFrontierCollectionMs":11,"resultAssemblyMs":5,"repeatedRoundWorkMs":122,"unattributedOrInterruptedMs":3776,"serializationMs":27}; states=3189; transitions generated/reused=9605/17; first policy=4223ms; first acquisition-safe=4223ms
+  Harvest distribution first generation=3323ms; same post-reset mechanical state reuse=0ms; reused=true; retained outcomes=204642
+  product optimizer status=BEST_RESOLVED_ACQUISITION_SAFE; U=235.684630c; elapsed=9962ms; stageTiming={"seedResultMs":4,"transitionGenerationMs":93,"graphAggregationAndSetupMs":884,"bellmanMs":8255,"candidateClassificationAndTrustMs":432,"absorptionMs":58,"occupancyMs":17,"competitiveFrontierCollectionMs":37,"resultAssemblyMs":14,"repeatedRoundWorkMs":3490,"unattributedOrInterruptedMs":87,"serializationMs":20}; states=5000; transitions generated/reused=17193/412; first policy=3496ms; first acquisition-safe=3496ms
   observed user reference=roughly ten minutes; controlled product request now returns inside the 30-second host guard without reducing mechanics fidelity
 
 CONSTRAINT AUDIT

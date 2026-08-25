@@ -1,6 +1,10 @@
 import type { CraftPlanSummary } from '../service/craftPlan.ts';
 import type { MethodFamilyResult } from './MethodFamily.ts';
 import type { RouteSummary } from '../service/optimizerService.ts';
+import {
+  playerizeModifierText,
+  type ModifierDisplayDescriptor,
+} from './ModifierDisplay.ts';
 
 export type MacroStateKind =
   | 'CLEAN_BASE'
@@ -18,8 +22,11 @@ export type MacroStateKind =
 
 export interface VisualizationNode {
   id: string;
+  /** Persistent, collision-managed player label. */
   label: string;
   sublabel?: string;
+  fullLabel: string;
+  stepNumber?: number;
   kind: MacroStateKind;
   x: number;
   y: number;
@@ -30,6 +37,18 @@ export interface VisualizationNode {
   isDominated: boolean;
   isUnresolved: boolean;
   occupancyWeight: number; // 0.0 to 1.0 (relative visit volume)
+  details: {
+    title: string;
+    phase?: string;
+    instruction?: string;
+    actions: string[];
+    targetTexts: string[];
+    expectedPhysicalActions?: number;
+    estimatedManualTimeMs?: number;
+    recoveryTargetStepId?: string;
+    routeStatus: string;
+    technicalModifiers: ModifierDisplayDescriptor[];
+  };
 }
 
 export interface VisualizationEdge {
@@ -88,6 +107,40 @@ export interface GraphBuildOptions {
   width?: number;
   height?: number;
   includeAlternatives?: boolean;
+  modifierDescriptors?: ModifierDisplayDescriptor[];
+}
+
+const ACTION_SHORT_LABELS: Readonly<Record<string, string>> = {
+  fracturing_orb: 'Fracture',
+  transmutation_orb: 'Transmute',
+  alteration_orb: 'Alter',
+  augmentation_orb: 'Augment',
+  regal_orb: 'Regal',
+  exalted_orb: 'Exalt',
+  annulment_orb: 'Annul',
+  divine_orb: 'Divine',
+  scouring_orb: 'Recover',
+  restart_reacquire: 'Recover',
+};
+
+function compactStepLabel(step: CraftPlanSummary['steps'][number]): string {
+  if (step.phase === 'ACQUIRE') return 'Fracture';
+  if (step.phase === 'RECOVER') return 'Recover';
+  if (step.phase === 'SUCCESS') return 'Complete';
+  if (step.phase === 'SPECIALIZED') return 'Harvest';
+  if (step.phase === 'FINISH') return 'Finish';
+  for (const actionId of step.actionIds) {
+    if (actionId.startsWith('harvest_reforge')) return 'Harvest';
+    const actionLabel = ACTION_SHORT_LABELS[actionId];
+    if (actionLabel) return actionLabel;
+  }
+  const phaseLabels: Record<string, string> = {
+    INITIALIZE: 'Make Magic',
+    ROLL: 'Roll Target',
+    FILL: 'Fill Magic',
+    PROMOTE: 'Promote',
+  };
+  return phaseLabels[step.phase] ?? 'Craft';
 }
 
 /**
@@ -100,8 +153,20 @@ export function buildVisualizationGraph(
   recommendedRoute?: RouteSummary,
   options: GraphBuildOptions = {}
 ): VisualizationGraph {
-  const width = options.width ?? 1000;
-  const height = options.height ?? 600;
+  const descriptors = options.modifierDescriptors ?? [];
+  const descriptorById = new Map(descriptors.map((descriptor) => [descriptor.modId, descriptor]));
+  const playerText = (text: string, form: 'primary' | 'compact' = 'compact') =>
+    playerizeModifierText(text, descriptors, form);
+  const steps = craftPlan.steps || [];
+  const routeNodeCount = steps.length + 2;
+  const routeSpacing = 190;
+  const width = Math.max(options.width ?? 1000, 180 + (routeNodeCount - 1) * routeSpacing);
+  const alternativeFamilies = methodPortfolio.filter((family) =>
+    family.spec.kind !== 'OPEN' && family.status !== 'SELECTED_WINNER'
+  );
+  const alternativeColumns = Math.max(1, Math.min(4, alternativeFamilies.length));
+  const alternativeRows = Math.ceil(alternativeFamilies.length / alternativeColumns);
+  const height = Math.max(options.height ?? 600, 480 + Math.max(0, alternativeRows - 1) * 115);
   const seed = options.seed ?? 'markov_constellation_default_seed';
 
   const nodes: VisualizationNode[] = [];
@@ -110,8 +175,7 @@ export function buildVisualizationGraph(
   const selectedRouteEdgeIds: string[] = [];
   const events: VisualizationEvent[] = [];
 
-  const centerY = height / 2;
-  const steps = craftPlan.steps || [];
+  const centerY = Math.min(240, height * 0.36);
   const isCertified = craftPlan.status === 'CERTIFIED';
 
   // 1. Starting State Node
@@ -120,7 +184,8 @@ export function buildVisualizationGraph(
   const startNode: VisualizationNode = {
     id: startNodeId,
     label: isFractureStart ? 'Fractured Base' : 'Clean Base',
-    sublabel: isFractureStart ? 'Fracturing Prep' : 'Normal Base',
+    sublabel: isFractureStart ? 'Fracture start' : 'Normal start',
+    fullLabel: playerText(recommendedRoute?.name ?? (isFractureStart ? 'Fractured Base' : 'Clean Base')),
     kind: isFractureStart ? 'FRACTURE_FAMILY' : 'CLEAN_BASE',
     x: 90,
     y: centerY,
@@ -130,6 +195,14 @@ export function buildVisualizationGraph(
     isDominated: false,
     isUnresolved: false,
     occupancyWeight: 1.0,
+    details: {
+      title: playerText(recommendedRoute?.name ?? (isFractureStart ? 'Fractured Base' : 'Clean Base')),
+      phase: 'ACQUIRE',
+      actions: [],
+      targetTexts: [],
+      routeStatus: 'Selected route start',
+      technicalModifiers: [],
+    },
   };
   nodes.push(startNode);
   selectedRouteNodeIds.push(startNodeId);
@@ -144,13 +217,16 @@ export function buildVisualizationGraph(
   // 2. Build Plan Steps Dynamically
   let prevNodeId = startNodeId;
   const totalSteps = steps.length;
-  const stepSpacing = (width - 240) / Math.max(1, totalSteps + 1);
 
   steps.forEach((step, idx) => {
     const stepNodeId = `node_step_${step.id || idx + 1}`;
-    const stepX = 90 + (idx + 1) * stepSpacing;
-    const verticalOffset = idx % 2 === 0 ? -45 : 35;
-    const stepY = Math.max(80, Math.min(height - 180, centerY + verticalOffset));
+    const stepX = 90 + (idx + 1) * routeSpacing;
+    const verticalOffset = idx % 2 === 0 ? -48 : 48;
+    const stepY = centerY + verticalOffset;
+    const targetDescriptors = (step.preferredTargetModIds ?? [])
+      .flatMap((modId) => descriptorById.get(modId) ?? []);
+    const targetTexts = targetDescriptors.map((descriptor) => descriptor.compactText);
+    const fullTitle = playerText(step.title, 'primary');
 
     const stepKind: MacroStateKind = step.phase === 'ACQUIRE'
       ? 'FRACTURE_FAMILY'
@@ -166,8 +242,10 @@ export function buildVisualizationGraph(
 
     const stepNode: VisualizationNode = {
       id: stepNodeId,
-      label: step.title,
-      sublabel: step.actionNames?.length > 0 ? step.actionNames.join(', ') : undefined,
+      label: compactStepLabel(step),
+      sublabel: targetTexts[0],
+      fullLabel: fullTitle,
+      stepNumber: idx + 1,
       kind: stepKind,
       x: stepX,
       y: stepY,
@@ -177,6 +255,18 @@ export function buildVisualizationGraph(
       isDominated: false,
       isUnresolved: false,
       occupancyWeight: Math.max(0.3, 1.0 - (idx * 0.15)),
+      details: {
+        title: fullTitle,
+        phase: step.phase,
+        instruction: playerText(step.instruction, 'primary'),
+        actions: step.actionNames.map((action) => playerText(action, 'primary')),
+        targetTexts,
+        expectedPhysicalActions: step.expectedPhysicalActions,
+        estimatedManualTimeMs: step.estimatedManualTimeMs,
+        recoveryTargetStepId: step.recoveryTargetStepId,
+        routeStatus: 'Selected policy route',
+        technicalModifiers: targetDescriptors,
+      },
     };
     nodes.push(stepNode);
     selectedRouteNodeIds.push(stepNodeId);
@@ -187,7 +277,7 @@ export function buildVisualizationGraph(
       id: edgeId,
       source: prevNodeId,
       target: stepNodeId,
-      actionLabel: step.actionNames?.length > 0 ? step.actionNames[0] : step.title,
+      actionLabel: playerText(step.actionNames?.[0] ?? step.title),
       probability: 1.0 / (idx + 1),
       expectedVisits: step.expectedPhysicalActions ? Math.max(1, step.expectedPhysicalActions / (totalSteps || 1)) : 1,
       isSelectedRoute: true,
@@ -223,9 +313,10 @@ export function buildVisualizationGraph(
   const terminalNode: VisualizationNode = {
     id: terminalNodeId,
     label: isCertified ? 'Target Certified' : 'Unresolved Target',
-    sublabel: isCertified ? (recommendedRoute?.name ?? 'Optimal Route') : 'Proof Limit Reached',
+    sublabel: isCertified ? 'Complete' : 'Proof limit',
+    fullLabel: isCertified ? 'Target complete' : 'Unresolved target',
     kind: isCertified ? 'TERMINAL_SUCCESS' : 'UNRESOLVED_FRONTIER',
-    x: width - 100,
+    x: 90 + (routeNodeCount - 1) * routeSpacing,
     y: centerY,
     radius: 25,
     glowIntensity: isCertified ? 1.0 : 0.4,
@@ -233,6 +324,14 @@ export function buildVisualizationGraph(
     isDominated: false,
     isUnresolved: !isCertified,
     occupancyWeight: 1.0,
+    details: {
+      title: isCertified ? 'Target complete' : 'Unresolved target',
+      phase: 'SUCCESS',
+      actions: [],
+      targetTexts: descriptors.map((descriptor) => descriptor.primaryText),
+      routeStatus: isCertified ? 'Selected route terminal' : 'Unresolved frontier',
+      technicalModifiers: descriptors,
+    },
   };
   nodes.push(terminalNode);
   if (isCertified) {
@@ -268,7 +367,7 @@ export function buildVisualizationGraph(
   });
 
   // 4. Alternative & Dominated Starting Methods from Portfolio
-  let altY = centerY + 140;
+  let visibleAlternativeIndex = 0;
   methodPortfolio.forEach((family, fIdx) => {
     if (family.spec.kind === 'OPEN') return;
     const isWinner = family.status === 'SELECTED_WINNER';
@@ -277,20 +376,42 @@ export function buildVisualizationGraph(
     const altNodeId = `node_alt_${family.spec.id || fIdx}`;
     const isDominated = family.status === 'DOMINATED' || family.status === 'MORE_EXPENSIVE';
     const isUnresolved = family.status === 'UNRESOLVED_AT_BUDGET';
+    const targetDescriptor = family.spec.targetFractureModId
+      ? descriptorById.get(family.spec.targetFractureModId)
+      : undefined;
+    const familyLabel = targetDescriptor && family.spec.kind === 'SELF_FRACTURE'
+      ? `Self-fracture ${targetDescriptor.compactText}`
+      : targetDescriptor && family.spec.kind === 'SELF_FRACTURE_HARVEST'
+        ? `Fracture ${targetDescriptor.compactText} + Harvest`
+        : playerText(family.spec.name);
+    const column = visibleAlternativeIndex % alternativeColumns;
+    const row = Math.floor(visibleAlternativeIndex / alternativeColumns);
+    const laneWidth = (width - 240) / alternativeColumns;
+    visibleAlternativeIndex += 1;
 
     const altNode: VisualizationNode = {
       id: altNodeId,
-      label: family.spec.name,
-      sublabel: family.whyNotSelectedExplanation ? family.whyNotSelectedExplanation.slice(0, 32) + '...' : undefined,
+      label: familyLabel,
+      sublabel: isUnresolved ? 'Unresolved' : isDominated ? 'Dominated' : 'Alternative',
+      fullLabel: familyLabel,
       kind: family.spec.kind === 'SELF_FRACTURE' ? 'FRACTURE_FAMILY' : family.spec.kind === 'HARVEST' ? 'HARVEST_REFORGE' : 'DOMINATED_BRANCH',
-      x: 240 + (fIdx * 160) % (width - 400),
-      y: Math.min(height - 60, altY),
+      x: 120 + laneWidth * (column + 0.5),
+      y: 430 + row * 115,
       radius: 15,
       glowIntensity: 0.25,
       isSelectedRoute: false,
       isDominated,
       isUnresolved,
       occupancyWeight: 0.15,
+      details: {
+        title: familyLabel,
+        phase: family.spec.kind,
+        instruction: playerText(family.spec.description, 'primary'),
+        actions: [],
+        targetTexts: targetDescriptor ? [targetDescriptor.primaryText] : [],
+        routeStatus: isUnresolved ? 'Unresolved at budget' : isDominated ? 'Dominated alternative' : 'Explored alternative',
+        technicalModifiers: targetDescriptor ? [targetDescriptor] : [],
+      },
     };
     nodes.push(altNode);
 
@@ -299,7 +420,7 @@ export function buildVisualizationGraph(
       id: `edge_start_to_${altNodeId}`,
       source: startNodeId,
       target: altNodeId,
-      actionLabel: family.spec.name,
+      actionLabel: familyLabel,
       probability: 0.2,
       expectedVisits: 0.2,
       isSelectedRoute: false,
@@ -321,8 +442,6 @@ export function buildVisualizationGraph(
       isUnresolved,
       curvature: -0.25,
     });
-
-    altY += 55;
   });
 
   events.push({
@@ -349,7 +468,7 @@ export function buildVisualizationGraph(
     edges,
     events,
     seed,
-    layoutVersion: '2Q.2',
+    layoutVersion: '2U.1',
     selectedRouteNodeIds,
     selectedRouteEdgeIds,
     bounds: {

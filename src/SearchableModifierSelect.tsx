@@ -394,7 +394,7 @@ export function SearchableModifierSelect({
             {selectedMod ? (
               <span className="selected-mod-preview">
                 <span className={`mod-display-name ${selectedMod.isNotable ? 'notable-name' : ''}`}>
-                  {selectedMod.displayName}
+                  {selectedMod.selectionLabel}
                 </span>
                 <span className="mod-badges">
                   {selectedMod.tierCount > 1 && (
@@ -510,16 +510,14 @@ export function SearchableModifierSelect({
                         >
                           <div className="option-primary">
                             <span className="option-name">
-                              {mod.displayName}
+                              {mod.selectionLabel}
                             </span>
                             {isSelected && <span className="selected-indicator">✓</span>}
                           </div>
 
                           <div className="option-meta">
-                            {mod.technicalName && mod.technicalName !== mod.displayName && (
-                              <span className="technical-name">{mod.technicalName}</span>
-                            )}
                             <div className="meta-badges">
+                              <span className="type-tag">{mod.genType}</span>
                               {mod.tierCount > 1 && (
                                 <span className="tier-tag">T{mod.tier}</span>
                               )}

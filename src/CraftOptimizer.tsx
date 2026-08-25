@@ -11,7 +11,12 @@ import type {
   OptimizerProgressSnapshot,
   PolicyExplanationRule,
   RecommendationStatus,
+  MethodFamilyResult,
 } from '../crafting-engine/src/service/optimizerService.ts';
+import {
+  playerizeModifierText,
+  type ModifierDisplayDescriptor,
+} from '../crafting-engine/src/domain/ModifierDisplay.ts';
 import type { SearchIntent } from '../crafting-engine/src/service/searchRuntime.ts';
 import {
   browserCraftingCatalog,
@@ -77,7 +82,29 @@ function candidatePlayerLabel(
       ? [modId]
       : [];
   }));
-  return mods.find((mod) => fracturedModIds.has(mod.modId))?.displayName ?? 'Fractured target modifier';
+  return mods.find((mod) => fracturedModIds.has(mod.modId))?.compactText ?? 'Target modifier';
+}
+
+function publicModifierText(
+  text: string,
+  mods: readonly ModifierDisplayDescriptor[],
+  form: 'primary' | 'compact' = 'compact',
+): string {
+  return playerizeModifierText(text, mods, form);
+}
+
+function methodFamilyPlayerName(
+  method: MethodFamilyResult,
+  mods: ReturnType<typeof browserCraftingCatalog.getEligibleMods>,
+): string {
+  const target = method.spec.targetFractureModId
+    ? mods.find((mod) => mod.modId === method.spec.targetFractureModId)
+    : undefined;
+  if (target && method.spec.kind === 'SELF_FRACTURE') return `Self-fracture ${target.compactText}`;
+  if (target && method.spec.kind === 'SELF_FRACTURE_HARVEST') {
+    return `Fracture ${target.compactText} + Harvest`;
+  }
+  return publicModifierText(method.spec.name, mods);
 }
 
 function playerActionName(actionId: string, actionName: string, recommendedStart: string): string {
@@ -91,7 +118,7 @@ function playerModName(
   modId: string,
   mods: ReturnType<typeof browserCraftingCatalog.getEligibleMods>,
 ): string {
-  return mods.find((mod) => mod.modId === modId)?.displayName ?? modId;
+  return mods.find((mod) => mod.modId === modId)?.primaryText ?? 'Exact modifier (see Technical details)';
 }
 
 function renderPolicyCondition(
@@ -156,6 +183,7 @@ interface SearchActivityVisualizerProps {
   progress: OptimizerProgressSnapshot | null;
   running: boolean;
   selectedRouteName?: string;
+  modifierDescriptors: ReturnType<typeof browserCraftingCatalog.getEligibleMods>;
   onRetryDeeper?: () => void;
   onCancel?: () => void;
 }
@@ -200,6 +228,7 @@ export function SearchActivityVisualizer({
   progress,
   running,
   selectedRouteName,
+  modifierDescriptors,
   onRetryDeeper,
   onCancel,
 }: SearchActivityVisualizerProps) {
@@ -247,7 +276,9 @@ export function SearchActivityVisualizer({
             )}
           </div>
           <p className="search-focus-text">
-            {progress?.currentFocus || (running ? 'Analyzing reachable state graphs…' : 'Optimization finished.')}
+            {progress?.currentFocus
+              ? publicModifierText(progress.currentFocus, modifierDescriptors)
+              : running ? 'Analyzing reachable state graphs…' : 'Optimization finished.'}
           </p>
         </div>
 
@@ -360,9 +391,17 @@ export function SearchActivityVisualizer({
                 </div>
 
                 <div className="node-body">
-                  <strong className="candidate-label">{cand.label}</strong>
+                  <strong className="candidate-label">
+                    {cand.kind === 'clean'
+                      ? 'Clean Base'
+                      : cand.targetModName
+                        ? publicModifierText(cand.targetModName, modifierDescriptors)
+                        : publicModifierText(cand.label, modifierDescriptors)}
+                  </strong>
                   {cand.targetModName && (
-                    <span className="candidate-mod-badge">{cand.targetModName}</span>
+                    <span className="candidate-mod-badge">
+                      {publicModifierText(cand.targetModName, modifierDescriptors)}
+                    </span>
                   )}
 
                   <div className="node-bounds-grid">
@@ -421,7 +460,7 @@ export function SearchActivityVisualizer({
             {progress.recentMilestones.slice(-6).map((item, idx) => (
               <li key={idx} className="milestone-entry">
                 <span className="milestone-bullet">›</span>
-                <span className="milestone-text">{item}</span>
+                <span className="milestone-text">{publicModifierText(item, modifierDescriptors)}</span>
               </li>
             ))}
           </ul>
@@ -431,7 +470,7 @@ export function SearchActivityVisualizer({
   );
 }
 
-export const APP_RELEASE_VERSION = '2T.1';
+export const APP_RELEASE_VERSION = '2U.1';
 
 export function CraftOptimizer() {
   const baseTypes = useMemo(() => browserCraftingCatalog.getBaseTypes(), []);
@@ -741,7 +780,9 @@ export function CraftOptimizer() {
 
   const copyShoppingList = (res: OptimizeCraftResult) => {
     const lines: string[] = ['=== CLUSTER JEWEL CRAFTING SHOPPING LIST ==='];
-    lines.push(`Target: ${res.target.requiredMods.map((m) => eligibleMods.find((mod) => mod.modId === m.modId)?.displayName ?? m.modId).join(' + ')}`);
+    lines.push(`Target: ${res.target.requiredMods.map((requirement) =>
+      requirement.modId ? playerModName(requirement.modId, eligibleMods) : requirement.name ?? requirement.modGroup ?? 'Exact modifier'
+    ).join(' + ')}`);
     lines.push(`Expected Total Cost: ~${chaos(res.expectedCostChaos)}`);
     lines.push('\nEstimated Materials & Bases:');
 
@@ -766,24 +807,26 @@ export function CraftOptimizer() {
 
   const copyCraftGuide = (res: OptimizeCraftResult) => {
     const lines: string[] = ['=== CLUSTER JEWEL CRAFTING PLAYBOOK ==='];
-    lines.push(`Target: ${res.target.requiredMods.map((m) => eligibleMods.find((mod) => mod.modId === m.modId)?.displayName ?? m.modId).join(' + ')}`);
+    lines.push(`Target: ${res.target.requiredMods.map((requirement) =>
+      requirement.modId ? playerModName(requirement.modId, eligibleMods) : requirement.name ?? requirement.modGroup ?? 'Exact modifier'
+    ).join(' + ')}`);
     lines.push(`Starting Point: ${recommendedStart}`);
     lines.push(`Expected Cost: ~${chaos(res.expectedCostChaos)}`);
     lines.push(`Expected Actions: ~${res.recommended?.metrics?.expectedPhysicalActions ? Math.round(res.recommended.metrics.expectedPhysicalActions) : 'N/A'}`);
     lines.push('\n--- Chronological Instructions ---');
 
     res.craftPlan.steps.forEach((step, idx) => {
-      lines.push(`\nStep ${idx + 1}: ${step.title}`);
-      lines.push(step.instruction);
+      lines.push(`\nStep ${idx + 1}: ${publicModifierText(step.title, eligibleMods, 'primary')}`);
+      lines.push(publicModifierText(step.instruction, eligibleMods, 'primary'));
       if (step.actionIds.length > 0) {
-        lines.push(`Action: ${step.actionNames.join(', ')}`);
+        lines.push(`Action: ${step.actionNames.map((action) => publicModifierText(action, eligibleMods, 'primary')).join(', ')}`);
       }
       if (step.decisionDetails && step.decisionDetails.length > 0) {
         lines.push('Decisions:');
         step.decisionDetails.forEach((group) => {
-          lines.push(`  - When ${group.summary}:`);
+          lines.push(`  - When ${publicModifierText(group.summary, eligibleMods, 'primary')}:`);
           group.options.forEach((opt) => {
-            lines.push(`      * ${opt.action} (~${opt.expectedVisits.toFixed(1)} visits)`);
+            lines.push(`      * ${publicModifierText(opt.action, eligibleMods, 'primary')} (~${opt.expectedVisits.toFixed(1)} visits)`);
           });
         });
       }
@@ -932,10 +975,19 @@ export function CraftOptimizer() {
   const selectedMethod = selectedAcquisition?.methods.find(
     (method) => method.id === result?.acquisition.selectedMethodId,
   );
+  const targetDescriptors = useMemo(
+    () => selectedTargetIds.flatMap((modId) => eligibleMods.find((mod) => mod.modId === modId) ?? []),
+    [eligibleMods, selectedTargetIds],
+  );
+  const publicSelectedRouteName = result?.presentation.selectedRouteName
+    ? publicModifierText(result.presentation.selectedRouteName, targetDescriptors)
+    : undefined;
   const selectedAcquisitionLabel = candidatePlayerLabel(selectedAcquisition, eligibleMods);
   const recommendedStart = selectedMethod?.executable && selectedAcquisitionLabel
     ? `Self-fracture ${selectedAcquisitionLabel}`
-    : selectedAcquisitionLabel ?? result?.recommended?.name ?? 'No start certified under this budget';
+    : selectedAcquisitionLabel ?? (result?.recommended?.name
+      ? publicModifierText(result.recommended.name, targetDescriptors)
+      : 'No start certified under this budget');
   const materialWarnings = result?.warningDetails.filter((warning) =>
     warning.category === 'SELECTED_ROUTE' ||
     warning.category === 'DATA_FRESHNESS' ||
@@ -951,9 +1003,10 @@ export function CraftOptimizer() {
     return buildVisualizationGraph(
       result.craftPlan,
       result.methodPortfolio ?? [],
-      result.recommended ?? undefined
+      result.recommended ?? undefined,
+      { modifierDescriptors: targetDescriptors },
     );
-  }, [result]);
+  }, [result, targetDescriptors]);
 
   return (
     <main className="optimizer-page">
@@ -1147,10 +1200,15 @@ export function CraftOptimizer() {
                   const mod = eligibleMods.find((candidate) => candidate.modId === requirement.modId);
                   return mod ? (
                     <>
-                      <strong>{mod.displayName}</strong> · {mod.genType}, ilvl {mod.requiredItemLevel}
+                      <strong>{mod.primaryText}</strong> · {mod.genType}, ilvl {mod.requiredItemLevel}
                       <details><summary>Technical modifier details</summary><code>{mod.technicalLabel}</code></details>
                     </>
-                  ) : requirement.modId;
+                  ) : (
+                    <>
+                      <strong>Exact modifier unavailable in the current eligible pool</strong>
+                      <details><summary>Technical modifier details</summary><code>Exact modifier ID: {requirement.modId}</code></details>
+                    </>
+                  );
                 })()}
               </li>
             ))}
@@ -1267,7 +1325,8 @@ export function CraftOptimizer() {
       <SearchActivityVisualizer
         progress={progress}
         running={running}
-        selectedRouteName={result?.presentation.selectedRouteName}
+        selectedRouteName={publicSelectedRouteName}
+        modifierDescriptors={targetDescriptors}
         onRetryDeeper={retryDeeper}
         onCancel={cancel}
       />
@@ -1276,7 +1335,7 @@ export function CraftOptimizer() {
         <div className="optimizer-results">
           <section
             className="optimizer-card optimizer-summary recommendation-hero"
-            data-selected-route={result.presentation.selectedRouteName}
+            data-selected-route={publicSelectedRouteName}
             data-proof-label={result.presentation.proofLabel}
             data-pricing-label={result.presentation.pricingLabel}
           >
@@ -1301,11 +1360,11 @@ export function CraftOptimizer() {
             <div className="recommendation-target">
               <span>Target</span>
               <strong>{result.target.requiredMods.map((requirement) =>
-                eligibleMods.find((mod) => mod.modId === requirement.modId)?.displayName ?? requirement.modId
+                requirement.modId ? playerModName(requirement.modId, eligibleMods) : requirement.name ?? requirement.modGroup ?? 'Exact modifier'
               ).join(' + ')} · {result.target.requiredRarity ?? 'Any rarity'}</strong>
             </div>
             <dl className="recommendation-facts">
-              <dt>Selected route</dt><dd>{result.presentation.selectedRouteName ?? 'none certified'}</dd>
+              <dt>Selected route</dt><dd>{publicSelectedRouteName ?? 'none certified'}</dd>
               <dt>{result.recommendationStatus === 'NO_RESOLVED_ROUTE' ? 'Resolved start' : 'Recommended start'}</dt><dd>{recommendedStart}</dd>
               <dt>Expected cost</dt><dd className="recommendation-cost">{chaos(result.expectedCostChaos)}</dd>
               <dt>Expected physical actions</dt>
@@ -1384,7 +1443,9 @@ export function CraftOptimizer() {
                 <h3>Important for this recommendation</h3>
                 <ul>
                   {materialWarnings.map((warning) => (
-                    <li key={`${warning.category}-${warning.message}`}>{playerWarning(warning.message)}</li>
+                    <li key={`${warning.category}-${warning.message}`}>
+                      {publicModifierText(playerWarning(warning.message), targetDescriptors, 'primary')}
+                    </li>
                   ))}
                 </ul>
               </section>
@@ -1407,7 +1468,7 @@ export function CraftOptimizer() {
                     className={`pareto-alternative-card ${alt.isRequestedObjective ? 'selected-objective' : ''}`}
                   >
                     <div className="pareto-card-header">
-                      <span className="pareto-route-name">{alt.route.name}</span>
+                      <span className="pareto-route-name">{publicModifierText(alt.route.name, targetDescriptors)}</span>
                       <div className="pareto-badges">
                         {alt.isCheapest && <span className="badge badge-cheapest">Cheapest</span>}
                         {alt.isFewestActions && <span className="badge badge-actions">Fewest Actions</span>}
@@ -1429,7 +1490,7 @@ export function CraftOptimizer() {
                         <dd>{alt.route.metrics?.estimatedManualTimeMs !== undefined ? `${(alt.route.metrics.estimatedManualTimeMs / 1000).toFixed(1)}s` : '—'}</dd>
                       </div>
                     </dl>
-                    <p className="pareto-tradeoff-text">{alt.tradeoffSummary}</p>
+                    <p className="pareto-tradeoff-text">{publicModifierText(alt.tradeoffSummary, targetDescriptors, 'primary')}</p>
                   </div>
                 ))}
               </div>
@@ -1455,7 +1516,9 @@ export function CraftOptimizer() {
                         : result.harvestComparison.status.replace(/_/g, ' ')}
                 </span>
               </div>
-              <p className="harvest-explanation">{result.harvestComparison.explanation}</p>
+              <p className="harvest-explanation">
+                {publicModifierText(result.harvestComparison.explanation, targetDescriptors, 'primary')}
+              </p>
               {result.harvestComparison.actionEvidenceObserved && (
                 <div className="harvest-comparison-grid">
                   <div className="harvest-stat-box">
@@ -1552,8 +1615,8 @@ export function CraftOptimizer() {
                     >
                       <div className="method-card-header">
                         <div className="method-title-group">
-                          <span className="method-badge-pill">{method.spec.badge}</span>
-                          <h3 className="method-name">{method.spec.name}</h3>
+                          <span className="method-badge-pill">{publicModifierText(method.spec.badge, targetDescriptors)}</span>
+                          <h3 className="method-name">{methodFamilyPlayerName(method, eligibleMods)}</h3>
                         </div>
                         <span className={`method-status-tag ${method.status.toLowerCase()}`}>
                           {isWinner
@@ -1573,7 +1636,7 @@ export function CraftOptimizer() {
                                     : method.status}
                         </span>
                       </div>
-                      <p className="method-desc">{method.spec.description}</p>
+                      <p className="method-desc">{publicModifierText(method.spec.description, targetDescriptors, 'primary')}</p>
                       <p className="method-evaluation-source">
                         <strong>Evidence:</strong> {method.evaluationSource.replace(/_/g, ' ')}
                         {method.duplicateOfMethodFamilyId ? ` · same independently evaluated policy as ${method.duplicateOfMethodFamilyId}` : ''}
@@ -1611,7 +1674,7 @@ export function CraftOptimizer() {
                       {method.whyNotSelectedExplanation && (
                         <div className={`method-explanation ${isWinner ? 'winner' : 'not-selected'}`}>
                           <strong>{isWinner ? 'Why selected:' : 'Why not selected:'}</strong>
-                          <span>{method.whyNotSelectedExplanation}</span>
+                          <span>{publicModifierText(method.whyNotSelectedExplanation, targetDescriptors, 'primary')}</span>
                         </div>
                       )}
                     </div>
@@ -1625,7 +1688,7 @@ export function CraftOptimizer() {
             <section className="optimizer-card constellation-card" aria-label="Markov Policy Constellation">
               <MarkovConstellation
                 graph={constellationGraph}
-                selectedRouteName={result.presentation.selectedRouteName}
+                selectedRouteName={publicSelectedRouteName}
               />
             </section>
           )}
@@ -1679,7 +1742,7 @@ export function CraftOptimizer() {
               <>
                 <div className="craft-start">
                   <span>Selected route</span>
-                  <strong data-selected-route={result.presentation.selectedRouteName}>{result.presentation.selectedRouteName}</strong>
+                  <strong data-selected-route={publicSelectedRouteName}>{publicSelectedRouteName}</strong>
                   <span>Starting point</span>
                   <strong>{recommendedStart}</strong>
                   <p>This condensed playbook puts the selected policy in chronological order. Repeat its recovery loop after misses, and expand Decision details when the exact current affixes matter.</p>
@@ -1703,8 +1766,8 @@ export function CraftOptimizer() {
                       <div className="craft-plan-step-body">
                         <div className="step-title-row">
                           <h3>{preferredTargets.length > 0
-                            ? `${step.title}: ${preferredTargets.join(' + ')}`
-                            : step.title}</h3>
+                            ? `${publicModifierText(step.title, targetDescriptors, 'primary')}: ${preferredTargets.join(' + ')}`
+                            : publicModifierText(step.title, targetDescriptors, 'primary')}</h3>
                           <div className="step-effort-badges">
                             {step.expectedPhysicalActions !== undefined && (
                               <span className="step-effort-pill actions">
@@ -1718,14 +1781,18 @@ export function CraftOptimizer() {
                             )}
                           </div>
                         </div>
-                        <p>{step.instruction}</p>
+                        <p>{publicModifierText(step.instruction, targetDescriptors, 'primary')}</p>
                         {step.actionIds.length > 0 && (
                           <p className="craft-plan-actions"><strong>Selected actions:</strong>{' '}
                             {step.actionIds.map((actionId, actionIndex) =>
-                              playerActionName(
-                                actionId,
-                                step.actionNames[actionIndex] ?? actionId,
-                                recommendedStart,
+                              publicModifierText(
+                                playerActionName(
+                                  actionId,
+                                  step.actionNames[actionIndex] ?? actionId,
+                                  recommendedStart,
+                                ),
+                                targetDescriptors,
+                                'primary',
                               )
                             ).join(', ')}
                           </p>
@@ -1733,7 +1800,7 @@ export function CraftOptimizer() {
                         {step.phase === 'ACQUIRE' && selectedSynthesis && (
                           <details className="selected-fracture-guide">
                             <summary>Self-fracture materials and recovery</summary>
-                            <p>{selectedSynthesis.explanation}</p>
+                            <p>{publicModifierText(selectedSynthesis.explanation, targetDescriptors, 'primary')}</p>
                             <dl>
                               <dt>Expected Fracturing Orbs</dt>
                               <dd>{selectedSynthesis.expectedFracturingOrbs === undefined ? '—' : count(selectedSynthesis.expectedFracturingOrbs)}</dd>
@@ -1741,14 +1808,14 @@ export function CraftOptimizer() {
                               <dd>{selectedSynthesis.expectedRestarts === undefined ? '—' : count(selectedSynthesis.expectedRestarts)}</dd>
                             </dl>
                             {selectedSynthesis.wrongFractureRecovery && (
-                              <p className="fracture-recovery"><strong>Wrong fracture:</strong> {selectedSynthesis.wrongFractureRecovery.note}</p>
+                              <p className="fracture-recovery"><strong>Wrong fracture:</strong> {publicModifierText(selectedSynthesis.wrongFractureRecovery.note, targetDescriptors, 'primary')}</p>
                             )}
                           </details>
                         )}
                         {step.decisionDetails.map((decision) => (
                           <details className="craft-plan-decision-details" key={decision.id}>
                             <summary>Decision details</summary>
-                            <p>{decision.summary}</p>
+                            <p>{publicModifierText(decision.summary, targetDescriptors, 'primary')}</p>
                             <ul>{decision.options.map((option) => {
                               const exampleRule = result.policyExplanation[option.policyRuleIndices[0]];
                               return <li
@@ -1756,7 +1823,7 @@ export function CraftOptimizer() {
                                 data-action-id={option.actionId}
                                 data-policy-rule-indices={option.policyRuleIndices.join(',')}
                               >
-                                <strong>{playerActionName(option.actionId, option.action, recommendedStart)}</strong>
+                                <strong>{publicModifierText(playerActionName(option.actionId, option.action, recommendedStart), targetDescriptors, 'primary')}</strong>
                                 <span>{option.representedStateCount} represented states · {count(option.expectedVisits)} expected visits</span>
                                 {exampleRule && <span className="craft-plan-decision-example">Example: {renderPolicyCondition(exampleRule, eligibleMods)}</span>}
                                 {option.policyRuleIndices.length > 1 && <span className="muted">{option.policyRuleIndices.length - 1} more exact cases are retained in Advanced optimizer details.</span>}
@@ -1771,7 +1838,11 @@ export function CraftOptimizer() {
                     </li>;
                   })}
                 </ol>
-                {result.craftPlan.optimalityNote && <p className="craft-plan-optimality">{result.craftPlan.optimalityNote}</p>}
+                {result.craftPlan.optimalityNote && (
+                  <p className="craft-plan-optimality">
+                    {publicModifierText(result.craftPlan.optimalityNote, targetDescriptors, 'primary')}
+                  </p>
+                )}
               </>
             ) : <p>No certified acquisition route is available under this search budget.</p>}
           </section>

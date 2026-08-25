@@ -2,6 +2,7 @@ import assert from 'node:assert/strict';
 import {
   mkdirSync,
   readFileSync,
+  statSync,
   writeFileSync,
 } from 'node:fs';
 import { dirname, join, relative, resolve } from 'node:path';
@@ -67,6 +68,35 @@ interface BrowserEvidence {
   workerEventCounts: Record<string, number>;
   status?: 'PASSED' | 'FAILED';
 }
+
+const PHASE2U_FOUR_MOD_VOCABULARY = [
+  {
+    modId: 'AfflictionJewelSmallPassivesGrantInt3',
+    primary: 'Added Small Passive Skills also grant: +(6–8) to Intelligence (T1)',
+    compact: '+6–8 Intelligence (T1)',
+    internal: 'of the Prodigy',
+  },
+  {
+    modId: 'AfflictionJewelSmallPassivesGrantAttributes3',
+    primary: 'Added Small Passive Skills also grant: +4 to All Attributes (T1)',
+    compact: '+4 All Attributes (T1)',
+    internal: 'of the Meteor',
+  },
+  {
+    modId: 'AfflictionJewelSmallPassivesHaveIncreasedEffect2',
+    primary: 'Added Small Passive Skills have 35% increased Effect (T1)',
+    compact: '35% increased Effect (T1)',
+    internal: 'Powerful',
+  },
+  {
+    modId: 'AfflictionJewelSmallPassivesGrantES3',
+    primary: 'Added Small Passive Skills also grant: +(10–12) to Maximum Energy Shield (T1)',
+    compact: '+10–12 Maximum Energy Shield (T1)',
+    internal: 'Glowing',
+  },
+] as const;
+
+const PUBLIC_RAW_MOD_ID = /\bAfflictionJewel[A-Za-z0-9_]+\b/;
 
 type JsonRecord = Record<string, unknown>;
 
@@ -441,15 +471,20 @@ async function assertDomMatchesResult(page: Page, result: JsonRecord): Promise<R
   const presentation = jsonRecord(result.presentation, 'presentation');
   const route = presentation.selectedRouteName === undefined ? '' : String(presentation.selectedRouteName);
   const hero = page.locator('.recommendation-hero');
-  assert.equal(await hero.getAttribute('data-selected-route'), route || null);
+  const publicRoute = await hero.getAttribute('data-selected-route');
+  assert.equal(Boolean(publicRoute), Boolean(route), 'Public and Worker route presence differ');
+  if (publicRoute && route) {
+    assert.equal(publicRoute.startsWith('Start '), route.startsWith('Start '), 'Public route changed route family');
+    assert(!PUBLIC_RAW_MOD_ID.test(publicRoute), 'Public route leaked an exact modifier ID');
+  }
   assert.equal(await hero.getAttribute('data-proof-label'), presentation.proofLabel);
   assert.equal(await hero.getAttribute('data-pricing-label'), presentation.pricingLabel);
-  assert.equal(await page.getByLabel('Search Activity').getAttribute('data-selected-route'), route || null);
+  assert.equal(await page.getByLabel('Search Activity').getAttribute('data-selected-route'), publicRoute);
   const playbook = page.locator('.craft-guide [data-selected-route]').first();
-  assert.equal(await playbook.getAttribute('data-selected-route'), route || null);
+  assert.equal(await playbook.getAttribute('data-selected-route'), publicRoute);
   const constellation = page.getByTestId('markov-constellation-container');
   if (await constellation.count()) {
-    assert.equal(await constellation.getAttribute('data-selected-route'), route || null);
+    assert.equal(await constellation.getAttribute('data-selected-route'), publicRoute);
   }
   const harvest = jsonRecord(result.harvestComparison, 'harvestComparison');
   const harvestCard = page.locator('[data-harvest-lifecycle]');
@@ -475,7 +510,12 @@ async function assertDomMatchesResult(page: Page, result: JsonRecord): Promise<R
     assert(!/Strictly optimal|Optimal trade-off frontier/i.test(pageText), 'False proof wording is visible');
   }
   assert.equal(await page.getByRole('alert').filter({ hasText: 'Research estimate using stale bundled pricing' }).count(), presentation.pricingLabel === 'RESEARCH_ESTIMATE_STALE_PRICING' ? 1 : 0);
-  return { selectedRoute: route, proofLabel: presentation.proofLabel, pricingLabel: presentation.pricingLabel };
+  return {
+    workerSelectedRoute: route,
+    publicSelectedRoute: publicRoute,
+    proofLabel: presentation.proofLabel,
+    pricingLabel: presentation.pricingLabel,
+  };
 }
 
 async function downloadExport(page: Page, artifactName: string): Promise<JsonRecord> {
@@ -765,6 +805,526 @@ async function runFourMod(page: Page, evidence: BrowserEvidence): Promise<void> 
   });
 }
 
+async function runPhase2U(page: Page, evidence: BrowserEvidence, soakMs: number): Promise<void> {
+  const scenario = 'phase2u-interaction-label-readability';
+  const exactFixture = fixture('four_mod_release');
+  await ensureOptimizerPage(page, String(evidence.productionUrl));
+  const currentTargetIds = await page.locator('.target-summary li[data-mod-id]').evaluateAll((nodes) =>
+    nodes.map((node) => node.getAttribute('data-mod-id'))
+  );
+  if (JSON.stringify(currentTargetIds) !== JSON.stringify(exactFixture.targetMods)) {
+    await importFixture(page, exactFixture);
+    await setBudget(page, exactFixture.searchBudget);
+    await runOptimization(page, exactFixture.searchBudget.maxWallTimeMs);
+    await compareMethods(page, exactFixture.searchBudget.maxWallTimeMs);
+  }
+
+  const container = page.getByTestId('markov-constellation-container');
+  const viewport = page.getByRole('region', { name: 'Interactive Markov Constellation camera' });
+  await container.waitFor({ state: 'visible' });
+  await page.setViewportSize({ width: 1280, height: 960 });
+  await container.scrollIntoViewIfNeeded();
+
+  const latestWorkerResult = async (): Promise<JsonRecord> => {
+    const results = responseEvents(await workerEvents(page))
+      .filter((event) => workerPayload(event).type === 'RESULT');
+    assert(results.length > 0, 'No Worker result is available for Phase 2U');
+    return jsonRecord(workerPayload(results.at(-1)!).result, 'latest Worker result');
+  };
+  const cameraState = async () => ({
+    fitMode: await container.getAttribute('data-camera-fit-mode'),
+    baseFitMode: await container.getAttribute('data-camera-base-fit-mode'),
+    panX: Number(await container.getAttribute('data-camera-pan-x')),
+    panY: Number(await container.getAttribute('data-camera-pan-y')),
+    zoom: Number(await container.getAttribute('data-camera-zoom')),
+  });
+  const closeNodeDetails = async () => {
+    const close = page.getByRole('button', { name: 'Close selected node details' });
+    if (await close.isVisible()) await close.click();
+  };
+  const pauseAnimation = async () => {
+    const pause = page.getByRole('button', { name: 'Pause Animation' });
+    if (await pause.isVisible()) await pause.click();
+  };
+  const centerOf = async (locator: ReturnType<Page['locator']>) => {
+    const box = await locator.boundingBox();
+    assert(box, 'Expected element has no browser geometry');
+    return { x: box.x + box.width / 2, y: box.y + box.height / 2, box };
+  };
+  const assertAnchorsFramed = async (anchors: ReturnType<Page['locator']>, label: string) => {
+    const viewportBox = await viewport.boundingBox();
+    assert(viewportBox, `${label} viewport has no geometry`);
+    const boxes = await anchors.evaluateAll((elements) => elements.map((element) => {
+      const rect = element.getBoundingClientRect();
+      return { id: (element as HTMLElement).dataset.nodeAnchor, left: rect.left, top: rect.top, width: rect.width, height: rect.height };
+    }));
+    assert(boxes.length > 0, `${label} has no node anchors`);
+    for (const box of boxes) {
+      const centerX = box.left + box.width / 2;
+      const centerY = box.top + box.height / 2;
+      assert(centerX >= viewportBox.x - 1 && centerX <= viewportBox.x + viewportBox.width + 1, `${label} missed ${box.id} horizontally`);
+      assert(centerY >= viewportBox.y - 1 && centerY <= viewportBox.y + viewportBox.height + 1, `${label} missed ${box.id} vertically`);
+    }
+    return boxes.length;
+  };
+
+  await gate(evidence, scenario, 'U2-display-descriptor-identity', async () => {
+    const result = await latestWorkerResult();
+    const target = jsonRecord(result.target, 'target');
+    const workerIds = arrayValue(target.requiredMods, 'requiredMods')
+      .map((entry) => String(jsonRecord(entry, 'requirement').modId));
+    assert.deepEqual(workerIds, exactFixture.targetMods, 'Worker exact target identity changed');
+    for (const vocabulary of PHASE2U_FOUR_MOD_VOCABULARY) {
+      const row = page.locator(`.target-summary li[data-mod-id="${vocabulary.modId}"]`);
+      assert.equal((await row.locator('strong').innerText()).trim(), vocabulary.primary);
+      const metadata = await row.innerText();
+      assert.match(metadata, /(?:Prefix|Suffix), ilvl 84/);
+    }
+    const exported = await downloadExport(page, 'phase2u-identity-export.json');
+    const exportedInput = jsonRecord(exported.requestInput, 'export requestInput');
+    const exportedTarget = jsonRecord(exportedInput.target, 'export target');
+    assert.deepEqual(
+      arrayValue(exportedTarget.requiredMods, 'export requiredMods').map((entry) => String(jsonRecord(entry, 'export requirement').modId)),
+      exactFixture.targetMods,
+    );
+    return { workerIds, exportIdsPreserved: true, descriptorRows: PHASE2U_FOUR_MOD_VOCABULARY.length };
+  });
+
+  await gate(evidence, scenario, 'U3-public-no-id-leakage-and-technical-reveal', async () => {
+    await page.locator('details.advanced-optimizer-details').evaluate((element) => {
+      (element as HTMLDetailsElement).open = false;
+    });
+    await page.locator('.target-summary details').evaluateAll((details) => details.forEach((detail) => {
+      (detail as HTMLDetailsElement).open = false;
+    }));
+    const publicText = await page.locator('.optimizer-page').innerText();
+    assert(!PUBLIC_RAW_MOD_ID.test(publicText), `Public raw modifier ID leaked: ${publicText.match(PUBLIC_RAW_MOD_ID)?.[0]}`);
+    for (const vocabulary of PHASE2U_FOUR_MOD_VOCABULARY) {
+      assert(!publicText.includes(vocabulary.internal), `Internal affix name leaked publicly: ${vocabulary.internal}`);
+    }
+    for (const vocabulary of PHASE2U_FOUR_MOD_VOCABULARY) {
+      const detail = page.locator(`.target-summary li[data-mod-id="${vocabulary.modId}"] details`);
+      await detail.locator('summary').click();
+      const technicalText = await detail.innerText();
+      assert(technicalText.includes(vocabulary.modId), `Technical details lost ${vocabulary.modId}`);
+      assert(technicalText.includes(vocabulary.internal), `Technical details lost ${vocabulary.internal}`);
+      await detail.locator('summary').click();
+    }
+    return { publicRawIds: 0, publicInternalAffixNames: 0, technicalExactIds: 4 };
+  });
+
+  await gate(evidence, scenario, 'U4-player-vocabulary-consistency', async () => {
+    const pickerText = await page.locator('.selected-mod-preview').allInnerTexts();
+    const targetText = await page.locator('.target-summary').innerText();
+    const activityText = await page.getByLabel('Search Activity').innerText();
+    const methodText = await page.locator('.method-portfolio-card').innerText();
+    for (const vocabulary of PHASE2U_FOUR_MOD_VOCABULARY) {
+      assert(targetText.includes(vocabulary.primary), `Target Summary lacks ${vocabulary.primary}`);
+      assert(pickerText.some((text) => text.includes(vocabulary.primary)), `Target picker lacks ${vocabulary.primary}`);
+      assert(activityText.includes(vocabulary.compact), `Search Activity lacks ${vocabulary.compact}`);
+      assert(methodText.includes(vocabulary.compact), `Method Portfolio lacks ${vocabulary.compact}`);
+    }
+    const terminalAnchor = container.locator('[data-node-anchor="node_terminal_target"]');
+    await terminalAnchor.focus();
+    await page.keyboard.press('Enter');
+    const detailText = await page.getByLabel('Selected constellation node details').innerText();
+    for (const vocabulary of PHASE2U_FOUR_MOD_VOCABULARY) {
+      assert(detailText.includes(vocabulary.primary), `Constellation details lack ${vocabulary.primary}`);
+    }
+    await page.getByRole('button', { name: /Copy Playbook/ }).click();
+    const playbook = await page.evaluate(() => navigator.clipboard.readText());
+    await page.getByRole('button', { name: /Copy Shopping List/ }).click();
+    const shopping = await page.evaluate(() => navigator.clipboard.readText());
+    for (const vocabulary of PHASE2U_FOUR_MOD_VOCABULARY) {
+      assert(playbook.includes(vocabulary.primary), `Copied playbook lacks ${vocabulary.primary}`);
+      assert(shopping.includes(vocabulary.primary), `Copied shopping list lacks ${vocabulary.primary}`);
+    }
+    assert(!PUBLIC_RAW_MOD_ID.test(playbook) && !PUBLIC_RAW_MOD_ID.test(shopping));
+    await closeNodeDetails();
+    return { picker: 4, targetSummary: 4, activity: 4, methods: 4, constellation: 4, copiedHeadings: 8 };
+  });
+
+  await gate(evidence, scenario, 'U5-mouse-pointer-capture-pan', async () => {
+    await page.setViewportSize({ width: 1280, height: 960 });
+    await container.scrollIntoViewIfNeeded();
+    await pauseAnimation();
+    await page.getByRole('button', { name: 'Route Focus' }).click();
+    await closeNodeDetails();
+    const anchor = container.locator('[data-node-anchor="node_start"]');
+    const before = await centerOf(anchor);
+    const pageScrollBefore = await page.evaluate(() => window.scrollY);
+    assert.equal(await viewport.evaluate((element) => getComputedStyle(element).cursor), 'grab');
+    await page.mouse.move(before.x, before.y);
+    await page.mouse.down();
+    await page.mouse.move(before.x + 142, before.y + 34, { steps: 8 });
+    assert.equal(await viewport.evaluate((element) => getComputedStyle(element).cursor), 'grabbing');
+    await page.mouse.up();
+    const after = await centerOf(anchor);
+    assert(Math.abs((after.x - before.x) - 142) <= 4, `Mouse pan X delta was ${after.x - before.x}`);
+    assert(Math.abs((after.y - before.y) - 34) <= 4, `Mouse pan Y delta was ${after.y - before.y}`);
+    assert.equal((await cameraState()).fitMode, 'MANUAL');
+    assert.equal(await viewport.evaluate((element) => getComputedStyle(element).cursor), 'grab');
+    assert.equal(await page.getByLabel('Selected constellation node details').count(), 0, 'Drag selected a node');
+    assert.equal(await page.evaluate(() => window.scrollY), pageScrollBefore, 'Canvas drag scrolled the page');
+    const screenshot = join(evidenceDirectory, 'constellation-post-pan.png');
+    await container.screenshot({ path: screenshot });
+    evidence.artifacts.phase2uPostPan = relative(repositoryRoot, screenshot);
+    return { deltaX: after.x - before.x, deltaY: after.y - before.y, clickSuppressed: true, pageScrollBefore };
+  });
+
+  await gate(evidence, scenario, 'U6-touch-pan-and-scroll-boundary', async () => {
+    await page.setViewportSize({ width: 390, height: 844 });
+    await page.getByRole('button', { name: 'Route Focus' }).click();
+    await container.scrollIntoViewIfNeeded();
+    const anchor = container.locator('[data-node-anchor="node_start"]');
+    const before = await centerOf(anchor);
+    const viewportBox = await viewport.boundingBox();
+    assert(viewportBox, 'Touch viewport has no geometry');
+    const startX = viewportBox.x + viewportBox.width * 0.52;
+    const startY = viewportBox.y + viewportBox.height * 0.52;
+    const scrollBefore = await page.evaluate(() => window.scrollY);
+    const cdp = await page.context().newCDPSession(page);
+    await cdp.send('Input.dispatchTouchEvent', { type: 'touchStart', touchPoints: [{ x: startX, y: startY }] });
+    for (let step = 1; step <= 6; step += 1) {
+      await cdp.send('Input.dispatchTouchEvent', {
+        type: 'touchMove',
+        touchPoints: [{ x: startX + step * 21, y: startY + step * 9 }],
+      });
+    }
+    await cdp.send('Input.dispatchTouchEvent', { type: 'touchEnd', touchPoints: [] });
+    await cdp.detach();
+    const after = await centerOf(anchor);
+    assert(after.x - before.x >= 120, `Touch pan moved only ${after.x - before.x}px`);
+    assert.equal(await page.evaluate(() => window.scrollY), scrollBefore, 'Touch canvas pan scrolled the page');
+    await page.evaluate(() => window.scrollTo(0, 0));
+    await page.mouse.move(10, 80);
+    await page.mouse.wheel(0, 600);
+    await page.waitForTimeout(100);
+    const outsideScroll = await page.evaluate(() => window.scrollY);
+    assert(outsideScroll > 0, 'Page did not scroll outside the Constellation');
+    await container.scrollIntoViewIfNeeded();
+    const screenshot = join(evidenceDirectory, 'constellation-touch-390.png');
+    await container.screenshot({ path: screenshot });
+    evidence.artifacts.phase2uTouch390 = relative(repositoryRoot, screenshot);
+    return { deltaX: after.x - before.x, deltaY: after.y - before.y, canvasScrollSuppressed: true, outsideScroll };
+  });
+
+  await gate(evidence, scenario, 'U7-pointer-centered-wheel-and-button-zoom', async () => {
+    await page.setViewportSize({ width: 1280, height: 960 });
+    await container.scrollIntoViewIfNeeded();
+    await page.getByRole('button', { name: 'Route Focus' }).click();
+    const anchor = container.locator('[data-node-anchor="node_start"]');
+    const before = await centerOf(anchor);
+    await page.mouse.move(before.x, before.y);
+    await page.mouse.wheel(0, -320);
+    const zoomed = await centerOf(anchor);
+    assert(Math.hypot(zoomed.x - before.x, zoomed.y - before.y) <= 3, 'Wheel zoom did not preserve its pointer anchor');
+    const zoomInState = await cameraState();
+    assert(zoomInState.zoom > 1 && Number.isFinite(zoomInState.zoom));
+    await page.mouse.wheel(0, 320);
+    const restored = await centerOf(anchor);
+    assert(Math.hypot(restored.x - before.x, restored.y - before.y) <= 4, 'Wheel zoom-out lost its pointer anchor');
+    for (let index = 0; index < 12; index += 1) await page.mouse.wheel(0, -1200);
+    const maximum = await cameraState();
+    assert.equal(maximum.zoom, Number(await container.getAttribute('data-camera-max-zoom')));
+    await page.getByRole('button', { name: 'Zoom constellation out' }).click();
+    const buttonState = await cameraState();
+    assert(buttonState.zoom < maximum.zoom && buttonState.fitMode === 'MANUAL');
+    const viewportBox = await viewport.boundingBox();
+    assert(viewportBox, 'Zoom viewport has no geometry');
+    await page.mouse.move(viewportBox.x + viewportBox.width / 2, viewportBox.y + viewportBox.height / 2);
+    for (let index = 0; index < 18; index += 1) await page.mouse.wheel(0, 1200);
+    const minimum = await cameraState();
+    assert.equal(minimum.zoom, Number(await container.getAttribute('data-camera-min-zoom')));
+    assert([minimum.panX, minimum.panY, minimum.zoom].every(Number.isFinite), 'Camera contains NaN or Infinity');
+    return { anchoredDistance: Math.hypot(zoomed.x - before.x, zoomed.y - before.y), maximum, minimum, buttonState };
+  });
+
+  await gate(evidence, scenario, 'U8-route-focus-fit-all-and-reset', async () => {
+    await page.getByRole('button', { name: 'Route Focus' }).click();
+    const selectedIds = await container.locator('.constellation-route-rail button[data-node-id]').evaluateAll((buttons) =>
+      buttons.map((button) => (button as HTMLElement).dataset.nodeId)
+    );
+    const routeAnchors = container.locator(selectedIds.map((id) => `[data-node-anchor="${id}"]`).join(','));
+    const routeCount = await assertAnchorsFramed(routeAnchors, 'Route Focus');
+    const routeScreenshot = join(evidenceDirectory, 'constellation-route-focus.png');
+    await container.screenshot({ path: routeScreenshot });
+    evidence.artifacts.phase2uRouteFocus = relative(repositoryRoot, routeScreenshot);
+    await page.getByRole('button', { name: 'Fit All' }).click();
+    const allCount = await assertAnchorsFramed(container.locator('[data-node-anchor]'), 'Fit All');
+    const allScreenshot = join(evidenceDirectory, 'constellation-fit-all.png');
+    await container.screenshot({ path: allScreenshot });
+    evidence.artifacts.phase2uFitAll = relative(repositoryRoot, allScreenshot);
+    await viewport.focus();
+    await page.keyboard.press('ArrowRight');
+    assert.equal((await cameraState()).fitMode, 'MANUAL');
+    await page.getByRole('button', { name: 'Reset View' }).click();
+    const reset = await cameraState();
+    assert.deepEqual(reset, { fitMode: 'ALL', baseFitMode: 'ALL', panX: 0, panY: 0, zoom: 1 });
+    return { routeCount, allCount, reset };
+  });
+
+  await gate(evidence, scenario, 'U9-keyboard-camera-and-node-access', async () => {
+    await viewport.focus();
+    const initial = await cameraState();
+    await page.keyboard.press('ArrowLeft');
+    const panned = await cameraState();
+    assert(panned.panX < initial.panX && panned.fitMode === 'MANUAL');
+    await page.keyboard.press('+');
+    assert((await cameraState()).zoom > panned.zoom);
+    await page.keyboard.press('0');
+    assert.equal((await cameraState()).zoom, 1);
+    await page.keyboard.press('f');
+    assert.equal((await cameraState()).fitMode, 'SELECTED_ROUTE');
+    await page.keyboard.press('a');
+    assert.equal((await cameraState()).fitMode, 'ALL');
+    const firstAnchor = container.locator('[data-node-anchor]').first();
+    await firstAnchor.focus();
+    await page.keyboard.press('Enter');
+    await page.getByLabel('Selected constellation node details').waitFor({ state: 'visible' });
+    const detailScreenshot = join(evidenceDirectory, 'constellation-selected-node.png');
+    await container.screenshot({ path: detailScreenshot });
+    evidence.artifacts.phase2uSelectedNode = relative(repositoryRoot, detailScreenshot);
+    await page.keyboard.press('Escape');
+    await page.getByLabel('Selected constellation node details').waitFor({ state: 'detached' });
+    await viewport.focus();
+    await page.keyboard.press('Tab');
+    assert.equal(await viewport.evaluate((element) => document.activeElement === element), false, 'Constellation trapped keyboard focus');
+    return { initial, panned, fitMode: (await cameraState()).fitMode, selectedAndCleared: true, noFocusTrap: true };
+  });
+
+  await gate(evidence, scenario, 'U10-dom-label-collision-and-readability', async () => {
+    await page.getByRole('button', { name: 'Route Focus' }).click();
+    const geometry = await viewport.evaluate((region) => {
+      const regionRect = region.getBoundingClientRect();
+      return [...region.querySelectorAll<HTMLElement>('.constellation-node-label, .constellation-edge-label')].map((label) => {
+        const rect = label.getBoundingClientRect();
+        const style = getComputedStyle(label);
+        return {
+          id: label.dataset.nodeId ?? label.dataset.edgeId,
+          kind: label.classList.contains('constellation-edge-label') ? 'edge' : 'node',
+          left: rect.left,
+          right: rect.right,
+          top: rect.top,
+          bottom: rect.bottom,
+          fontSize: parseFloat(style.fontSize),
+          color: style.color,
+          background: style.backgroundColor,
+          regionLeft: regionRect.left,
+          regionRight: regionRect.right,
+          regionTop: regionRect.top,
+          regionBottom: regionRect.bottom,
+        };
+      });
+    });
+    assert(geometry.filter((label) => label.kind === 'node').length >= 4, 'Too few persistent node labels are visible at Route Focus');
+    for (const label of geometry) {
+      assert(label.left >= label.regionLeft - 1 && label.right <= label.regionRight + 1, `${label.id} crosses horizontal graph bounds`);
+      assert(label.top >= label.regionTop - 1 && label.bottom <= label.regionBottom + 1, `${label.id} crosses vertical graph bounds`);
+      assert(label.fontSize >= 13, `${label.id} font is only ${label.fontSize}px`);
+      assert(label.background !== 'rgba(0, 0, 0, 0)' && label.color !== label.background, `${label.id} lacks contrast backing`);
+    }
+    for (let leftIndex = 0; leftIndex < geometry.length; leftIndex += 1) {
+      for (let rightIndex = leftIndex + 1; rightIndex < geometry.length; rightIndex += 1) {
+        const left = geometry[leftIndex];
+        const right = geometry[rightIndex];
+        const overlapX = Math.min(left.right, right.right) - Math.max(left.left, right.left);
+        const overlapY = Math.min(left.bottom, right.bottom) - Math.max(left.top, right.top);
+        assert(overlapX <= 1 || overlapY <= 1, `Labels ${left.id} and ${right.id} overlap by ${overlapX}×${overlapY}`);
+      }
+    }
+    return { measuredLabels: geometry.length, intersections: 0, minimumFontSize: Math.min(...geometry.map((label) => label.fontSize)) };
+  });
+
+  await gate(evidence, scenario, 'U11-long-label-mobile-and-fullscreen-stress', async () => {
+    const cardOverflow = await page.locator('.method-family-card').evaluateAll((cards) => cards.map((card) => ({
+      width: card.clientWidth,
+      scrollWidth: card.scrollWidth,
+      text: card.textContent?.slice(0, 80),
+    })));
+    assert(cardOverflow.every((card) => card.scrollWidth <= card.width + 1), `Method card overflow: ${JSON.stringify(cardOverflow)}`);
+    await page.setViewportSize({ width: 390, height: 844 });
+    const overflow = await page.evaluate(() => ({
+      documentWidth: document.documentElement.scrollWidth,
+      viewportWidth: document.documentElement.clientWidth,
+      labelOverflow: [...document.querySelectorAll<HTMLElement>('.constellation-node-label')]
+        .some((label) => getComputedStyle(label).overflow !== 'hidden'),
+    }));
+    assert(overflow.documentWidth <= overflow.viewportWidth + 1, `390px document overflow: ${JSON.stringify(overflow)}`);
+    assert.equal(overflow.labelOverflow, false, 'A Constellation label does not clip/wrap within its boundary');
+    return { methodCards: cardOverflow.length, mobile: overflow };
+  });
+
+  await gate(evidence, scenario, 'U12-concise-route-rail-and-active-step', async () => {
+    await container.scrollIntoViewIfNeeded();
+    const rail = container.locator('.constellation-route-rail');
+    const labels = await rail.locator('button').allInnerTexts();
+    assert(labels.length > 2, 'Route rail lacks steps');
+    assert(labels.every((label) => label.length <= 28 && !/[.!?]\s/.test(label)), `Route rail contains long instructions: ${JSON.stringify(labels)}`);
+    const resume = page.getByRole('button', { name: 'Resume Animation' });
+    if (await resume.isVisible()) await resume.click();
+    await container.getByRole('button', { name: '5x', exact: true }).click();
+    await page.waitForTimeout(900);
+    const activeVisibility = await rail.evaluate((element) => {
+      const active = element.querySelector<HTMLElement>('button.active');
+      if (!active) return { found: false, inside: false, scrollLeft: element.scrollLeft };
+      const railRect = element.getBoundingClientRect();
+      const activeRect = active.getBoundingClientRect();
+      return {
+        found: true,
+        inside: activeRect.left >= railRect.left - 1 && activeRect.right <= railRect.right + 1,
+        scrollLeft: element.scrollLeft,
+      };
+    });
+    assert(activeVisibility.found && activeVisibility.inside, `Active rail step is not in view: ${JSON.stringify(activeVisibility)}`);
+    await pauseAnimation();
+    return { labels, activeVisibility };
+  });
+
+  await gate(evidence, scenario, 'U13-reduced-motion-fullscreen-screensaver-and-soak', async () => {
+    await page.setViewportSize({ width: 1280, height: 960 });
+    await container.scrollIntoViewIfNeeded();
+    const fluid = page.getByRole('button', { name: 'Toggle Reduced Motion' });
+    if ((await fluid.innerText()).includes('Fluid')) await fluid.click();
+    const canvas = page.getByRole('img', { name: 'Markov Constellation state transition diagram' });
+    const first = await canvas.screenshot();
+    await page.waitForTimeout(350);
+    const second = await canvas.screenshot();
+    assert(first.equals(second), 'Reduced motion did not freeze wisps/replay camera state');
+    const reducedScreenshot = join(evidenceDirectory, 'constellation-reduced-motion.png');
+    await container.screenshot({ path: reducedScreenshot });
+    evidence.artifacts.phase2uReducedMotion = relative(repositoryRoot, reducedScreenshot);
+
+    await page.getByRole('button', { name: 'Screensaver' }).click();
+    await page.waitForTimeout(250);
+    assert.equal(await page.evaluate(() => document.fullscreenElement !== null), true, 'Screensaver failed to enter fullscreen');
+    assert.equal(await container.locator('.constellation-route-rail').count(), 0, 'Screensaver retained the route rail');
+    await page.waitForTimeout(2600);
+    assert.equal(await container.locator('.constellation-toolbar').getAttribute('aria-hidden'), 'true', 'Screensaver controls did not auto-hide');
+    const fullscreenScreenshot = join(evidenceDirectory, 'constellation-screensaver-fullscreen.png');
+    await container.screenshot({ path: fullscreenScreenshot });
+    evidence.artifacts.phase2uScreensaver = relative(repositoryRoot, fullscreenScreenshot);
+    const viewportBox = await viewport.boundingBox();
+    assert(viewportBox, 'Fullscreen viewport has no geometry');
+    await page.mouse.move(viewportBox.x + viewportBox.width / 2, viewportBox.y + viewportBox.height / 2);
+    await page.waitForTimeout(80);
+    assert.equal(await container.locator('.constellation-toolbar').getAttribute('aria-hidden'), 'false', 'Screensaver controls did not reappear');
+    await page.getByRole('button', { name: 'Toggle Fullscreen' }).click();
+    await page.waitForFunction(() => document.fullscreenElement === null);
+    await page.getByRole('button', { name: 'Replay' }).click();
+    await page.waitForTimeout(2600);
+    assert.equal(await container.locator('.constellation-toolbar').getAttribute('aria-hidden'), 'false', 'Controls auto-hid outside Screensaver');
+
+    if ((await fluid.innerText()).includes('Static')) await fluid.click();
+    const resume = page.getByRole('button', { name: 'Resume Animation' });
+    if (await resume.isVisible()) await resume.click();
+    const cdp = await page.context().newCDPSession(page);
+    await cdp.send('Performance.enable');
+    await cdp.send('HeapProfiler.collectGarbage');
+    const heap = async () => {
+      const metrics = await cdp.send('Performance.getMetrics') as { metrics: Array<{ name: string; value: number }> };
+      return metrics.metrics.find((metric) => metric.name === 'JSHeapUsedSize')?.value;
+    };
+    const beforeHeap = await heap();
+    const beforeDom = await page.locator('.markov-constellation-container *').count();
+    await page.waitForTimeout(soakMs);
+    await cdp.send('HeapProfiler.collectGarbage');
+    const afterHeap = await heap();
+    const afterDom = await page.locator('.markov-constellation-container *').count();
+    await cdp.detach();
+    // Replay may add/remove one active edge label as it reaches the terminal node; it must not grow.
+    assert(afterDom <= beforeDom + 2, `Constellation DOM grew during soak (${beforeDom} → ${afterDom})`);
+    if (beforeHeap !== undefined && afterHeap !== undefined) {
+      const allowedGrowth = Math.max(16 * 1024 * 1024, beforeHeap * 0.2);
+      assert(afterHeap - beforeHeap <= allowedGrowth, `Heap grew by ${afterHeap - beforeHeap} bytes during soak`);
+    }
+    return { reducedFramesEqual: true, fullscreen: true, controlsAutoHide: true, soakMs, beforeHeap, afterHeap, beforeDom, afterDom };
+  });
+
+  await gate(evidence, scenario, 'U14-stable-visual-evidence', async () => {
+    const expected = [
+      'constellation-route-focus.png',
+      'constellation-fit-all.png',
+      'constellation-post-pan.png',
+      'constellation-selected-node.png',
+      'constellation-touch-390.png',
+      'constellation-screensaver-fullscreen.png',
+      'constellation-reduced-motion.png',
+    ];
+    for (const filename of expected) {
+      const path = join(evidenceDirectory, filename);
+      assert(statSync(path).size > 0, `Stable Phase 2U image is missing: ${filename}`);
+    }
+    return expected;
+  });
+
+  await gate(evidence, scenario, 'U15-worker-semantics-and-interaction-performance', async () => {
+    const beforeEvents = responseEvents(await workerEvents(page)).length;
+    const beforeResult = await latestWorkerResult();
+    const observed = await page.evaluate(async () => {
+      const region = document.querySelector<HTMLElement>('.constellation-viewport');
+      if (!region) throw new Error('Constellation viewport missing');
+      const frameDurations: number[] = [];
+      const longTasks: number[] = [];
+      const observer = typeof PerformanceObserver === 'undefined'
+        ? undefined
+        : new PerformanceObserver((list) => list.getEntries().forEach((entry) => longTasks.push(entry.duration)));
+      try { observer?.observe({ type: 'longtask', buffered: false }); } catch {}
+      let prior = performance.now();
+      for (let index = 0; index < 90; index += 1) {
+        if (index % 6 === 0) {
+          region.dispatchEvent(new WheelEvent('wheel', {
+            bubbles: true,
+            cancelable: true,
+            clientX: region.getBoundingClientRect().left + region.clientWidth / 2,
+            clientY: region.getBoundingClientRect().top + region.clientHeight / 2,
+            deltaY: index % 12 === 0 ? -35 : 35,
+          }));
+        }
+        await new Promise<void>((resolveFrame) => requestAnimationFrame((now) => {
+          frameDurations.push(now - prior);
+          prior = now;
+          resolveFrame();
+        }));
+      }
+      observer?.disconnect();
+      const sorted = [...frameDurations].sort((left, right) => left - right);
+      return {
+        frames: frameDurations.length,
+        medianFrameMs: sorted[Math.floor(sorted.length / 2)],
+        maxFrameMs: Math.max(...frameDurations),
+        maxLongTaskMs: Math.max(0, ...longTasks),
+      };
+    });
+    assert(observed.medianFrameMs < 25, `Median interaction frame was ${observed.medianFrameMs}ms`);
+    assert(observed.maxLongTaskMs < 100, `Interaction caused a ${observed.maxLongTaskMs}ms long task`);
+    const afterEvents = responseEvents(await workerEvents(page)).length;
+    const afterResult = await latestWorkerResult();
+    assert.equal(afterEvents, beforeEvents, 'Camera interaction started solver/Worker work');
+    assert.deepEqual(afterResult.target, beforeResult.target, 'Camera interaction changed Worker target semantics');
+    assert.deepEqual(afterResult.fullRouteUsage, beforeResult.fullRouteUsage, 'Camera interaction changed full-route accounting');
+    evidence.performance.phase2u = { ...observed, optimizerOverheadPercent: 0, workerMessagesAdded: 0 };
+    return evidence.performance.phase2u;
+  });
+
+  await gate(evidence, scenario, 'U8-graph-replacement-resets-camera', async () => {
+    await viewport.focus();
+    await page.keyboard.press('ArrowRight');
+    assert.equal((await cameraState()).fitMode, 'MANUAL');
+    const oldIdentity = await container.getAttribute('data-graph-identity');
+    const replacement = fixture('cheap_one_mod');
+    await importFixture(page, replacement);
+    await setBudget(page, replacement.searchBudget);
+    await runOptimization(page, replacement.searchBudget.maxWallTimeMs);
+    await page.waitForFunction((identity) =>
+      document.querySelector('[data-testid="markov-constellation-container"]')?.getAttribute('data-graph-identity') !== identity,
+    oldIdentity);
+    const reset = await cameraState();
+    assert.deepEqual(reset, { fitMode: 'SELECTED_ROUTE', baseFitMode: 'SELECTED_ROUTE', panX: 0, panY: 0, zoom: 1 });
+    return { oldIdentity, newIdentity: await container.getAttribute('data-graph-identity'), reset };
+  });
+}
+
 async function runHarvestFixtures(page: Page, evidence: BrowserEvidence): Promise<void> {
   const scenario = 'harvest-method-and-economics';
   await ensureOptimizerPage(page, String(evidence.productionUrl));
@@ -855,7 +1415,7 @@ async function runConstellation(page: Page, evidence: BrowserEvidence, soakMs: n
     const box = await canvas.boundingBox();
     assert(box && box.width >= 280 && box.height >= 240, `Canvas geometry is unusable: ${JSON.stringify(box)}`);
     await page.getByRole('button', { name: 'Pause Animation' }).click();
-    await page.getByRole('button', { name: 'Focus selected route' }).click();
+    await page.getByRole('button', { name: 'Route Focus' }).click();
     await page.getByRole('button', { name: 'Zoom constellation in' }).click();
     await page.getByRole('button', { name: 'Zoom constellation out' }).click();
     await page.getByRole('button', { name: 'Toggle Reduced Motion' }).click();
@@ -975,7 +1535,8 @@ function scenarioEnabled(requested: string, name: string): boolean {
   if (requested === 'all' || requested === 'release' || requested === 'nightly') return true;
   const aliases: Record<string, string[]> = {
     smoke: ['smoke'],
-    four: ['four', 'objectives', 'consistency'],
+    four: ['four', 'objectives', 'consistency', 'phase2u', 'phase2u-quick'],
+    phase2u: ['phase2u', 'phase2u-quick'],
     methods: ['methods', 'harvest', 'portfolio', 'harvest-witness'],
     responsive: ['responsive', 'accessibility'],
     animation: ['animation', 'constellation'],
@@ -989,7 +1550,7 @@ function writeReports(evidence: BrowserEvidence): void {
   evidence.status = evidence.checks.every((check) => check.passed) ? 'PASSED' : 'FAILED';
   writeFileSync(join(reportsDirectory, 'release-gate.json'), `${JSON.stringify(evidence, null, 2)}\n`, 'utf8');
   const lines = [
-    '# Phase 2T Real-Browser Release Gate',
+    '# Phase 2U Real-Browser Release Gate',
     '',
     `- Run: ${evidence.runId}`,
     `- Started: ${evidence.startedAt}`,
@@ -1023,7 +1584,7 @@ async function closeBrowser(
 ): Promise<void> {
   if (context) {
     try {
-      const tracePath = join(artifactsDirectory, 'phase2t-trace.zip');
+      const tracePath = join(artifactsDirectory, 'phase2u-trace.zip');
       await context.tracing.stop({ path: tracePath });
       evidence.artifacts.trace = relative(repositoryRoot, tracePath);
     } catch (error) {
@@ -1061,6 +1622,7 @@ async function main(): Promise<void> {
     evidence.browserVersion = browser.version();
     context = await browser.newContext({
       viewport: { width: 1280, height: 960 },
+      hasTouch: true,
       acceptDownloads: true,
       recordVideo: { dir: join(artifactsDirectory, 'video'), size: { width: 1280, height: 960 } },
       reducedMotion: 'no-preference',
@@ -1078,6 +1640,9 @@ async function main(): Promise<void> {
 
     if (scenarioEnabled(requested, 'smoke')) await runSmoke(page, evidence);
     if (scenarioEnabled(requested, 'four')) await runFourMod(page, evidence);
+    if (scenarioEnabled(requested, 'phase2u')) {
+      await runPhase2U(page, evidence, requested === 'phase2u-quick' ? 5_000 : 300_000);
+    }
     if (scenarioEnabled(requested, 'methods')) await runHarvestFixtures(page, evidence);
     if (scenarioEnabled(requested, 'responsive')) await runResponsiveAndKeyboard(page, evidence);
     if (scenarioEnabled(requested, 'animation')) await runConstellation(page, evidence, requested === 'nightly' ? 60_000 : 5_000);
@@ -1119,7 +1684,7 @@ async function main(): Promise<void> {
   for (const check of evidence.checks) {
     console.log(`${check.passed ? 'PASS' : 'FAIL'} ${check.scenario}/${check.id} (${check.durationMs} ms)`);
   }
-  console.log(`Phase 2T Quality Lab: ${evidence.status} (${evidence.checks.filter((check) => check.passed).length}/${evidence.checks.length} gates)`);
+  console.log(`Phase 2U Quality Lab: ${evidence.status} (${evidence.checks.filter((check) => check.passed).length}/${evidence.checks.length} gates)`);
   if (evidence.status !== 'PASSED') process.exitCode = 1;
 }
 

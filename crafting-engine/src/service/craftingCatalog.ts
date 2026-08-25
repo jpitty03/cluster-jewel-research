@@ -1,8 +1,11 @@
 import type { ClusterModRepository } from '../data/clusterModRepository.ts';
 import type { BaseType } from '../domain/ItemState.ts';
+import {
+  resolveModifierDisplayDescriptor,
+  type ModifierDisplayDescriptor,
+} from '../domain/ModifierDisplay.ts';
 
-export interface CraftingCatalogMod {
-  modId: string;
+export interface CraftingCatalogMod extends ModifierDisplayDescriptor {
   /** Player-facing identity: the granted stat/notable statement, plus tier when needed. */
   displayName: string;
   /** Compact dropdown label, expanded with stable technical disambiguation only on collision. */
@@ -33,7 +36,7 @@ type PrimaryLabelFields = Pick<
 type SelectionLabelFields = Pick<
   CraftingCatalogMod,
   'displayName' | 'genType' | 'requiredItemLevel'
->;
+> & Partial<Pick<CraftingCatalogMod, 'tierLabel'>>;
 
 type SelectionDisambiguationFields = SelectionLabelFields & Pick<
   CraftingCatalogMod,
@@ -47,20 +50,30 @@ const MODIFIER_LABEL_COLLATOR = new Intl.Collator('en', {
   sensitivity: 'variant',
 });
 
-/** Shared Phase 2F player-facing label contract for ordinary mods and notables. */
+/** Backward-compatible alias for the shared Phase 2U descriptor primary text. */
 export function formatModifierPrimaryLabel(mod: PrimaryLabelFields): string {
-  const playerText = mod.statText.trim() ||
-    (mod.isNotable ? mod.technicalName : `Modifier ${mod.modId}`);
-  return mod.tierCount > 1 ? `${playerText} (T${mod.tier})` : playerText;
+  return resolveModifierDisplayDescriptor({
+    modId: mod.modId,
+    name: mod.technicalName,
+    statText: mod.statText,
+    tier: mod.tier,
+    tierCount: mod.tierCount,
+    genType: 'Prefix',
+    ilvl: 1,
+    modGroup: mod.modId,
+    isNotable: mod.isNotable,
+  }).primaryText;
 }
 
 export function formatModifierSelectionLabel(mod: SelectionLabelFields): string {
-  return `${mod.displayName} · ${mod.genType}, ilvl ${mod.requiredItemLevel}`;
+  const tier = mod.tierLabel ? ` · ${mod.tierLabel}` : '';
+  return `${mod.displayName} · ${mod.genType}${tier} · ilvl ${mod.requiredItemLevel}`;
 }
 
 /**
  * Keep the primary label compact unless a real collision requires more information. Generation
- * type and level are the first fallback; exact mod ID is the final deterministic tie-breaker.
+ * type, tier, and level are the first fallback. A stable player-facing variant number is the
+ * final tie-breaker; raw IDs remain confined to Technical details.
  */
 export function disambiguateModifierSelectionLabels<T extends SelectionDisambiguationFields>(
   mods: T[]
@@ -79,9 +92,24 @@ export function disambiguateModifierSelectionLabels<T extends SelectionDisambigu
       (contextualCounts.get(mod.selectionLabel) ?? 0) + 1
     );
   }
-  return contextual.map((mod) => contextualCounts.get(mod.selectionLabel) === 1
-    ? mod
-    : { ...mod, selectionLabel: `${mod.selectionLabel} · ${mod.modId}` });
+  const duplicateGroups = new Map<string, T[]>();
+  for (const mod of contextual) {
+    if (contextualCounts.get(mod.selectionLabel) === 1) continue;
+    const group = duplicateGroups.get(mod.selectionLabel) ?? [];
+    group.push(mod);
+    duplicateGroups.set(mod.selectionLabel, group);
+  }
+  const variants = new Map<string, number>();
+  for (const group of duplicateGroups.values()) {
+    group.sort((left, right) => left.modId.localeCompare(right.modId));
+    group.forEach((mod, index) => variants.set(mod.modId, index + 1));
+  }
+  return contextual.map((mod) => {
+    const variant = variants.get(mod.modId);
+    return variant === undefined
+      ? mod
+      : { ...mod, selectionLabel: `${mod.selectionLabel} · variant ${variant}` };
+  });
 }
 
 export function compareCraftingCatalogMods(
@@ -94,9 +122,9 @@ export function compareCraftingCatalogMods(
 }
 
 export function formatModifierTechnicalLabel(
-  mod: Pick<CraftingCatalogMod, 'technicalName' | 'modId'>
+  mod: Pick<CraftingCatalogMod, 'technicalName' | 'modId'> & Partial<Pick<CraftingCatalogMod, 'modGroup'>>
 ): string {
-  return `Internal affix: ${mod.technicalName} · exact modifier ID: ${mod.modId}`;
+  return `Internal affix: ${mod.technicalName} · exact modifier ID: ${mod.modId}${mod.modGroup ? ` · exclusion group: ${mod.modGroup}` : ''}`;
 }
 
 export function buildModifierSearchAliases(
@@ -152,16 +180,10 @@ export class CraftingCatalog {
       .getCombinedModPool(baseType, clusterType)
       .filter((mod) => mod.ilvl <= itemLevel)
       .map((mod): CraftingCatalogMod => {
-        const labelFields = {
-          modId: mod.modId,
-          statText: mod.statText,
-          technicalName: mod.name,
-          tier: mod.tier,
-          tierCount: mod.tierCount,
-          isNotable: mod.isNotable,
-        };
-        const displayName = formatModifierPrimaryLabel(labelFields);
+        const descriptor = resolveModifierDisplayDescriptor(mod);
+        const displayName = descriptor.primaryText;
         const catalogMod: CraftingCatalogMod = {
+          ...descriptor,
           modId: mod.modId,
           displayName,
           selectionLabel: displayName,
@@ -178,7 +200,7 @@ export class CraftingCatalog {
           weight: mod.weight,
           isNotable: mod.isNotable,
         };
-        catalogMod.technicalLabel = formatModifierTechnicalLabel(catalogMod);
+        catalogMod.technicalLabel = descriptor.technicalText;
         catalogMod.searchAliases = buildModifierSearchAliases(catalogMod);
         return catalogMod;
       });

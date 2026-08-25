@@ -1,4 +1,4 @@
-name: Nightly Phase 2T Quality Matrix
+name: Nightly Phase 2U Quality Matrix
 
 on:
   schedule:
@@ -29,11 +29,12 @@ jobs:
       - name: Extended fixtures, objectives, method matrix, viewports, frames, and soak
         run: npm run lab:nightly
       - run: npm run diagnostic:phase2t
+      - run: npm run diagnostic:phase2u
       - name: Upload nightly traces, video, screenshots, frames, and reports
         if: always()
         uses: actions/upload-artifact@v6
         with:
-          name: phase2t-nightly-quality-lab
+          name: phase2u-nightly-quality-lab
           path: |
             quality-lab/artifacts/
             quality-lab/reports/

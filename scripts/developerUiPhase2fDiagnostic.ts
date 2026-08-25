@@ -70,8 +70,9 @@ const collisionFixture = disambiguateModifierSelectionLabels([
   { displayName: 'Duplicate stat', selectionLabel: '', genType: 'Prefix' as const, requiredItemLevel: 84, modId: 'duplicate_b' },
 ]);
 const collisionFallbackPass = collisionFixture[0].selectionLabel ===
-  'Duplicate stat · Prefix, ilvl 84 · duplicate_a' &&
-  collisionFixture[1].selectionLabel === 'Duplicate stat · Prefix, ilvl 84 · duplicate_b';
+  'Duplicate stat · Prefix · ilvl 84 · variant 1' &&
+  collisionFixture[1].selectionLabel === 'Duplicate stat · Prefix · ilvl 84 · variant 2' &&
+  collisionFixture.every((mod) => !mod.selectionLabel.includes(mod.modId));
 const technicalAliasPass = matchesAlias('Acrobat').includes(t1Evasion.modId) &&
   matchesAlias('Glowing').includes(t1Es.modId) &&
   matchesAlias('Prodigy').includes(t1Int.modId);
@@ -104,10 +105,10 @@ const lines = ['DEVELOPER UI PHASE 2F — MODIFIER LABEL CATALOG DIAGNOSTIC'];
 lines.push(`catalog fixture: ${baseType} | ${clusterType} | ilvl 84 | ${mods.length} options`);
 lines.push(`ordinary statText primary contract: ${ordinaryPrimaryFailures.length === 0 ? 'PASS' : 'FAIL'}; failures=${ordinaryPrimaryFailures.length}`);
 lines.push(`opaque ordinary affix names removed from primary position: ${opaquePrimaryFailures.length === 0 ? 'PASS' : 'FAIL'}; failures=${opaquePrimaryFailures.length}`);
-lines.push(`unique selection labels after tier/type/ilvl/ID fallback: ${duplicateSelectionLabels.length === 0 ? 'PASS' : 'FAIL'}; duplicates=${duplicateSelectionLabels.length}`);
+lines.push(`unique selection labels after tier/type/ilvl/player-facing variant fallback: ${duplicateSelectionLabels.length === 0 ? 'PASS' : 'FAIL'}; duplicates=${duplicateSelectionLabels.length}`);
 lines.push(`shared numeric user-facing label / tier / ID sort: ${deterministicSortPass ? 'PASS' : 'FAIL'}`);
 lines.push(`multi-tier family order consistent (T3, T2, T1): ${multiTierSortPass ? 'PASS' : 'FAIL'}; Evasion=${familyTierOrder(evasionIds).join(',')}; ES=${familyTierOrder(energyShieldIds).join(',')}`);
-lines.push(`synthetic duplicate fallback reaches exact-ID tie-breaker: ${collisionFallbackPass ? 'PASS' : 'FAIL'}; ${collisionFixture.map((mod) => mod.selectionLabel).join(' | ')}`);
+lines.push(`synthetic duplicate fallback stays distinguishable without public exact-ID leakage: ${collisionFallbackPass ? 'PASS' : 'FAIL'}; ${collisionFixture.map((mod) => mod.selectionLabel).join(' | ')}`);
 lines.push(`technical-name aliases (Acrobat / Glowing / Prodigy): ${technicalAliasPass ? 'PASS' : 'FAIL'}`);
 lines.push(`stat-text aliases (Evasion / Energy Shield / Intelligence): ${statAliasPass ? 'PASS' : 'FAIL'}`);
 lines.push(`exact mod-ID alias: ${exactIdAliasPass ? 'PASS' : 'FAIL'}`);

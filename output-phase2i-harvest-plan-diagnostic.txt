@@ -1,5 +1,5 @@
 PHASE 2I — SELECTED HARVEST / SPECIALIZED PLAN DIAGNOSTIC
-shared solver status=FULLY RESOLVED / PROPER / ABSORBING / COST-RECONCILED; U=0.000075000c; elapsed=1ms
+shared solver status=FULLY RESOLVED / PROPER / ABSORBING / COST-RECONCILED; U=0.000075000c; elapsed=7ms
 proper=true; absorption=1.000000000000; Bellman=true; occupancy=true; reconciled=true
 fixture=symmetric diagnostic pool; real shared harvest_reforge_defences mechanic and PriceBook; exact selected on-policy rules=1
 selected Harvest actions=harvest_reforge_defences

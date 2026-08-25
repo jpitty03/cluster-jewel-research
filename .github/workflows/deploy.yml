@@ -32,13 +32,15 @@ jobs:
       - run: git diff --check
       - run: npm run diagnostic:mature
       - run: npm run lab:no-fallback-probe
-      - run: npm run lab:release
+      - name: Phase 2T release and Phase 2U interaction matrix
+        run: npm run lab:release
       - run: npm run diagnostic:phase2t
+      - run: npm run diagnostic:phase2u
       - name: Upload real-browser evidence
         if: always()
         uses: actions/upload-artifact@v6
         with:
-          name: phase2t-quality-lab
+          name: phase2u-quality-lab
           path: |
             quality-lab/artifacts/
             quality-lab/reports/

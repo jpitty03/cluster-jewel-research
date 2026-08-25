@@ -106,7 +106,17 @@ export const OnboardingModal: React.FC<OnboardingModalProps> = ({ isOpen, onClos
           </section>
 
           <section className="onboarding-section">
-            <h3>⚠️ 4. Known Limitations & Proof Budgets</h3>
+            <h3>🗺️ 4. Exploring the Markov Constellation</h3>
+            <p>
+              Drag the Constellation with a mouse, pen, or one finger. Wheel or use plus and minus to zoom;
+              arrow keys pan, <strong>0</strong> resets, <strong>F</strong> focuses the selected route,
+              <strong>A</strong> fits every family, and <strong>Escape</strong> closes node details. Public labels use
+              player stat text; exact modifier IDs remain available under Technical details.
+            </p>
+          </section>
+
+          <section className="onboarding-section">
+            <h3>⚠️ 5. Known Limitations & Proof Budgets</h3>
             <p>
               For 4-affix targets with vast combinatorial search spaces, the optimizer finds the best executable route within your configured state/time budget.
               If a route is labeled <em>Best resolved route found</em>, you can click <strong>Retry Deeper</strong> to allocate additional search rounds.

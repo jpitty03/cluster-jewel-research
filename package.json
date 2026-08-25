@@ -26,8 +26,11 @@
     "lab:responsive": "tsx quality-lab/src/runner.ts --scenario responsive",
     "lab:animation": "tsx quality-lab/src/runner.ts --scenario animation",
     "lab:additional": "tsx quality-lab/src/runner.ts --scenario additional",
+    "lab:phase2u": "tsx quality-lab/src/runner.ts --scenario phase2u",
+    "lab:phase2u:quick": "tsx quality-lab/src/runner.ts --scenario phase2u-quick",
     "diagnostic:mature": "tsx scripts/matureDiagnostics.ts",
     "diagnostic:phase2t": "tsx scripts/phase2tDiagnostics.ts",
+    "diagnostic:phase2u": "tsx scripts/phase2uDiagnostics.ts",
     "browser:smoke": "tsx scripts/browserPhase2sSmoke.ts",
     "publish": "npm run scrape && npm run price && node scripts/publish.mjs"
   },

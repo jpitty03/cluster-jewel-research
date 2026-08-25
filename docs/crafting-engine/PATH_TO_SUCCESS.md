@@ -4,7 +4,7 @@
 
 Baseline reviewed: `4b75cfe52f441114fca63aaa7bd4b9868cd30350` on `main`.
 
-> **Phase 2T superseding status (2026-08-25):** Phase 2S public-beta certification is reopened. The current product status is **Browser-Verified Release Candidate 2T.1**. Historical Phase 2M–2S feature records remain intact, but only the real Playwright gates, canonical result accounting, and independent method-family evidence defined by `POST_PHASE2S_REVIEW_AND_PHASE2T_RELEASE_TRUTHFULNESS_REAL_BROWSER_AND_RESULT_CONSISTENCY_PLAN.md` are authoritative for release validation.
+> **Phase 2U superseding status (2026-08-25):** Phase 2S public-beta certification remains reopened. The current product status is **Browser-Verified Release Candidate 2U.1**. Phase 2T solver, accounting, method-family, Worker, and real-browser release behavior remains authoritative and is now joined by the real interaction, rendered-label geometry, player-vocabulary, and exact-identity disclosure gates defined by `POST_PHASE2T_REVIEW_AND_PHASE2U_CONSTELLATION_INTERACTION_READABILITY_AND_PLAYER_LABELS_PLAN.md`.
 
 This document is the high-level roadmap for taking the current research-grade optimizer to a trustworthy, efficient, polished application that ordinary players can use. Detailed phase documents remain the source of truth for their individual implementations; this file defines the final product, the order of work, the quality strategy, and the release gates.
 
