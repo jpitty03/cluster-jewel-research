@@ -1,5 +1,6 @@
 import { createBrowserOptimizerService } from './browserEngine.ts';
 import type {
+  OptimizerProgressSnapshot,
   OptimizerWorkerRequest,
   OptimizerWorkerResponse,
 } from './optimizerWorkerProtocol.ts';
@@ -9,13 +10,14 @@ import type {
 const optimizer = createBrowserOptimizerService();
 
 export function executeOptimizerWorkerRequest(
-  request: OptimizerWorkerRequest
+  request: OptimizerWorkerRequest,
+  onProgress?: (progress: OptimizerProgressSnapshot) => void
 ): OptimizerWorkerResponse {
   try {
     return {
       type: 'RESULT',
       requestId: request.requestId,
-      result: optimizer.optimize(request.input),
+      result: optimizer.optimize(request.input, onProgress),
     };
   } catch (error) {
     return {

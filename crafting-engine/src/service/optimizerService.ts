@@ -36,9 +36,9 @@ import {
   type StartingStateCandidate,
 } from '../solver/strategyDiscovery.ts';
 import {
-  ACQUISITION_FRACTURE_PREPARATION_STATE_IDENTITY,
   DEFAULT_ACQUISITION_SYNTHESIS_ACTION_IDS,
   buildAcquisitionTargetDefinition,
+  describeModRequirement,
   synthesizeAcquisition,
   type AcquisitionSynthesisResult,
 } from '../solver/acquisitionSynthesis.ts';
@@ -342,6 +342,60 @@ export interface PolicyRefinementSummary {
   budgetEndedWhileImproving: boolean;
   stopReason: GenericSearchResult['searchSummary']['refinementStopReason'];
   explanation: string;
+}
+
+export interface OptimizerProgressCandidate {
+  id: string;
+  label: string;
+  kind: 'clean' | 'self-fracture';
+  targetModName?: string;
+  status:
+    | 'NOT_STARTED'
+    | 'PROBING'
+    | 'UNRESOLVED'
+    | 'PROVISIONAL'
+    | 'RESOLVED'
+    | 'DOWNSTREAM_UNRESOLVED'
+    | 'FULL_ROUTE_RESOLVED'
+    | 'DOMINATED'
+    | 'SELECTED';
+  lowerBoundChaos?: number;
+  acquisitionUpperBoundChaos?: number;
+  downstreamUpperBoundChaos?: number;
+  fullRouteUpperBoundChaos?: number;
+  statesExpanded: number;
+  retainedStates: number;
+  elapsedMs: number;
+  isActive: boolean;
+}
+
+export interface OptimizerProgressSnapshot {
+  phase:
+    | 'INITIALIZING'
+    | 'CLEAN_PROBE'
+    | 'FRACTURE_PROBE'
+    | 'FRACTURE_DEEPEN'
+    | 'DOWNSTREAM_SOLVE'
+    | 'REFINEMENT'
+    | 'COMPLETE';
+  phaseDescription: string;
+  currentFocus: string;
+  elapsedMs: number;
+  totalStatesExpanded: number;
+  retainedStatesReused: number;
+  expansionRound: number;
+  bestExecutableUpperBoundChaos?: number;
+  bestUnresolvedLowerBoundChaos?: number;
+  potentialGapChaos?: number;
+  incumbentHistory: Array<{
+    elapsedMs: number;
+    upperBoundChaos: number;
+    label: string;
+  }>;
+  candidates: OptimizerProgressCandidate[];
+  recentMilestones: string[];
+  sessionReuseStatus: 'COLD' | 'RESUMED' | 'INVALIDATED';
+  sessionReuseMessage?: string;
 }
 
 export interface SearchSessionReuseSummary {
@@ -667,35 +721,7 @@ export function describeOptimizerSearchSessionIdentity(
   return { exactIdentity, identityHash: hashIdentity(exactIdentity) };
 }
 
-function acquisitionCacheIdentity(
-  start: StartingStateCandidate,
-  cleanBase: ReturnType<typeof cleanBaseEvidence>,
-  input: OptimizeCraftInput,
-  budget: { maxStates: number; maxWallTimeMs: number; maxExpansionRounds: number }
-): string {
-  return JSON.stringify({
-    version: 1,
-    cleanPhysicalState: getPhysicalStateSignature(normalizeItemState({
-      ...start.state,
-      rarity: 'normal',
-      prefixes: [],
-      suffixes: [],
-      fracturedModIds: [],
-    })),
-    fracturedRequirement: start.fracturedRequirement,
-    cleanBase,
-    currencyRates: sortedRecord({
-      ...DEFAULT_CURRENCY_RATES,
-      ...(input.prices?.currencyRates ?? {}),
-    }),
-    enabledActionIds: [...DEFAULT_ACQUISITION_SYNTHESIS_ACTION_IDS],
-    acquisitionStateIdentity: ACQUISITION_FRACTURE_PREPARATION_STATE_IDENTITY,
-    includeHarvest: false,
-    allowResearchFallbackPrices: input.allowResearchFallbackPrices ?? true,
-    searchIntent: input.searchIntent ?? 'RECOMMEND',
-    budget,
-  });
-}
+
 
 function summarizeSynthesis(
   result: AcquisitionSynthesisResult,
@@ -917,12 +943,13 @@ interface OptimizerSearchSessionRecord {
     identity: string;
     continuation: GenericSearchContinuationSession;
   };
+  fractureAcquisitions: Map<string, GenericSearchContinuationSession>;
+  fractureDownstreams: Map<string, GenericSearchContinuationSession>;
 }
 
 /** Serializable optimizer boundary intended for the thin Developer UI. */
 export class OptimizerService {
   private readonly repo: ClusterModRepository;
-  private readonly acquisitionSynthesisCache = new Map<string, AcquisitionSynthesisResult>();
   private readonly searchSessions = new Map<string, OptimizerSearchSessionRecord>();
   private lastSearchIdentityComponents?: SearchIdentityComponents;
 
@@ -930,13 +957,16 @@ export class OptimizerService {
     this.repo = repo;
   }
 
-  optimize(input: OptimizeCraftInput): OptimizeCraftResult {
+  optimize(
+    input: OptimizeCraftInput,
+    onProgress?: (snapshot: OptimizerProgressSnapshot) => void
+  ): OptimizeCraftResult {
     const optimizationStarted = Date.now();
     const validation = validateOptimizeCraftInput(this.repo, input);
     if (!validation.valid) throw new OptimizerInputValidationError(validation.errors);
     input = validation.normalizedInput;
     const runtimeBudget = getSearchRuntimeBudget(input.searchBudget?.maxWallTimeMs);
-    const overallDeadline = optimizationStarted + runtimeBudget.engineDeadlineMs;
+    const searchStopDeadline = optimizationStarted + Math.floor(runtimeBudget.engineDeadlineMs * 0.85);
     const priceBook = new PriceBook(input.prices?.currencyRates ?? {});
     const pool = ModPool.forCluster(this.repo, input.baseType, input.clusterType);
     const starts = generateStartingStateCandidates(
@@ -979,6 +1009,8 @@ export class OptimizerService {
         identity: searchIdentity,
         components: identityComponents,
         cleanDownstream: createGenericSearchContinuationSession(),
+        fractureAcquisitions: new Map(),
+        fractureDownstreams: new Map(),
       };
       if (this.searchSessions.size >= 8) {
         const oldest = this.searchSessions.keys().next().value;
@@ -1130,18 +1162,119 @@ export class OptimizerService {
     const allStructuralBoundsProven = fractureEntries.every(({ candidateIndex }) =>
       structuralBounds.get(candidateIndex)?.mechanics.proven === true
     );
+
+    // Set up progress tracking
+    const recentMilestones: string[] = [];
+    let lastProgressEmissionMs = 0;
+    const progressIncumbents: Array<{ elapsedMs: number; upperBoundChaos: number; label: string }> = [];
+    const progressCandidates = new Map<string, OptimizerProgressCandidate>();
+
+    progressCandidates.set('clean', {
+      id: 'clean',
+      label: cleanStart.label,
+      kind: 'clean',
+      status: 'NOT_STARTED',
+      lowerBoundChaos: cleanEvidence.costChaos,
+      statesExpanded: 0,
+      retainedStates: searchSessionRecord.cleanDownstream.expansion.nodes.size,
+      elapsedMs: 0,
+      isActive: false,
+    });
+
+    for (const { start, candidateIndex } of fractureEntries) {
+      const id = `candidate_${candidateIndex}`;
+      const sessionKey = JSON.stringify(start.fracturedRequirement);
+      const retainedAcqStates = searchSessionRecord.fractureAcquisitions.get(sessionKey)?.expansion.nodes.size ?? 0;
+      progressCandidates.set(id, {
+        id,
+        label: start.label,
+        kind: 'self-fracture',
+        targetModName: describeModRequirement(start.fracturedRequirement!),
+        status: 'NOT_STARTED',
+        lowerBoundChaos: structuralBounds.get(candidateIndex)?.combinedLowerBoundChaos,
+        statesExpanded: 0,
+        retainedStates: retainedAcqStates,
+        elapsedMs: 0,
+        isActive: false,
+      });
+    }
+
+    let currentBestUpperBound: number | undefined;
+    let currentBestUnresolvedLowerBound: number | undefined;
+    let currentPotentialGap: number | undefined;
+
+    const emitProgress = (
+      phase: OptimizerProgressSnapshot['phase'],
+      phaseDescription: string,
+      currentFocus: string,
+      force = false,
+      milestone?: string
+    ) => {
+      if (!onProgress) return;
+      const now = Date.now();
+      if (!force && now - lastProgressEmissionMs < 100 && !milestone) return;
+      if (milestone) {
+        recentMilestones.push(milestone);
+        if (recentMilestones.length > 8) recentMilestones.shift();
+      }
+      lastProgressEmissionMs = now;
+      const candidateList = [...progressCandidates.values()];
+      const totalStates = candidateList.reduce((sum, c) => sum + c.statesExpanded, 0) +
+        (searchSessionRecord?.cleanDownstream.expansion.nodes.size ?? 0);
+      const totalRetained = candidateList.reduce((sum, c) => sum + c.retainedStates, 0);
+
+      const activeLowerBounds = candidateList
+        .filter((c) => c.status !== 'DOMINATED' && (c.status === 'NOT_STARTED' || c.status === 'PROBING' || c.status === 'UNRESOLVED'))
+        .map((c) => c.lowerBoundChaos)
+        .filter((val): val is number => val !== undefined && Number.isFinite(val));
+      currentBestUnresolvedLowerBound = activeLowerBounds.length > 0 ? Math.min(...activeLowerBounds) : undefined;
+      currentPotentialGap = currentBestUpperBound !== undefined && currentBestUnresolvedLowerBound !== undefined
+        ? Math.max(0, currentBestUpperBound - currentBestUnresolvedLowerBound)
+        : undefined;
+
+      onProgress({
+        phase,
+        phaseDescription,
+        currentFocus,
+        elapsedMs: now - optimizationStarted,
+        totalStatesExpanded: totalStates,
+        retainedStatesReused: totalRetained,
+        expansionRound: 1,
+        bestExecutableUpperBoundChaos: currentBestUpperBound,
+        bestUnresolvedLowerBoundChaos: currentBestUnresolvedLowerBound,
+        potentialGapChaos: currentPotentialGap,
+        incumbentHistory: [...progressIncumbents],
+        candidates: candidateList,
+        recentMilestones: [...recentMilestones],
+        sessionReuseStatus: invalidationReason === undefined && totalRetained > 0
+          ? 'RESUMED'
+          : invalidationReason ? 'INVALIDATED' : 'COLD',
+        sessionReuseMessage: invalidationReason
+          ? `Restarted — ${invalidationReason.toLowerCase().replace(/_/g, ' ')}`
+          : totalRetained > 0
+            ? `Resumed from prior run (${totalRetained.toLocaleString()} states retained)`
+            : undefined,
+      });
+    };
+
+    emitProgress('INITIALIZING', 'Analyzing craft targets and starting candidates', 'Evaluating starting base portfolio', true);
+
+    let bestFractureDownstreamResult: GenericSearchResult | undefined;
+    let bestFractureCandidateIndex: number | undefined;
+
     if (
       fractureEntries.length > 0 &&
       !targetExplicitlyRequiresFracture &&
       allStructuralBoundsProven
     ) {
       const requestedIntent = input.searchIntent ?? 'RECOMMEND';
+      const isComplexMultiMod = validation.normalizedInput.target.requiredMods.length >= 3;
       const fastWallTimeCeiling = requestedIntent === 'RECOMMEND'
-        ? 22_000
-        : Math.floor(runtimeBudget.engineDeadlineMs * 0.8);
+        ? (isComplexMultiMod ? Math.min(3_000, Math.floor(runtimeBudget.engineDeadlineMs * 0.15)) : Math.min(10_000, Math.floor(runtimeBudget.engineDeadlineMs * 0.35)))
+        : Math.floor(runtimeBudget.engineDeadlineMs * 0.7);
       const fastWallTimeMs = Math.max(
         1,
-        Math.min(fastWallTimeCeiling, Math.floor(runtimeBudget.engineDeadlineMs * 0.8))
+        Math.min(fastWallTimeCeiling, searchStopDeadline - Date.now() - 4_000)
       );
       // Certify the physical clean craft directly so acquisition-menu competition cannot consume
       // the tranche before an executable incumbent exists. Restart/reacquisition is still a real
@@ -1160,6 +1293,12 @@ export class OptimizerService {
         scope: 'CLEAN_DOWNSTREAM',
       };
       fastCleanSessionReuse = { ...selectedSessionReuse };
+
+      const cleanProg = progressCandidates.get('clean')!;
+      cleanProg.status = 'PROBING';
+      cleanProg.isActive = true;
+      emitProgress('CLEAN_PROBE', 'Certifying physical clean-base route', 'Clean Base Craft', true);
+
       fastCleanResult = new GenericSearchEngine(
         { pool, priceBook },
         input.target,
@@ -1182,12 +1321,32 @@ export class OptimizerService {
             provenance: cleanEvidence.provenance,
             label: 'Abandon attempt and reacquire a clean base',
           },
+          onProgress: (ev) => {
+            cleanProg.statesExpanded = ev.statesExpanded;
+            cleanProg.elapsedMs = ev.elapsedMs;
+            emitProgress('CLEAN_PROBE', 'Certifying physical clean-base route', `Clean Base: Round ${ev.currentRound}/${ev.totalRounds}`, false, ev.milestone);
+          },
         }
       ).search(cleanStart.state);
+
+      cleanProg.statesExpanded = fastCleanResult.graphBuild.nodes.size;
+      cleanProg.elapsedMs = fastCleanResult.searchSummary.elapsedMs;
+      cleanProg.isActive = false;
+
       const fastCertified = fastCleanResult.optimalityProof.selectedPolicyStatus ===
         'FULLY RESOLVED / PROPER / ABSORBING / COST-RECONCILED';
       if (fastCertified && Number.isFinite(fastCleanResult.totalExpectedCostChaos)) {
         const total = cleanEvidence.costChaos + fastCleanResult.totalExpectedCostChaos;
+        cleanProg.status = 'RESOLVED';
+        cleanProg.fullRouteUpperBoundChaos = total;
+        currentBestUpperBound = total;
+        progressIncumbents.push({
+          elapsedMs: Date.now() - optimizationStarted,
+          upperBoundChaos: total,
+          label: 'Clean Base',
+        });
+        emitProgress('CLEAN_PROBE', 'Clean route certified', `Clean Base certified: ${total.toFixed(2)}c`, true, `Clean base certified: ${total.toFixed(2)}c`);
+
         const startDecision = fastCleanResult.policyMap.get(
           getCanonicalStateKey(cleanStart.state, input.target)
         );
@@ -1224,6 +1383,8 @@ export class OptimizerService {
         stageMode = 'CLEAN_ROUTE_DOMINANCE';
         for (const { candidateIndex } of fractureEntries) {
           const bound = structuralBounds.get(candidateIndex)!;
+          const pCand = progressCandidates.get(`candidate_${candidateIndex}`);
+          if (pCand) pCand.status = 'DOMINATED';
           synthesisSummaries.set(candidateIndex, {
             status: 'SKIPPED_DOMINATED',
             provenance: 'ADMISSIBLE MECHANICS LOWER BOUND',
@@ -1242,6 +1403,7 @@ export class OptimizerService {
             allocatedMaxExpansionRounds: stageMaxExpansionRounds,
           });
         }
+        emitProgress('COMPLETE', 'Clean route dominates all self-fractures', `Optimization complete (Clean Base: ${fastCleanRoute.expectedTotalCostChaos.toFixed(2)}c)`, true, 'Clean route dominates all fracture families');
       }
     }
 
@@ -1251,78 +1413,258 @@ export class OptimizerService {
       result = fastCleanResult;
     } else {
       const acquisitionStarted = Date.now();
-      if (fractureEntries.length > 0) {
-        stageTotalStateBudget = Math.max(
-          fractureEntries.length,
-          input.searchBudget?.acquisitionMaxStates ??
-            Math.max(5_001, input.searchBudget?.maxStates ?? 5_000)
-        );
-        const downstreamReserveMs = Math.max(
-          1_000,
-          Math.min(8_000, Math.floor(runtimeBudget.engineDeadlineMs * 0.25))
-        );
-        const availableAcquisitionWallTimeMs = Math.max(
-          fractureEntries.length,
-          overallDeadline - Date.now() - downstreamReserveMs
-        );
-        stageTotalWallTimeBudgetMs = Math.max(
-          fractureEntries.length,
-          Math.min(
-            input.searchBudget?.acquisitionMaxWallTimeMs ??
-              Math.floor(runtimeBudget.engineDeadlineMs * 0.75),
-            availableAcquisitionWallTimeMs
-          )
-        );
-        if (
-          input.searchBudget?.acquisitionMaxWallTimeMs === undefined &&
-          Math.floor(stageTotalStateBudget / fractureEntries.length) < 5_001
-        ) {
-          stageTotalWallTimeBudgetMs = Math.min(
-            stageTotalWallTimeBudgetMs,
-            5_000 * fractureEntries.length
-          );
-        }
-        const stateQuotient = Math.floor(stageTotalStateBudget / fractureEntries.length);
-        const stateRemainder = stageTotalStateBudget % fractureEntries.length;
-        const wallQuotient = Math.floor(stageTotalWallTimeBudgetMs / fractureEntries.length);
-        const wallRemainder = stageTotalWallTimeBudgetMs % fractureEntries.length;
 
-        for (const [fractureIndex, { start, candidateIndex }] of fractureEntries.entries()) {
-          const allocation = {
-            maxStates: stateQuotient + (fractureIndex < stateRemainder ? 1 : 0),
-            maxWallTimeMs: wallQuotient + (fractureIndex < wallRemainder ? 1 : 0),
-            maxExpansionRounds: stageMaxExpansionRounds,
+      if (fractureEntries.length > 0) {
+        let incumbentFullRouteU = fastCleanRoute?.expectedTotalCostChaos ?? Infinity;
+
+        // Sort candidates by lowest mandatory mechanics lower bound (most competitive first)
+        const sortedFractureEntries = [...fractureEntries].sort(
+          (a, b) => (structuralBounds.get(a.candidateIndex)?.combinedLowerBoundChaos ?? 0) -
+                    (structuralBounds.get(b.candidateIndex)?.combinedLowerBoundChaos ?? 0)
+        );
+
+        // Tranche 1: Probe each non-dominated fracture candidate
+        for (const { start, candidateIndex } of sortedFractureEntries) {
+          const bound = structuralBounds.get(candidateIndex)!;
+          const pCand = progressCandidates.get(`candidate_${candidateIndex}`)!;
+          if (bound.combinedLowerBoundChaos >= incumbentFullRouteU || Date.now() >= searchStopDeadline) {
+            pCand.status = 'DOMINATED';
+            continue;
+          }
+          const sessionKey = JSON.stringify(start.fracturedRequirement);
+          let acqSession = searchSessionRecord.fractureAcquisitions.get(sessionKey);
+          if (!acqSession) {
+            acqSession = createGenericSearchContinuationSession();
+            searchSessionRecord.fractureAcquisitions.set(sessionKey, acqSession);
+          }
+
+          pCand.status = 'PROBING';
+          pCand.isActive = true;
+          emitProgress('FRACTURE_PROBE', 'Probing self-fracture acquisition', `Probing: ${start.label}`, true);
+
+          const timeRemaining = Math.max(1_000, searchStopDeadline - Date.now() - 2_500);
+          const probeWallTimeMs = Math.min(5_000, Math.max(1_000, Math.floor(timeRemaining / (sortedFractureEntries.length + 1))));
+          const probeAllocation = {
+            maxStates: Math.min(5_001, input.searchBudget?.maxStates ?? 5_000),
+            maxWallTimeMs: probeWallTimeMs,
+            maxExpansionRounds: 3,
           };
-          const cacheIdentity = acquisitionCacheIdentity(start, cleanEvidence, input, allocation);
-          let synthesis = this.acquisitionSynthesisCache.get(cacheIdentity);
-          const cacheHit = synthesis !== undefined;
-          if (!synthesis) {
-            synthesis = synthesizeAcquisition(
+
+          const synthesis = synthesizeAcquisition(
+            { pool, priceBook },
+            {
+              cleanStartingState: cleanStart.state,
+              desiredPhysicalState: { fracturedMod: start.fracturedRequirement! },
+              cleanBaseAcquisition: cleanEvidence,
+              searchBudget: probeAllocation,
+              allowResearchFallbackPrices: input.allowResearchFallbackPrices ?? true,
+              searchIntent: input.searchIntent ?? 'RECOMMEND',
+              continuationSession: acqSession,
+              persistentExpansion: true,
+              onProgress: (ev) => {
+                pCand.statesExpanded = ev.statesExpanded;
+                pCand.elapsedMs = ev.elapsedMs;
+                emitProgress('FRACTURE_PROBE', 'Probing self-fracture acquisition', `${start.label}: ${ev.statesExpanded} states`, false, ev.milestone);
+              },
+            }
+          );
+
+          stageAttemptedCandidates++;
+          pCand.statesExpanded = synthesis.search.statesExpanded;
+          pCand.elapsedMs = synthesis.search.elapsedMs;
+          pCand.lowerBoundChaos = synthesis.lowerBoundChaos;
+          synthesisSummaries.set(
+            candidateIndex,
+            summarizeSynthesis(synthesis, probeAllocation, false, sessionKey)
+          );
+
+          if (synthesis.status === 'RESOLVED' && synthesis.expectedCostChaos !== undefined) {
+            synthesisResults.set(candidateIndex, synthesis);
+            pCand.status = 'RESOLVED';
+            pCand.acquisitionUpperBoundChaos = synthesis.expectedCostChaos;
+            emitProgress('FRACTURE_PROBE', 'Self-fracture acquisition resolved', `Acquisition resolved: ${start.label} (${synthesis.expectedCostChaos.toFixed(2)}c)`, true, `Acquisition resolved: ${start.label} (${synthesis.expectedCostChaos.toFixed(2)}c)`);
+
+            // Evaluate downstream from this fractured state with accurate restart cost
+            let downSession = searchSessionRecord.fractureDownstreams.get(sessionKey);
+            if (!downSession) {
+              downSession = createGenericSearchContinuationSession();
+              searchSessionRecord.fractureDownstreams.set(sessionKey, downSession);
+            }
+            pCand.isActive = true;
+            emitProgress('DOWNSTREAM_SOLVE', 'Solving downstream craft from fractured state', `Downstream: ${start.label}`, true);
+
+            const downWallTimeMs = Math.min(5_000, Math.max(1_000, searchStopDeadline - Date.now() - 1_500));
+            const downstreamResult = new GenericSearchEngine(
+              { pool, priceBook },
+              input.target,
+              {
+                includeHarvest: harvestTags.length > 0,
+                harvestTags,
+                prioritizeTargetProgress: true,
+                allowResearchFallbackPrices: input.allowResearchFallbackPrices ?? true,
+                maxStates: input.searchBudget?.maxStates ?? 5_000,
+                maxWallTimeMs: downWallTimeMs,
+                maxExpansionRounds: input.searchBudget?.maxExpansionRounds ?? 3,
+                searchIntent: input.searchIntent ?? 'RECOMMEND',
+                persistentExpansion: true,
+                continuationSession: downSession,
+                recommendationRefinementRounds: 1,
+                restartReacquire: {
+                  destination: start.state,
+                  acquisitionCostChaos: synthesis.expectedCostChaos,
+                  confidence: 'research-fallback',
+                  provenance: 'Self-fracture acquisition',
+                  label: `Abandon attempt and reacquire self-fracture ${start.label}`,
+                },
+              }
+            ).search(start.state);
+
+            if (
+              downstreamResult.optimalityProof.selectedPolicyStatus === 'FULLY RESOLVED / PROPER / ABSORBING / COST-RECONCILED' &&
+              Number.isFinite(downstreamResult.totalExpectedCostChaos)
+            ) {
+              const fullRouteCost = synthesis.expectedCostChaos + downstreamResult.totalExpectedCostChaos;
+              pCand.status = 'FULL_ROUTE_RESOLVED';
+              pCand.downstreamUpperBoundChaos = downstreamResult.totalExpectedCostChaos;
+              pCand.fullRouteUpperBoundChaos = fullRouteCost;
+              if (fullRouteCost < incumbentFullRouteU) {
+                incumbentFullRouteU = fullRouteCost;
+                currentBestUpperBound = fullRouteCost;
+                bestFractureDownstreamResult = downstreamResult;
+                bestFractureCandidateIndex = candidateIndex;
+                progressIncumbents.push({
+                  elapsedMs: Date.now() - optimizationStarted,
+                  upperBoundChaos: fullRouteCost,
+                  label: start.label,
+                });
+                emitProgress('DOWNSTREAM_SOLVE', 'New best full route resolved', `New best route: ${start.label} (${fullRouteCost.toFixed(2)}c)`, true, `New best route: ${start.label} (${fullRouteCost.toFixed(2)}c)`);
+              }
+            }
+          }
+          pCand.isActive = false;
+        }
+
+        // Tranche 2: Deepen competitive candidates if time remains
+        const remainingForDeepen = searchStopDeadline - Date.now() - 2_000;
+        if (remainingForDeepen > 1_500) {
+          const competitiveCandidates = sortedFractureEntries
+            .filter(({ candidateIndex }) => {
+              const s = synthesisSummaries.get(candidateIndex);
+              const p = progressCandidates.get(`candidate_${candidateIndex}`);
+              return (s?.lowerBoundChaos ?? Infinity) < incumbentFullRouteU && p?.status !== 'FULL_ROUTE_RESOLVED';
+            })
+            .sort((a, b) => (synthesisSummaries.get(a.candidateIndex)?.lowerBoundChaos ?? 0) - (synthesisSummaries.get(b.candidateIndex)?.lowerBoundChaos ?? 0));
+
+          for (const { start, candidateIndex } of competitiveCandidates) {
+            if (Date.now() + 1_000 >= searchStopDeadline) break;
+            const sessionKey = JSON.stringify(start.fracturedRequirement);
+            const acqSession = searchSessionRecord.fractureAcquisitions.get(sessionKey)!;
+            const pCand = progressCandidates.get(`candidate_${candidateIndex}`)!;
+            pCand.status = 'PROBING';
+            pCand.isActive = true;
+            emitProgress('FRACTURE_DEEPEN', 'Deepening competitive self-fracture acquisition', `Deepening: ${start.label}`, true);
+
+            const deepenWallTimeMs = Math.min(6_000, Math.max(1_000, searchStopDeadline - Date.now() - 1_500));
+            const deepenAllocation = {
+              maxStates: input.searchBudget?.maxStates ?? 5_000,
+              maxWallTimeMs: deepenWallTimeMs,
+              maxExpansionRounds: input.searchBudget?.maxExpansionRounds ?? 3,
+            };
+
+            const synthesis = synthesizeAcquisition(
               { pool, priceBook },
               {
                 cleanStartingState: cleanStart.state,
                 desiredPhysicalState: { fracturedMod: start.fracturedRequirement! },
                 cleanBaseAcquisition: cleanEvidence,
-                searchBudget: allocation,
+                searchBudget: deepenAllocation,
                 allowResearchFallbackPrices: input.allowResearchFallbackPrices ?? true,
                 searchIntent: input.searchIntent ?? 'RECOMMEND',
+                continuationSession: acqSession,
+                persistentExpansion: true,
               }
             );
-            if (this.acquisitionSynthesisCache.size >= 64) {
-              const oldestKey = this.acquisitionSynthesisCache.keys().next().value;
-              if (oldestKey !== undefined) this.acquisitionSynthesisCache.delete(oldestKey);
+
+            pCand.statesExpanded = synthesis.search.statesExpanded;
+            pCand.elapsedMs = synthesis.search.elapsedMs;
+            pCand.lowerBoundChaos = synthesis.lowerBoundChaos;
+            synthesisSummaries.set(
+              candidateIndex,
+              summarizeSynthesis(synthesis, deepenAllocation, false, sessionKey)
+            );
+
+            if (synthesis.status === 'RESOLVED' && synthesis.expectedCostChaos !== undefined) {
+              synthesisResults.set(candidateIndex, synthesis);
+              pCand.status = 'RESOLVED';
+              pCand.acquisitionUpperBoundChaos = synthesis.expectedCostChaos;
+
+              const downSession = searchSessionRecord.fractureDownstreams.get(sessionKey) ?? createGenericSearchContinuationSession();
+              searchSessionRecord.fractureDownstreams.set(sessionKey, downSession);
+
+              const downstreamResult = new GenericSearchEngine(
+                { pool, priceBook },
+                input.target,
+                {
+                  includeHarvest: harvestTags.length > 0,
+                  harvestTags,
+                  prioritizeTargetProgress: true,
+                  allowResearchFallbackPrices: input.allowResearchFallbackPrices ?? true,
+                  maxStates: input.searchBudget?.maxStates ?? 5_000,
+                  maxWallTimeMs: Math.min(5_000, Math.max(1_000, searchStopDeadline - Date.now() - 1_000)),
+                  maxExpansionRounds: input.searchBudget?.maxExpansionRounds ?? 3,
+                  searchIntent: input.searchIntent ?? 'RECOMMEND',
+                  persistentExpansion: true,
+                  continuationSession: downSession,
+                  recommendationRefinementRounds: 1,
+                  restartReacquire: {
+                    destination: start.state,
+                    acquisitionCostChaos: synthesis.expectedCostChaos,
+                    confidence: 'research-fallback',
+                    provenance: 'Self-fracture acquisition',
+                    label: `Abandon attempt and reacquire self-fracture ${start.label}`,
+                  },
+                }
+              ).search(start.state);
+
+              if (
+                downstreamResult.optimalityProof.selectedPolicyStatus === 'FULLY RESOLVED / PROPER / ABSORBING / COST-RECONCILED' &&
+                Number.isFinite(downstreamResult.totalExpectedCostChaos)
+              ) {
+                const fullRouteCost = synthesis.expectedCostChaos + downstreamResult.totalExpectedCostChaos;
+                pCand.status = 'FULL_ROUTE_RESOLVED';
+                pCand.downstreamUpperBoundChaos = downstreamResult.totalExpectedCostChaos;
+                pCand.fullRouteUpperBoundChaos = fullRouteCost;
+                if (fullRouteCost < incumbentFullRouteU) {
+                  incumbentFullRouteU = fullRouteCost;
+                  currentBestUpperBound = fullRouteCost;
+                  bestFractureDownstreamResult = downstreamResult;
+                  bestFractureCandidateIndex = candidateIndex;
+                  progressIncumbents.push({
+                    elapsedMs: Date.now() - optimizationStarted,
+                    upperBoundChaos: fullRouteCost,
+                    label: start.label,
+                  });
+                  emitProgress('DOWNSTREAM_SOLVE', 'New best full route resolved', `New best route: ${start.label} (${fullRouteCost.toFixed(2)}c)`, true, `New best route: ${start.label} (${fullRouteCost.toFixed(2)}c)`);
+                }
+              }
             }
-            this.acquisitionSynthesisCache.set(cacheIdentity, synthesis);
+            pCand.isActive = false;
           }
-          stageAttemptedCandidates++;
-          if (cacheHit) stageCacheHits++;
-          synthesisSummaries.set(
-            candidateIndex,
-            summarizeSynthesis(synthesis, allocation, cacheHit, cacheIdentity)
-          );
-          if (synthesis.status === 'RESOLVED' && synthesis.expectedCostChaos !== undefined) {
-            synthesisResults.set(candidateIndex, synthesis);
+        }
+
+        // Mark any remaining candidate whose lower bound cannot beat the best full route as dominated
+        for (const { candidateIndex } of fractureEntries) {
+          const pCand = progressCandidates.get(`candidate_${candidateIndex}`);
+          const s = synthesisSummaries.get(candidateIndex);
+          if (pCand && s && s.lowerBoundChaos >= incumbentFullRouteU && pCand.status !== 'FULL_ROUTE_RESOLVED') {
+            pCand.status = 'DOMINATED';
           }
+        }
+
+        // Mark winner
+        if (bestFractureCandidateIndex !== undefined) {
+          const winnerCand = progressCandidates.get(`candidate_${bestFractureCandidateIndex}`);
+          if (winnerCand) winnerCand.status = 'SELECTED';
         }
       }
       stageElapsedMs = (fastCleanResult?.searchSummary.elapsedMs ?? 0) +
@@ -1330,15 +1672,16 @@ export class OptimizerService {
       portfolio = buildAcquisitionPortfolio(starts, input, synthesisResults);
       const downstreamResult = runDownstreamSearch(
         portfolio,
-        Math.max(1, overallDeadline - Date.now())
+        Math.max(1, searchStopDeadline - Date.now())
       );
       const downstreamCertified = downstreamResult.optimalityProof.selectedPolicyStatus ===
         'FULLY RESOLVED / PROPER / ABSORBING / COST-RECONCILED';
-      if (!downstreamCertified && fastCleanResult && fastCleanRoute) {
-        // A certified physical clean-base policy is a valid executable upper bound even when
-        // acquisition-family competition consumes the remaining request budget. Preserve it as
-        // a proof-honest provisional recommendation and keep every unresolved self-fracture
-        // lower bound visible; never turn failure to rank all acquisitions into NO_ROUTE.
+      if (downstreamCertified) {
+        result = downstreamResult;
+      } else if (bestFractureDownstreamResult) {
+        stageMode = 'EXECUTABLE_SYNTHESIS';
+        result = bestFractureDownstreamResult;
+      } else if (fastCleanResult && fastCleanRoute) {
         stageMode = 'CLEAN_EXECUTABLE_PROVISIONAL';
         result = fastCleanResult;
         if (fastCleanSessionReuse) selectedSessionReuse = fastCleanSessionReuse;
@@ -1349,30 +1692,58 @@ export class OptimizerService {
 
     const usesDirectCleanPolicy = stageMode === 'CLEAN_ROUTE_DOMINANCE' ||
       stageMode === 'CLEAN_EXECUTABLE_PROVISIONAL';
+    const usesDirectFracturePolicy = stageMode === 'EXECUTABLE_SYNTHESIS' &&
+      bestFractureCandidateIndex !== undefined &&
+      bestFractureDownstreamResult !== undefined;
+
+    const bestFractureSynthesis = usesDirectFracturePolicy
+      ? synthesisResults.get(bestFractureCandidateIndex!)
+      : undefined;
+    const bestFractureTotalCost = usesDirectFracturePolicy && bestFractureSynthesis?.expectedCostChaos !== undefined && bestFractureDownstreamResult?.totalExpectedCostChaos !== undefined
+      ? bestFractureSynthesis.expectedCostChaos + bestFractureDownstreamResult.totalExpectedCostChaos
+      : undefined;
+    const bestFractureRoute: RouteSummary | undefined = usesDirectFracturePolicy && bestFractureTotalCost !== undefined
+      ? {
+          actionId: `acquire_candidate_${bestFractureCandidateIndex}_self-fracture_executable`,
+          name: `Start self-fracture: ${starts[bestFractureCandidateIndex!].label}`,
+          acquisitionCandidateId: `candidate_${bestFractureCandidateIndex}`,
+          acquisitionMethodId: 'self-fracture_executable',
+          expectedTotalCostChaos: bestFractureTotalCost,
+          lowerBoundChaos: bestFractureSynthesis?.lowerBoundChaos ?? 0,
+          incumbentUpperBoundChaos: bestFractureTotalCost,
+          optimalityGapChaos: Math.max(0, bestFractureTotalCost - (bestFractureSynthesis?.lowerBoundChaos ?? 0)),
+          status: 'RESOLVED',
+          couldBeatResolvedIncumbent: false,
+        }
+      : undefined;
 
     const acquisitionDecision = [...result.policyMap.values()].find(
       (decision) => decision.state.flags?.acquisitionMenu === true
     );
     const rankedAcquisitionRoutes = usesDirectCleanPolicy && fastCleanRoute
       ? [fastCleanRoute]
-      : (acquisitionDecision?.candidateQValues ?? [])
-        .filter((candidate) => candidate.actionId.startsWith('acquire_'))
-        .map(routeSummary)
-        .sort((left, right) =>
-          (left.expectedTotalCostChaos ?? Infinity) - (right.expectedTotalCostChaos ?? Infinity)
-        );
+      : usesDirectFracturePolicy && bestFractureRoute
+        ? [bestFractureRoute, ...(fastCleanRoute ? [fastCleanRoute] : [])]
+        : (acquisitionDecision?.candidateQValues ?? [])
+          .filter((candidate) => candidate.actionId.startsWith('acquire_'))
+          .map(routeSummary)
+          .sort((left, right) =>
+            (left.expectedTotalCostChaos ?? Infinity) - (right.expectedTotalCostChaos ?? Infinity)
+          );
     const selectedPolicyCertified =
       result.optimalityProof.selectedPolicyStatus ===
       'FULLY RESOLVED / PROPER / ABSORBING / COST-RECONCILED';
     const recommended = selectedPolicyCertified
       ? usesDirectCleanPolicy
         ? fastCleanRoute ?? null
-        : rankedAcquisitionRoutes.find(
-          (route) =>
-            route.actionId === acquisitionDecision?.bestActionId &&
-            route.status === 'RESOLVED' &&
-            route.expectedTotalCostChaos !== null
-        ) ?? null
+        : usesDirectFracturePolicy
+          ? bestFractureRoute ?? null
+          : rankedAcquisitionRoutes.find(
+            (route) =>
+              route.actionId === acquisitionDecision?.bestActionId &&
+              route.status === 'RESOLVED' &&
+              route.expectedTotalCostChaos !== null
+          ) ?? null
       : null;
     const selectedParts = recommended ? portfolioActionParts(recommended.actionId) : {};
     const incumbentUpperBound = recommended?.expectedTotalCostChaos ?? undefined;
@@ -1591,6 +1962,54 @@ export class OptimizerService {
           disambiguateAffixes: false,
         },
       });
+    } else if (usesDirectFracturePolicy && bestFractureRoute && bestFractureSynthesis) {
+      const fracturePolicyExplanation: PolicyExplanationRule[] = (bestFractureSynthesis.policy ?? []).map((rule) => ({
+        condition: `Self-fracture preparation: ${rule.state}`,
+        actionId: rule.selectedActionId,
+        action: rule.selectedAction,
+        representedStateCount: 1,
+        expectedVisits: rule.expectedVisits,
+        exampleState: rule.state,
+        context: {
+          rarity: 'rare' as const,
+          prefixCount: 0,
+          suffixCount: 0,
+          matchedTargetModIds: [],
+          unmatchedTargetModIds: [],
+          prefixes: [],
+          suffixes: [],
+          influenced: false,
+          synthesised: false,
+          acquisitionMenu: false,
+          disambiguateAffixes: false,
+        },
+      }));
+      policyExplanation.unshift(
+        {
+          condition: 'Start: choose an acquisition route',
+          actionId: bestFractureRoute.actionId,
+          action: bestFractureRoute.name,
+          representedStateCount: 1,
+          expectedVisits: 1,
+          exampleState: 'Choose an acquisition route',
+          context: {
+            rarity: starts[bestFractureCandidateIndex!].state.rarity,
+            prefixCount: 0,
+            suffixCount: 0,
+            matchedTargetModIds: [],
+            unmatchedTargetModIds: getAllTargetModRequirements(input.target).map(
+              (requirement, index) => targetRequirementIdentity(requirement, index)
+            ).sort(),
+            prefixes: [],
+            suffixes: [],
+            influenced: false,
+            synthesised: false,
+            acquisitionMenu: true,
+            disambiguateAffixes: false,
+          },
+        },
+        ...fracturePolicyExplanation
+      );
     }
     const expectedCostChaos = recommended?.expectedTotalCostChaos ?? null;
     const expectedProfitChaos = input.expectedSaleValueChaos === undefined || expectedCostChaos === null
@@ -1607,6 +2026,13 @@ export class OptimizerService {
         ? 'Search budget exhausted before every competitive candidate was resolved or bounded.'
         : undefined,
       recommended === null ? 'No fully resolved acquisition route was found within this search budget.' : undefined,
+      synthesisFrontiersCouldBeat
+        ? 'A self-fracture frontier has a lower bound below the current best route and was not fully resolved.'
+        : undefined,
+      selectedSynthesis?.status === 'RESOLVED' &&
+        selectedSynthesis.proof?.modeledActionOptimalityProven !== true
+        ? 'The selected executable self-fracture policy was resolved to a finite incumbent but was not proven modeled-optimal.'
+        : undefined,
       recommended !== null && !acquisitionSelectionSafe
         ? `ACQUISITION SELECTION IS PROVISIONAL: resolved incumbent ${incumbentUpperBound!.toFixed(3)}c; ` +
           `best unresolved acquisition lower bound ${bestUnresolvedLowerBound.toFixed(3)}c; ` +
@@ -1624,7 +2050,10 @@ export class OptimizerService {
     const selectedMechanicsEvidence = result.mechanicsConfidence.evidence.filter(
       (entry) => entry.onPolicySelections > 0
     );
-    const selectedMechanicsWarnings = mechanicsScope(selectedMechanicsEvidence).warnings;
+    const selectedMechanicsWarnings = [
+      ...result.mechanicsConfidence.warnings,
+      ...(selectedSynthesis?.mechanicsConfidence?.warnings ?? []),
+    ];
     const warningDetails: OptimizationWarning[] = [
       ...proofWarnings.map((message): OptimizationWarning => ({ category: 'PROOF_SEARCH', message })),
       ...result.priceConfidence.warnings.map((message): OptimizationWarning => ({ category: 'SELECTED_ROUTE', message })),
@@ -1666,6 +2095,21 @@ export class OptimizerService {
       ) === index
     );
 
+    const mergedPolicyRules: PolicyRule[] = [
+      ...(usesDirectFracturePolicy && bestFractureSynthesis?.policy
+        ? bestFractureSynthesis.policy.map((rule) => ({
+            stateKey: rule.stateKey,
+            state: rule.state,
+            selectedActionId: rule.selectedActionId,
+            selectedAction: rule.selectedAction,
+            expectedVisits: rule.expectedVisits,
+            totalCostChaos: typeof rule.totalCostChaos === 'number' ? finiteOrNull(rule.totalCostChaos) : null,
+            candidates: [],
+          }))
+        : []),
+      ...policyRules,
+    ];
+
     const outputWithoutCraftPlan: Omit<OptimizeCraftResult, 'craftPlan'> = {
       target: input.target,
       validationNotices: validation.notices,
@@ -1675,6 +2119,9 @@ export class OptimizerService {
       expectedCurrencies: Object.fromEntries(
         [
           ...(usesDirectCleanPolicy ? [['clean_base', 1] as const] : []),
+          ...(usesDirectFracturePolicy && bestFractureSynthesis?.expectedCurrencies
+            ? Object.entries(bestFractureSynthesis.expectedCurrencies)
+            : []),
           ...Object.entries(result.expectedCurrencies),
         ].map(([currency, amount]) => [currency, finiteOrNull(amount)])
       ),
@@ -1685,10 +2132,21 @@ export class OptimizerService {
           expectedCount: 1,
           expectedCostChaos: cleanEvidence.costChaos,
         }] : []),
+        ...(usesDirectFracturePolicy && bestFractureSynthesis
+          ? [
+              {
+                actionId: bestFractureRoute!.actionId,
+                actionName: bestFractureRoute!.name,
+                expectedCount: 1,
+                expectedCostChaos: bestFractureSynthesis.expectedCostChaos ?? 0,
+              },
+              ...bestFractureSynthesis.expectedActionUsage,
+            ]
+          : []),
         ...result.expectedActionUsage.map((usage) => ({ ...usage })),
       ],
       policyExplanation,
-      policyRules,
+      policyRules: mergedPolicyRules,
       acquisition: {
         selectedCandidateId: selectedParts.candidateId,
         selectedMethodId: selectedParts.methodId,

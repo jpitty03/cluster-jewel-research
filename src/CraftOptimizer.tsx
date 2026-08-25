@@ -4,6 +4,7 @@ import type {
   AcquisitionCandidateSummary,
   OptimizeCraftInput,
   OptimizeCraftResult,
+  OptimizerProgressSnapshot,
   PolicyExplanationRule,
   RecommendationStatus,
 } from '../crafting-engine/src/service/optimizerService.ts';
@@ -143,6 +144,195 @@ function age(value: number | undefined): string {
   return days < 1 ? `${(value / 3_600_000).toFixed(1)} hours` : `${days.toFixed(1)} days`;
 }
 
+interface SearchActivityVisualizerProps {
+  progress: OptimizerProgressSnapshot | null;
+  running: boolean;
+  onRetryDeeper?: () => void;
+  onCancel?: () => void;
+}
+
+function SearchActivityVisualizer({
+  progress,
+  running,
+  onRetryDeeper,
+  onCancel,
+}: SearchActivityVisualizerProps) {
+  if (!progress && !running) return null;
+
+  const phaseLabels: Record<OptimizerProgressSnapshot['phase'], string> = {
+    INITIALIZING: 'Initializing Search Space',
+    CLEAN_PROBE: 'Certifying Clean Base Route',
+    FRACTURE_PROBE: 'Probing Self-Fracture Portfolios',
+    FRACTURE_DEEPEN: 'Deepening Competitive Candidates',
+    DOWNSTREAM_SOLVE: 'Solving Downstream Transition Policy',
+    REFINEMENT: 'Refining Recommendation Proof',
+    COMPLETE: 'Search Complete',
+  };
+
+  const currentPhase = progress?.phase ?? (running ? 'INITIALIZING' : 'COMPLETE');
+  const elapsed = progress ? (progress.elapsedMs / 1000).toFixed(1) : '0.0';
+  const totalStates = progress?.totalStatesExpanded ?? 0;
+  const retainedStates = progress?.retainedStatesReused ?? 0;
+
+  return (
+    <section className="optimizer-card search-activity-card" aria-label="Search Activity">
+      <div className="search-activity-header">
+        <div className="search-activity-title-group">
+          <div className="search-status-pill-container">
+            <span className={`search-status-badge ${currentPhase.toLowerCase()} ${running ? 'pulse' : ''}`}>
+              {running && <span className="status-spinner" />}
+              {phaseLabels[currentPhase] || currentPhase}
+            </span>
+            {progress?.sessionReuseStatus === 'RESUMED' && (
+              <span className="session-reuse-chip resumed">
+                ⚡ Graph Resumed ({retainedStates.toLocaleString()} states)
+              </span>
+            )}
+            {progress?.sessionReuseStatus === 'INVALIDATED' && (
+              <span className="session-reuse-chip invalidated">
+                ↺ Graph Invalidated
+              </span>
+            )}
+          </div>
+          <p className="search-focus-text">
+            {progress?.currentFocus || (running ? 'Analyzing reachable state graphs…' : 'Optimization finished.')}
+          </p>
+        </div>
+
+        <div className="search-activity-actions">
+          {running && onCancel && (
+            <button type="button" className="secondary small-btn" onClick={onCancel}>
+              Cancel
+            </button>
+          )}
+          {!running && onRetryDeeper && (
+            <button type="button" className="secondary small-btn" onClick={onRetryDeeper}>
+              Retry Deeper
+            </button>
+          )}
+        </div>
+      </div>
+
+      {/* Metrics Row */}
+      <div className="search-metrics-bar">
+        <div className="search-metric-item">
+          <span className="metric-label">States Expanded</span>
+          <span className="metric-value">{totalStates.toLocaleString()}</span>
+        </div>
+        <div className="search-metric-item">
+          <span className="metric-label">Retained / Reused</span>
+          <span className="metric-value">{retainedStates.toLocaleString()}</span>
+        </div>
+        <div className="search-metric-item">
+          <span className="metric-label">Elapsed Time</span>
+          <span className="metric-value">{elapsed}s</span>
+        </div>
+        <div className="search-metric-item highlight">
+          <span className="metric-label">Best Executable (U)</span>
+          <span className="metric-value cost">
+            {progress?.bestExecutableUpperBoundChaos ? `${progress.bestExecutableUpperBoundChaos.toFixed(1)}c` : '—'}
+          </span>
+        </div>
+        <div className="search-metric-item">
+          <span className="metric-label">Active Bound (L)</span>
+          <span className="metric-value">
+            {progress?.bestUnresolvedLowerBoundChaos ? `${progress.bestUnresolvedLowerBoundChaos.toFixed(1)}c` : '—'}
+          </span>
+        </div>
+        <div className="search-metric-item">
+          <span className="metric-label">Optimality Gap</span>
+          <span className="metric-value">
+            {progress?.potentialGapChaos !== undefined ? `${progress.potentialGapChaos.toFixed(1)}c` : '—'}
+          </span>
+        </div>
+      </div>
+
+      {/* Macro Markov-Bellman Graph */}
+      <div className="macro-graph-container">
+        <h3 className="macro-graph-title">Macro Markov-Bellman Acquisition Graph</h3>
+        <div className="macro-graph-nodes-grid">
+          {progress?.candidates.map((cand) => {
+            const isWinner = cand.status === 'SELECTED';
+            const isDominated = cand.status === 'DOMINATED';
+            const isProbing = cand.status === 'PROBING' || cand.isActive;
+
+            return (
+              <div
+                key={cand.id}
+                className={`macro-candidate-node ${cand.kind} ${cand.status.toLowerCase()} ${isProbing ? 'active-probe' : ''} ${isWinner ? 'winner' : ''} ${isDominated ? 'dominated' : ''}`}
+              >
+                <div className="node-header">
+                  <span className="candidate-kind-badge">{cand.kind === 'clean' ? 'Clean Base' : 'Self-Fracture'}</span>
+                  <span className={`candidate-status-chip ${cand.status.toLowerCase()}`}>
+                    {cand.status.replace(/_/g, ' ')}
+                  </span>
+                </div>
+
+                <div className="node-body">
+                  <strong className="candidate-label">{cand.label}</strong>
+                  {cand.targetModName && (
+                    <span className="candidate-mod-badge">{cand.targetModName}</span>
+                  )}
+
+                  <div className="node-bounds-grid">
+                    <div className="bound-row">
+                      <span className="bound-tag">Lower Bound L:</span>
+                      <span className="bound-num">
+                        {cand.lowerBoundChaos !== undefined ? `${cand.lowerBoundChaos.toFixed(1)}c` : '—'}
+                      </span>
+                    </div>
+
+                    {cand.acquisitionUpperBoundChaos !== undefined && (
+                      <div className="bound-row">
+                        <span className="bound-tag">Acquisition U:</span>
+                        <span className="bound-num">{cand.acquisitionUpperBoundChaos.toFixed(1)}c</span>
+                      </div>
+                    )}
+
+                    {cand.downstreamUpperBoundChaos !== undefined && (
+                      <div className="bound-row">
+                        <span className="bound-tag">Downstream U:</span>
+                        <span className="bound-num">{cand.downstreamUpperBoundChaos.toFixed(1)}c</span>
+                      </div>
+                    )}
+
+                    <div className="bound-row full-cost">
+                      <span className="bound-tag">Full Route:</span>
+                      <span className="bound-num cost">
+                        {cand.fullRouteUpperBoundChaos !== undefined ? `${cand.fullRouteUpperBoundChaos.toFixed(1)}c` : '—'}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="node-footer">
+                  <span>{cand.statesExpanded.toLocaleString()} states</span>
+                  <span>{cand.elapsedMs > 0 ? `${(cand.elapsedMs / 1000).toFixed(1)}s` : ''}</span>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      </div>
+
+      {/* Live Milestones Log */}
+      {progress && progress.recentMilestones.length > 0 && (
+        <div className="search-milestones-feed">
+          <h4 className="milestones-title">Recent Milestones &amp; Graph Updates</h4>
+          <ul className="milestones-list">
+            {progress.recentMilestones.slice(-6).map((item, idx) => (
+              <li key={idx} className="milestone-entry">
+                <span className="milestone-bullet">›</span>
+                <span className="milestone-text">{item}</span>
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
+    </section>
+  );
+}
+
 function CraftOptimizer() {
   const baseTypes = useMemo(() => browserCraftingCatalog.getBaseTypes(), []);
   const initialBase = baseTypes[0] ?? 'Large Cluster Jewel';
@@ -176,6 +366,7 @@ function CraftOptimizer() {
   const [maxExpansionRounds, setMaxExpansionRounds] = useState(DEFAULT_BUDGET.maxExpansionRounds);
   const [searchIntent, setSearchIntent] = useState<SearchIntent>('RECOMMEND');
   const [result, setResult] = useState<OptimizeCraftResult | null>(null);
+  const [progress, setProgress] = useState<OptimizerProgressSnapshot | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [wallTimeExceeded, setWallTimeExceeded] = useState(false);
   const [running, setRunning] = useState(false);
@@ -319,10 +510,13 @@ function CraftOptimizer() {
     setError(null);
     setWallTimeExceeded(false);
     setResult(null);
+    setProgress(null);
     setRuntimeMs(null);
     const started = performance.now();
     try {
-      const nextResult = await workerRef.current.optimize(input);
+      const nextResult = await workerRef.current.optimize(input, (snapshot) => {
+        setProgress(snapshot);
+      });
       setResult(nextResult);
       setRuntimeMs(performance.now() - started);
     } catch (caught) {
@@ -586,7 +780,13 @@ function CraftOptimizer() {
           )}
         </div>
       )}
-      {running && <div className="status">The worker is exploring and valuing the candidate graph…</div>}
+
+      <SearchActivityVisualizer
+        progress={progress}
+        running={running}
+        onRetryDeeper={retryDeeper}
+        onCancel={cancel}
+      />
 
       {result && (
         <div className="optimizer-results">

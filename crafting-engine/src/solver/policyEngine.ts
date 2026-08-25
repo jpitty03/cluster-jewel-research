@@ -745,7 +745,7 @@ export class CraftingPolicyEngine {
           }
         }
         const junkProb = Math.max(0, 1 - winProb);
-        expContinuation = winProb * 0 + junkProb * ((4 / 3) * this.cA + (1 / 3) * vG1 + (1 / 6) * this.vS0 + 0.5 * this.vEnter);
+        expContinuation = junkProb * ((4 / 3) * this.cA + (1 / 3) * vG1 + (1 / 6) * this.vS0 + 0.5 * this.vEnter);
       }
 
       return {

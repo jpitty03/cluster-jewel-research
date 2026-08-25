@@ -98,6 +98,9 @@ export interface AcquisitionSynthesisRequest {
   harvestTags?: string[];
   allowResearchFallbackPrices?: boolean;
   searchIntent?: SearchIntent;
+  continuationSession?: import('./genericSearch.ts').GenericSearchContinuationSession;
+  persistentExpansion?: boolean;
+  onProgress?: (event: import('./genericSearch.ts').SearchProgressEvent) => void;
 }
 
 export interface AcquisitionPolicyRule {
@@ -348,6 +351,10 @@ export function synthesizeAcquisition(
       maxStates: budget.maxStates,
       maxWallTimeMs: budget.maxWallTimeMs,
       maxExpansionRounds: budget.maxExpansionRounds,
+      persistentExpansion: request.persistentExpansion ?? true,
+      continuationSession: request.continuationSession,
+      recommendationRefinementRounds: 1,
+      onProgress: request.onProgress,
     }
   );
 

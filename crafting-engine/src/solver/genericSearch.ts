@@ -468,6 +468,17 @@ export interface CanonicalGraphNode {
   >;
 }
 
+export interface SearchProgressEvent {
+  phase: string;
+  statesExpanded: number;
+  currentRound: number;
+  totalRounds: number;
+  elapsedMs: number;
+  incumbentUpperBoundChaos?: number;
+  unresolvedLowerBoundChaos?: number;
+  milestone?: string;
+}
+
 export interface GenericSearchOptions {
   allowResearchFallbackPrices?: boolean;
   maxStates?: number;
@@ -511,6 +522,8 @@ export interface GenericSearchOptions {
    * Normal product search uses the full canonical identity.
    */
   canonicalStateKey?: (state: ItemState, target: TargetDefinition) => string;
+  /** Optional telemetry observer. Observational only; never modifies search semantics or outcomes. */
+  onProgress?: (event: SearchProgressEvent) => void;
 }
 
 class StateExpansionQueue {
@@ -1945,6 +1958,21 @@ export class GenericSearchEngine {
             : intent === 'RECOMMEND'
               ? 'REFINEMENT'
               : intent,
+        });
+      }
+
+      if (effectiveOptions.onProgress) {
+        const bestIncumbent = incumbentHistory.at(-1)?.upperBoundChaos;
+        effectiveOptions.onProgress({
+          phase: `Round ${priorCompletedRounds + roundsExecuted}/${maxExpansionRounds}`,
+          statesExpanded: result.graphBuild.nodes.size,
+          currentRound: priorCompletedRounds + roundsExecuted,
+          totalRounds: maxExpansionRounds,
+          elapsedMs: Date.now() - startTime,
+          incumbentUpperBoundChaos: Number.isFinite(bestIncumbent) ? bestIncumbent : undefined,
+          milestone: hasCertifiedPolicy(result)
+            ? `Certified policy: ${result.totalExpectedCostChaos.toFixed(2)}c`
+            : undefined,
         });
       }
 

@@ -1,4 +1,8 @@
-import type { OptimizeCraftInput, OptimizeCraftResult } from '../../crafting-engine/src/service/optimizerService.ts';
+import type {
+  OptimizeCraftInput,
+  OptimizeCraftResult,
+  OptimizerProgressSnapshot,
+} from '../../crafting-engine/src/service/optimizerService.ts';
 import {
   getSearchRuntimeBudget,
   HOST_SEARCH_GUARD_GRACE_MS,
@@ -11,6 +15,7 @@ import {
 interface PendingRequest {
   resolve: (result: OptimizeCraftResult) => void;
   reject: (error: Error) => void;
+  onProgress?: (snapshot: OptimizerProgressSnapshot) => void;
   timeoutId: ReturnType<typeof setTimeout>;
 }
 
@@ -42,7 +47,10 @@ export class OptimizerWorkerClient {
     this.worker = this.createWorker();
   }
 
-  optimize(input: OptimizeCraftInput): Promise<OptimizeCraftResult> {
+  optimize(
+    input: OptimizeCraftInput,
+    onProgress?: (snapshot: OptimizerProgressSnapshot) => void
+  ): Promise<OptimizeCraftResult> {
     const requestId = `optimizer_${this.nextRequestId++}`;
     const request: OptimizerWorkerRequest = { type: 'OPTIMIZE', requestId, input };
     const runtimeBudget = getSearchRuntimeBudget(input.searchBudget?.maxWallTimeMs);
@@ -52,7 +60,7 @@ export class OptimizerWorkerClient {
         if (!this.pending.has(requestId)) return;
         this.replaceWorker(new SearchWallTimeExceededError(budgetMs));
       }, runtimeBudget.hostGuardDeadlineMs);
-      this.pending.set(requestId, { resolve, reject, timeoutId });
+      this.pending.set(requestId, { resolve, reject, onProgress, timeoutId });
       this.worker.postMessage(request);
     });
   }
@@ -79,6 +87,10 @@ export class OptimizerWorkerClient {
       if (!isOptimizerWorkerResponse(event.data)) return;
       const pending = this.pending.get(event.data.requestId);
       if (!pending) return;
+      if (event.data.type === 'PROGRESS') {
+        pending.onProgress?.(event.data.progress);
+        return;
+      }
       this.pending.delete(event.data.requestId);
       clearTimeout(pending.timeoutId);
       if (event.data.type === 'RESULT') pending.resolve(event.data.result);

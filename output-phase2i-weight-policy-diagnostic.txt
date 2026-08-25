@@ -57,7 +57,7 @@ W5 SEEDED MONTE CARLO SANITY
 W6 REAL HERALD TARGET-ORDER EVIDENCE
   target weights={"Empowered Envoy":1882,"Endbringer":353}
   eligible prefix weight totals={"after_Empowered Envoy":12118,"after_Endbringer":13647,"clean":14000}
-  policy health: U=62.518070c; proper=true; absorption=1.000000000000; Bellman=true; occupancy=true; reconciled=true; states=5000; elapsed=6010ms
+  policy health: U=62.518070c; proper=true; absorption=1.000000000000; Bellman=true; occupancy=true; reconciled=true; states=5000; elapsed=5204ms
   target-order preference={"kind":"NONE","targetModIds":[],"strength":"NONE","evidence":"No complete identity-specific preservation opposition: Empowered Envoy=15/15, Endbringer=15/15."}
   behavior Empowered Envoy: {"augmentation_orb":{"states":1,"visits":7.496868433601341},"regal_orb":{"states":14,"visits":29.987473734405263}}
   Empowered Envoy representative Magic: augmentation_orb; V=52.470715; candidates=augmentation_orb[immediate=0.030000, continuation=52.440715, Q=52.470715, status=RESOLVED] | regal_orb[immediate=0.200000, continuation=52.305591, Q=52.505591, status=RESOLVED] | alteration_orb[immediate=0.110000, continuation=52.488070, Q=52.598070, status=RESOLVED] | scouring_orb[immediate=0.500000, continuation=52.518070, Q=53.018070, status=RESOLVED] | restart_reacquire[immediate=10.000000, continuation=52.518070, Q=62.518070, status=RESOLVED]
