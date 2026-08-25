@@ -11,6 +11,7 @@ import { runSmokeScenario } from './scenarios/smokeScenario.ts';
 import { runMethodPortfolioScenario } from './scenarios/methodPortfolioScenario.ts';
 import { runMultiObjectiveScenario } from './scenarios/multiObjectiveScenario.ts';
 import { runResponsiveScenario } from './scenarios/responsiveScenario.ts';
+import { runAnimationScenario } from './scenarios/animationScenario.ts';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -52,6 +53,11 @@ async function main() {
   if (requestedScenario === 'all' || requestedScenario === 'responsive' || requestedScenario === 'accessibility') {
     console.log('Running Suite: Responsive & Accessibility Scenario...');
     results.push(await runResponsiveScenario(appUrl));
+  }
+
+  if (requestedScenario === 'all' || requestedScenario === 'animation' || requestedScenario === 'constellation') {
+    console.log('Running Suite: Markov Constellation & Animation Scenario...');
+    results.push(await runAnimationScenario(appUrl));
   }
 
   // Generate Report

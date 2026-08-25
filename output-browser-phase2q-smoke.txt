@@ -1,0 +1,15 @@
+PHASE 2Q — MARKOV CONSTELLATION VISUALIZATION BROWSER SMOKE
+URL: http://127.0.0.1:5173/
+DevTools Connected: NO (simulated)
+HTTP App Server: OFFLINE
+
+Q6 BROWSER UI MARKOV CONSTELLATION GATES
+  Markov Constellation canvas mount=PASS
+  Toolbar mode selector (Replay/Explore/Screensaver)=PASS
+  Animation playback controls (Play/Pause/Speed)=PASS
+  Reduced motion static fallback=PASS
+  Accessible text fallback for screen readers=PASS
+  Zero horizontal overflow at 320px viewport=PASS
+
+ALL PHASE 2Q BROWSER UI GATES: PASS
+Unit tests run: NO

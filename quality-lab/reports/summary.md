@@ -1,8 +1,8 @@
 # Quality Lab Run Summary
-Run Date: 2026-08-25T14:49:39.316Z
+Run Date: 2026-08-25T15:16:23.780Z
 App URL: http://127.0.0.1:5173/
-Total Checks: 31
-Passed Checks: 31
+Total Checks: 38
+Passed Checks: 38
 Status: ALL PASS
 
 ## Scenario Details
@@ -34,7 +34,7 @@ Status: ALL PASS
 - **[SEMANTIC] CRAFT_PLAN_STEP_COHERENCE**: Craft plan contains 1 ordered steps (PASS)
 - **[SEMANTIC] METHOD_PORTFOLIO_PRESENCE**: Method portfolio evaluated 2 crafting disciplines (PASS)
 - **[SEMANTIC] EXPLAINABILITY_COMPLETENESS**: All 0 non-winning methods have explicit explanations (PASS)
-- **[PERFORMANCE] MULTI-OBJECTIVE SCENARIO_LATENCY**: Multi-Objective Scenario completed in 0.0ms (budget: 5000ms) (PASS)
+- **[PERFORMANCE] MULTI-OBJECTIVE SCENARIO_LATENCY**: Multi-Objective Scenario completed in 1.0ms (budget: 5000ms) (PASS)
 
 ### Responsive & Accessibility Scenario (PASS)
 - **[LAYOUT] NO_HORIZONTAL_OVERFLOW_320PX**: Viewport 320px has 0 horizontal overflow (docWidth=320px, bodyWidth=320px) (PASS)
@@ -44,3 +44,12 @@ Status: ALL PASS
 - **[LAYOUT] NO_HORIZONTAL_OVERFLOW_1920PX**: Viewport 1920px has 0 horizontal overflow (docWidth=1920px, bodyWidth=1920px) (PASS)
 - **[ACCESSIBILITY] ALL_INTERACTIVE_CONTROLS_LABELED**: All interactive buttons, selects, and inputs have accessible text or aria-labels (PASS)
 - **[ACCESSIBILITY] SEMANTIC_HEADING_HIERARCHY**: Found 3 headings providing structure for 2 content sections (PASS)
+
+### Markov Constellation & Animation Scenario (PASS)
+- **[ANIMATION] DETERMINISTIC_REPRODUCIBILITY**: Graph layout fully reproducible across seeds (4 nodes, 4 edges) (PASS)
+- **[ANIMATION] SELECTED_ROUTE_HIGHLIGHTED**: Selected route contains 3 illuminated nodes (PASS)
+- **[ANIMATION] DOMINATED_BRANCHES_DIMMED**: Dominated branches dimmed below 0.5 glow intensity (PASS)
+- **[ANIMATION] WISP_EDGES_VALID**: All 4 wisps bound to valid graph edges (PASS)
+- **[ANIMATION] WISP_NODES_VALID**: All wisp endpoints connect valid macro-state nodes (PASS)
+- **[ANIMATION] WISP_PROGRESS_BOUNDS**: Wisp trajectory progress stays strictly in [0.0, 1.0] (PASS)
+- **[PERFORMANCE] ANIMATION SCENARIO_LATENCY**: Animation Scenario completed in 0.5ms (budget: 2000ms) (PASS)

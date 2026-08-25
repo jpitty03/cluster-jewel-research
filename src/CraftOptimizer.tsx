@@ -26,6 +26,8 @@ import {
   SearchWallTimeExceededError,
 } from './crafting/optimizerWorkerClient.ts';
 import { SearchableModifierSelect } from './SearchableModifierSelect.tsx';
+import { buildVisualizationGraph } from '../crafting-engine/src/domain/VisualizationGraph.ts';
+import { MarkovConstellation } from './components/MarkovConstellation.tsx';
 
 const DEFAULT_ITEM_LEVEL = 84;
 const DEFAULT_BUDGET = { maxStates: 5000, maxWallTimeMs: 30_000, maxExpansionRounds: 3 };
@@ -747,6 +749,15 @@ function CraftOptimizer() {
   ) ?? [];
   const selectedSynthesis = selectedMethod?.executable ? selectedAcquisition?.synthesis : undefined;
 
+  const constellationGraph = useMemo(() => {
+    if (!result?.craftPlan) return null;
+    return buildVisualizationGraph(
+      result.craftPlan,
+      result.methodPortfolio ?? [],
+      result.recommended ?? undefined
+    );
+  }, [result]);
+
   return (
     <main className="optimizer-page">
       <p className="subtitle">
@@ -1296,6 +1307,12 @@ function CraftOptimizer() {
                   );
                 })}
               </div>
+            </section>
+          )}
+
+          {constellationGraph && (
+            <section className="optimizer-card constellation-card" aria-label="Markov Policy Constellation">
+              <MarkovConstellation graph={constellationGraph} />
             </section>
           )}
 
