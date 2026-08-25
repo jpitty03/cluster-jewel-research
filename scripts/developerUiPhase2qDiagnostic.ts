@@ -1,26 +1,18 @@
+import assert from 'node:assert/strict';
 import { writeFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { ClusterModRepository } from '../crafting-engine/src/data/loadClusterMods.ts';
+import { buildVisualizationGraph } from '../crafting-engine/src/domain/VisualizationGraph.ts';
 import {
   OptimizerService,
   type OptimizeCraftInput,
 } from '../crafting-engine/src/service/optimizerService.ts';
-import {
-  buildVisualizationGraph,
-  type VisualizationWisp,
-} from '../crafting-engine/src/domain/VisualizationGraph.ts';
-import { AnimationOracle } from '../quality-lab/src/oracles/animationOracle.ts';
 
 const outputPath = fileURLToPath(new URL('../output-phase2q-constellation-diagnostic.txt', import.meta.url));
 const repository = new ClusterModRepository();
 const service = new OptimizerService(repository);
+const lines: string[] = ['PHASE 2Q — CONSTELLATION SERIALIZED-GRAPH REGRESSION (VISUAL CERTIFICATION SUPERSEDED BY PHASE 2T PLAYWRIGHT)'];
 
-const lines: string[] = ['PHASE 2Q — MARKOV CONSTELLATION VISUALIZATION DIAGNOSTIC'];
-
-// ==========================================
-// Q1: Graph Construction from Real Optimizer Results
-// ==========================================
-lines.push('\n--- Q1: Graph Construction from Real Optimizer Results ---');
 const input: OptimizeCraftInput = {
   baseType: 'Large Cluster Jewel',
   clusterType: '10% increased Attack Damage',
@@ -33,84 +25,49 @@ const input: OptimizeCraftInput = {
     ],
     requiredRarity: 'rare',
   },
-  searchBudget: { maxStates: 2000, maxWallTimeMs: 15000, maxExpansionRounds: 2 },
+  searchBudget: { maxStates: 2_000, maxWallTimeMs: 15_000, maxExpansionRounds: 2 },
   allowResearchFallbackPrices: true,
 };
 
 const result = service.optimize(input);
-const graph = buildVisualizationGraph(
+const graphA = buildVisualizationGraph(
   result.craftPlan,
   result.methodPortfolio ?? [],
-  result.recommended ?? undefined
+  result.recommended ?? undefined,
+  { seed: 'phase2t_graph_regression' },
+);
+const graphB = buildVisualizationGraph(
+  result.craftPlan,
+  result.methodPortfolio ?? [],
+  result.recommended ?? undefined,
+  { seed: 'phase2t_graph_regression' },
 );
 
-lines.push(`Constructed Graph: ${graph.nodes.length} nodes, ${graph.edges.length} edges, ${graph.events.length} events`);
-lines.push(`Selected Route Nodes: ${graph.selectedRouteNodeIds.join(', ')}`);
-
-if (graph.nodes.length < 5 || graph.edges.length < 4) {
-  throw new Error('Q1 Failed: Incomplete macro-state graph constructed');
+lines.push('\nQ1 — Graph topology from a real optimizer result');
+assert(graphA.nodes.length >= 5 && graphA.edges.length >= 4);
+const nodeIds = new Set(graphA.nodes.map((node) => node.id));
+assert.equal(nodeIds.size, graphA.nodes.length);
+for (const edge of graphA.edges) {
+  assert(nodeIds.has(edge.source) && nodeIds.has(edge.target));
+  assert(edge.probability >= 0 && edge.probability <= 1);
 }
-lines.push('Q1 PASS: Markov Constellation graph successfully derived from optimizer craft plan.');
+lines.push(`PASS: ${graphA.nodes.length} unique nodes and ${graphA.edges.length} real endpoint-valid edges.`);
 
-// ==========================================
-// Q2: Wisp Topology & Trajectory Bounds
-// ==========================================
-lines.push('\n--- Q2: Wisp Topology & Trajectory Bounds ---');
-const simulatedWisps: VisualizationWisp[] = graph.edges.map((edge, i) => ({
-  id: `wisp_${i}`,
-  edgeId: edge.id,
-  sourceNodeId: edge.source,
-  targetNodeId: edge.target,
-  progress: (i * 0.33) % 1.0,
-  speed: 0.001,
-  size: 3,
-  opacity: 0.9,
-  color: '#38bdf8',
-}));
+lines.push('\nQ2 — Selected-route and accessibility serialization');
+assert(graphA.selectedRouteNodeIds.length > 0);
+assert(graphA.selectedRouteNodeIds.every((id) => nodeIds.has(id)));
+assert(graphA.nodes.every((node) => node.label.trim().length > 0));
+lines.push(`PASS: ${graphA.selectedRouteNodeIds.length} selected-route nodes and every node has a discoverable label.`);
 
-const topologyChecks = AnimationOracle.verifyWispTopology(graph, simulatedWisps);
-for (const check of topologyChecks) {
-  lines.push(`  [${check.passed ? 'PASS' : 'FAIL'}] ${check.gate}: ${check.details}`);
-  if (!check.passed) throw new Error(`Q2 Failed: ${check.gate}`);
-}
-lines.push('Q2 PASS: All particle wisps bound to valid edges with bounded trajectories.');
+lines.push('\nQ3 — Deterministic layout seed');
+assert.deepEqual(graphA, graphB);
+lines.push('PASS: identical optimizer input and seed serialize identical graph nodes, edges, events, and bounds.');
 
-// ==========================================
-// Q3: Visual Hierarchy & Dimming Invariant
-// ==========================================
-lines.push('\n--- Q3: Visual Hierarchy & Dimming Invariant ---');
-const hierarchyChecks = AnimationOracle.verifyVisualHierarchy(graph);
-for (const check of hierarchyChecks) {
-  lines.push(`  [${check.passed ? 'PASS' : 'FAIL'}] ${check.gate}: ${check.details}`);
-  if (!check.passed) throw new Error(`Q3 Failed: ${check.gate}`);
-}
-lines.push('Q3 PASS: Selected policy route prominently illuminated and dominated branches dimmed.');
+lines.push('\nQ4 — Certification boundary');
+lines.push('PASS: this diagnostic covers serialized graph invariants only; real frames, controls, reduced motion, fullscreen, FPS, and memory are gated by quality-lab/src/runner.ts.');
+lines.push('\n=== ALL PHASE 2Q SERIALIZED-GRAPH REGRESSIONS PASS ===');
+lines.push('Unit tests run: NO');
 
-// ==========================================
-// Q4: Deterministic Clock & Seed Reproducibility
-// ==========================================
-lines.push('\n--- Q4: Deterministic Clock & Seed Reproducibility ---');
-const graphA = buildVisualizationGraph(result.craftPlan, result.methodPortfolio ?? [], result.recommended ?? undefined, { seed: 'fixed_seed_42' });
-const graphB = buildVisualizationGraph(result.craftPlan, result.methodPortfolio ?? [], result.recommended ?? undefined, { seed: 'fixed_seed_42' });
-
-const determinismChecks = AnimationOracle.verifyDeterminism(graphA, graphB);
-for (const check of determinismChecks) {
-  lines.push(`  [${check.passed ? 'PASS' : 'FAIL'}] ${check.gate}: ${check.details}`);
-  if (!check.passed) throw new Error(`Q4 Failed: ${check.gate}`);
-}
-lines.push('Q4 PASS: Deterministic seed produces 100% mathematically identical visual layouts.');
-
-// ==========================================
-// Q5: Accessibility & Reduced Motion
-// ==========================================
-lines.push('\n--- Q5: Accessibility & Reduced Motion ---');
-const hasLabels = graph.nodes.every((n) => n.label && n.label.length > 0);
-lines.push(`All nodes have human-readable text labels: ${hasLabels ? 'YES' : 'NO'}`);
-if (!hasLabels) throw new Error('Q5 Failed: Missing accessible labels on nodes');
-lines.push('Q5 PASS: Graph contains full accessible semantics and supports static rendering.');
-
-lines.push('\n=== ALL PHASE 2Q ACCEPTANCE GATES PASS ===\n');
-
-const fullOutput = lines.join('\n');
-console.log(fullOutput);
-writeFileSync(outputPath, fullOutput, 'utf8');
+const output = `${lines.join('\n')}\n`;
+writeFileSync(outputPath, output, 'utf8');
+console.log(output);

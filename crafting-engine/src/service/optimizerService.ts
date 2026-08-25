@@ -61,16 +61,24 @@ import {
 import { getSearchRuntimeBudget, type SearchIntent } from './searchRuntime.ts';
 import type {
   MethodFamilyKind,
+  MethodFamilyEvaluationSource,
+  MethodFamilyStageStatus,
   MethodFamilyStatus,
   MethodFamilySpec,
   MethodFamilyResult,
 } from '../domain/MethodFamily.ts';
+import {
+  HARVEST_CRAFT_DEFINITIONS,
+  type LifeforceType,
+} from '../rules/harvestCrafts.ts';
 
 export type {
   ActionCostVector,
   ActionEffortProfile,
   EffortConfidence,
   MethodFamilyKind,
+  MethodFamilyEvaluationSource,
+  MethodFamilyStageStatus,
   MethodFamilyStatus,
   MethodFamilySpec,
   MethodFamilyResult,
@@ -143,7 +151,44 @@ export interface OptimizeCraftInput {
   searchIntent?: SearchIntent;
   objective?: OptimizationObjectiveSpec;
   effortProfile?: Partial<ActionEffortProfile>;
+  /** Independently solve constrained method families after the open recommendation. */
+  compareMethodFamilies?: boolean;
 }
+
+export type ResultMetricScope =
+  | 'ACQUISITION'
+  | 'DOWNSTREAM'
+  | 'FULL_ROUTE'
+  | 'PORTFOLIO_TOTAL_WORK'
+  | 'SELECTED_POLICY_GRAPH'
+  | 'METHOD_FAMILY_GRAPH';
+
+export interface ScopedExpectedActionUsage extends ExpectedActionUsage {
+  scope: 'ACQUISITION' | 'DOWNSTREAM' | 'FULL_ROUTE';
+  additive: true;
+}
+
+export interface FullRouteUsageSummary {
+  acquisitionActions: ScopedExpectedActionUsage[];
+  downstreamActions: ScopedExpectedActionUsage[];
+  combinedActions: ScopedExpectedActionUsage[];
+  combinedCurrencies: Record<string, number>;
+  acquisitionCostChaos: number;
+  downstreamCostChaos: number;
+  fullRouteCostChaos: number;
+  reconciliationDifferenceChaos: number;
+}
+
+export type HarvestLifecycleStatus =
+  | 'NOT_ELIGIBLE'
+  | 'PRICE_UNAVAILABLE_OR_DISABLED'
+  | 'ENABLED_NOT_SEARCHED'
+  | 'SEARCHING'
+  | 'ENABLED_UNRESOLVED'
+  | 'RESOLVED_MORE_EXPENSIVE'
+  | 'RESOLVED_FASTER_BUT_OVER_CEILING'
+  | 'SELECTED'
+  | 'DOMINATED_BY_PROOF';
 
 export type ObjectiveProofStatus =
   | 'UNCONSTRAINED_RESOLVED'
@@ -158,16 +203,22 @@ export interface HarvestComparisonSummary {
   consideredHarvestActions: Array<{ actionId: string; actionName: string; tag: string }>;
   resolvedHarvestRoute?: RouteSummary;
   conventionalRoute?: RouteSummary;
+  harvestActionId?: string;
+  harvestActionName?: string;
+  harvestTag?: string;
+  lifeforceType?: LifeforceType;
+  lifeforcePerApplication?: number;
+  expectedHarvestApplications?: number;
+  expectedLifeforce?: number;
+  harvestNonLifeforceCostChaos?: number;
+  harvestTotalAtCurrentPriceChaos?: number;
+  currentLifeforceUnitPriceChaos?: number;
   costDifferenceChaos?: number;
   actionsSaved?: number;
   timeSavedMs?: number;
   lifeforceCrossoverPriceChaosPerUnit?: number;
-  status:
-    | 'HARVEST_SELECTED'
-    | 'HARVEST_MORE_EXPENSIVE'
-    | 'HARVEST_NOT_ELIGIBLE'
-    | 'HARVEST_DISABLED'
-    | 'HARVEST_NO_RESOLVED_POLICY';
+  status: HarvestLifecycleStatus;
+  actionEvidenceObserved: boolean;
   explanation: string;
 }
 
@@ -268,6 +319,10 @@ export interface AcquisitionSynthesisSummary {
   expectedRestarts?: number;
   expectedRestartCostChaos?: number;
   expectedFracturingOrbs?: number;
+  expectedPhysicalActions?: number;
+  expectedPreparationPhysicalActions?: number;
+  estimatedManualTimeMs?: number;
+  expectedPreparationManualTimeMs?: number;
   expectedActionUsage?: ExpectedActionUsage[];
   wrongFractureRecovery?: AcquisitionSynthesisResult['wrongFractureRecovery'];
   proof?: AcquisitionSynthesisResult['proof'];
@@ -481,6 +536,10 @@ export interface PolicyRefinementSummary {
     | 'NO_EXECUTABLE_POLICY';
   firstCertifiedUpperBoundChaos?: number;
   finalUpperBoundChaos?: number;
+  firstCertifiedDownstreamU?: number;
+  finalDownstreamU?: number;
+  firstCertifiedFullRouteU?: number;
+  finalFullRouteU?: number;
   improvementChaos?: number;
   improvementFraction?: number;
   selectedStartLowerBoundChaos?: number;
@@ -593,6 +652,9 @@ export interface OptimizationSearchSummary {
   hostGuardTriggered: boolean;
   timeToFirstCompletedRoundMs?: number;
   timeToFirstCertifiedPolicyMs?: number;
+  timeToFirstUsefulExecutableRecommendationMs?: number;
+  timeToFirstAcquisitionSafeRecommendationMs?: number;
+  /** @deprecated Use timeToFirstUsefulExecutableRecommendationMs. */
   timeToFirstUsefulRecommendationMs?: number;
   expansionMode: 'REBUILT_EACH_ROUND' | 'PERSISTENT_EXTENDED';
   repeatedStatesExpanded: number;
@@ -621,6 +683,14 @@ export interface OptimizationSearchSummary {
   stageTimingMs: GenericSearchResult['stageTiming'] & { serializationMs: number };
   sessionReuse: SearchSessionReuseSummary;
   totalElapsedMs: number;
+  workScopes: {
+    portfolioTotalStatesExpanded: number;
+    portfolioRetainedStates: number;
+    selectedPolicyGraphStates: number;
+    acquisitionSynthesisStates: number;
+    methodFamilyStates: number;
+    proofBoundStates: number;
+  };
   harvestActionScope: {
     mode: 'DISABLED' | 'TARGET_INFERRED' | 'EXPLICIT';
     tags: string[];
@@ -648,6 +718,7 @@ export interface OptimizeCraftResult {
   alternatives: RouteSummary[];
   expectedCurrencies: Record<string, number | null>;
   expectedActionUsage: ExpectedActionUsage[];
+  fullRouteUsage: FullRouteUsageSummary;
   policyExplanation: PolicyExplanationRule[];
   craftPlan: CraftPlanSummary;
   policyRules: PolicyRule[];
@@ -682,12 +753,164 @@ export interface OptimizeCraftResult {
   objective?: OptimizationObjectiveSpec;
   costCeilingChaos?: number;
   methodPortfolio?: MethodFamilyResult[];
+  presentation: CanonicalResultPresentation;
   warningDetails: OptimizationWarning[];
   warnings: string[];
 }
 
+export interface CanonicalResultPresentation {
+  schemaVersion: '2T.1';
+  releaseStatus: 'RELEASE_CANDIDATE_BROWSER_VERIFIED';
+  selectedRouteName?: string;
+  selectedRouteStatus: RecommendationStatus;
+  proofLabel: string;
+  pricingLabel: 'CURRENT_PRICING' | 'RESEARCH_ESTIMATE_STALE_PRICING';
+  harvestLifecycle: HarvestLifecycleStatus;
+  fullRouteCostChaos?: number;
+  routeScopes: {
+    acquisitionU?: number;
+    downstreamU?: number;
+    fullRouteU?: number;
+  };
+  timingScopes: {
+    firstCompletedRoundMs?: number;
+    firstCertifiedDownstreamPolicyMs?: number;
+    firstUsefulExecutableFullRouteMs?: number;
+    firstAcquisitionSafeRecommendationMs?: number;
+  };
+  workScopes: OptimizationSearchSummary['workScopes'];
+  methodFamilyCounts: Record<MethodFamilyStatus, number>;
+}
+
 function finiteOrNull(value: number): number | null {
   return Number.isFinite(value) ? value : null;
+}
+
+const CURRENCY_BY_ACTION_ID: Readonly<Record<string, string>> = {
+  transmutation_orb: 'transmutation',
+  alteration_orb: 'alteration',
+  augmentation_orb: 'augmentation',
+  regal_orb: 'regal',
+  scouring_orb: 'scour',
+  annulment_orb: 'annul',
+  exalted_orb: 'exalt',
+  fracturing_orb: 'fracturing',
+  restart_reacquire: 'clean_base_reacquisition',
+  clean_base_initial: 'clean_base',
+};
+
+function mergeActionUsage(
+  usages: readonly ScopedExpectedActionUsage[],
+  scope: ScopedExpectedActionUsage['scope']
+): ScopedExpectedActionUsage[] {
+  const merged = new Map<string, ScopedExpectedActionUsage>();
+  for (const usage of usages) {
+    const existing = merged.get(usage.actionId);
+    if (existing) {
+      existing.expectedCount += usage.expectedCount;
+      existing.expectedCostChaos += usage.expectedCostChaos;
+      continue;
+    }
+    merged.set(usage.actionId, { ...usage, scope, additive: true });
+  }
+  return [...merged.values()].sort((left, right) =>
+    right.expectedCostChaos - left.expectedCostChaos ||
+    left.actionId.localeCompare(right.actionId)
+  );
+}
+
+function currencyVectorFromActions(
+  usages: readonly ScopedExpectedActionUsage[]
+): Record<string, number> {
+  const totals: Record<string, number> = {};
+  const harvestByActionId = new Map(
+    Object.values(HARVEST_CRAFT_DEFINITIONS).map((definition) => [definition.craftId, definition])
+  );
+  for (const usage of usages) {
+    const harvest = harvestByActionId.get(usage.actionId);
+    if (harvest) {
+      totals[harvest.lifeforceType] = (totals[harvest.lifeforceType] ?? 0) +
+        usage.expectedCount * harvest.lifeforceAmount;
+      continue;
+    }
+    const currency = CURRENCY_BY_ACTION_ID[usage.actionId];
+    if (currency) totals[currency] = (totals[currency] ?? 0) + usage.expectedCount;
+  }
+  return Object.fromEntries(
+    Object.entries(totals)
+      .filter(([, quantity]) => Number.isFinite(quantity) && quantity > 0)
+      .sort(([left], [right]) => left.localeCompare(right))
+  );
+}
+
+function buildFullRouteUsageSummary(options: {
+  recommended: RouteSummary | null;
+  cleanBaseCostChaos: number;
+  selectedSynthesis?: AcquisitionSynthesisSummary;
+  downstreamActionUsage: readonly ExpectedActionUsage[];
+}): FullRouteUsageSummary {
+  if (!options.recommended) {
+    return {
+      acquisitionActions: [],
+      downstreamActions: [],
+      combinedActions: [],
+      combinedCurrencies: {},
+      acquisitionCostChaos: 0,
+      downstreamCostChaos: 0,
+      fullRouteCostChaos: 0,
+      reconciliationDifferenceChaos: 0,
+    };
+  }
+
+  const acquisitionActions: ScopedExpectedActionUsage[] = [{
+    actionId: 'clean_base_initial',
+    actionName: 'Initial clean cluster jewel base',
+    expectedCount: 1,
+    expectedCostChaos: options.cleanBaseCostChaos,
+    scope: 'ACQUISITION',
+    additive: true,
+  }];
+  if (options.selectedSynthesis) {
+    acquisitionActions.push(...(options.selectedSynthesis.expectedActionUsage ?? []).map((usage) => ({
+      ...usage,
+      scope: 'ACQUISITION' as const,
+      additive: true as const,
+    })));
+  }
+  const downstreamActions: ScopedExpectedActionUsage[] = options.downstreamActionUsage
+    .filter((usage) => !usage.actionId.startsWith('acquire_'))
+    .map((usage) => ({
+      ...usage,
+      scope: 'DOWNSTREAM' as const,
+      additive: true as const,
+    }));
+  const normalizedAcquisition = mergeActionUsage(acquisitionActions, 'ACQUISITION');
+  const normalizedDownstream = mergeActionUsage(downstreamActions, 'DOWNSTREAM');
+  const combinedActions = mergeActionUsage(
+    [...normalizedAcquisition, ...normalizedDownstream],
+    'FULL_ROUTE'
+  );
+  const acquisitionCostChaos = normalizedAcquisition.reduce(
+    (sum, usage) => sum + usage.expectedCostChaos,
+    0
+  );
+  const downstreamCostChaos = normalizedDownstream.reduce(
+    (sum, usage) => sum + usage.expectedCostChaos,
+    0
+  );
+  const fullRouteCostChaos = acquisitionCostChaos + downstreamCostChaos;
+  return {
+    acquisitionActions: normalizedAcquisition,
+    downstreamActions: normalizedDownstream,
+    combinedActions,
+    combinedCurrencies: currencyVectorFromActions(combinedActions),
+    acquisitionCostChaos,
+    downstreamCostChaos,
+    fullRouteCostChaos,
+    reconciliationDifferenceChaos: Math.abs(
+      fullRouteCostChaos - (options.recommended.expectedTotalCostChaos ?? fullRouteCostChaos)
+    ),
+  };
 }
 
 function serializeCandidate(candidate: CandidateActionQValue): SerializableCandidateQValue {
@@ -763,7 +986,7 @@ function computeParetoAlternatives(
 
     let tradeoffSummary = '';
     if (isCheapest && isFewestActions && isFastest) {
-      tradeoffSummary = `Strictly optimal: ${cost.toFixed(1)}c (${Math.round(act)} actions, ${(time / 1000).toFixed(1)}s)`;
+      tradeoffSummary = `Dominates the currently resolved alternatives: ${cost.toFixed(1)}c (${Math.round(act)} actions, ${(time / 1000).toFixed(1)}s)`;
     } else if (isCheapest) {
       tradeoffSummary = `Cheapest: ${cost.toFixed(1)}c (${Math.round(act)} actions, ${(time / 1000).toFixed(1)}s)`;
     } else if (isFewestActions) {
@@ -787,310 +1010,737 @@ function computeParetoAlternatives(
   });
 }
 
-function buildHarvestComparisonSummary(
-  enabledHarvestCrafts: Array<{ actionId: string; actionName: string; tag: string }>,
-  harvestTags: string[],
-  routes: RouteSummary[],
-  priceBook: PriceBook,
-  recommended: RouteSummary | null,
-  cleanBaseCost: number
-): HarvestComparisonSummary {
-  const harvestEligible = enabledHarvestCrafts.length > 0;
-  const harvestConsidered = harvestTags.length > 0;
-  if (!harvestConsidered || !harvestEligible) {
-    return {
-      harvestConsidered,
-      harvestEligible,
-      consideredHarvestActions: enabledHarvestCrafts,
-      status: harvestEligible ? 'HARVEST_DISABLED' : 'HARVEST_NOT_ELIGIBLE',
-      explanation: harvestEligible
-        ? 'Harvest crafts were not enabled for this optimization.'
-        : 'No matching Harvest crafts are available for the target affixes on this cluster jewel base.',
-    };
-  }
+const CONVENTIONAL_METHOD_ACTION_IDS = [
+  'transmutation_orb',
+  'alteration_orb',
+  'augmentation_orb',
+  'regal_orb',
+  'scouring_orb',
+  'annulment_orb',
+  'exalted_orb',
+] as const;
 
-  const resolved = routes.filter((r) => r.status === 'RESOLVED' && r.expectedTotalCostChaos !== null);
-  const resolvedHarvestRoute = resolved.find((r) => {
-    const name = (r.name || '').toLowerCase();
-    return name.includes('reforge') || name.includes('harvest');
-  });
-  const conventionalRoute = resolved.find((r) => {
-    const name = (r.name || '').toLowerCase();
-    return !name.includes('reforge') && !name.includes('harvest');
-  });
+interface MethodPortfolioBuildContext {
+  pool: ModPool;
+  priceBook: PriceBook;
+  input: OptimizeCraftInput;
+  starts: StartingStateCandidate[];
+  cleanStart: StartingStateCandidate;
+  cleanEvidence: { costChaos: number; confidence: PriceConfidence; provenance: string };
+  recommended: RouteSummary | null;
+  recommendationStatus: RecommendationStatus;
+  craftPlan: CraftPlanSummary;
+  openResult: GenericSearchResult;
+  fastCleanResult?: GenericSearchResult;
+  fastCleanRoute?: RouteSummary;
+  synthesisSummaries: Map<number, AcquisitionSynthesisSummary>;
+  acquisition: AcquisitionSummary;
+  enabledHarvestCrafts: Array<{ actionId: string; actionName: string; tag: string }>;
+  session: OptimizerSearchSessionRecord;
+  searchIdentityHash: string;
+  deadlineMs: number;
+}
 
-  if (!resolvedHarvestRoute && !conventionalRoute) {
-    return {
-      harvestConsidered: true,
-      harvestEligible: true,
-      consideredHarvestActions: enabledHarvestCrafts,
-      status: 'HARVEST_NO_RESOLVED_POLICY',
-      explanation: 'No fully resolved Harvest or conventional policy was found within budget.',
-    };
-  }
-
-  if (resolvedHarvestRoute && conventionalRoute) {
-    const harvestCost = resolvedHarvestRoute.expectedTotalCostChaos!;
-    const convCost = conventionalRoute.expectedTotalCostChaos!;
-    const costDifferenceChaos = harvestCost - convCost;
-    const actionsSaved = (conventionalRoute.metrics?.expectedPhysicalActions ?? 0) - (resolvedHarvestRoute.metrics?.expectedPhysicalActions ?? 0);
-    const timeSavedMs = (conventionalRoute.metrics?.estimatedManualTimeMs ?? 0) - (resolvedHarvestRoute.metrics?.estimatedManualTimeMs ?? 0);
-
-    const harvestReforges = resolvedHarvestRoute.metrics?.expectedPhysicalActions ?? 1;
-    const lifeforceUnitsUsed = Math.max(1, harvestReforges * 50);
-    const nonLifeforceHarvestChaos = cleanBaseCost;
-    const lifeforceCrossoverPriceChaosPerUnit = priceBook.calculateHarvestCrossoverPrice(
-      convCost,
-      nonLifeforceHarvestChaos,
-      lifeforceUnitsUsed
-    );
-
-    const isHarvestSelected = recommended?.actionId === resolvedHarvestRoute.actionId;
-    const status = isHarvestSelected
-      ? 'HARVEST_SELECTED'
-      : costDifferenceChaos > 0
-        ? 'HARVEST_MORE_EXPENSIVE'
-        : 'HARVEST_SELECTED';
-
-    const explanation = costDifferenceChaos > 0
-      ? `Harvest Reforge saves ${Math.round(actionsSaved)} physical actions (~${Math.max(0, Math.round(timeSavedMs / 1000))}s manual time) ` +
-        `but costs ${costDifferenceChaos.toFixed(1)}c more in materials at current prices. ` +
-        (lifeforceCrossoverPriceChaosPerUnit !== undefined && lifeforceCrossoverPriceChaosPerUnit > 0
-          ? `Harvest becomes cheaper if lifeforce drops below ${lifeforceCrossoverPriceChaosPerUnit.toFixed(4)}c/unit.`
-          : '')
-      : `Harvest Reforge is the cheapest route (${harvestCost.toFixed(1)}c) and saves ${Math.round(actionsSaved)} physical actions.`;
-
-    return {
-      harvestConsidered: true,
-      harvestEligible: true,
-      consideredHarvestActions: enabledHarvestCrafts,
-      resolvedHarvestRoute,
-      conventionalRoute,
-      costDifferenceChaos,
-      actionsSaved,
-      timeSavedMs,
-      lifeforceCrossoverPriceChaosPerUnit,
-      status,
-      explanation,
-    };
-  }
-
+function methodFamilyStatus(
+  route: RouteSummary | undefined,
+  recommended: RouteSummary | null
+): Pick<MethodFamilyResult, 'status' | 'costDifferenceChaos' | 'costDifferencePercent'> {
+  if (!route || route.expectedTotalCostChaos === null) return { status: 'UNRESOLVED_AT_BUDGET' };
+  const selectedCost = recommended?.expectedTotalCostChaos;
+  if (selectedCost === null || selectedCost === undefined) return { status: 'DOMINATED' };
+  const difference = route.expectedTotalCostChaos - selectedCost;
+  const percent = selectedCost > 0 ? difference / selectedCost * 100 : undefined;
   return {
-    harvestConsidered: true,
-    harvestEligible: true,
-    consideredHarvestActions: enabledHarvestCrafts,
-    resolvedHarvestRoute,
-    conventionalRoute,
-    status: resolvedHarvestRoute ? 'HARVEST_SELECTED' : 'HARVEST_NO_RESOLVED_POLICY',
-    explanation: resolvedHarvestRoute
-      ? 'Harvest route resolved successfully.'
-      : 'Harvest route was unresolved within the allocated state budget.',
+    status: Math.abs(difference) <= 0.05 ? 'SELECTED_WINNER' : difference > 0 ? 'MORE_EXPENSIVE' : 'DOMINATED',
+    costDifferenceChaos: difference,
+    costDifferencePercent: percent,
   };
 }
 
-function buildMethodPortfolio(
-  pool: ModPool,
-  allResolvedRoutes: RouteSummary[],
-  recommended: RouteSummary | null,
-  recommendationStatus: RecommendationStatus,
-  fastCleanRoute: RouteSummary | undefined,
-  bestFractureRoute: RouteSummary | undefined,
-  synthesisSummaries: Map<number, AcquisitionSynthesisSummary>,
-  starts: StartingStateCandidate[],
-  harvestComparison: HarvestComparisonSummary | undefined,
-  priceBook: PriceBook,
-  craftPlan: CraftPlanSummary
-): MethodFamilyResult[] {
-  const results: MethodFamilyResult[] = [];
-  const recCost = recommended?.expectedTotalCostChaos ?? null;
+function stageStatus(
+  upper: number | undefined,
+  lower: number | undefined,
+  dominated = false
+): MethodFamilyStageStatus {
+  if (dominated) return 'DOMINATED';
+  if (upper !== undefined && Number.isFinite(upper)) return 'RESOLVED';
+  if (lower !== undefined) return 'UNRESOLVED';
+  return 'NOT_SEARCHED';
+}
 
-  // 1. OPEN POLICY (Primary recommended or incumbent)
+function methodPolicyHealth(
+  result: GenericSearchResult,
+): NonNullable<MethodFamilyResult['policyHealth']> {
+  return {
+    selectedPolicyStatus: result.optimalityProof.selectedPolicyStatus,
+    proofLevel: result.optimalityProof.proofLevel,
+    onPolicyReachableStates: result.onPolicyGraph.onPolicyReachableStates,
+    onPolicyTerminalStates: result.onPolicyGraph.onPolicyTerminalStates,
+    onPolicyUnresolvedTransitions: result.onPolicyGraph.onPolicyUnresolvedTransitions,
+    terminalAbsorptionProbability: result.onPolicyGraph.terminalAbsorptionProbability,
+    proper: result.onPolicyGraph.isProper,
+    fullyResolved: result.onPolicyGraph.isFullyResolved,
+    bellmanConverged: result.convergence.converged,
+    occupancyConverged: result.reconciliation.visitConverged,
+    costReconciled: result.reconciliation.isReconciled,
+    reconciliationDifferenceChaos: Number.isFinite(result.reconciliation.differenceChaos)
+      ? result.reconciliation.differenceChaos
+      : undefined,
+  };
+}
+
+function buildMethodPortfolio(context: MethodPortfolioBuildContext): MethodFamilyResult[] {
+  const {
+    pool,
+    priceBook,
+    input,
+    starts,
+    cleanStart,
+    cleanEvidence,
+    recommended,
+    recommendationStatus,
+    craftPlan,
+    openResult,
+    fastCleanResult,
+    fastCleanRoute,
+    synthesisSummaries,
+    acquisition,
+    enabledHarvestCrafts,
+    session,
+    searchIdentityHash,
+    deadlineMs,
+  } = context;
+  const results: MethodFamilyResult[] = [];
+  const compare = input.compareMethodFamilies === true;
+  const selectedEvidence = acquisition.portfolioProof.candidateEvidence.find(
+    (candidate) => candidate.candidateId === acquisition.selectedCandidateId
+  );
+  const openUsage = openResult.expectedActionUsage.map((usage) => ({ ...usage }));
   results.push({
     spec: {
       id: 'family_open',
       kind: 'OPEN',
       name: 'Open Policy (All Modeled Mechanics)',
-      description: 'Global optimization considering all legal and enabled crafting mechanics.',
-      badge: 'Recommended',
+      description: 'Unconstrained search across every legal and enabled modeled mechanic.',
+      badge: 'Open search',
+      forcedAcquisitionType: 'OPEN',
     },
     status: recommended ? 'SELECTED_WINNER' : 'UNRESOLVED_AT_BUDGET',
+    evaluationSource: 'INDEPENDENT_SOLVE',
     route: recommended ?? undefined,
     craftPlan,
     whyNotSelectedExplanation: recommended
       ? recommendationStatus === 'PROVEN_OPTIMAL'
-        ? 'Optimal choice under the selected objective.'
-        : 'Best resolved crafting path found within search budget.'
-      : 'Search budget was reached before proof completion.',
+        ? 'Portfolio optimality is proven over the modeled search space.'
+        : 'Best executable open-search route at the current proof budget.'
+      : 'The open search did not certify an executable full route at this budget.',
+    acquisitionStatus: stageStatus(selectedEvidence?.acquisitionUpperBoundChaos, selectedEvidence?.acquisitionLowerBoundChaos),
+    acquisitionL: selectedEvidence?.acquisitionLowerBoundChaos,
+    acquisitionU: selectedEvidence?.acquisitionUpperBoundChaos,
+    downstreamStatus: stageStatus(selectedEvidence?.downstreamUpperBoundChaos, selectedEvidence?.downstreamLowerBoundChaos),
+    downstreamL: selectedEvidence?.downstreamLowerBoundChaos,
+    downstreamU: selectedEvidence?.downstreamUpperBoundChaos,
+    fullRouteStatus: stageStatus(selectedEvidence?.fullRouteUpperBoundChaos, selectedEvidence?.fullRouteLowerBoundChaos),
+    fullRouteL: selectedEvidence?.fullRouteLowerBoundChaos,
+    fullRouteU: selectedEvidence?.fullRouteUpperBoundChaos,
+    requiredActionObservedOnPolicy: true,
+    onPolicyActionIds: [...new Set(openUsage.map((usage) => usage.actionId))].sort(),
+    expectedActionUsage: openUsage,
+    policyHealth: methodPolicyHealth(openResult),
+    sessionIdentity: `${searchIdentityHash}:family_open`,
+    retainedStates: openResult.graphBuild.nodes.size,
+    transitionDistributionsGenerated: openResult.searchSummary.transitionDistributionsGenerated,
+    budget: {
+      maxStates: openResult.searchSummary.maxStates,
+      maxWallTimeMs: openResult.searchSummary.maxWallTimeMs ?? 0,
+      maxExpansionRounds: openResult.searchSummary.maxExpansionRounds,
+      elapsedMs: openResult.searchSummary.elapsedMs,
+    },
   });
 
-  // 2. CONVENTIONAL ROLLING (Alt / Aug / Regal / Exalt)
-  const conventionalRoute = fastCleanRoute ?? allResolvedRoutes.find((r) => r.actionId.includes('clean'));
-  if (conventionalRoute && conventionalRoute.expectedTotalCostChaos !== null) {
-    const isWinner = Boolean(recommended && recommended.actionId === conventionalRoute.actionId);
-    const costDelta = recCost !== null ? conventionalRoute.expectedTotalCostChaos - recCost : 0;
-    const costDeltaPct = recCost !== null && recCost > 0 ? (costDelta / recCost) * 100 : 0;
-    const actionsSaved = (conventionalRoute.metrics?.expectedPhysicalActions ?? 0) - (recommended?.metrics?.expectedPhysicalActions ?? 0);
-    const timeSavedMs = (conventionalRoute.metrics?.estimatedManualTimeMs ?? 0) - (recommended?.metrics?.estimatedManualTimeMs ?? 0);
-
-    let status: MethodFamilyStatus = 'DOMINATED';
-    let explanation: string | undefined;
-
-    if (isWinner) {
-      status = 'SELECTED_WINNER';
-      explanation = 'Selected as the most effective path under the chosen objective.';
-    } else if (costDelta > 0.05) {
-      status = 'MORE_EXPENSIVE';
-      explanation = `+${costDelta.toFixed(1)}c (+${costDeltaPct.toFixed(0)}%) more expensive than ${recommended?.name ?? 'recommended route'}.`;
-    } else if (actionsSaved > 0) {
-      status = 'MORE_EXPENSIVE';
-      explanation = `Requires ~${Math.round(actionsSaved)} more physical actions (~${Math.max(0, Math.round(timeSavedMs / 1000))}s manual time) than the selected route.`;
-    } else {
-      status = 'DOMINATED';
-      explanation = `Dominated by other starting methods.`;
+  const independentlyRunnableHarvestCount = enabledHarvestCrafts.filter((craft) => {
+    const definition = HARVEST_CRAFT_DEFINITIONS[craft.tag];
+    return definition !== undefined &&
+      priceBook.evaluateRate(definition.lifeforceType).confidence !== 'unavailable';
+  }).length;
+  const independentlyRunnableFractureHarvestCount = starts.reduce((count, _start, index) =>
+    count + (synthesisSummaries.get(index)?.expectedCostChaos !== undefined
+      ? independentlyRunnableHarvestCount
+      : 0), 0);
+  let remainingConstrainedFamilies = Math.max(
+    1,
+    1 +
+      independentlyRunnableHarvestCount +
+      independentlyRunnableFractureHarvestCount,
+  );
+  const runConstrainedFamily = (
+    spec: MethodFamilySpec,
+    startState: ItemState,
+    acquisitionCostChaos: number,
+    acquisitionLowerBoundChaos: number,
+    enabledActionIds: string[],
+    requiredActionIds: string[],
+    includeHarvest: boolean,
+    harvestTags: string[]
+  ): MethodFamilyResult => {
+    const remainingMs = Math.max(1, deadlineMs - Date.now());
+    const allocatedWallTimeMs = Math.max(
+      1,
+      Math.min(15_000, Math.floor(remainingMs / remainingConstrainedFamilies)),
+    );
+    remainingConstrainedFamilies = Math.max(1, remainingConstrainedFamilies - 1);
+    const maxStates = Math.max(100, input.searchBudget?.maxStates ?? 5_000);
+    let continuation = session.methodFamilies.get(spec.id);
+    if (!continuation) {
+      continuation = createGenericSearchContinuationSession();
+      session.methodFamilies.set(spec.id, continuation);
     }
-
-    results.push({
-      spec: {
-        id: 'family_conventional',
-        kind: 'CONVENTIONAL',
-        name: 'Conventional Alt / Aug / Regal',
-        description: 'Clean base start using Magic rolling (Alteration + Augmentation), Regal promotion, and Exalted/Annul finishing.',
-        badge: 'Alt + Regal',
-        forcedAcquisitionType: 'CLEAN',
-      },
-      status,
-      route: conventionalRoute,
-      costDifferenceChaos: costDelta,
-      costDifferencePercent: costDeltaPct,
-      actionsSaved: -actionsSaved,
-      timeSavedMs: -timeSavedMs,
-      whyNotSelectedExplanation: explanation,
-    });
-  } else {
-    results.push({
-      spec: {
-        id: 'family_conventional',
-        kind: 'CONVENTIONAL',
-        name: 'Conventional Alt / Aug / Regal',
-        description: 'Clean base start using Magic rolling, Regal promotion, and Exalt finishing.',
-        badge: 'Alt + Regal',
-        forcedAcquisitionType: 'CLEAN',
-      },
-      status: 'UNRESOLVED_AT_BUDGET',
-      whyNotSelectedExplanation: 'Conventional route was unresolved within the allocated state budget.',
-    });
-  }
-
-  // 3. HARVEST REFORGE
-  if (harvestComparison) {
-    const harvestStatus = harvestComparison.status;
-    let status: MethodFamilyStatus = 'NOT_ELIGIBLE';
-    let explanation = harvestComparison.explanation;
-
-    if (harvestStatus === 'HARVEST_SELECTED') {
-      status = 'SELECTED_WINNER';
-    } else if (harvestStatus === 'HARVEST_MORE_EXPENSIVE') {
-      status = 'MORE_EXPENSIVE';
-      if (!explanation.includes('more expensive')) {
-        explanation = 'Harvest reforges were modeled but proved more expensive than Alteration rolling at current lifeforce prices.';
+    const started = Date.now();
+    const familyResult = new GenericSearchEngine(
+      { pool, priceBook },
+      input.target,
+      {
+        includeHarvest,
+        harvestTags,
+        enabledActionIds,
+        requiredAnyActionIds: requiredActionIds,
+        prioritizeTargetProgress: true,
+        allowResearchFallbackPrices: input.allowResearchFallbackPrices ?? true,
+        maxStates,
+        maxWallTimeMs: allocatedWallTimeMs,
+        maxExpansionRounds: input.searchBudget?.maxExpansionRounds ?? 3,
+        searchIntent: 'DEEPEN',
+        objective: input.objective,
+        effortProfile: input.effortProfile,
+        persistentExpansion: true,
+        continuationSession: continuation,
+        recommendationRefinementRounds: 1,
+        skipAcquisitionFeasibility: startState.flags?.acquisitionMenu === true,
       }
-    } else if (harvestStatus === 'HARVEST_NOT_ELIGIBLE') {
-      status = 'NOT_ELIGIBLE';
-      explanation = 'None of the target modifiers match available Harvest reforge tags.';
-    } else if (harvestStatus === 'HARVEST_DISABLED') {
-      status = 'DISABLED';
-      explanation = 'Harvest crafts are disabled or currency rates are missing.';
-    } else {
-      status = 'UNRESOLVED_AT_BUDGET';
-    }
-
-    results.push({
-      spec: {
-        id: 'family_harvest',
-        kind: 'HARVEST',
-        name: 'Harvest Reforges',
-        description: 'Clean base start repeatedly applying tagged Harvest reforges matching target affixes.',
-        badge: 'Harvest',
-        forcedAcquisitionType: 'CLEAN',
+    ).search(startState);
+    const elapsedMs = Date.now() - started;
+    const usage = familyResult.expectedActionUsage.map((entry) => ({ ...entry }));
+    const onPolicyActionIds = [...new Set(usage
+      .filter((entry) => entry.expectedCount > 0)
+      .map((entry) => entry.actionId))].sort();
+    const requiredActionObservedOnPolicy = requiredActionIds.length === 0 ||
+      requiredActionIds.some((actionId) => onPolicyActionIds.includes(actionId));
+    const certified = familyResult.optimalityProof.selectedPolicyStatus ===
+      'FULLY RESOLVED / PROPER / ABSORBING / COST-RECONCILED' &&
+      requiredActionObservedOnPolicy;
+    const rawLower = genericSearchStartLowerBound(familyResult, startState, input.target);
+    const searchIncludesAcquisition = startState.flags?.acquisitionMenu === true;
+    const downstreamLower = searchIncludesAcquisition
+      ? Math.max(0, rawLower - acquisitionLowerBoundChaos)
+      : rawLower;
+    const downstreamUpper = certified
+      ? searchIncludesAcquisition
+        ? Math.max(0, familyResult.totalExpectedCostChaos - acquisitionCostChaos)
+        : familyResult.totalExpectedCostChaos
+      : undefined;
+    const fullRouteLower = acquisitionLowerBoundChaos + downstreamLower;
+    const fullRouteUpper = downstreamUpper === undefined
+      ? undefined
+      : acquisitionCostChaos + downstreamUpper;
+    const route: RouteSummary | undefined = fullRouteUpper === undefined ? undefined : {
+      actionId: `method:${spec.id}`,
+      name: recommended && Math.abs((recommended.expectedTotalCostChaos ?? Infinity) - fullRouteUpper) <= 0.05
+        ? recommended.name
+        : spec.name,
+      expectedTotalCostChaos: fullRouteUpper,
+      lowerBoundChaos: fullRouteLower,
+      incumbentUpperBoundChaos: fullRouteUpper,
+      optimalityGapChaos: Math.max(0, fullRouteUpper - fullRouteLower),
+      status: 'RESOLVED',
+      couldBeatResolvedIncumbent: recommended?.expectedTotalCostChaos !== null &&
+        recommended?.expectedTotalCostChaos !== undefined &&
+        fullRouteLower < recommended.expectedTotalCostChaos,
+      metrics: familyResult.metrics ? {
+        ...familyResult.metrics,
+        expectedChaosCost: fullRouteUpper,
+      } : undefined,
+      acquisitionMetrics: {
+        expectedChaosCost: acquisitionCostChaos,
+        expectedPhysicalActions: searchIncludesAcquisition ? 1 : 0,
+        estimatedManualTimeMs: searchIncludesAcquisition ? 1_000 : 0,
+        objectiveScore: acquisitionCostChaos,
+        effortConfidence: 'DEFAULT_APPROXIMATE',
       },
-      status,
-      route: harvestComparison.resolvedHarvestRoute,
-      costDifferenceChaos: harvestComparison.costDifferenceChaos,
-      actionsSaved: harvestComparison.actionsSaved,
-      timeSavedMs: harvestComparison.timeSavedMs,
-      whyNotSelectedExplanation: explanation,
+      downstreamMetrics: familyResult.metrics ? {
+        ...familyResult.metrics,
+        expectedChaosCost: downstreamUpper ?? familyResult.totalExpectedCostChaos,
+      } : undefined,
+    };
+    const comparison = methodFamilyStatus(route, recommended);
+    return {
+      spec,
+      ...comparison,
+      evaluationSource: 'INDEPENDENT_SOLVE',
+      route,
+      acquisitionStatus: 'RESOLVED',
+      acquisitionL: acquisitionLowerBoundChaos,
+      acquisitionU: acquisitionCostChaos,
+      downstreamStatus: stageStatus(downstreamUpper, downstreamLower),
+      downstreamL: downstreamLower,
+      downstreamU: downstreamUpper,
+      fullRouteStatus: stageStatus(fullRouteUpper, fullRouteLower),
+      fullRouteL: fullRouteLower,
+      fullRouteU: fullRouteUpper,
+      requiredActionObservedOnPolicy,
+      onPolicyActionIds,
+      expectedActionUsage: usage,
+      policyHealth: methodPolicyHealth(familyResult),
+      sessionIdentity: `${searchIdentityHash}:${spec.id}`,
+      retainedStates: continuation.expansion.nodes.size,
+      transitionDistributionsGenerated: continuation.expansion.transitionDistributionsGeneratedTotal,
+      budget: {
+        maxStates,
+        maxWallTimeMs: allocatedWallTimeMs,
+        maxExpansionRounds: input.searchBudget?.maxExpansionRounds ?? 3,
+        elapsedMs,
+      },
+      whyNotSelectedExplanation: !requiredActionObservedOnPolicy
+        ? `The constrained policy did not contain a required ${spec.badge} action on-policy, so the family is unresolved.`
+        : route
+          ? comparison.status === 'SELECTED_WINNER'
+            ? 'Independent constrained solve reproduces the selected policy at the current objective.'
+            : `${spec.name} independently resolved at ${route.expectedTotalCostChaos?.toFixed(1)}c.`
+          : `Independent constrained search remained unresolved after ${continuation.expansion.nodes.size.toLocaleString()} retained states.`,
+    };
+  };
+
+  const conventionalSpec: MethodFamilySpec = {
+    id: 'family_conventional',
+    kind: 'CONVENTIONAL',
+    name: 'Conventional Alt / Aug / Regal',
+    description: 'Clean-base rolling constrained to currency preparation, cleanup, promotion, and slams; Harvest and self-fracture are forbidden.',
+    badge: 'Alt + Regal',
+    allowedActionIds: [...CONVENTIONAL_METHOD_ACTION_IDS],
+    forbiddenActionIds: ['fracturing_orb', ...enabledHarvestCrafts.map((craft) => craft.actionId)],
+    forcedAcquisitionType: 'CLEAN',
+  };
+  if (compare) {
+    results.push(runConstrainedFamily(
+      conventionalSpec,
+      cleanStart.state,
+      cleanEvidence.costChaos,
+      cleanEvidence.costChaos,
+      conventionalSpec.allowedActionIds ?? [],
+      [],
+      false,
+      []
+    ));
+  } else {
+    const comparison = methodFamilyStatus(fastCleanRoute, recommended);
+    results.push({
+      spec: conventionalSpec,
+      ...comparison,
+      status: fastCleanRoute ? comparison.status : 'NOT_SEARCHED',
+      evaluationSource: fastCleanRoute ? 'OPEN_SEARCH_SUMMARY' : 'NOT_SEARCHED',
+      route: fastCleanRoute,
+      acquisitionStatus: 'RESOLVED',
+      acquisitionL: cleanEvidence.costChaos,
+      acquisitionU: cleanEvidence.costChaos,
+      downstreamStatus: fastCleanRoute ? 'RESOLVED' : 'NOT_SEARCHED',
+      downstreamU: fastCleanRoute?.expectedTotalCostChaos === null
+        ? undefined
+        : fastCleanRoute?.expectedTotalCostChaos !== undefined
+          ? fastCleanRoute.expectedTotalCostChaos - cleanEvidence.costChaos
+          : undefined,
+      fullRouteStatus: fastCleanRoute ? 'RESOLVED' : 'NOT_SEARCHED',
+      fullRouteL: fastCleanRoute?.lowerBoundChaos,
+      fullRouteU: fastCleanRoute?.expectedTotalCostChaos ?? undefined,
+      requiredActionObservedOnPolicy: true,
+      onPolicyActionIds: fastCleanResult
+        ? [...new Set(fastCleanResult.expectedActionUsage.map((usage) => usage.actionId))].sort()
+        : [],
+      expectedActionUsage: fastCleanResult?.expectedActionUsage.map((usage) => ({ ...usage })),
+      policyHealth: fastCleanResult ? methodPolicyHealth(fastCleanResult) : undefined,
+      retainedStates: fastCleanResult?.graphBuild.nodes.size ?? 0,
+      transitionDistributionsGenerated: fastCleanResult?.searchSummary.transitionDistributionsGenerated ?? 0,
+      whyNotSelectedExplanation: fastCleanRoute
+        ? 'Summarized from the clean candidate found by open search; use Compare Methods for an independent constrained solve.'
+        : 'Not independently searched yet. Use Compare Methods.',
     });
   }
 
-  // 4. SELF-FRACTURE TARGETS
-  for (let idx = 0; idx < starts.length; idx++) {
-    const start = starts[idx];
-    if (!start.fracturedRequirement?.modId) continue;
-    const modId = start.fracturedRequirement.modId;
-    const mod = pool.findModById(modId);
-    const modName = mod ? `${mod.name} (T${mod.tier})` : modId;
-    const candidateRoute = allResolvedRoutes.find((r) => r.actionId.includes(`candidate_${idx}`)) ??
-      (bestFractureRoute?.actionId.includes(`candidate_${idx}`) ? bestFractureRoute : undefined);
-    const synthSummary = synthesisSummaries.get(idx);
-
-    const isWinner = Boolean(recommended && recommended.actionId.includes(`candidate_${idx}`));
-    const fractureCost = candidateRoute?.expectedTotalCostChaos ?? synthSummary?.expectedCostChaos ?? null;
-    const costDelta = recCost !== null && fractureCost !== null ? fractureCost - recCost : undefined;
-    const costDeltaPct = recCost !== null && recCost > 0 && costDelta !== undefined ? (costDelta / recCost) * 100 : undefined;
-
-    let status: MethodFamilyStatus = 'NOT_MODELED';
-    let explanation: string | undefined;
-
-    if (isWinner) {
-      status = 'SELECTED_WINNER';
-      explanation = `Fracturing ${modName} first minimizes total expected cost.`;
-    } else if (candidateRoute && fractureCost !== null) {
-      status = costDelta && costDelta > 0.05 ? 'MORE_EXPENSIVE' : 'DOMINATED';
-      const orbPrice = priceBook.getRate('fracturing') || 800;
-      explanation = costDelta && costDelta > 0.05
-        ? `+${costDelta.toFixed(1)}c (+${costDeltaPct?.toFixed(0)}%) more expensive, largely due to Fracturing Orb prices (${orbPrice}c each).`
-        : `Dominated by other starting methods.`;
-    } else if (synthSummary?.status === 'SKIPPED_DOMINATED') {
-      status = 'DOMINATED';
-      explanation = `Self-fracturing ${modName} was proven dominated by lower-bound pruning.`;
+  for (const craft of enabledHarvestCrafts) {
+    const definition = HARVEST_CRAFT_DEFINITIONS[craft.tag];
+    const priceAvailable = definition !== undefined &&
+      priceBook.evaluateRate(definition.lifeforceType).confidence !== 'unavailable';
+    const spec: MethodFamilySpec = {
+      id: `family_harvest_${craft.tag}`,
+      kind: 'HARVEST',
+      name: craft.actionName,
+      description: `Clean-base family constrained to ${craft.actionName}; the selected policy must contain that action.`,
+      badge: `Harvest ${craft.tag}`,
+      allowedActionIds: ['transmutation_orb', 'regal_orb', craft.actionId],
+      requiredActionIds: [craft.actionId],
+      forbiddenActionIds: ['fracturing_orb'],
+      forcedAcquisitionType: 'CLEAN',
+    };
+    if (!priceAvailable) {
+      results.push({
+        spec,
+        status: 'DISABLED',
+        evaluationSource: 'NOT_SEARCHED',
+        acquisitionStatus: 'RESOLVED',
+        acquisitionL: cleanEvidence.costChaos,
+        acquisitionU: cleanEvidence.costChaos,
+        downstreamStatus: 'NOT_SEARCHED',
+        fullRouteStatus: 'NOT_SEARCHED',
+        requiredActionObservedOnPolicy: false,
+        onPolicyActionIds: [],
+        retainedStates: 0,
+        transitionDistributionsGenerated: 0,
+        whyNotSelectedExplanation: `${definition?.lifeforceType ?? 'Lifeforce'} price evidence is unavailable.`,
+      });
+    } else if (compare) {
+      results.push(runConstrainedFamily(
+        spec,
+        cleanStart.state,
+        cleanEvidence.costChaos,
+        cleanEvidence.costChaos,
+        spec.allowedActionIds ?? [],
+        [craft.actionId],
+        true,
+        [craft.tag]
+      ));
     } else {
-      status = 'UNRESOLVED_AT_BUDGET';
-      explanation = `Self-fracture synthesis for ${modName} remained unresolved within search budget.`;
+      results.push({
+        spec,
+        status: 'NOT_SEARCHED',
+        evaluationSource: 'NOT_SEARCHED',
+        acquisitionStatus: 'RESOLVED',
+        acquisitionL: cleanEvidence.costChaos,
+        acquisitionU: cleanEvidence.costChaos,
+        downstreamStatus: 'NOT_SEARCHED',
+        fullRouteStatus: 'NOT_SEARCHED',
+        requiredActionObservedOnPolicy: false,
+        onPolicyActionIds: [],
+        retainedStates: session.methodFamilies.get(spec.id)?.expansion.nodes.size ?? 0,
+        transitionDistributionsGenerated: session.methodFamilies.get(spec.id)?.expansion.transitionDistributionsGeneratedTotal ?? 0,
+        whyNotSelectedExplanation: 'Enabled but not searched. Use Compare Methods to run the required-action family solve.',
+      });
     }
+  }
 
+  for (let index = 0; index < starts.length; index++) {
+    const start = starts[index];
+    const requirement = start.fracturedRequirement;
+    if (!requirement?.modId) continue;
+    const mod = pool.findModById(requirement.modId);
+    const modName = mod ? `${mod.name} (T${mod.tier})` : requirement.modId;
+    const synthesis = synthesisSummaries.get(index);
+    const evidence = acquisition.portfolioProof.candidateEvidence.find(
+      (candidate) => candidate.candidateId === `candidate_${index}`
+    );
+    const proofRecord = session.fractureProofs.get(JSON.stringify(requirement));
+    const downstreamUsage = proofRecord?.downstream?.expectedActionUsage ?? [];
+    const allUsage = [
+      ...(synthesis?.expectedActionUsage ?? []),
+      ...downstreamUsage,
+    ];
+    const onPolicyActionIds = [...new Set(allUsage
+      .filter((usage) => usage.expectedCount > 0)
+      .map((usage) => usage.actionId))].sort();
+    const acquisitionL = synthesis?.lowerBoundChaos ?? evidence?.acquisitionLowerBoundChaos;
+    const acquisitionU = synthesis?.expectedCostChaos ?? evidence?.acquisitionUpperBoundChaos;
+    const fullU = evidence?.fullRouteUpperBoundChaos;
+    const fullL = evidence?.fullRouteLowerBoundChaos ?? 0;
+    const route: RouteSummary | undefined = fullU === undefined ? undefined : {
+      actionId: `method:family_fracture_${requirement.modId}`,
+      name: recommended?.acquisitionCandidateId === `candidate_${index}`
+        ? recommended.name
+        : `Self-Fracture ${modName}`,
+      acquisitionCandidateId: `candidate_${index}`,
+      acquisitionMethodId: 'self-fracture_executable',
+      expectedTotalCostChaos: fullU,
+      lowerBoundChaos: fullL,
+      incumbentUpperBoundChaos: fullU,
+      optimalityGapChaos: Math.max(0, fullU - fullL),
+      status: 'RESOLVED',
+      couldBeatResolvedIncumbent: recommended?.expectedTotalCostChaos !== null &&
+        recommended?.expectedTotalCostChaos !== undefined &&
+        fullL < recommended.expectedTotalCostChaos,
+      metrics: proofRecord?.downstream?.metrics && synthesis?.expectedCostChaos !== undefined ? {
+        expectedChaosCost: fullU,
+        expectedPhysicalActions: (synthesis.expectedPhysicalActions ?? 0) +
+          proofRecord.downstream.metrics.expectedPhysicalActions,
+        estimatedManualTimeMs: (synthesis.estimatedManualTimeMs ?? 0) +
+          proofRecord.downstream.metrics.estimatedManualTimeMs,
+        objectiveScore: fullU,
+        effortConfidence: proofRecord.downstream.metrics.effortConfidence,
+      } : undefined,
+    };
+    const comparison = methodFamilyStatus(route, recommended);
+    const dominated = evidence?.status === 'DOMINATED';
     results.push({
       spec: {
-        id: `family_fracture_${modId}`,
+        id: `family_fracture_${requirement.modId}`,
         kind: 'SELF_FRACTURE',
         name: `Self-Fracture ${modName}`,
-        description: `Synthesize a fractured ${modName} starting base, then craft remaining affixes.`,
+        description: `Independently synthesize a fractured ${modName} base, then solve its downstream policy.`,
         badge: `Fracture: ${modName}`,
+        allowedActionIds: [...DEFAULT_ACQUISITION_SYNTHESIS_ACTION_IDS],
+        requiredActionIds: ['fracturing_orb'],
         forcedAcquisitionType: 'SELF_FRACTURE',
-        targetFractureModId: modId,
+        targetFractureModId: requirement.modId,
         targetFractureModName: modName,
       },
-      status,
-      route: candidateRoute,
-      costDifferenceChaos: costDelta,
-      costDifferencePercent: costDeltaPct,
-      whyNotSelectedExplanation: explanation,
+      ...comparison,
+      status: dominated ? 'DOMINATED' : route ? comparison.status : 'UNRESOLVED_AT_BUDGET',
+      evaluationSource: synthesis || evidence?.retainedAcquisitionStates || evidence?.retainedDownstreamStates
+        ? 'INDEPENDENT_SOLVE'
+        : 'NOT_SEARCHED',
+      route,
+      acquisitionStatus: stageStatus(acquisitionU, acquisitionL, dominated && acquisitionU === undefined),
+      acquisitionL,
+      acquisitionU,
+      downstreamStatus: stageStatus(evidence?.downstreamUpperBoundChaos, evidence?.downstreamLowerBoundChaos, dominated),
+      downstreamL: evidence?.downstreamLowerBoundChaos,
+      downstreamU: evidence?.downstreamUpperBoundChaos,
+      fullRouteStatus: stageStatus(evidence?.fullRouteUpperBoundChaos, evidence?.fullRouteLowerBoundChaos, dominated),
+      fullRouteL: evidence?.fullRouteLowerBoundChaos,
+      fullRouteU: evidence?.fullRouteUpperBoundChaos,
+      requiredActionObservedOnPolicy: onPolicyActionIds.includes('fracturing_orb'),
+      onPolicyActionIds,
+      expectedActionUsage: allUsage.map((usage) => ({ ...usage })),
+      sessionIdentity: `${searchIdentityHash}:family_fracture_${requirement.modId}`,
+      retainedStates: (evidence?.retainedAcquisitionStates ?? 0) + (evidence?.retainedDownstreamStates ?? 0),
+      transitionDistributionsGenerated: (evidence?.acquisitionTransitionDistributionsGenerated ?? 0) +
+        (evidence?.downstreamTransitionDistributionsGenerated ?? 0),
+      whyNotSelectedExplanation: synthesis?.expectedCostChaos !== undefined && evidence?.downstreamUpperBoundChaos === undefined
+        ? `Acquisition synthesis produced a finite executable upper bound at ${synthesis.expectedCostChaos.toFixed(1)}c; the independent downstream/full-route solve remains unresolved.`
+        : route
+          ? comparison.status === 'SELECTED_WINNER'
+            ? 'The independently synthesized acquisition and downstream policy form the selected full route.'
+            : `Acquisition and downstream policy resolved independently at ${fullU?.toFixed(1)}c full-route cost.`
+          : dominated
+            ? 'The family was dominated by an admissible full-route lower bound.'
+            : 'Acquisition and downstream status are reported separately; the full route remains unresolved.',
     });
+
+    for (const craft of enabledHarvestCrafts) {
+      const spec: MethodFamilySpec = {
+        id: `family_fracture_harvest_${requirement.modId}_${craft.tag}`,
+        kind: 'SELF_FRACTURE_HARVEST',
+        name: `Self-Fracture ${modName} + ${craft.actionName}`,
+        description: 'Reuse the independently synthesized fractured acquisition, then require a tagged Harvest action in the downstream policy.',
+        badge: `Fracture + Harvest ${craft.tag}`,
+        allowedActionIds: ['regal_orb', craft.actionId],
+        requiredActionIds: [craft.actionId],
+        forcedAcquisitionType: 'SELF_FRACTURE',
+        targetFractureModId: requirement.modId,
+        targetFractureModName: modName,
+      };
+      if (compare && synthesis?.expectedCostChaos !== undefined) {
+        results.push(runConstrainedFamily(
+          spec,
+          start.state,
+          synthesis.expectedCostChaos,
+          synthesis.lowerBoundChaos,
+          spec.allowedActionIds ?? [],
+          [craft.actionId],
+          true,
+          [craft.tag]
+        ));
+      } else {
+        results.push({
+          spec,
+          status: 'NOT_SEARCHED',
+          evaluationSource: 'NOT_SEARCHED',
+          acquisitionStatus: stageStatus(synthesis?.expectedCostChaos, synthesis?.lowerBoundChaos),
+          acquisitionL: synthesis?.lowerBoundChaos,
+          acquisitionU: synthesis?.expectedCostChaos,
+          downstreamStatus: 'NOT_SEARCHED',
+          fullRouteStatus: 'NOT_SEARCHED',
+          requiredActionObservedOnPolicy: false,
+          onPolicyActionIds: [],
+          retainedStates: session.methodFamilies.get(spec.id)?.expansion.nodes.size ?? 0,
+          transitionDistributionsGenerated: session.methodFamilies.get(spec.id)?.expansion.transitionDistributionsGeneratedTotal ?? 0,
+          whyNotSelectedExplanation: synthesis?.status === 'RESOLVED'
+            ? 'Acquisition is resolved; the required-Harvest downstream family has not been searched. Use Compare Methods.'
+            : 'Required self-fracture acquisition is unresolved, so its Harvest downstream family has not started.',
+        });
+      }
+    }
   }
 
-  // Deduplicate method families that resolved to the exact same route
-  const seenRouteIds = new Set<string>();
-  if (recommended?.actionId) {
-    seenRouteIds.add(recommended.actionId);
-  }
-  return results.filter((family) => {
-    if (family.spec.kind === 'OPEN') return true;
-    if (!family.route?.actionId) return true;
-    if (seenRouteIds.has(family.route.actionId)) {
-      return false;
-    }
-    seenRouteIds.add(family.route.actionId);
-    return true;
+  results.push({
+    spec: {
+      id: 'family_chaos_reforge',
+      kind: 'CHAOS_REFORGE',
+      name: 'Chaos Reforge',
+      description: 'Chaos Orb transitions are not yet modeled with an executable distribution.',
+      badge: 'Chaos',
+      requiredActionIds: ['chaos_orb'],
+    },
+    status: 'NOT_MODELED',
+    evaluationSource: 'NOT_SEARCHED',
+    acquisitionStatus: 'NOT_APPLICABLE',
+    downstreamStatus: 'NOT_APPLICABLE',
+    fullRouteStatus: 'NOT_APPLICABLE',
+    requiredActionObservedOnPolicy: false,
+    onPolicyActionIds: [],
+    retainedStates: 0,
+    transitionDistributionsGenerated: 0,
+    whyNotSelectedExplanation: 'Chaos Reforge is advertised only as not modeled; it is never assigned a synthetic route.',
   });
+
+  const fingerprints = new Map<string, string>();
+  for (const family of results) {
+    if (family.evaluationSource !== 'INDEPENDENT_SOLVE' || family.fullRouteStatus !== 'RESOLVED') continue;
+    const fingerprint = JSON.stringify({
+      actions: family.expectedActionUsage
+        ?.filter((usage) => usage.expectedCount > 1e-9)
+        .map((usage) => [usage.actionId, usage.expectedCount.toFixed(6)])
+        .sort(),
+      cost: family.fullRouteU?.toFixed(6),
+    });
+    const original = fingerprints.get(fingerprint);
+    if (original) family.duplicateOfMethodFamilyId = original;
+    else fingerprints.set(fingerprint, family.spec.id);
+  }
+  return results;
+}
+
+function buildHarvestComparisonSummary(options: {
+  enabledHarvestCrafts: Array<{ actionId: string; actionName: string; tag: string }>;
+  methodPortfolio: MethodFamilyResult[];
+  selectedActionUsage: readonly ExpectedActionUsage[];
+  priceBook: PriceBook;
+  costCeilingChaos?: number;
+}): HarvestComparisonSummary {
+  const { enabledHarvestCrafts, methodPortfolio, selectedActionUsage, priceBook, costCeilingChaos } = options;
+  if (enabledHarvestCrafts.length === 0) {
+    return {
+      harvestConsidered: false,
+      harvestEligible: false,
+      consideredHarvestActions: [],
+      status: 'NOT_ELIGIBLE',
+      actionEvidenceObserved: false,
+      explanation: 'No target modifier is eligible for an available modeled Harvest reforge tag.',
+    };
+  }
+  const harvestFamilies = methodPortfolio.filter((family) => family.spec.kind === 'HARVEST');
+  const conventional = methodPortfolio.find((family) => family.spec.kind === 'CONVENTIONAL');
+  const resolvedHarvest = harvestFamilies
+    .filter((family) => family.evaluationSource === 'INDEPENDENT_SOLVE' &&
+      family.fullRouteStatus === 'RESOLVED' && family.requiredActionObservedOnPolicy && family.route)
+    .sort((left, right) => (left.fullRouteU ?? Infinity) - (right.fullRouteU ?? Infinity))[0];
+  const disabled = harvestFamilies.find((family) => family.status === 'DISABLED');
+  const notSearched = harvestFamilies.every((family) => family.evaluationSource === 'NOT_SEARCHED');
+  if (disabled && !resolvedHarvest) {
+    return {
+      harvestConsidered: true,
+      harvestEligible: true,
+      consideredHarvestActions: enabledHarvestCrafts,
+      status: 'PRICE_UNAVAILABLE_OR_DISABLED',
+      actionEvidenceObserved: false,
+      explanation: disabled.whyNotSelectedExplanation ?? 'Required Lifeforce price evidence is unavailable.',
+    };
+  }
+  if (notSearched) {
+    return {
+      harvestConsidered: true,
+      harvestEligible: true,
+      consideredHarvestActions: enabledHarvestCrafts,
+      status: 'ENABLED_NOT_SEARCHED',
+      actionEvidenceObserved: false,
+      explanation: 'Harvest crafts are enabled and eligible, but their required-action families have not been independently searched. Use Compare Methods.',
+    };
+  }
+  if (!resolvedHarvest?.route) {
+    return {
+      harvestConsidered: true,
+      harvestEligible: true,
+      consideredHarvestActions: enabledHarvestCrafts,
+      status: 'ENABLED_UNRESOLVED',
+      actionEvidenceObserved: false,
+      explanation: 'Harvest was independently searched, but no policy containing a Harvest action resolved within its family budget.',
+    };
+  }
+  const harvestAction = enabledHarvestCrafts.find((craft) =>
+    resolvedHarvest.onPolicyActionIds.includes(craft.actionId)
+  );
+  const definition = harvestAction ? HARVEST_CRAFT_DEFINITIONS[harvestAction.tag] : undefined;
+  const harvestUsage = harvestAction
+    ? resolvedHarvest.expectedActionUsage?.find((usage) => usage.actionId === harvestAction.actionId)
+    : undefined;
+  if (!harvestAction || !definition || !harvestUsage || harvestUsage.expectedCount <= 0) {
+    return {
+      harvestConsidered: true,
+      harvestEligible: true,
+      consideredHarvestActions: enabledHarvestCrafts,
+      status: 'ENABLED_UNRESOLVED',
+      actionEvidenceObserved: false,
+      explanation: 'The constrained family returned no positive expected visits for its required Harvest action.',
+    };
+  }
+  const expectedHarvestApplications = harvestUsage.expectedCount;
+  const expectedLifeforce = expectedHarvestApplications * definition.lifeforceAmount;
+  const currentUnitPrice = priceBook.getRate(definition.lifeforceType);
+  const harvestTotal = resolvedHarvest.fullRouteU!;
+  const nonLifeforceCost = harvestTotal - expectedLifeforce * currentUnitPrice;
+  const conventionalTotal = conventional?.fullRouteU;
+  const crossover = conventionalTotal === undefined
+    ? undefined
+    : priceBook.calculateHarvestCrossoverPrice(
+        conventionalTotal,
+        nonLifeforceCost,
+        expectedLifeforce
+      );
+  const costDifference = conventionalTotal === undefined ? undefined : harvestTotal - conventionalTotal;
+  const actionsSaved = conventional?.route?.metrics?.expectedPhysicalActions === undefined ||
+      resolvedHarvest.route.metrics?.expectedPhysicalActions === undefined
+    ? undefined
+    : conventional.route.metrics.expectedPhysicalActions -
+      resolvedHarvest.route.metrics.expectedPhysicalActions;
+  const timeSavedMs = conventional?.route?.metrics?.estimatedManualTimeMs === undefined ||
+      resolvedHarvest.route.metrics?.estimatedManualTimeMs === undefined
+    ? undefined
+    : conventional.route.metrics.estimatedManualTimeMs -
+      resolvedHarvest.route.metrics.estimatedManualTimeMs;
+  const selectedUsesHarvest = selectedActionUsage.some((usage) =>
+    usage.actionId === harvestAction.actionId && usage.expectedCount > 0
+  );
+  const status: HarvestLifecycleStatus = selectedUsesHarvest
+    ? 'SELECTED'
+    : costCeilingChaos !== undefined && harvestTotal > costCeilingChaos && (actionsSaved ?? 0) > 0
+      ? 'RESOLVED_FASTER_BUT_OVER_CEILING'
+      : (costDifference ?? 0) > 0
+        ? 'RESOLVED_MORE_EXPENSIVE'
+        : 'DOMINATED_BY_PROOF';
+  return {
+    harvestConsidered: true,
+    harvestEligible: true,
+    consideredHarvestActions: enabledHarvestCrafts,
+    resolvedHarvestRoute: resolvedHarvest.route,
+    conventionalRoute: conventional?.route,
+    harvestActionId: harvestAction.actionId,
+    harvestActionName: harvestAction.actionName,
+    harvestTag: harvestAction.tag,
+    lifeforceType: definition.lifeforceType,
+    lifeforcePerApplication: definition.lifeforceAmount,
+    expectedHarvestApplications,
+    expectedLifeforce,
+    harvestNonLifeforceCostChaos: nonLifeforceCost,
+    harvestTotalAtCurrentPriceChaos: harvestTotal,
+    currentLifeforceUnitPriceChaos: currentUnitPrice,
+    costDifferenceChaos: costDifference,
+    actionsSaved,
+    timeSavedMs,
+    lifeforceCrossoverPriceChaosPerUnit: crossover,
+    status,
+    actionEvidenceObserved: true,
+    explanation: `${harvestAction.actionName} was independently solved with ${expectedHarvestApplications.toFixed(3)} expected applications ` +
+      `(${expectedLifeforce.toFixed(3)} ${definition.lifeforceType}, ${definition.lifeforceAmount} per application). ` +
+      (costDifference === undefined
+        ? 'A resolved Conventional comparison is unavailable, so no crossover is reported.'
+        : `${costDifference >= 0 ? '+' : ''}${costDifference.toFixed(3)}c versus Conventional.`) +
+      (crossover === undefined ? '' : ` Crossover: ${crossover.toFixed(6)}c per ${definition.lifeforceType}.`),
+  };
 }
 
 function methodConfidence(start: StartingStateCandidate, methodIndex: number, input: OptimizeCraftInput): PriceConfidence {
@@ -1297,6 +1947,10 @@ function summarizeSynthesis(
     expectedRestarts: result.expectedRestarts,
     expectedRestartCostChaos: result.expectedRestartCostChaos,
     expectedFracturingOrbs: result.expectedFracturingOrbs,
+    expectedPhysicalActions: result.expectedPhysicalActions,
+    expectedPreparationPhysicalActions: result.expectedPreparationPhysicalActions,
+    estimatedManualTimeMs: result.estimatedManualTimeMs,
+    expectedPreparationManualTimeMs: result.expectedPreparationManualTimeMs,
     expectedActionUsage: result.expectedActionUsage.map((usage) => ({ ...usage })),
     wrongFractureRecovery: result.wrongFractureRecovery,
     proof: result.proof,
@@ -1529,6 +2183,7 @@ interface OptimizerSearchSessionRecord {
     continuation: GenericSearchContinuationSession;
   }>;
   fractureProofs: Map<string, FracturePortfolioProofRecord>;
+  methodFamilies: Map<string, GenericSearchContinuationSession>;
 }
 
 interface FracturePortfolioProofRecord {
@@ -1611,6 +2266,7 @@ export class OptimizerService {
         fractureDownstreams: new Map(),
         fractureDownstreamBounds: new Map(),
         fractureProofs: new Map(),
+        methodFamilies: new Map(),
       };
       if (this.searchSessions.size >= 8) {
         const oldest = this.searchSessions.keys().next().value;
@@ -1851,7 +2507,7 @@ export class OptimizerService {
       if (!onProgress) return;
       const now = Date.now();
       if (!force && now - lastProgressEmissionMs < 100 && !milestone) return;
-      if (milestone) {
+      if (milestone && recentMilestones.at(-1) !== milestone) {
         recentMilestones.push(milestone);
         if (recentMilestones.length > 8) recentMilestones.shift();
       }
@@ -3146,14 +3802,6 @@ export class OptimizerService {
     const selectedParts = recommended ? portfolioActionParts(recommended.actionId) : {};
     const incumbentUpperBound = recommended?.expectedTotalCostChaos ?? undefined;
 
-    const harvestComparison = buildHarvestComparisonSummary(
-      enabledHarvestCrafts,
-      harvestTags,
-      allResolvedRoutes,
-      priceBook,
-      recommended,
-      cleanEvidence.costChaos
-    );
     const synthesisEvidenceRoutes: RouteSummary[] = [...synthesisSummaries.entries()].flatMap(
       ([candidateIndex, synthesis]): RouteSummary[] => {
         const candidateId = `candidate_${candidateIndex}`;
@@ -3371,14 +4019,37 @@ export class OptimizerService {
       result.optimalityProof.unresolvedCandidatesCouldBeatIncumbent ||
       synthesisFrontiersCouldBeat;
 
-    const directCleanCostOffset = usesDirectCleanPolicy ? cleanEvidence.costChaos : 0;
+    const selectedAcquisitionCostForScope = recommended === null
+      ? 0
+      : selectedSynthesis?.expectedCostChaos ?? cleanEvidence.costChaos;
+    const resultIncludesAcquisition = !usesDirectCleanPolicy && !usesDirectFracturePolicy;
+    const directAcquisitionCostOffset = resultIncludesAcquisition
+      ? 0
+      : selectedAcquisitionCostForScope;
     const policyIncumbentHistory = result.searchSummary.incumbentHistory.map((entry) => ({
       ...entry,
-      upperBoundChaos: entry.upperBoundChaos + directCleanCostOffset,
+      upperBoundChaos: entry.upperBoundChaos + directAcquisitionCostOffset,
     }));
-    const firstPolicyUpperBound = policyIncumbentHistory[0]?.upperBoundChaos;
-    const finalPolicyUpperBound = recommended?.expectedTotalCostChaos ??
-      policyIncumbentHistory.at(-1)?.upperBoundChaos;
+    const firstCertifiedDownstreamU = result.searchSummary.incumbentHistory[0] === undefined
+      ? undefined
+      : Math.max(
+          0,
+          result.searchSummary.incumbentHistory[0].upperBoundChaos -
+            (resultIncludesAcquisition ? selectedAcquisitionCostForScope : 0)
+        );
+    const finalDownstreamU = recommended === null
+      ? undefined
+      : Math.max(
+          0,
+          result.totalExpectedCostChaos -
+            (resultIncludesAcquisition ? selectedAcquisitionCostForScope : 0)
+        );
+    const firstPolicyUpperBound = firstCertifiedDownstreamU === undefined
+      ? undefined
+      : selectedAcquisitionCostForScope + firstCertifiedDownstreamU;
+    const finalPolicyUpperBound = finalDownstreamU === undefined
+      ? undefined
+      : selectedAcquisitionCostForScope + finalDownstreamU;
     let lastMeaningfulImprovementRound: number | undefined;
     for (let index = 1; index < policyIncumbentHistory.length; index++) {
       const before = policyIncumbentHistory[index - 1].upperBoundChaos;
@@ -3414,11 +4085,19 @@ export class OptimizerService {
       .reduce((minimum, candidate) => Math.min(minimum, candidate.lowerBoundChaos), Infinity);
     const normalizedSelectedStartLowerBound = selectedStartLowerBound !== undefined &&
       Number.isFinite(selectedStartLowerBound)
-      ? selectedStartLowerBound + directCleanCostOffset
+      ? Math.max(
+          0,
+          selectedStartLowerBound -
+            (resultIncludesAcquisition ? selectedAcquisitionCostForScope : 0)
+        )
       : undefined;
     const normalizedUnresolvedPolicyLowerBound = unresolvedPolicyLowerBound !== undefined &&
       Number.isFinite(unresolvedPolicyLowerBound)
-      ? unresolvedPolicyLowerBound + directCleanCostOffset
+      ? Math.max(
+          0,
+          unresolvedPolicyLowerBound -
+            (resultIncludesAcquisition ? selectedAcquisitionCostForScope : 0)
+        )
       : undefined;
     const downstreamPotentialGap = finalPolicyUpperBound !== undefined &&
       normalizedUnresolvedPolicyLowerBound !== undefined
@@ -3435,6 +4114,10 @@ export class OptimizerService {
       status: policyRefinementStatus,
       firstCertifiedUpperBoundChaos: firstPolicyUpperBound,
       finalUpperBoundChaos: finalPolicyUpperBound,
+      firstCertifiedDownstreamU,
+      finalDownstreamU,
+      firstCertifiedFullRouteU: firstPolicyUpperBound,
+      finalFullRouteU: finalPolicyUpperBound,
       improvementChaos: firstPolicyUpperBound === undefined || finalPolicyUpperBound === undefined
         ? undefined
         : Math.max(0, firstPolicyUpperBound - finalPolicyUpperBound),
@@ -3644,41 +4327,32 @@ export class OptimizerService {
       ...policyRules,
     ];
 
-    const outputWithoutCraftPlan: Omit<OptimizeCraftResult, 'craftPlan'> = {
+    const portfolioTotalStatesExpanded = Math.max(
+      result.searchSummary.cumulativeExpansionWork,
+      [...progressCandidates.values()].reduce((sum, candidate) => sum + candidate.statesExpanded, 0)
+    );
+    const portfolioRetainedStates = searchSessionRecord.cleanDownstream.expansion.nodes.size +
+      [...searchSessionRecord.fractureAcquisitions.values()].reduce(
+        (sum, continuation) => sum + continuation.expansion.nodes.size,
+        0
+      ) +
+      [...searchSessionRecord.fractureDownstreams.values()].reduce(
+        (sum, continuation) => sum + continuation.expansion.nodes.size,
+        0
+      );
+    const outputWithoutCraftPlan: Omit<
+      OptimizeCraftResult,
+      'craftPlan' | 'methodPortfolio' | 'presentation' | 'fullRouteUsage' | 'harvestComparison'
+    > = {
       target: input.target,
       validationNotices: validation.notices,
       recommendationStatus,
       recommended,
       alternatives: acquisitionRoutes.filter((route) => route.actionId !== recommended?.actionId),
-      expectedCurrencies: Object.fromEntries(
-        [
-          ...(usesDirectCleanPolicy ? [['clean_base', 1] as const] : []),
-          ...(usesDirectFracturePolicy && bestFractureSynthesis?.expectedCurrencies
-            ? Object.entries(bestFractureSynthesis.expectedCurrencies)
-            : []),
-          ...Object.entries(result.expectedCurrencies),
-        ].map(([currency, amount]) => [currency, finiteOrNull(amount)])
-      ),
-      expectedActionUsage: [
-        ...(usesDirectCleanPolicy ? [{
-          actionId: fastCleanRoute!.actionId,
-          actionName: fastCleanRoute!.name,
-          expectedCount: 1,
-          expectedCostChaos: cleanEvidence.costChaos,
-        }] : []),
-        ...(usesDirectFracturePolicy && bestFractureSynthesis
-          ? [
-              {
-                actionId: bestFractureRoute!.actionId,
-                actionName: bestFractureRoute!.name,
-                expectedCount: 1,
-                expectedCostChaos: bestFractureSynthesis.expectedCostChaos ?? 0,
-              },
-              ...bestFractureSynthesis.expectedActionUsage,
-            ]
-          : []),
-        ...result.expectedActionUsage.map((usage) => ({ ...usage })),
-      ],
+      expectedCurrencies: {},
+      expectedActionUsage: result.expectedActionUsage
+        .filter((usage) => !usage.actionId.startsWith('acquire_'))
+        .map((usage) => ({ ...usage })),
       policyExplanation,
       policyRules: mergedPolicyRules,
       acquisition: {
@@ -3805,9 +4479,22 @@ export class OptimizerService {
         hostGuardDeadlineMs: runtimeBudget.hostGuardDeadlineMs,
         shutdownReserveMs: runtimeBudget.shutdownReserveMs,
         hostGuardTriggered: false,
+        timeToFirstUsefulExecutableRecommendationMs:
+          result.searchSummary.timeToFirstUsefulRecommendationMs,
+        timeToFirstAcquisitionSafeRecommendationMs: acquisitionSelectionSafe
+          ? Date.now() - optimizationStarted
+          : undefined,
         stageTimingMs: { ...result.stageTiming, serializationMs: 0 },
         sessionReuse: selectedSessionReuse,
         totalElapsedMs: Date.now() - optimizationStarted,
+        workScopes: {
+          portfolioTotalStatesExpanded,
+          portfolioRetainedStates,
+          selectedPolicyGraphStates: result.graphBuild.nodes.size,
+          acquisitionSynthesisStates: selectedSynthesis?.search?.statesExpanded ?? 0,
+          methodFamilyStates: 0,
+          proofBoundStates: result.searchSummary.acquisitionFeasibilityStatesExpanded,
+        },
         harvestActionScope: {
           mode: harvestTags.length === 0
             ? 'DISABLED'
@@ -3834,7 +4521,6 @@ export class OptimizerService {
           (selectedSynthesis?.solver?.costReconciled ?? true),
       },
       marketContext: input.marketContext,
-      harvestComparison,
       paretoAlternatives,
       objectiveProofStatus,
       objective: input.objective,
@@ -3843,23 +4529,134 @@ export class OptimizerService {
       warnings: [...new Set(uniqueWarningDetails.map((warning) => warning.message))],
     };
     const craftPlan = buildCraftPlan(outputWithoutCraftPlan);
-    const methodPortfolio = buildMethodPortfolio(
+    const methodPortfolio = buildMethodPortfolio({
       pool,
-      allResolvedRoutes,
-      recommended,
-      outputWithoutCraftPlan.recommendationStatus,
-      fastCleanRoute,
-      bestFractureRoute,
-      synthesisSummaries,
-      starts,
-      harvestComparison,
       priceBook,
-      craftPlan
+      input,
+      starts,
+      cleanStart,
+      cleanEvidence,
+      recommended,
+      recommendationStatus: outputWithoutCraftPlan.recommendationStatus,
+      craftPlan,
+      openResult: result,
+      fastCleanResult,
+      fastCleanRoute,
+      synthesisSummaries,
+      acquisition: outputWithoutCraftPlan.acquisition,
+      enabledHarvestCrafts,
+      session: searchSessionRecord,
+      searchIdentityHash,
+      deadlineMs: optimizationStarted + Math.floor(runtimeBudget.engineDeadlineMs * 0.97),
+    });
+    const fullRouteUsage = buildFullRouteUsageSummary({
+      recommended,
+      cleanBaseCostChaos: cleanEvidence.costChaos,
+      selectedSynthesis,
+      downstreamActionUsage: result.expectedActionUsage,
+    });
+    const canonicalCost = recommended ? fullRouteUsage.fullRouteCostChaos : null;
+    const canonicalRecommended = recommended && canonicalCost !== null
+      ? {
+          ...recommended,
+          expectedTotalCostChaos: canonicalCost,
+          incumbentUpperBoundChaos: canonicalCost,
+          metrics: recommended.metrics ? {
+            ...recommended.metrics,
+            expectedChaosCost: canonicalCost,
+          } : undefined,
+        }
+      : recommended;
+    const harvestComparison = buildHarvestComparisonSummary({
+      enabledHarvestCrafts,
+      methodPortfolio,
+      selectedActionUsage: fullRouteUsage.combinedActions,
+      priceBook,
+      costCeilingChaos,
+    });
+    const methodFamilyStates = methodPortfolio.reduce(
+      (sum, family) => sum + family.retainedStates,
+      0
     );
+    const methodFamilyCounts: Record<MethodFamilyStatus, number> = {
+      SELECTED_WINNER: 0,
+      MORE_EXPENSIVE: 0,
+      DOMINATED: 0,
+      NOT_ELIGIBLE: 0,
+      UNRESOLVED_AT_BUDGET: 0,
+      DISABLED: 0,
+      NOT_MODELED: 0,
+      NOT_SEARCHED: 0,
+    };
+    for (const family of methodPortfolio) methodFamilyCounts[family.status]++;
+    const presentation: CanonicalResultPresentation = {
+      schemaVersion: '2T.1',
+      releaseStatus: 'RELEASE_CANDIDATE_BROWSER_VERIFIED',
+      selectedRouteName: canonicalRecommended?.name,
+      selectedRouteStatus: recommendationStatus,
+      proofLabel: recommendationStatus === 'PROVEN_OPTIMAL'
+        ? 'Portfolio optimal — proven'
+        : canonicalRecommended
+          ? 'Best among resolved alternatives'
+          : 'No executable route certified',
+      pricingLabel: input.marketContext?.stale
+        ? 'RESEARCH_ESTIMATE_STALE_PRICING'
+        : 'CURRENT_PRICING',
+      harvestLifecycle: harvestComparison.status,
+      fullRouteCostChaos: canonicalCost ?? undefined,
+      routeScopes: {
+        acquisitionU: canonicalRecommended ? fullRouteUsage.acquisitionCostChaos : undefined,
+        downstreamU: canonicalRecommended ? fullRouteUsage.downstreamCostChaos : undefined,
+        fullRouteU: canonicalCost ?? undefined,
+      },
+      timingScopes: {
+        firstCompletedRoundMs: result.searchSummary.timeToFirstCompletedRoundMs,
+        firstCertifiedDownstreamPolicyMs: result.searchSummary.timeToFirstCertifiedPolicyMs,
+        firstUsefulExecutableFullRouteMs: result.searchSummary.timeToFirstUsefulRecommendationMs,
+        firstAcquisitionSafeRecommendationMs:
+          outputWithoutCraftPlan.search.timeToFirstAcquisitionSafeRecommendationMs,
+      },
+      workScopes: {
+        ...outputWithoutCraftPlan.search.workScopes,
+        methodFamilyStates,
+      },
+      methodFamilyCounts,
+    };
     const output: OptimizeCraftResult = {
       ...outputWithoutCraftPlan,
+      recommended: canonicalRecommended,
+      expectedCostChaos: canonicalCost,
+      expectedProfitChaos: input.expectedSaleValueChaos === undefined || canonicalCost === null
+        ? undefined
+        : input.expectedSaleValueChaos - canonicalCost,
+      expectedCurrencies: Object.fromEntries(
+        Object.entries(fullRouteUsage.combinedCurrencies).map(([currency, amount]) => [
+          currency,
+          finiteOrNull(amount),
+        ])
+      ),
+      expectedActionUsage: fullRouteUsage.combinedActions.map((usage) => ({
+        actionId: usage.actionId,
+        actionName: usage.actionName,
+        expectedCount: usage.expectedCount,
+        expectedCostChaos: usage.expectedCostChaos,
+      })),
+      fullRouteUsage,
       craftPlan,
       methodPortfolio,
+      harvestComparison,
+      presentation,
+      search: {
+        ...outputWithoutCraftPlan.search,
+        totalElapsedMs: Date.now() - optimizationStarted,
+        workScopes: presentation.workScopes,
+      },
+      solver: {
+        ...outputWithoutCraftPlan.solver,
+        reconciliationDifferenceChaos: fullRouteUsage.reconciliationDifferenceChaos,
+        costReconciled: outputWithoutCraftPlan.solver.costReconciled &&
+          fullRouteUsage.reconciliationDifferenceChaos < 0.05,
+      },
     };
     // never become a frontend integration surprise.
     const serializationStarted = Date.now();

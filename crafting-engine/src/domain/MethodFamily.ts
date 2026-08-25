@@ -1,5 +1,5 @@
 import type { CraftPlanSummary } from '../service/craftPlan.ts';
-import type { RouteSummary } from '../service/optimizerService.ts';
+import type { ExpectedActionUsage, RouteSummary } from '../service/optimizerService.ts';
 
 export type MethodFamilyKind =
   | 'OPEN'
@@ -16,7 +16,21 @@ export type MethodFamilyStatus =
   | 'NOT_ELIGIBLE'
   | 'UNRESOLVED_AT_BUDGET'
   | 'DISABLED'
-  | 'NOT_MODELED';
+  | 'NOT_MODELED'
+  | 'NOT_SEARCHED';
+
+export type MethodFamilyEvaluationSource =
+  | 'INDEPENDENT_SOLVE'
+  | 'OPEN_SEARCH_SUMMARY'
+  | 'NOT_SEARCHED';
+
+export type MethodFamilyStageStatus =
+  | 'NOT_APPLICABLE'
+  | 'NOT_SEARCHED'
+  | 'SEARCHING'
+  | 'UNRESOLVED'
+  | 'RESOLVED'
+  | 'DOMINATED';
 
 export interface MethodFamilySpec {
   id: string;
@@ -26,6 +40,7 @@ export interface MethodFamilySpec {
   badge: string;
   allowedActionIds?: string[] | null;
   requiredActionIds?: string[] | null;
+  forbiddenActionIds?: string[] | null;
   forcedAcquisitionType?: 'CLEAN' | 'SELF_FRACTURE' | 'OPEN';
   targetFractureModId?: string;
   targetFractureModName?: string;
@@ -34,6 +49,7 @@ export interface MethodFamilySpec {
 export interface MethodFamilyResult {
   spec: MethodFamilySpec;
   status: MethodFamilyStatus;
+  evaluationSource: MethodFamilyEvaluationSource;
   route?: RouteSummary;
   craftPlan?: CraftPlanSummary;
   costDifferenceChaos?: number;
@@ -41,4 +57,40 @@ export interface MethodFamilyResult {
   actionsSaved?: number;
   timeSavedMs?: number;
   whyNotSelectedExplanation?: string;
+  acquisitionStatus: MethodFamilyStageStatus;
+  acquisitionL?: number;
+  acquisitionU?: number;
+  downstreamStatus: MethodFamilyStageStatus;
+  downstreamL?: number;
+  downstreamU?: number;
+  fullRouteStatus: MethodFamilyStageStatus;
+  fullRouteL?: number;
+  fullRouteU?: number;
+  requiredActionObservedOnPolicy: boolean;
+  onPolicyActionIds: string[];
+  expectedActionUsage?: ExpectedActionUsage[];
+  policyHealth?: {
+    selectedPolicyStatus: string;
+    proofLevel: string;
+    onPolicyReachableStates: number;
+    onPolicyTerminalStates: number;
+    onPolicyUnresolvedTransitions: number;
+    terminalAbsorptionProbability: number;
+    proper: boolean;
+    fullyResolved: boolean;
+    bellmanConverged: boolean;
+    occupancyConverged: boolean;
+    costReconciled: boolean;
+    reconciliationDifferenceChaos?: number;
+  };
+  sessionIdentity?: string;
+  retainedStates: number;
+  transitionDistributionsGenerated: number;
+  budget?: {
+    maxStates: number;
+    maxWallTimeMs: number;
+    maxExpansionRounds: number;
+    elapsedMs: number;
+  };
+  duplicateOfMethodFamilyId?: string;
 }

@@ -80,20 +80,20 @@ export const OnboardingModal: React.FC<OnboardingModalProps> = ({ isOpen, onClos
 
         <div className="onboarding-body">
           <section className="onboarding-section">
-            <h3>🎯 1. Mathematical Optimality & Markov Policies</h3>
+            <h3>🎯 1. Proof-Scoped Markov Policies</h3>
             <p>
               Unlike static craft calculators, this engine formulates crafting as a Markov Decision Process.
               Every roll, promote, fracture attempt, and recovery decision is solved with Bellman value iteration
-              to find the mathematically cheapest, fastest, or fewest-action route to your exact target affixes.
+              to find the best resolved cheapest, fastest, or fewest-action route to your exact target affixes.
+              Optimality is claimed only when the displayed modeled-action and portfolio proofs are complete.
             </p>
           </section>
 
           <section className="onboarding-section">
             <h3>🔬 2. Method Portfolio & Explainability</h3>
             <p>
-              We evaluate multiple crafting disciplines simultaneously: conventional Alt/Aug/Regal/Exalt, Harvest reforges,
-              and self-fracturing every eligible target modifier. You can see not just the winner, but also why alternatives were rejected
-              or dominated.
+              The open recommendation returns first. Compare Methods then runs dedicated constrained searches for conventional
+              Alt/Aug/Regal/Exalt, eligible Harvest reforges, and self-fracture families, recording required on-policy action evidence.
             </p>
           </section>
 

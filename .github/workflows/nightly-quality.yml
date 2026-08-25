@@ -1,23 +1,17 @@
-name: Deploy to GitHub Pages
+name: Nightly Phase 2T Quality Matrix
 
 on:
-  push:
-    branches: [main]
+  schedule:
+    - cron: '17 10 * * *'
   workflow_dispatch:
 
 permissions:
   contents: read
-  pages: write
-  id-token: write
-
-# Let a running deploy finish; queue the newest without piling up.
-concurrency:
-  group: pages
-  cancel-in-progress: false
 
 jobs:
-  validate-and-build:
+  extended-real-browser-matrix:
     runs-on: ubuntu-latest
+    timeout-minutes: 45
     steps:
       - uses: actions/checkout@v7
       - uses: actions/setup-node@v7
@@ -32,27 +26,15 @@ jobs:
       - run: git diff --check
       - run: npm run diagnostic:mature
       - run: npm run lab:no-fallback-probe
-      - run: npm run lab:release
+      - name: Extended fixtures, objectives, method matrix, viewports, frames, and soak
+        run: npm run lab:nightly
       - run: npm run diagnostic:phase2t
-      - name: Upload real-browser evidence
+      - name: Upload nightly traces, video, screenshots, frames, and reports
         if: always()
         uses: actions/upload-artifact@v6
         with:
-          name: phase2t-quality-lab
+          name: phase2t-nightly-quality-lab
           path: |
             quality-lab/artifacts/
             quality-lab/reports/
           if-no-files-found: error
-      - uses: actions/upload-pages-artifact@v5
-        with:
-          path: dist
-
-  deploy:
-    needs: validate-and-build
-    runs-on: ubuntu-latest
-    environment:
-      name: github-pages
-      url: ${{ steps.deployment.outputs.page_url }}
-    steps:
-      - id: deployment
-        uses: actions/deploy-pages@v5

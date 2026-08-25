@@ -155,6 +155,7 @@ function age(value: number | undefined): string {
 interface SearchActivityVisualizerProps {
   progress: OptimizerProgressSnapshot | null;
   running: boolean;
+  selectedRouteName?: string;
   onRetryDeeper?: () => void;
   onCancel?: () => void;
 }
@@ -198,6 +199,7 @@ const PROOF_REASON_COPY: Record<AcquisitionPortfolioProofReason, string> = {
 export function SearchActivityVisualizer({
   progress,
   running,
+  selectedRouteName,
   onRetryDeeper,
   onCancel,
 }: SearchActivityVisualizerProps) {
@@ -221,7 +223,11 @@ export function SearchActivityVisualizer({
   const proofCopy = proofStatus ? PORTFOLIO_PROOF_COPY[proofStatus] : undefined;
 
   return (
-    <section className="optimizer-card search-activity-card" aria-label="Search Activity">
+    <section
+      className="optimizer-card search-activity-card"
+      aria-label="Search Activity"
+      data-selected-route={selectedRouteName}
+    >
       <div className="search-activity-header">
         <div className="search-activity-title-group">
           <div className="search-status-pill-container">
@@ -259,14 +265,18 @@ export function SearchActivityVisualizer({
         </div>
       </div>
 
+      {!running && selectedRouteName && (
+        <p className="search-selected-route"><strong>Selected route:</strong> {selectedRouteName}</p>
+      )}
+
       {/* Metrics Row */}
       <div className="search-metrics-bar">
         <div className="search-metric-item">
-          <span className="metric-label">States Expanded</span>
+          <span className="metric-label">Total Portfolio States Expanded</span>
           <span className="metric-value">{totalStates.toLocaleString()}</span>
         </div>
         <div className="search-metric-item">
-          <span className="metric-label">Retained / Reused</span>
+          <span className="metric-label">Portfolio States Retained / Reused</span>
           <span className="metric-value">{retainedStates.toLocaleString()}</span>
         </div>
         <div className="search-metric-item">
@@ -421,7 +431,7 @@ export function SearchActivityVisualizer({
   );
 }
 
-export const APP_RELEASE_VERSION = '2S.1';
+export const APP_RELEASE_VERSION = '2T.1';
 
 export function CraftOptimizer() {
   const baseTypes = useMemo(() => browserCraftingCatalog.getBaseTypes(), []);
@@ -459,6 +469,7 @@ export function CraftOptimizer() {
   const [error, setError] = useState<string | null>(null);
   const [wallTimeExceeded, setWallTimeExceeded] = useState(false);
   const [running, setRunning] = useState(false);
+  const [comparingMethods, setComparingMethods] = useState(false);
   const [runtimeMs, setRuntimeMs] = useState<number | null>(null);
   const workerRef = useRef<OptimizerWorkerClient | null>(null);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
@@ -658,13 +669,15 @@ export function CraftOptimizer() {
 
   const optimize = async (
     budget = { maxStates, maxWallTimeMs, maxExpansionRounds },
-    intent: SearchIntent = searchIntent
+    intent: SearchIntent = searchIntent,
+    compareMethodFamilies = false,
   ) => {
     if (validationError || !workerRef.current) return;
     const requestValidation = validateBrowserOptimizeInput({
       ...draftInput,
       searchBudget: budget,
       searchIntent: intent,
+      compareMethodFamilies,
     });
     if (!requestValidation.valid) {
       setError(requestValidation.errors.map((issue) => issue.message).join(' '));
@@ -672,9 +685,10 @@ export function CraftOptimizer() {
     }
     const input = requestValidation.normalizedInput;
     setRunning(true);
+    setComparingMethods(compareMethodFamilies);
     setError(null);
     setWallTimeExceeded(false);
-    setResult(null);
+    if (!compareMethodFamilies) setResult(null);
     setProgress(null);
     setRuntimeMs(null);
     const started = performance.now();
@@ -698,6 +712,7 @@ export function CraftOptimizer() {
       }
     } finally {
       setRunning(false);
+      setComparingMethods(false);
     }
   };
 
@@ -715,6 +730,14 @@ export function CraftOptimizer() {
   };
 
   const cancel = () => workerRef.current?.cancel();
+
+  const compareMethods = () => {
+    void optimize(
+      { maxStates, maxWallTimeMs, maxExpansionRounds },
+      'DEEPEN',
+      true,
+    );
+  };
 
   const copyShoppingList = (res: OptimizeCraftResult) => {
     const lines: string[] = ['=== CLUSTER JEWEL CRAFTING SHOPPING LIST ==='];
@@ -870,6 +893,26 @@ export function CraftOptimizer() {
         recommendationStatus: res.recommendationStatus,
         recommendedRoute: res.recommended?.name,
         metrics: res.recommended?.metrics,
+        presentation: res.presentation,
+        fullRouteUsage: res.fullRouteUsage,
+        shoppingListCurrencies: res.expectedCurrencies,
+        harvestComparison: res.harvestComparison,
+        methodFamilies: res.methodPortfolio?.map((family) => ({
+          id: family.spec.id,
+          status: family.status,
+          evaluationSource: family.evaluationSource,
+          acquisitionStatus: family.acquisitionStatus,
+          downstreamStatus: family.downstreamStatus,
+          fullRouteStatus: family.fullRouteStatus,
+                          requiredActionObservedOnPolicy: family.requiredActionObservedOnPolicy,
+                          onPolicyActionIds: family.onPolicyActionIds,
+                          expectedActionUsage: family.expectedActionUsage,
+                          policyHealth: family.policyHealth,
+                          sessionIdentity: family.sessionIdentity,
+                          retainedStates: family.retainedStates,
+                          transitionDistributionsGenerated: family.transitionDistributionsGenerated,
+                          budget: family.budget,
+        })),
       },
     };
 
@@ -1224,13 +1267,19 @@ export function CraftOptimizer() {
       <SearchActivityVisualizer
         progress={progress}
         running={running}
+        selectedRouteName={result?.presentation.selectedRouteName}
         onRetryDeeper={retryDeeper}
         onCancel={cancel}
       />
 
       {result && (
         <div className="optimizer-results">
-          <section className="optimizer-card optimizer-summary recommendation-hero">
+          <section
+            className="optimizer-card optimizer-summary recommendation-hero"
+            data-selected-route={result.presentation.selectedRouteName}
+            data-proof-label={result.presentation.proofLabel}
+            data-pricing-label={result.presentation.pricingLabel}
+          >
             <div className="recommendation-heading">
               <h2>{result.recommendationStatus === 'NO_RESOLVED_ROUTE' ? 'Search outcome' : 'Craft recommendation'}</h2>
               <span className={`confidence-badge ${result.recommendationStatus.toLowerCase()}`}>
@@ -1243,6 +1292,12 @@ export function CraftOptimizer() {
                       : 'No resolved route'}
               </span>
             </div>
+            {result.presentation.pricingLabel === 'RESEARCH_ESTIMATE_STALE_PRICING' && (
+              <div className="stale-research-estimate" role="alert">
+                <strong>Research estimate using stale bundled pricing</strong>
+                <span>Route ordering is provisional until current manual overrides or a fresh market snapshot are supplied.</span>
+              </div>
+            )}
             <div className="recommendation-target">
               <span>Target</span>
               <strong>{result.target.requiredMods.map((requirement) =>
@@ -1250,6 +1305,7 @@ export function CraftOptimizer() {
               ).join(' + ')} · {result.target.requiredRarity ?? 'Any rarity'}</strong>
             </div>
             <dl className="recommendation-facts">
+              <dt>Selected route</dt><dd>{result.presentation.selectedRouteName ?? 'none certified'}</dd>
               <dt>{result.recommendationStatus === 'NO_RESOLVED_ROUTE' ? 'Resolved start' : 'Recommended start'}</dt><dd>{recommendedStart}</dd>
               <dt>Expected cost</dt><dd className="recommendation-cost">{chaos(result.expectedCostChaos)}</dd>
               <dt>Expected physical actions</dt>
@@ -1300,7 +1356,7 @@ export function CraftOptimizer() {
               <dd>{result.target.finalStateConstraints?.maxUnmatchedAffixes === 0 ? 'No unwanted affixes' : 'Extra affixes allowed'}</dd>
             </dl>
             <div className={`optimizer-proof ${result.recommendationStatus.toLowerCase()}`}>
-              <strong>{STATUS_COPY[result.recommendationStatus].title}</strong>
+              <strong>{result.presentation.proofLabel}</strong>
               <span>{STATUS_COPY[result.recommendationStatus].detail}</span>
             </div>
             {result.recommended !== null && result.policyRefinement.status !== 'MODELED_OPTIMAL' && (
@@ -1342,7 +1398,7 @@ export function CraftOptimizer() {
             <section className="optimizer-card pareto-comparison-card" aria-labelledby="pareto-card-title">
               <h2 id="pareto-card-title">Multi-Objective Tradeoffs &amp; Alternatives</h2>
               <p className="muted">
-                These non-dominated alternatives represent the optimal trade-off frontier between currency cost, physical crafting operations, and manual crafting time.
+                These non-dominated alternatives form the current resolved Pareto set for currency cost, physical crafting operations, and manual crafting time. Unresolved competitors are excluded.
               </p>
               <div className="pareto-grid">
                 {result.paretoAlternatives.map((alt, idx) => (
@@ -1381,26 +1437,54 @@ export function CraftOptimizer() {
           )}
 
           {result.harvestComparison && (
-            <section className="optimizer-card harvest-comparison-card" aria-labelledby="harvest-card-title">
+            <section
+              className="optimizer-card harvest-comparison-card"
+              aria-labelledby="harvest-card-title"
+              data-harvest-lifecycle={result.harvestComparison.status}
+              data-harvest-action-evidence={result.harvestComparison.actionEvidenceObserved}
+            >
               <div className="harvest-card-heading">
                 <h2 id="harvest-card-title">Harvest Crafting Comparison</h2>
                 <span className={`harvest-status-badge ${result.harvestComparison.status.toLowerCase()}`}>
-                  {result.harvestComparison.status === 'HARVEST_SELECTED'
+                  {result.harvestComparison.status === 'SELECTED'
                     ? 'Harvest Route Recommended'
-                    : result.harvestComparison.status === 'HARVEST_MORE_EXPENSIVE'
+                    : result.harvestComparison.status === 'RESOLVED_MORE_EXPENSIVE'
                       ? 'Harvest More Expensive'
-                      : result.harvestComparison.status === 'HARVEST_NOT_ELIGIBLE'
+                      : result.harvestComparison.status === 'NOT_ELIGIBLE'
                         ? 'Not Eligible for Target'
-                        : 'Harvest Crafts Disabled'}
+                        : result.harvestComparison.status.replace(/_/g, ' ')}
                 </span>
               </div>
               <p className="harvest-explanation">{result.harvestComparison.explanation}</p>
-              {result.harvestComparison.costDifferenceChaos !== undefined && (
+              {result.harvestComparison.actionEvidenceObserved && (
                 <div className="harvest-comparison-grid">
                   <div className="harvest-stat-box">
+                    <span className="stat-label">Expected Harvest Applications</span>
+                    <strong className="stat-value">{count(result.harvestComparison.expectedHarvestApplications ?? 0)}</strong>
+                  </div>
+                  <div className="harvest-stat-box">
+                    <span className="stat-label">Expected Lifeforce</span>
+                    <strong className="stat-value">
+                      {count(result.harvestComparison.expectedLifeforce ?? 0)} {result.harvestComparison.lifeforceType}
+                    </strong>
+                    <small>{result.harvestComparison.lifeforcePerApplication} per application</small>
+                  </div>
+                  <div className="harvest-stat-box">
+                    <span className="stat-label">Non-Lifeforce Cost</span>
+                    <strong className="stat-value">{chaos(result.harvestComparison.harvestNonLifeforceCostChaos)}</strong>
+                  </div>
+                  <div className="harvest-stat-box">
+                    <span className="stat-label">Current-Price Harvest Total</span>
+                    <strong className="stat-value">{chaos(result.harvestComparison.harvestTotalAtCurrentPriceChaos)}</strong>
+                  </div>
+                  <div className="harvest-stat-box">
                     <span className="stat-label">Currency Delta</span>
-                    <strong className={`stat-value ${result.harvestComparison.costDifferenceChaos <= 0 ? 'good' : 'more-cost'}`}>
-                      {result.harvestComparison.costDifferenceChaos > 0 ? `+${result.harvestComparison.costDifferenceChaos.toFixed(1)}c` : `${result.harvestComparison.costDifferenceChaos.toFixed(1)}c`}
+                    <strong className={`stat-value ${(result.harvestComparison.costDifferenceChaos ?? 0) <= 0 ? 'good' : 'more-cost'}`}>
+                      {result.harvestComparison.costDifferenceChaos === undefined
+                        ? '—'
+                        : result.harvestComparison.costDifferenceChaos > 0
+                          ? `+${result.harvestComparison.costDifferenceChaos.toFixed(1)}c`
+                          : `${result.harvestComparison.costDifferenceChaos.toFixed(1)}c`}
                     </strong>
                   </div>
                   <div className="harvest-stat-box">
@@ -1423,7 +1507,7 @@ export function CraftOptimizer() {
                     <div className="harvest-stat-box crossover-box">
                       <span className="stat-label">Lifeforce Crossover Price</span>
                       <strong className="stat-value crossover">
-                        {result.harvestComparison.lifeforceCrossoverPriceChaosPerUnit.toFixed(4)}c / unit
+                        {result.harvestComparison.lifeforceCrossoverPriceChaosPerUnit.toFixed(4)}c / {result.harvestComparison.lifeforceType}
                       </strong>
                     </div>
                   )}
@@ -1436,11 +1520,18 @@ export function CraftOptimizer() {
             <section className="optimizer-card method-portfolio-card" aria-labelledby="method-portfolio-title">
               <div className="method-portfolio-heading">
                 <h2 id="method-portfolio-title">Crafting Method Comparison</h2>
-                <span className="portfolio-badge">{result.methodPortfolio.length} Methods Evaluated</span>
+                <span className="portfolio-badge">
+                  {result.methodPortfolio.filter((method) => method.evaluationSource === 'INDEPENDENT_SOLVE').length}/{result.methodPortfolio.length} Independently Solved
+                </span>
               </div>
               <p className="muted">
-                These cards compare the major crafting disciplines (Open, Conventional Alt/Regal, Harvest Reforges, and Self-Fracture options) against the chosen objective.
+                Each card states whether it came from an independent constrained solve, an open-search summary, or has not been searched. Required mechanics are accepted only with positive on-policy action evidence.
               </p>
+              {result.methodPortfolio.some((method) => method.evaluationSource !== 'INDEPENDENT_SOLVE' && method.status !== 'NOT_MODELED') && (
+                <button type="button" className="secondary compare-methods-btn" onClick={compareMethods} disabled={running}>
+                  {comparingMethods ? 'Comparing methods…' : 'Compare Methods Independently'}
+                </button>
+              )}
               <div className="method-portfolio-grid">
                 {result.methodPortfolio.map((method) => {
                   const isWinner = method.status === 'SELECTED_WINNER';
@@ -1448,11 +1539,16 @@ export function CraftOptimizer() {
                   const isDominated = method.status === 'DOMINATED';
                   const isNotEligible = method.status === 'NOT_ELIGIBLE';
                   const isUnresolved = method.status === 'UNRESOLVED_AT_BUDGET';
+                  const isNotSearched = method.status === 'NOT_SEARCHED';
 
                   return (
                     <div
                       key={method.spec.id}
                       className={`method-family-card ${isWinner ? 'winner' : ''} status-${method.status.toLowerCase()}`}
+                      data-method-family-id={method.spec.id}
+                      data-evaluation-source={method.evaluationSource}
+                      data-required-action-observed={method.requiredActionObservedOnPolicy}
+                      data-duplicate-of={method.duplicateOfMethodFamilyId}
                     >
                       <div className="method-card-header">
                         <div className="method-title-group">
@@ -1472,10 +1568,16 @@ export function CraftOptimizer() {
                                   ? 'Not Eligible'
                                   : isUnresolved
                                     ? 'Unresolved at budget'
+                                    : isNotSearched
+                                      ? 'Not searched'
                                     : method.status}
                         </span>
                       </div>
                       <p className="method-desc">{method.spec.description}</p>
+                      <p className="method-evaluation-source">
+                        <strong>Evidence:</strong> {method.evaluationSource.replace(/_/g, ' ')}
+                        {method.duplicateOfMethodFamilyId ? ` · same independently evaluated policy as ${method.duplicateOfMethodFamilyId}` : ''}
+                      </p>
                       {method.route && (
                         <dl className="method-metrics">
                           <div>
@@ -1492,6 +1594,20 @@ export function CraftOptimizer() {
                           </div>
                         </dl>
                       )}
+                      <dl className="method-stage-metrics">
+                        <div><dt>Acquisition</dt><dd>{method.acquisitionStatus} · L {chaos(method.acquisitionL)} · U {chaos(method.acquisitionU)}</dd></div>
+                        <div><dt>Downstream</dt><dd>{method.downstreamStatus} · L {chaos(method.downstreamL)} · U {chaos(method.downstreamU)}</dd></div>
+                        <div><dt>Full route</dt><dd>{method.fullRouteStatus} · L {chaos(method.fullRouteL)} · U {chaos(method.fullRouteU)}</dd></div>
+                        <div><dt>Required action evidence</dt><dd>{method.spec.requiredActionIds?.length
+                          ? method.requiredActionObservedOnPolicy
+                            ? `observed (${method.spec.requiredActionIds.join(', ')})`
+                            : `not observed (${method.spec.requiredActionIds.join(', ')})`
+                          : 'not required'}</dd></div>
+                        {method.policyHealth && <>
+                          <div><dt>Independent policy proof</dt><dd>{method.policyHealth.selectedPolicyStatus}</dd></div>
+                          <div><dt>Policy health</dt><dd>{method.policyHealth.proper ? 'proper' : 'not proper'} · absorption {(method.policyHealth.terminalAbsorptionProbability * 100).toFixed(6)}% · reconciliation {method.policyHealth.costReconciled ? 'yes' : 'no'}</dd></div>
+                        </>}
+                      </dl>
                       {method.whyNotSelectedExplanation && (
                         <div className={`method-explanation ${isWinner ? 'winner' : 'not-selected'}`}>
                           <strong>{isWinner ? 'Why selected:' : 'Why not selected:'}</strong>
@@ -1507,7 +1623,10 @@ export function CraftOptimizer() {
 
           {constellationGraph && (
             <section className="optimizer-card constellation-card" aria-label="Markov Policy Constellation">
-              <MarkovConstellation graph={constellationGraph} />
+              <MarkovConstellation
+                graph={constellationGraph}
+                selectedRouteName={result.presentation.selectedRouteName}
+              />
             </section>
           )}
 
@@ -1559,6 +1678,8 @@ export function CraftOptimizer() {
             {result.recommended && result.craftPlan.status === 'CERTIFIED' ? (
               <>
                 <div className="craft-start">
+                  <span>Selected route</span>
+                  <strong data-selected-route={result.presentation.selectedRouteName}>{result.presentation.selectedRouteName}</strong>
                   <span>Starting point</span>
                   <strong>{recommendedStart}</strong>
                   <p>This condensed playbook puts the selected policy in chronological order. Repeat its recovery loop after misses, and expand Decision details when the exact current affixes matter.</p>
@@ -1657,10 +1778,11 @@ export function CraftOptimizer() {
 
           {result.recommended !== null && <section className="optimizer-card expected-materials" aria-labelledby="expected-materials-title">
             <h2 id="expected-materials-title">Expected materials</h2>
-            <p className="muted">These are long-run averages from the selected policy, so fractional usage is expected rather than a guaranteed whole-number shopping list.</p>
-            {result.expectedActionUsage.length > 0 ? (
-              <table><thead><tr><th>Material or action</th><th>Expected usage</th><th>Expected cost</th></tr></thead>
-                <tbody>{result.expectedActionUsage.map((usage) => (
+            <p className="muted">Acquisition preparation and downstream crafting are additive, non-overlapping scopes. Full-route totals merge matching action and currency IDs exactly once.</p>
+            <h3>Acquisition preparation</h3>
+            {result.fullRouteUsage.acquisitionActions.length > 0 ? (
+              <table data-usage-scope="ACQUISITION"><thead><tr><th>Material or action</th><th>Expected usage</th><th>Expected cost</th></tr></thead>
+                <tbody>{result.fullRouteUsage.acquisitionActions.map((usage) => (
                   <tr
                     key={usage.actionId}
                     data-action-id={usage.actionId}
@@ -1671,10 +1793,40 @@ export function CraftOptimizer() {
                   </tr>
                 ))}</tbody>
               </table>
-            ) : <p>No resolved expected material usage is available.</p>}
+            ) : <p>No additive acquisition usage is available.</p>}
+            <p><strong>Acquisition cost:</strong> {chaos(result.fullRouteUsage.acquisitionCostChaos)}</p>
+            <h3>Downstream crafting</h3>
+            {result.fullRouteUsage.downstreamActions.length > 0 ? (
+              <table data-usage-scope="DOWNSTREAM"><thead><tr><th>Material or action</th><th>Expected usage</th><th>Expected cost</th></tr></thead>
+                <tbody>{result.fullRouteUsage.downstreamActions.map((usage) => (
+                  <tr
+                    key={usage.actionId}
+                    data-action-id={usage.actionId}
+                    data-expected-count={usage.expectedCount}
+                    data-expected-cost={usage.expectedCostChaos}
+                  >
+                    <td>{usage.actionName}</td><td>{count(usage.expectedCount)}</td><td>{chaos(usage.expectedCostChaos)}</td>
+                  </tr>
+                ))}</tbody>
+              </table>
+            ) : <p>No downstream actions are needed.</p>}
+            <p><strong>Downstream cost:</strong> {chaos(result.fullRouteUsage.downstreamCostChaos)}</p>
+            <details className="combined-action-summary">
+              <summary>Full-route merged action totals</summary>
+              <table data-usage-scope="FULL_ROUTE"><thead><tr><th>Material or action</th><th>Expected usage</th><th>Expected cost</th></tr></thead>
+                <tbody>{result.fullRouteUsage.combinedActions.map((usage) => (
+                  <tr key={usage.actionId} data-action-id={usage.actionId} data-expected-count={usage.expectedCount} data-expected-cost={usage.expectedCostChaos}>
+                    <td>{usage.actionName}</td><td>{count(usage.expectedCount)}</td><td>{chaos(usage.expectedCostChaos)}</td>
+                  </tr>
+                ))}</tbody>
+              </table>
+            </details>
+            <p className="full-route-reconciliation" data-reconciliation-difference={result.fullRouteUsage.reconciliationDifferenceChaos}>
+              <strong>Full-route cost:</strong> {chaos(result.fullRouteUsage.fullRouteCostChaos)} · reconciliation difference {chaos(result.fullRouteUsage.reconciliationDifferenceChaos)}
+            </p>
             {Object.keys(result.expectedCurrencies).length > 0 && (
               <details className="currency-summary">
-                <summary>Expected currency totals</summary>
+                <summary>Full-route expected currency totals (shopping list)</summary>
                 <ul className="currency-usage">
                   {Object.entries(result.expectedCurrencies).map(([currency, amount]) => (
                     <li key={currency}><span>{currency}</span><strong>{amount === null ? '—' : count(amount)}</strong></li>
@@ -1693,18 +1845,21 @@ export function CraftOptimizer() {
               <section className="advanced-section raw-proof-details">
                 <h2>Recommendation proof</h2>
                 <dl>
+                  <dt>Selected route</dt><dd>{result.presentation.selectedRouteName ?? 'none'}</dd>
                   <dt>Raw recommendation status</dt><dd>{result.recommendationStatus}</dd>
                   <dt>Raw proof level</dt><dd>{result.proof.proofLevel}</dd>
                   <dt>Global optimality</dt><dd>{result.proof.globalOptimality}</dd>
                   <dt>Acquisition selection safe</dt><dd>{result.acquisition.selectionSafe ? 'yes' : 'no'}</dd>
                   <dt>Downstream policy status</dt><dd>{result.policyRefinement.status}</dd>
                   <dt>Downstream refinement stop</dt><dd>{result.policyRefinement.stopReason}</dd>
-                  {result.policyRefinement.firstCertifiedUpperBoundChaos !== undefined && <><dt>First certified policy U</dt><dd>{chaos(result.policyRefinement.firstCertifiedUpperBoundChaos)}</dd></>}
-                  {result.policyRefinement.finalUpperBoundChaos !== undefined && <><dt>Final returned policy U</dt><dd>{chaos(result.policyRefinement.finalUpperBoundChaos)}</dd></>}
-                  {result.policyRefinement.improvementFraction !== undefined && <><dt>Refinement improvement</dt><dd>{chaos(result.policyRefinement.improvementChaos)} ({(result.policyRefinement.improvementFraction * 100).toFixed(2)}%)</dd></>}
+                  {result.policyRefinement.firstCertifiedDownstreamU !== undefined && <><dt>First certified downstream policy U</dt><dd>{chaos(result.policyRefinement.firstCertifiedDownstreamU)}</dd></>}
+                  {result.policyRefinement.finalDownstreamU !== undefined && <><dt>Final downstream policy U</dt><dd>{chaos(result.policyRefinement.finalDownstreamU)}</dd></>}
+                  {result.policyRefinement.firstCertifiedFullRouteU !== undefined && <><dt>First certified full-route U</dt><dd>{chaos(result.policyRefinement.firstCertifiedFullRouteU)}</dd></>}
+                  {result.policyRefinement.finalFullRouteU !== undefined && <><dt>Final returned full-route U</dt><dd>{chaos(result.policyRefinement.finalFullRouteU)}</dd></>}
+                  {result.policyRefinement.improvementFraction !== undefined && <><dt>Full-route refinement improvement</dt><dd>{chaos(result.policyRefinement.improvementChaos)} ({(result.policyRefinement.improvementFraction * 100).toFixed(2)}%)</dd></>}
                   {result.policyRefinement.unresolvedCompetitiveLowerBoundChaos !== undefined && <><dt>Unresolved downstream competitive L</dt><dd>{chaos(result.policyRefinement.unresolvedCompetitiveLowerBoundChaos)}</dd></>}
-                  {result.acquisition.resolvedIncumbentUpperBoundChaos !== undefined && <><dt>Resolved incumbent U</dt><dd>{chaos(result.acquisition.resolvedIncumbentUpperBoundChaos)}</dd></>}
-                  {result.acquisition.bestUnresolvedLowerBoundChaos !== undefined && <><dt>Best unresolved acquisition L</dt><dd>{chaos(result.acquisition.bestUnresolvedLowerBoundChaos)}</dd></>}
+                  {result.acquisition.resolvedIncumbentUpperBoundChaos !== undefined && <><dt>Resolved full-route incumbent U</dt><dd>{chaos(result.acquisition.resolvedIncumbentUpperBoundChaos)}</dd></>}
+                  {result.acquisition.bestUnresolvedLowerBoundChaos !== undefined && <><dt>Best unresolved competitive full-route L</dt><dd>{chaos(result.acquisition.bestUnresolvedLowerBoundChaos)}</dd></>}
                   {result.acquisition.potentialGapChaos !== undefined && <><dt>Potential acquisition gap</dt><dd>{chaos(result.acquisition.potentialGapChaos)}</dd></>}
                   <dt>Selected acquisition method</dt><dd>{selectedMethod?.label ?? 'none'}</dd>
                   <dt>Worker round trip</dt><dd>{runtimeMs === null ? 'not recorded' : `${runtimeMs.toFixed(0)} ms`}</dd>
@@ -1886,15 +2041,21 @@ export function CraftOptimizer() {
                 <section className="advanced-section search-performance">
                   <h2>Search budget and performance</h2>
                   <dl>
-                    <dt>States expanded</dt><dd>{result.search.statesExpanded.toLocaleString()}</dd>
+                    <dt>Total portfolio states expanded this request</dt><dd>{result.search.workScopes.portfolioTotalStatesExpanded.toLocaleString()}</dd>
+                    <dt>Total retained/reused portfolio states</dt><dd>{result.search.workScopes.portfolioRetainedStates.toLocaleString()}</dd>
+                    <dt>Selected downstream policy graph states</dt><dd>{result.search.workScopes.selectedPolicyGraphStates.toLocaleString()}</dd>
+                    <dt>Selected acquisition synthesis states</dt><dd>{result.search.workScopes.acquisitionSynthesisStates.toLocaleString()}</dd>
+                    <dt>Independent method-family graph states</dt><dd>{result.search.workScopes.methodFamilyStates.toLocaleString()}</dd>
+                    <dt>Proof-bound states</dt><dd>{result.search.workScopes.proofBoundStates.toLocaleString()}</dd>
                     <dt>Expansion rounds</dt><dd>{result.search.expansionRounds}/{result.search.maxExpansionRounds}</dd>
                     <dt>Search intent</dt><dd>{result.search.intent}</dd>
                     <dt>Engine elapsed</dt><dd>{result.search.elapsedMs.toLocaleString()} ms</dd>
                     <dt>Total staged engine elapsed</dt><dd>{result.search.totalElapsedMs.toLocaleString()} ms</dd>
                     <dt>Engine / host deadline</dt><dd>{result.search.engineDeadlineMs} / {result.search.hostGuardDeadlineMs} ms</dd>
-                    <dt>First completed round</dt><dd>{result.search.timeToFirstCompletedRoundMs === undefined ? 'not reached' : `${result.search.timeToFirstCompletedRoundMs} ms`}</dd>
-                    <dt>First certified policy</dt><dd>{result.search.timeToFirstCertifiedPolicyMs === undefined ? 'not reached' : `${result.search.timeToFirstCertifiedPolicyMs} ms`}</dd>
-                    <dt>First acquisition-safe recommendation</dt><dd>{result.search.timeToFirstUsefulRecommendationMs === undefined ? 'not reached' : `${result.search.timeToFirstUsefulRecommendationMs} ms`}</dd>
+                    <dt>First completed search round</dt><dd>{result.search.timeToFirstCompletedRoundMs === undefined ? 'not reached' : `${result.search.timeToFirstCompletedRoundMs} ms`}</dd>
+                    <dt>First certified downstream policy</dt><dd>{result.search.timeToFirstCertifiedPolicyMs === undefined ? 'not reached' : `${result.search.timeToFirstCertifiedPolicyMs} ms`}</dd>
+                    <dt>First useful executable full route</dt><dd>{result.search.timeToFirstUsefulExecutableRecommendationMs === undefined ? 'not reached' : `${result.search.timeToFirstUsefulExecutableRecommendationMs} ms`}</dd>
+                    <dt>First acquisition-safe recommendation</dt><dd>{result.search.timeToFirstAcquisitionSafeRecommendationMs === undefined ? 'not reached' : `${result.search.timeToFirstAcquisitionSafeRecommendationMs} ms`}</dd>
                     <dt>Minimum feasible rarity</dt><dd>{result.search.minimumFeasibleRarity.rarity} — {result.search.minimumFeasibleRarity.reason}</dd>
                     <dt>Returned at budget</dt><dd>{result.search.returnedAtBudget ? 'yes' : 'no'}</dd>
                     <dt>Host guard triggered</dt><dd>{result.search.hostGuardTriggered ? 'yes' : 'no'}</dd>
@@ -1912,7 +2073,8 @@ export function CraftOptimizer() {
                     <dt>Fair acquisition probes</dt><dd>{result.search.acquisitionFeasibility.certifiedCandidates}/{result.search.acquisitionFeasibility.attemptedCandidates} certified</dd>
                     <dt>Budget exhausted</dt><dd>{result.search.budgetExhausted ? 'yes' : 'no'}</dd>
                     <dt>Raw inferred tags</dt><dd>{result.search.harvestActionScope.rawInferredTags.join(', ') || 'none'}</dd>
-                    <dt>Enabled Harvest crafts</dt><dd>{result.search.harvestActionScope.enabledCrafts.map((craft) => craft.actionName).join(', ') || 'none'}</dd>
+                    <dt>Harvest lifecycle</dt><dd>{result.harvestComparison?.status ?? 'NOT_ELIGIBLE'}</dd>
+                    <dt>Eligible/enabled Harvest definitions</dt><dd>{result.search.harvestActionScope.enabledCrafts.map((craft) => craft.actionName).join(', ') || 'none'}</dd>
                   </dl>
                   <details>
                     <summary>Stage timing</summary>
@@ -1989,7 +2151,7 @@ export function CraftOptimizer() {
 
       <footer className="release-footer" role="contentinfo">
         <p>
-          <strong>Cluster Jewel Craft Optimizer</strong> — Release Candidate {APP_RELEASE_VERSION} (Public Beta)
+          <strong>Cluster Jewel Craft Optimizer</strong> — Browser-Verified Release Candidate {APP_RELEASE_VERSION}
         </p>
         <p>
           Powered by Markov Decision Processes & Bellman Dynamic Programming.

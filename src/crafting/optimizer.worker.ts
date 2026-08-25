@@ -15,6 +15,16 @@ workerScope.addEventListener('message', (event: MessageEvent<OptimizerWorkerRequ
       progress,
     });
   });
+  if (response.type === 'RESULT') {
+    workerScope.postMessage({
+      type: 'COMPLETE',
+      requestId,
+      completion: {
+        recommendationStatus: response.result.recommendationStatus,
+        selectedRouteName: response.result.presentation.selectedRouteName,
+      },
+    });
+  }
   workerScope.postMessage(response);
 });
 export {};

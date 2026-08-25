@@ -33,3 +33,6 @@ dist-ssr
 *.sw?
 .claude/
 
+# Real-browser videos, traces, and transient run directories. Stable evidence is
+# copied to quality-lab/reports/evidence/ by the release harness.
+/quality-lab/artifacts/

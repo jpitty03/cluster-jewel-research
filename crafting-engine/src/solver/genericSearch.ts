@@ -597,6 +597,11 @@ export interface GenericSearchOptions {
   includeHarvest?: boolean;
   harvestTags?: string[];
   enabledActionIds?: string[];
+  /**
+   * At least one of these actions must have occurred before a target state is
+   * terminal. The evidence is carried in ItemStateFlags and canonical identity.
+   */
+  requiredAnyActionIds?: string[];
   prioritizeTargetProgress?: boolean;
   maxMarkovIterations?: number;
   maxWallTimeMs?: number;
@@ -1154,6 +1159,26 @@ export class GenericSearchEngine {
   private defaultOptions: GenericSearchOptions;
   private minimumFeasibleRarity: MinimumFeasibleRarityResult;
 
+  private requiredActionEvidenceSatisfied(state: ItemState): boolean {
+    const required = this.defaultOptions.requiredAnyActionIds;
+    if (!required || required.length === 0) return true;
+    const observed = new Set(state.flags?.methodFamilyActionEvidence ?? []);
+    return required.some((actionId) => observed.has(actionId));
+  }
+
+  private withMethodFamilyActionEvidence(state: ItemState, actionId: string): ItemState {
+    const required = this.defaultOptions.requiredAnyActionIds;
+    if (!required?.includes(actionId)) return state;
+    const next = cloneItemState(state);
+    next.flags = {
+      ...next.flags,
+      methodFamilyActionEvidence: [
+        ...new Set([...(next.flags?.methodFamilyActionEvidence ?? []), actionId]),
+      ].sort(),
+    };
+    return next;
+  }
+
   private stateKey(state: ItemState): string {
     return this.defaultOptions.canonicalStateKey?.(state, this.target) ??
       getCanonicalStateKey(state, this.target);
@@ -1414,7 +1439,8 @@ export class GenericSearchEngine {
         // Zero-mass analytical entries are not graph edges. Keeping one
         // can poison continuation arithmetic through 0 * Infinity = NaN.
         if (!Number.isFinite(out.probability) || out.probability <= 0) continue;
-        const outKey = this.stateKey(out.state);
+        const nextState = this.withMethodFamilyActionEvidence(out.state, adapter.id);
+        const outKey = this.stateKey(nextState);
         actionLocalSuccessorKeys.get(adapter.id)?.add(outKey);
         const existing = aggMap.get(outKey);
         if (existing) {
@@ -1423,13 +1449,13 @@ export class GenericSearchEngine {
           aggMap.set(outKey, {
             targetKey: outKey,
             probability: out.probability,
-            nextState: out.state,
+            nextState,
             label: out.label,
           });
           if (!queuedKeys.has(outKey)) {
             queuedKeys.add(outKey);
             if (liveResolutionFrontier.has(key)) liveResolutionFrontier.add(outKey);
-            queue.push(out.state, this.expansionPriority(out.state, prioritizedStateKeys, searchIntent, liveResolutionFrontier));
+            queue.push(nextState, this.expansionPriority(nextState, prioritizedStateKeys, searchIntent, liveResolutionFrontier));
             if (actionAttribution[adapter.id]) {
               actionAttribution[adapter.id].newGlobalStatesFirstDiscovered++;
             }
@@ -1499,7 +1525,8 @@ export class GenericSearchEngine {
       const key = this.stateKey(curr);
       if (nodes.has(key)) continue;
 
-      const isTerminal = satisfiesTarget(curr, this.target);
+      const isTerminal = satisfiesTarget(curr, this.target) &&
+        this.requiredActionEvidenceSatisfied(curr);
       if (isTerminal) terminalStatesFound++;
 
       stateCountsByRarity[curr.rarity] = (stateCountsByRarity[curr.rarity] ?? 0) + 1;

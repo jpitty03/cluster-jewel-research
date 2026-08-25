@@ -151,7 +151,8 @@ export function getCanonicalStateKey(
     ? `${state.baseType ?? 'Large Cluster Jewel'}:${state.clusterType ?? 'generic'}:${state.itemLevel ?? 84}:${state.passiveCount ?? 12}:` +
       `flags(influenced=${state.flags?.influenced === true || state.metadata?.influenced === true},` +
       `synthesised=${state.flags?.synthesised === true || state.metadata?.synthesised === true},` +
-      `acquisitionMenu=${state.flags?.acquisitionMenu === true}):`
+      `acquisitionMenu=${state.flags?.acquisitionMenu === true},` +
+      `methodFamilyActionEvidence=${state.flags?.methodFamilyActionEvidence?.slice().sort().join(',') ?? ''}):`
     : '';
 
   const finalConstraints = target?.finalStateConstraints;

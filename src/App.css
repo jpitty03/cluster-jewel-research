@@ -3019,6 +3019,13 @@ td a {
   border-bottom: 1px solid rgba(255, 255, 255, 0.08);
 }
 
+.toolbar-left,
+.toolbar-controls,
+.mode-toggle-group {
+  flex-wrap: wrap;
+  min-width: 0;
+}
+
 .toolbar-left {
   display: flex;
   align-items: center;
@@ -3122,6 +3129,88 @@ td a {
   height: 520px;
   display: block;
   cursor: grab;
+}
+
+.constellation-node-access-list {
+  display: flex;
+  gap: 0.45rem;
+  padding: 0.7rem;
+  overflow-x: auto;
+  border-top: 1px solid rgba(148, 163, 184, 0.18);
+
+  button {
+    flex: 0 0 auto;
+    max-width: 18rem;
+    padding: 0.35rem 0.55rem;
+    border: 1px solid rgba(148, 163, 184, 0.35);
+    border-radius: 0.45rem;
+    background: rgba(15, 23, 42, 0.85);
+    color: #cbd5e1;
+    font-size: 0.72rem;
+    text-align: left;
+  }
+
+  button.selected-route-node {
+    border-color: #38bdf8;
+    color: #e0f2fe;
+  }
+
+  button:focus-visible {
+    outline: 3px solid #fbbf24;
+    outline-offset: 2px;
+  }
+}
+
+.stale-research-estimate {
+  display: grid;
+  gap: 0.25rem;
+  margin: 0.75rem 0;
+  padding: 0.8rem 1rem;
+  border: 1px solid #f59e0b;
+  border-radius: 0.65rem;
+  background: rgba(245, 158, 11, 0.13);
+  color: #fde68a;
+}
+
+.method-evaluation-source {
+  color: #bfdbfe;
+  font-size: 0.78rem;
+}
+
+.method-stage-metrics {
+  display: grid;
+  gap: 0.35rem;
+
+  div {
+    display: grid;
+    gap: 0.15rem;
+  }
+
+  dt {
+    color: #94a3b8;
+    font-size: 0.72rem;
+    text-transform: uppercase;
+  }
+
+  dd {
+    margin: 0;
+    overflow-wrap: anywhere;
+    font-size: 0.78rem;
+  }
+}
+
+.compare-methods-btn {
+  margin-bottom: 1rem;
+}
+
+.expected-materials h3 {
+  margin-top: 1.15rem;
+}
+
+.full-route-reconciliation {
+  padding: 0.65rem;
+  border-left: 3px solid #38bdf8;
+  background: rgba(56, 189, 248, 0.08);
 }
 
 .node-detail-overlay {
@@ -3298,4 +3387,61 @@ td a {
   text-decoration: underline;
 }
 
+@media (max-width: 700px) {
+  .app,
+  .optimizer-page,
+  .optimizer-results,
+  .optimizer-card,
+  .advanced-details-content,
+  .advanced-section,
+  .policy-rules,
+  .currency-coverage {
+    box-sizing: border-box;
+    min-width: 0;
+    max-width: 100%;
+  }
 
+  .tabs {
+    max-width: 100%;
+    overflow-x: auto;
+  }
+
+  .optimizer-result-grid,
+  .optimizer-grid,
+  .search-metrics-bar,
+  .macro-graph-nodes-grid,
+  .pareto-grid,
+  .harvest-comparison-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .optimizer-card table {
+    display: block;
+    max-width: 100%;
+    overflow-x: auto;
+  }
+
+  .method-card-header,
+  .method-portfolio-heading {
+    align-items: flex-start;
+    flex-wrap: wrap;
+  }
+
+  .method-title-group,
+  .method-name,
+  .method-status-tag,
+  .candidate-mod-badge,
+  .optimizer-page code {
+    min-width: 0;
+    max-width: 100%;
+    overflow-wrap: anywhere;
+    word-break: break-word;
+    white-space: normal;
+  }
+
+  .node-detail-overlay {
+    right: 10px;
+    left: 10px;
+    min-width: 0;
+  }
+}

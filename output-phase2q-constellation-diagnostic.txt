@@ -1,27 +1,16 @@
-PHASE 2Q — MARKOV CONSTELLATION VISUALIZATION DIAGNOSTIC
+PHASE 2Q — CONSTELLATION SERIALIZED-GRAPH REGRESSION (VISUAL CERTIFICATION SUPERSEDED BY PHASE 2T PLAYWRIGHT)
 
---- Q1: Graph Construction from Real Optimizer Results ---
-Constructed Graph: 11 nodes, 13 edges, 3 events
-Selected Route Nodes: node_start, node_step_acquire, node_step_initialize, node_step_roll, node_step_fill, node_step_promote, node_step_success, node_terminal_target
-Q1 PASS: Markov Constellation graph successfully derived from optimizer craft plan.
+Q1 — Graph topology from a real optimizer result
+PASS: 14 unique nodes and 19 real endpoint-valid edges.
 
---- Q2: Wisp Topology & Trajectory Bounds ---
-  [PASS] WISP_EDGES_VALID: All 13 wisps bound to valid graph edges
-  [PASS] WISP_NODES_VALID: All wisp endpoints connect valid macro-state nodes
-  [PASS] WISP_PROGRESS_BOUNDS: Wisp trajectory progress stays strictly in [0.0, 1.0]
-Q2 PASS: All particle wisps bound to valid edges with bounded trajectories.
+Q2 — Selected-route and accessibility serialization
+PASS: 8 selected-route nodes and every node has a discoverable label.
 
---- Q3: Visual Hierarchy & Dimming Invariant ---
-  [PASS] SELECTED_ROUTE_HIGHLIGHTED: Selected route contains 8 illuminated nodes
-  [PASS] DOMINATED_BRANCHES_DIMMED: Dominated branches dimmed below 0.5 glow intensity
-Q3 PASS: Selected policy route prominently illuminated and dominated branches dimmed.
+Q3 — Deterministic layout seed
+PASS: identical optimizer input and seed serialize identical graph nodes, edges, events, and bounds.
 
---- Q4: Deterministic Clock & Seed Reproducibility ---
-  [PASS] DETERMINISTIC_REPRODUCIBILITY: Graph layout fully reproducible across seeds (11 nodes, 13 edges)
-Q4 PASS: Deterministic seed produces 100% mathematically identical visual layouts.
+Q4 — Certification boundary
+PASS: this diagnostic covers serialized graph invariants only; real frames, controls, reduced motion, fullscreen, FPS, and memory are gated by quality-lab/src/runner.ts.
 
---- Q5: Accessibility & Reduced Motion ---
-All nodes have human-readable text labels: YES
-Q5 PASS: Graph contains full accessible semantics and supports static rendering.
-
-=== ALL PHASE 2Q ACCEPTANCE GATES PASS ===
+=== ALL PHASE 2Q SERIALIZED-GRAPH REGRESSIONS PASS ===
+Unit tests run: NO

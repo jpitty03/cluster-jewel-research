@@ -34,6 +34,21 @@ export interface BugReportBundle {
     expectedCostChaos?: number;
     recommendationStatus?: string;
     recommendedRouteName?: string;
+    presentation?: OptimizeCraftResult['presentation'];
+    fullRouteUsage?: OptimizeCraftResult['fullRouteUsage'];
+    harvestComparison?: OptimizeCraftResult['harvestComparison'];
+    methodFamilies?: Array<{
+      id: string;
+      status: string;
+      evaluationSource: string;
+      acquisitionStatus: string;
+      downstreamStatus: string;
+      fullRouteStatus: string;
+      requiredActionObservedOnPolicy: boolean;
+      onPolicyActionIds: string[];
+      policyHealth?: NonNullable<OptimizeCraftResult['methodPortfolio']>[number]['policyHealth'];
+    }>;
+    shoppingListCurrencies?: Record<string, number | null>;
     warningCount?: number;
     warnings?: string[];
   };
@@ -108,6 +123,21 @@ export function generateBugReportBundle(
       expectedCostChaos: result.expectedCostChaos ?? undefined,
       recommendationStatus: result.recommendationStatus,
       recommendedRouteName: result.recommended?.name,
+      presentation: result.presentation,
+      fullRouteUsage: result.fullRouteUsage,
+      harvestComparison: result.harvestComparison,
+      methodFamilies: result.methodPortfolio?.map((family) => ({
+        id: family.spec.id,
+        status: family.status,
+        evaluationSource: family.evaluationSource,
+        acquisitionStatus: family.acquisitionStatus,
+        downstreamStatus: family.downstreamStatus,
+        fullRouteStatus: family.fullRouteStatus,
+        requiredActionObservedOnPolicy: family.requiredActionObservedOnPolicy,
+        onPolicyActionIds: family.onPolicyActionIds,
+        policyHealth: family.policyHealth,
+      })),
+      shoppingListCurrencies: result.expectedCurrencies,
       warningCount: result.warnings?.length ?? 0,
       warnings: result.warnings,
     } : undefined,

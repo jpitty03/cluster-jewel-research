@@ -31,8 +31,8 @@ M5 PASS: Multi-objective evaluations produced consistent objective rankings.
 
 --- M6: Harvest Lifeforce Price Sweep ---
 Calculated Lifeforce Crossover Price: 0.11500 c/unit
-Harvest Comparison Status: HARVEST_MORE_EXPENSIVE
-Harvest Comparison Explanation: Conventional route resolved without Harvest.
+Harvest Comparison Status: ENABLED_NOT_SEARCHED
+Harvest Comparison Explanation: Harvest crafts are enabled and eligible, but their required-action families have not been independently searched. Use Compare Methods.
 M6 PASS: Harvest economic crossover dynamically adapts to lifeforce market pricing.
 
 --- M7: Fracture Cost Guardrail ---
@@ -47,7 +47,7 @@ M8 PASS: Cheap fracturing orbs naturally reverse route optimality without hardco
 
 --- M10: Pareto Pruning ---
 Pareto Frontier Count: 1
-  - Start clean base: Clean Base: 264.7c | 2816 actions | Strictly optimal: 264.7c (2816 actions, 1126.3s)
+  - Start clean base: Clean Base: 264.7c | 2816 actions | Dominates the currently resolved alternatives: 264.7c (2816 actions, 1126.3s)
 M10 PASS: Pareto alternatives are verified non-dominated across (chaos, actions, time).
 
 --- M11: Cost-Ceiling Safety ---

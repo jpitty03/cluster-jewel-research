@@ -1,15 +1,13 @@
 PHASE 2P — CORRECTNESS, PROOF, AND PERFORMANCE CLOSURE DIAGNOSTIC
 
 --- P1: Frozen Fixture Corpus Verification ---
-Fixture [single_mod] (Single Mod (T1 Energy Shield)):
-  Status: BEST_RESOLVED_ACQUISITION_SAFE, Cost: 13.3c, Time: 337ms
-Fixture [two_mod_prefix_suffix] (Two-Mod Prefix + Suffix (T1 ES + T1 Int)):
-  Status: BEST_RESOLVED_ACQUISITION_SAFE, Cost: 169.7c, Time: 825ms
-Fixture [two_mod_same_generation_prefixes] (Two-Mod Same Generation Prefixes (T1 Armour + T1 ES)):
-  Status: BEST_RESOLVED_ACQUISITION_SAFE, Cost: 254.2c, Time: 3441ms
-Fixture [two_mod_herald] (Herald Speed + T1 ES):
-  Status: BEST_RESOLVED_ACQUISITION_SAFE, Cost: 274.8c, Time: 708ms
-P1 PASS: All frozen fixtures resolved with certified recommendation status.
+Fixture [cheap_one_mod] (Cheap one-mod T1 Energy Shield):
+  Status: BEST_RESOLVED_ACQUISITION_SAFE, Cost: 13.3c, Time: 302ms
+Fixture [armour_energy_shield] (T1 Armour plus T1 Energy Shield Harvest comparison):
+  Status: BEST_RESOLVED_ACQUISITION_SAFE, Cost: 254.2c, Time: 4116ms
+Fixture [herald_envoy_endbringer] (Empowered Envoy plus Endbringer):
+  Status: BEST_RESOLVED_ACQUISITION_SAFE, Cost: 79.4c, Time: 3384ms
+P1 PASS: Frozen fixtures preserve exact targets; every returned executable route is policy-valid and reconciled, while unresolved outcomes remain explicit.
 
 --- P2: Metamorphic Symmetry (Input Order) ---
 Order [A, B] Cost: 185.79c, Route: Start clean base: Clean Base
@@ -24,7 +22,7 @@ P3 PASS: Increasing material costs monotonically increases expected route cost.
 --- P4: Wrong-Fracture Recovery Invariant ---
 P4 PASS: Wrong-fracture states safely reacquire/resell and never perform illegal scour operations.
 
---- P5: Session Cache Memory Bounds (20 Sequential Searches) ---
-P5 PASS: 20 sequential optimizer queries executed without memory degradation or leak.
+--- P5: Bounded Sequential Session Execution (20 Searches) ---
+P5 PASS: 20 bounded sequential optimizer queries completed without an exception. Long browser memory soak is owned by the Phase 2T Quality Lab.
 
 === ALL PHASE 2P ACCEPTANCE GATES PASS ===

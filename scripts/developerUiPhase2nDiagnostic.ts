@@ -125,27 +125,41 @@ for (const family of result.methodPortfolio) {
 lines.push('N5 PASS: All non-winning method families provide clear deterministic explanations.');
 
 // ==========================================
-// N6: Deduplication Check
+// N6: Independent Evaluation Before Deduplication Annotation
 // ==========================================
-lines.push('\n--- N6: Method Family Deduplication ---');
-const routeActionIds = result.methodPortfolio
-  .map((m) => m.route?.actionId)
-  .filter(Boolean);
-const uniqueActionIds = new Set(routeActionIds);
-lines.push(`Evaluated Methods: ${result.methodPortfolio.length}, Unique Route Actions: ${uniqueActionIds.size}`);
-lines.push('N6 PASS: Duplicate identical policies pruned from default presentation.');
+lines.push('\n--- N6: Independent Evaluation Before Deduplication Annotation ---');
+const comparedResult = service.optimize({
+  ...commonInput,
+  compareMethodFamilies: true,
+  searchIntent: 'DEEPEN',
+});
+const independentlyCompared = comparedResult.methodPortfolio?.filter(
+  (family) => family.evaluationSource === 'INDEPENDENT_SOLVE'
+) ?? [];
+const duplicateAnnotations = independentlyCompared.filter(
+  (family) => family.duplicateOfMethodFamilyId !== undefined
+);
+if (duplicateAnnotations.some((family) => family.evaluationSource !== 'INDEPENDENT_SOLVE')) {
+  throw new Error('N6 Failed: duplicate marker appeared before independent evaluation');
+}
+lines.push(`Independent Methods: ${independentlyCompared.length}, Post-solve Duplicate Annotations: ${duplicateAnnotations.length}`);
+lines.push('N6 PASS: cards retain family identity; duplicate-policy annotations are assigned only after independent solves.');
 
 // ==========================================
 // N7: Graph and Session Reuse
 // ==========================================
 lines.push('\n--- N7: Graph and Session Reuse ---');
-const secondResult = service.optimize({
-  ...commonInput,
-  objective: { kind: 'FEWEST_ACTIONS_WITHIN_COST', maxPremiumFraction: 0.3 },
-});
-lines.push(`Second Run Method Portfolio Count: ${secondResult.methodPortfolio?.length}`);
-lines.push(`Session Reuse Status: ${secondResult.search.sessionReuse.status}`);
-lines.push('N7 PASS: On-demand method portfolio reuses retained transition distributions safely.');
+lines.push(`Compared Method Portfolio Count: ${comparedResult.methodPortfolio?.length}`);
+lines.push(`Open Search Session Reuse Status: ${comparedResult.search.sessionReuse.status}`);
+if (comparedResult.search.sessionReuse.status !== 'RESUMED') {
+  throw new Error('N7 Failed: Compare Methods did not resume the open-search session');
+}
+for (const family of independentlyCompared.filter((entry) => entry.spec.kind !== 'OPEN')) {
+  if (family.status !== 'DOMINATED' && !family.sessionIdentity) {
+    throw new Error(`N7 Failed: ${family.spec.id} lacks an independent session identity`);
+  }
+}
+lines.push('N7 PASS: Compare Methods resumes open work and records separate constrained-family sessions.');
 
 lines.push('\n=== ALL PHASE 2N ACCEPTANCE GATES PASS ===\n');
 

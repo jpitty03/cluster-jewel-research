@@ -1,29 +1,98 @@
-/**
- * App Launcher & Health Verifier for Quality Lab.
- */
+import { existsSync } from 'node:fs';
+import { dirname, join, resolve } from 'node:path';
+import { fileURLToPath } from 'node:url';
+import { spawn, type ChildProcess } from 'node:child_process';
 
-export interface LauncherOptions {
-  appUrl?: string;
-  maxRetries?: number;
-  retryIntervalMs?: number;
+export interface RunningProductionApp {
+  url: string;
+  output: () => string;
+  stop: () => Promise<void>;
 }
 
-export async function waitForAppReady(options: LauncherOptions = {}): Promise<string> {
-  const url = options.appUrl ?? process.env.APP_URL ?? 'http://127.0.0.1:5173/';
-  const maxRetries = options.maxRetries ?? 30;
-  const retryIntervalMs = options.retryIntervalMs ?? 500;
+export interface ProductionAppLaunchOptions {
+  distDirectory?: string;
+  viteCliPath?: string;
+}
 
-  for (let attempt = 1; attempt <= maxRetries; attempt++) {
-    try {
-      const response = await fetch(url, { method: 'GET' });
-      if (response.ok || response.status === 200 || response.status === 304) {
-        return url;
-      }
-    } catch {
-      // Continue polling
+const qualityLabDirectory = resolve(dirname(fileURLToPath(import.meta.url)), '..');
+const repositoryRoot = resolve(qualityLabDirectory, '..');
+
+async function waitForProductionHtml(
+  url: string,
+  child: ChildProcess,
+  output: () => string,
+): Promise<void> {
+  const deadline = Date.now() + 15_000;
+  while (Date.now() < deadline) {
+    if (child.exitCode !== null) {
+      throw new Error(`Production preview exited with code ${child.exitCode}.\n${output()}`);
     }
-    await new Promise((resolve) => setTimeout(resolve, retryIntervalMs));
+    try {
+      const response = await fetch(url, { signal: AbortSignal.timeout(1_000) });
+      const html = await response.text();
+      if (response.ok && /<html[\s>]/i.test(html) && /<div id="root"><\/div>/.test(html)) return;
+    } catch {
+      // The preview process may still be binding its port.
+    }
+    await new Promise((resolveWait) => setTimeout(resolveWait, 150));
+  }
+  throw new Error(`Production preview did not become healthy at ${url}.\n${output()}`);
+}
+
+export async function launchProductionApp(
+  options: ProductionAppLaunchOptions = {},
+): Promise<RunningProductionApp> {
+  const distDirectory = options.distDirectory ?? join(repositoryRoot, 'dist');
+  const indexPath = join(distDirectory, 'index.html');
+  const viteCliPath = options.viteCliPath ?? join(repositoryRoot, 'node_modules', 'vite', 'bin', 'vite.js');
+  if (!existsSync(indexPath)) {
+    throw new Error(`Built production entry is unavailable: ${indexPath}. Run npm run build first.`);
+  }
+  if (!existsSync(viteCliPath)) {
+    throw new Error(`Vite preview executable is unavailable: ${viteCliPath}. Run npm ci first.`);
   }
 
-  throw new Error(`Application at ${url} failed to respond after ${maxRetries} attempts.`);
+  const host = '127.0.0.1';
+  const port = 4173;
+  const url = `http://${host}:${port}/`;
+  const child = spawn(
+    process.execPath,
+    [viteCliPath, 'preview', '--host', host, '--port', String(port), '--strictPort'],
+    {
+      cwd: options.distDirectory ? distDirectory : repositoryRoot,
+      env: { ...process.env, NO_COLOR: '1' },
+      stdio: ['ignore', 'pipe', 'pipe'],
+      windowsHide: true,
+    },
+  );
+  let combinedOutput = '';
+  child.stdout.on('data', (chunk: Buffer) => { combinedOutput += chunk.toString(); });
+  child.stderr.on('data', (chunk: Buffer) => { combinedOutput += chunk.toString(); });
+  const output = () => combinedOutput.trim();
+
+  try {
+    await waitForProductionHtml(url, child, output);
+  } catch (error) {
+    child.kill();
+    throw error;
+  }
+
+  return {
+    url,
+    output,
+    stop: async () => {
+      if (child.exitCode !== null || child.killed) return;
+      await new Promise<void>((resolveStop) => {
+        const timeout = setTimeout(() => {
+          child.kill('SIGKILL');
+          resolveStop();
+        }, 3_000);
+        child.once('exit', () => {
+          clearTimeout(timeout);
+          resolveStop();
+        });
+        child.kill();
+      });
+    },
+  };
 }

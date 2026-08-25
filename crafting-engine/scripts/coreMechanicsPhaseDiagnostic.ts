@@ -244,6 +244,7 @@ const generatedStarts = generateStartingStateCandidates(
 );
 const cleanStateKey = getCanonicalStateKey(cleanBase, multiStageTarget);
 const evaluatedStartingRoutes = generatedStarts
+  .filter((candidate) => candidate.acquisitions.length > 0)
   .map((candidate) => {
     const acquisition = candidate.acquisitions
       .slice()
@@ -267,7 +268,9 @@ lines.push('  Target: magic item with fractured T1 Intelligence + T1 Maximum Ene
 lines.push('  Modeled pool: bounded five-mod fixture using real cluster-jewel mods/weights; route logic remains generic.');
 lines.push(`  Generated physical starting states: ${generatedStarts.length}`);
 for (const start of generatedStarts) {
-  lines.push(`    - ${start.label}: ${start.acquisitions.map((acquisition) => `${acquisition.type} ${acquisition.costChaos.toFixed(1)}c (${acquisition.confidence})`).join(' | ')}`);
+  lines.push(`    - ${start.label}: ${start.acquisitions.length > 0
+    ? start.acquisitions.map((acquisition) => `${acquisition.type} ${acquisition.costChaos.toFixed(1)}c (${acquisition.confidence})`).join(' | ')
+    : 'not directly acquired; executable synthesis is evaluated separately'}`);
 }
 lines.push(`  Evaluated starting routes:`);
 for (const route of evaluatedStartingRoutes) {

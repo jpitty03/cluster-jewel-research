@@ -1,54 +1,100 @@
 {
-  "version": "Phase2P-Corpus",
+  "version": "Phase2T-Frozen-Browser-Corpus-1",
   "fixtures": [
     {
-      "id": "single_mod",
-      "name": "Single Mod (T1 Energy Shield)",
+      "id": "cheap_one_mod",
+      "name": "Cheap one-mod T1 Energy Shield",
       "baseType": "Large Cluster Jewel",
       "clusterType": "10% increased Attack Damage",
       "itemLevel": 84,
       "passiveCount": 8,
+      "finalRarity": "magic",
+      "extraAffixes": "allow-extra",
       "targetMods": ["AfflictionJewelSmallPassivesGrantES3"],
-      "expectedStatus": "PROVEN_OPTIMAL"
+      "searchBudget": { "maxStates": 1200, "maxWallTimeMs": 10000, "maxExpansionRounds": 2 }
     },
     {
-      "id": "two_mod_prefix_suffix",
-      "name": "Two-Mod Prefix + Suffix (T1 ES + T1 Int)",
+      "id": "harvest_one_mod_math_witness",
+      "name": "Armour resolved Harvest economics witness",
+      "baseType": "Large Cluster Jewel",
+      "clusterType": "10% increased Attack Damage",
+      "itemLevel": 1,
+      "passiveCount": 8,
+      "finalRarity": "rare",
+      "extraAffixes": "allow-extra",
+      "targetMods": ["AfflictionJewelSmallPassivesGrantArmour"],
+      "searchBudget": { "maxStates": 10000, "maxWallTimeMs": 30000, "maxExpansionRounds": 4 }
+    },
+    {
+      "id": "four_mod_release",
+      "name": "Attached four-mod release regression",
       "baseType": "Large Cluster Jewel",
       "clusterType": "10% increased Attack Damage",
       "itemLevel": 84,
-      "passiveCount": 8,
+      "passiveCount": 12,
+      "finalRarity": "rare",
+      "extraAffixes": "allow-extra",
       "targetMods": [
-        "AfflictionJewelSmallPassivesGrantES3",
-        "AfflictionJewelSmallPassivesGrantInt3"
+        "AfflictionJewelSmallPassivesGrantInt3",
+        "AfflictionJewelSmallPassivesGrantAttributes3",
+        "AfflictionJewelSmallPassivesHaveIncreasedEffect2",
+        "AfflictionJewelSmallPassivesGrantES3"
       ],
-      "expectedStatus": "PROVEN_OPTIMAL"
+      "searchBudget": { "maxStates": 5000, "maxWallTimeMs": 30000, "maxExpansionRounds": 3 }
     },
     {
-      "id": "two_mod_same_generation_prefixes",
-      "name": "Two-Mod Same Generation Prefixes (T1 Armour + T1 ES)",
+      "id": "armour_evasion",
+      "name": "T1 Armour plus T1 Evasion Harvest comparison",
       "baseType": "Large Cluster Jewel",
       "clusterType": "10% increased Attack Damage",
       "itemLevel": 84,
       "passiveCount": 8,
+      "finalRarity": "rare",
+      "extraAffixes": "allow-extra",
+      "targetMods": [
+        "AfflictionJewelSmallPassivesGrantArmour3_",
+        "AfflictionJewelSmallPassivesGrantEvasion3"
+      ],
+      "searchBudget": { "maxStates": 5000, "maxWallTimeMs": 30000, "maxExpansionRounds": 3 }
+    },
+    {
+      "id": "armour_energy_shield",
+      "name": "T1 Armour plus T1 Energy Shield Harvest comparison",
+      "baseType": "Large Cluster Jewel",
+      "clusterType": "10% increased Attack Damage",
+      "itemLevel": 84,
+      "passiveCount": 8,
+      "finalRarity": "rare",
+      "extraAffixes": "allow-extra",
       "targetMods": [
         "AfflictionJewelSmallPassivesGrantArmour3_",
         "AfflictionJewelSmallPassivesGrantES3"
       ],
-      "expectedStatus": "PROVEN_OPTIMAL"
+      "searchBudget": { "maxStates": 5000, "maxWallTimeMs": 30000, "maxExpansionRounds": 3 }
     },
     {
-      "id": "two_mod_herald",
-      "name": "Herald Speed + T1 ES",
+      "id": "herald_envoy_endbringer",
+      "name": "Empowered Envoy plus Endbringer",
       "baseType": "Medium Cluster Jewel",
       "clusterType": "10% increased Damage while affected by a Herald",
       "itemLevel": 84,
       "passiveCount": 4,
-      "targetMods": [
-        "Added Small Passive Skills also grant: #% increased Attack and Cast Speed while affected by a Herald_T1",
-        "AfflictionJewelSmallPassivesGrantES3"
-      ],
-      "expectedStatus": "PROVEN_OPTIMAL"
+      "finalRarity": "rare",
+      "extraAffixes": "allow-extra",
+      "targetMods": ["Empowered Envoy", "Endbringer"],
+      "searchBudget": { "maxStates": 2500, "maxWallTimeMs": 12000, "maxExpansionRounds": 3 }
+    },
+    {
+      "id": "three_notable",
+      "name": "Large Attack three-notable runtime regression",
+      "baseType": "Large Cluster Jewel",
+      "clusterType": "10% increased Attack Damage",
+      "itemLevel": 84,
+      "passiveCount": 8,
+      "finalRarity": "rare",
+      "extraAffixes": "allow-extra",
+      "targetMods": ["Feed the Fury", "Fuel the Fight", "Martial Prowess"],
+      "searchBudget": { "maxStates": 2500, "maxWallTimeMs": 12000, "maxExpansionRounds": 3 }
     }
   ]
 }

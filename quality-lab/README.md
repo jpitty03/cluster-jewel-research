@@ -1,26 +1,19 @@
-# Quality Lab: External Adaptive Browser Quality Harness
+# Phase 2T External Real-Browser Quality Lab
 
-The Quality Lab is a standalone, external test harness for validating the Cluster Jewel Crafting Optimizer web application.
+This package is the release-gating black-box harness for the production Cluster Jewel Optimizer. It starts Vite's production preview from the already-built `dist/` directory and launches Playwright Chromium. If either startup fails, the run fails; there is no simulation mode or application-URL fallback.
 
-## Key Principles
-1. **Isolated & Standalone**: Located strictly outside `src/` and `crafting-engine/`.
-2. **Black-Box Testing**: Inspects the running application solely through standard browser APIs, accessibility trees, DOM geometry, and structured Worker telemetry.
-3. **No Production Test Hooks**: Zero invasive debug variables or synthetic test bridges in production code. Worker events are captured via transparent browser init-scripts.
-4. **Multi-Dimensional Oracles**:
-   - **Semantic Oracle**: Verifies route correctness, bound sanity, and explainability cards.
-   - **Worker Oracle**: Asserts event monotonicities, progress milestones, and clean terminations.
-   - **Layout Oracle**: Asserts strict responsive viewport geometry and 0 horizontal overflow.
-   - **Accessibility Oracle**: Validates ARIA attributes, semantic roles, and focusable elements.
-   - **Performance Oracle**: Tracks solve duration and UI latency.
+The harness imports no files from `src/` or `crafting-engine/src/`. Inputs come from the serialized fixture corpus, and results are observed through the rendered DOM, downloads, clipboard, browser geometry, canvas frames, and the native module Worker boundary. An init script wraps `window.Worker` before application JavaScript executes so the lab can record real request, `PROGRESS`, `COMPLETE`, `RESULT`, `ERROR`, termination, and replacement events without a production test hook.
 
-## Running Scenarios
-```bash
-# Run all scenarios
-npm run lab
+Install and run from the repository root:
 
-# Run individual suites
-npm run lab:smoke
-npm run lab:methods
-npm run lab:objectives
-npm run lab:responsive
+```text
+npm ci
+npm ci --prefix quality-lab
+npx --prefix quality-lab playwright install chromium
+npm run build
+npm run lab:release
 ```
+
+Focused suites are available as `lab:smoke`, `lab:methods`, `lab:objectives`, `lab:responsive`, `lab:animation`, and `lab:additional`. `lab:nightly` uses the full fixture matrix and an extended constellation soak.
+
+Transient traces, videos, downloads, and paired frames are written to `quality-lab/artifacts/` and ignored by Git. The structured gate result and stable review evidence are written to `quality-lab/reports/`.

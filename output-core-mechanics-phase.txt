@@ -62,26 +62,26 @@ KEY EXTERNAL OBSERVATIONS SUMMARY (2.6M+ Cumulative Attempt Evidence):
 
 FULL-POOL CLEAN-BASE T1 INTELLIGENCE POLICY PRESERVATION:
     Clean-base solve:
-    Candidate graph states: 1360/5000 (cap hit: NO)
+    Candidate graph states: 399/5000 (cap hit: NO)
     Candidate graph cycles: YES
-    On-policy states: 1360
+    On-policy states: 399
     On-policy cycles: YES
-    Bellman: CONVERGED in 647 iterations (residual 2.5715e-12)
+    Bellman: CONVERGED in 599 iterations (residual 3.6276e-12)
     On-policy unresolved probability: 0.000000%
     Terminal absorption: 100.000000%
-    Occupancy: CONVERGED in 3 iterations (residual 1.5321e-14)
+    Occupancy: CONVERGED in 3 iterations (residual 3.3307e-15)
     Action-cost sum / Bellman EV: 6.0496c / 6.0496c
     EV reconciliation delta: 0.000000c (RECONCILED)
     Selected policy: FULLY RESOLVED / PROPER / ABSORBING / COST-RECONCILED
     Recursive candidate resolution: CONVERGED
     Proof level: BEST FULLY RESOLVED POLICY FOUND
     GLOBAL OPTIMALITY: NOT YET PROVEN
-    Unresolved competitors / potentially cheaper: 1325 / 2721
+    Unresolved competitors / potentially cheaper: 377 / 791
     Price confidence complete: YES; warnings: 3
-  Action Orb of Transmutation: local successors=1359, first discoveries=1359, on-policy selections=1, unresolved edges=0
-  Action Orb of Augmentation: local successors=1287, first discoveries=0, on-policy selections=33, unresolved edges=0
-  Action Orb of Alteration: local successors=1359, first discoveries=0, on-policy selections=1292, unresolved edges=0
-  Action Regal Orb: local successors=1325, first discoveries=0, on-policy selections=0, unresolved edges=1325
+  Action Orb of Transmutation: local successors=399, first discoveries=398, on-policy selections=1, unresolved edges=0
+  Action Orb of Augmentation: local successors=360, first discoveries=0, on-policy selections=20, unresolved edges=0
+  Action Orb of Alteration: local successors=398, first discoveries=0, on-policy selections=357, unresolved edges=0
+  Action Regal Orb: local successors=377, first discoveries=0, on-policy selections=0, unresolved edges=377
   Action Orb of Scouring: local successors=1, first discoveries=0, on-policy selections=0, unresolved edges=0
   Action Orb of Annulment: local successors=0, first discoveries=0, on-policy selections=0, unresolved edges=0
   Action Exalted Orb Slam: local successors=0, first discoveries=0, on-policy selections=0, unresolved edges=0
@@ -93,16 +93,14 @@ FULL GENERIC MULTI-STAGE ROUTE:
   Modeled pool: bounded five-mod fixture using real cluster-jewel mods/weights; route logic remains generic.
   Generated physical starting states: 3
     - Clean Base: clean-base 10.0c (deterministic)
-    - of the Prodigy (T1): self-fracture 1539.0c (approximate)
-    - Glowing (T1): self-fracture 1534.3c (approximate)
+    - of the Prodigy (T1): not directly acquired; executable synthesis is evaluated separately
+    - Glowing (T1): not directly acquired; executable synthesis is evaluated separately
   Evaluated starting routes:
     - Clean Base: acquisition=10.0c (deterministic), downstream=1473.987c, full=1483.987c, proof=OPTIMAL OVER MODELED ACTIONS: PROVEN
-    - of the Prodigy (T1): acquisition=1539.0c (approximate), downstream=0.140c, full=1539.140c, proof=OPTIMAL OVER MODELED ACTIONS: PROVEN
-    - Glowing (T1): acquisition=1534.3c (approximate), downstream=1483.987c, full=3018.287c, proof=OPTIMAL OVER MODELED ACTIONS: PROVEN
   Selected acquisition: Clean Base at 10.0c
   Expected currencies: transmutation=4.000, augmentation=6.333, alteration=14.333, regal=4.000, exalt=4.000, fracturing=4.000, reacquisition=3.000, scour=1.000
   Expected downstream cost: 1473.987c; acquisition-inclusive: 1483.987c
-  Action Orb of Transmutation: local successors=11, first discoveries=11, on-policy selections=1, unresolved edges=0
+  Action Orb of Transmutation: local successors=12, first discoveries=11, on-policy selections=1, unresolved edges=0
   Action Orb of Augmentation: local successors=18, first discoveries=12, on-policy selections=4, unresolved edges=0
   Action Orb of Alteration: local successors=23, first discoveries=0, on-policy selections=7, unresolved edges=0
   Action Regal Orb: local successors=64, first discoveries=5, on-policy selections=2, unresolved edges=0
@@ -116,7 +114,7 @@ FULL GENERIC MULTI-STAGE ROUTE:
     Candidate graph cycles: YES
     On-policy states: 30
     On-policy cycles: YES
-    Bellman: CONVERGED in 13500 iterations (residual 4.8203e-13)
+    Bellman: CONVERGED in 874 iterations (residual 7.0940e-13)
     On-policy unresolved probability: 0.000000%
     Terminal absorption: 100.000000%
     Occupancy: CONVERGED in 8 iterations (residual 5.5511e-16)
@@ -139,7 +137,7 @@ CRAFT B GENERIC CLEAN-BASE DISCOVERY:
     Candidate graph cycles: YES
     On-policy states: 7
     On-policy cycles: NO
-    Bellman: CONVERGED in 3 iterations (residual 2.2204e-16)
+    Bellman: CONVERGED in 4 iterations (residual 2.2204e-16)
     On-policy unresolved probability: 0.000000%
     Terminal absorption: 100.000000%
     Occupancy: CONVERGED in 2 iterations (residual 0.0000e+0)

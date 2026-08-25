@@ -9,6 +9,15 @@ export interface ItemStateFlags {
   synthesised?: boolean;
   /** Solver-only synthetic state exposing the acquisition portfolio. */
   acquisitionMenu?: boolean;
+  /**
+   * Solver-only evidence carried by a constrained method-family search.
+   *
+   * This is mechanical state, not presentation metadata: a family whose contract
+   * requires an action (for example Harvest Reforge Defences) must not terminate
+   * until one of those actions has actually occurred. Keeping the evidence in the
+   * canonical state prevents pre-action and post-action states from being merged.
+   */
+  methodFamilyActionEvidence?: string[];
 }
 
 export interface ItemState {
@@ -50,6 +59,9 @@ export function normalizeItemState(state: ItemState): ItemState {
     influenced: state.flags?.influenced ?? (state.metadata?.influenced === true || undefined),
     synthesised: state.flags?.synthesised ?? (state.metadata?.synthesised === true || undefined),
     acquisitionMenu: state.flags?.acquisitionMenu,
+    methodFamilyActionEvidence: state.flags?.methodFamilyActionEvidence
+      ? [...new Set(state.flags.methodFamilyActionEvidence)].sort()
+      : undefined,
   };
 
   return {
@@ -61,7 +73,10 @@ export function normalizeItemState(state: ItemState): ItemState {
     prefixes,
     suffixes,
     fracturedModIds: affixes.filter((mod) => mod.isFractured).map((mod) => mod.modId),
-    flags: flags.influenced || flags.synthesised || flags.acquisitionMenu ? flags : undefined,
+    flags: flags.influenced || flags.synthesised || flags.acquisitionMenu ||
+        (flags.methodFamilyActionEvidence?.length ?? 0) > 0
+      ? flags
+      : undefined,
     metadata: state.metadata ? structuredClone(state.metadata) : undefined,
   };
 }
@@ -92,6 +107,7 @@ export function getPhysicalStateSignature(state: ItemState): string {
     `influenced=${normalized.flags?.influenced === true}`,
     `synthesised=${normalized.flags?.synthesised === true}`,
     `acquisitionMenu=${normalized.flags?.acquisitionMenu === true}`,
+    `methodFamilyActionEvidence=${normalized.flags?.methodFamilyActionEvidence?.join(',') ?? ''}`,
     ...normalized.prefixes.map(modKey).sort(),
     ...normalized.suffixes.map(modKey).sort(),
   ].join('|');

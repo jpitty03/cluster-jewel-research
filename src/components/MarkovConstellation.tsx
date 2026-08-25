@@ -8,6 +8,7 @@ import type {
 
 export interface MarkovConstellationProps {
   graph: VisualizationGraph;
+  selectedRouteName?: string;
   width?: number;
   height?: number;
   isLive?: boolean;
@@ -18,6 +19,7 @@ export interface MarkovConstellationProps {
 
 export const MarkovConstellation: React.FC<MarkovConstellationProps> = ({
   graph,
+  selectedRouteName,
   width = 900,
   height = 520,
   isLive: _isLive = false,
@@ -36,6 +38,8 @@ export const MarkovConstellation: React.FC<MarkovConstellationProps> = ({
   const [hoveredNode, setHoveredNode] = useState<VisualizationNode | null>(null);
   const [reducedMotion, setReducedMotion] = useState<boolean>(false);
   const [replayStepIndex, setReplayStepIndex] = useState<number>(0);
+  const [zoomLevel, setZoomLevel] = useState<number>(1);
+  const [focusSelectedRoute, setFocusSelectedRoute] = useState<boolean>(true);
 
   // Sync fullscreen state with browser events
   useEffect(() => {
@@ -91,18 +95,34 @@ export const MarkovConstellation: React.FC<MarkovConstellationProps> = ({
   // Calculate viewport transformation to prevent clipping on small viewports
   const getTransform = useCallback((displayWidth: number, displayHeight: number) => {
     const padding = 30;
-    const graphWidth = graph.bounds.width || 1000;
-    const graphHeight = graph.bounds.height || 600;
+    const focusNodes = focusSelectedRoute
+      ? graph.nodes.filter((node) => node.isSelectedRoute)
+      : graph.nodes;
+    const framedNodes = focusNodes.length > 0 ? focusNodes : graph.nodes;
+    const minX = framedNodes.length > 0
+      ? Math.min(...framedNodes.map((node) => node.x - node.radius * 2.5))
+      : 0;
+    const maxX = framedNodes.length > 0
+      ? Math.max(...framedNodes.map((node) => node.x + node.radius * 2.5))
+      : graph.bounds.width || 1000;
+    const minY = framedNodes.length > 0
+      ? Math.min(...framedNodes.map((node) => node.y - node.radius * 2.5))
+      : 0;
+    const maxY = framedNodes.length > 0
+      ? Math.max(...framedNodes.map((node) => node.y + node.radius * 3.5))
+      : graph.bounds.height || 600;
+    const graphWidth = Math.max(1, maxX - minX);
+    const graphHeight = Math.max(1, maxY - minY);
 
     const scaleX = (displayWidth - padding * 2) / graphWidth;
     const scaleY = (displayHeight - padding * 2) / graphHeight;
-    const scale = Math.min(1.2, Math.max(0.25, Math.min(scaleX, scaleY)));
+    const scale = Math.min(3, Math.max(0.25, Math.min(scaleX, scaleY) * zoomLevel));
 
-    const offsetX = (displayWidth - graphWidth * scale) / 2;
-    const offsetY = (displayHeight - graphHeight * scale) / 2;
+    const offsetX = (displayWidth - graphWidth * scale) / 2 - minX * scale;
+    const offsetY = (displayHeight - graphHeight * scale) / 2 - minY * scale;
 
     return { scale, offsetX, offsetY };
-  }, [graph.bounds]);
+  }, [focusSelectedRoute, graph.bounds, graph.nodes, zoomLevel]);
 
   // Quadratic curve midpoint calculator
   const getEdgePoint = useCallback((edge: VisualizationEdge, t: number): { x: number; y: number } => {
@@ -266,6 +286,7 @@ export const MarkovConstellation: React.FC<MarkovConstellationProps> = ({
       }
 
       // 4. Draw Macro-State Nodes
+      const placedLabelRects: Array<{ left: number; right: number; top: number; bottom: number }> = [];
       graph.nodes.forEach((node) => {
         const isHovered = hoveredNode?.id === node.id;
         const isSelected = selectedNode?.id === node.id;
@@ -318,15 +339,29 @@ export const MarkovConstellation: React.FC<MarkovConstellationProps> = ({
         ctx.stroke();
 
         // Labels
-        ctx.fillStyle = '#f8fafc';
         ctx.font = '600 12px Inter, sans-serif';
         ctx.textAlign = 'center';
-        ctx.fillText(node.label, node.x, node.y + node.radius + 16);
+        const labelWidth = Math.max(ctx.measureText(node.label).width, node.sublabel ? ctx.measureText(node.sublabel).width : 0);
+        const labelRect = {
+          left: node.x - labelWidth / 2 - 4,
+          right: node.x + labelWidth / 2 + 4,
+          top: node.y + node.radius + 5,
+          bottom: node.y + node.radius + (node.sublabel ? 34 : 22),
+        };
+        const collides = placedLabelRects.some((rect) =>
+          labelRect.left < rect.right && labelRect.right > rect.left &&
+          labelRect.top < rect.bottom && labelRect.bottom > rect.top
+        );
+        if (!collides || node.isSelectedRoute || isHovered || isSelected || isReplayActive) {
+          placedLabelRects.push(labelRect);
+          ctx.fillStyle = '#f8fafc';
+          ctx.fillText(node.label, node.x, node.y + node.radius + 16);
 
-        if (node.sublabel) {
-          ctx.fillStyle = '#94a3b8';
-          ctx.font = '400 10px Inter, sans-serif';
-          ctx.fillText(node.sublabel, node.x, node.y + node.radius + 28);
+          if (node.sublabel && (node.isSelectedRoute || isHovered || isSelected || !collides)) {
+            ctx.fillStyle = '#94a3b8';
+            ctx.font = '400 10px Inter, sans-serif';
+            ctx.fillText(node.sublabel, node.x, node.y + node.radius + 28);
+          }
         }
       });
 
@@ -358,10 +393,12 @@ export const MarkovConstellation: React.FC<MarkovConstellationProps> = ({
     selectedNode,
     replayStepIndex,
     mode,
+    focusSelectedRoute,
     getEdgePoint,
     getTransform,
     width,
     height,
+    zoomLevel,
   ]);
 
   // Pointer Interaction with Viewport Coordinate Inversion
@@ -413,6 +450,7 @@ export const MarkovConstellation: React.FC<MarkovConstellationProps> = ({
       ref={containerRef}
       className={`markov-constellation-container ${isFullscreen ? 'fullscreen' : ''} ${className}`}
       data-testid="markov-constellation-container"
+      data-selected-route={selectedRouteName}
     >
       <div className="constellation-toolbar">
         <div className="toolbar-left">
@@ -453,6 +491,30 @@ export const MarkovConstellation: React.FC<MarkovConstellationProps> = ({
             aria-label={isPlaying ? 'Pause Animation' : 'Resume Animation'}
           >
             {isPlaying ? '⏸' : '▶'}
+          </button>
+
+          <button
+            className={`ctrl-btn ${focusSelectedRoute ? 'active' : ''}`}
+            onClick={() => setFocusSelectedRoute((current) => !current)}
+            aria-label="Focus selected route"
+            aria-pressed={focusSelectedRoute}
+          >
+            Route Focus
+          </button>
+
+          <button
+            className="ctrl-btn"
+            onClick={() => setZoomLevel((current) => Math.max(0.6, current - 0.2))}
+            aria-label="Zoom constellation out"
+          >
+            −
+          </button>
+          <button
+            className="ctrl-btn"
+            onClick={() => setZoomLevel((current) => Math.min(2, current + 0.2))}
+            aria-label="Zoom constellation in"
+          >
+            +
           </button>
 
           <div className="speed-selector">
@@ -511,6 +573,24 @@ export const MarkovConstellation: React.FC<MarkovConstellationProps> = ({
             <button className="close-detail-btn" onClick={() => setSelectedNode(null)}>✕</button>
           </div>
         )}
+      </div>
+
+      <div className="constellation-node-access-list" aria-label="Focusable constellation nodes">
+        {graph.nodes.map((node) => (
+          <button
+            type="button"
+            key={node.id}
+            className={node.isSelectedRoute ? 'selected-route-node' : ''}
+            onFocus={() => setHoveredNode(node)}
+            onBlur={() => setHoveredNode(null)}
+            onClick={() => {
+              setSelectedNode(node);
+              onNodeClick?.(node);
+            }}
+          >
+            {node.label}<span>{node.sublabel ? ` — ${node.sublabel}` : ''}</span>
+          </button>
+        ))}
       </div>
 
       {/* Screen-reader Accessible Text Fallback */}

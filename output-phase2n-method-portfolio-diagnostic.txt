@@ -12,36 +12,42 @@ Conventional Cost: 264.74c
 N2 PASS: Conventional family correctly isolated and evaluated.
 
 --- N3: Harvest Family Reporting ---
-Harvest Family Status: MORE_EXPENSIVE
-Harvest Family Explanation: Harvest reforges were modeled but proved more expensive than conventional Alteration rolling at current lifeforce prices.
+Harvest Family Status: NOT_SEARCHED
+Harvest Family Explanation: Enabled but not searched. Use Compare Methods to run the required-action family solve.
 N3 PASS: Harvest family accurately models reforge eligibility and reason.
 
 --- N4: Self-Fracture Target Mod Families ---
 Found 2 Self-Fracture Families:
-  - Self-Fracture Glowing (T1): status=DOMINATED, explanation=Self-fracturing Glowing (T1) was proven dominated by lower-bound pruning.
-  - Self-Fracture of the Prodigy (T1): status=DOMINATED, explanation=Self-fracturing of the Prodigy (T1) was proven dominated by lower-bound pruning.
+  - Self-Fracture Glowing (T1): status=DOMINATED, explanation=The family was dominated by an admissible full-route lower bound.
+  - Self-Fracture of the Prodigy (T1): status=DOMINATED, explanation=The family was dominated by an admissible full-route lower bound.
 N4 PASS: Self-fracture families generated for target affixes.
 
 --- N5: Why Not Selected? Explainability ---
 [Open Policy (All Modeled Mechanics)] -> Status: SELECTED_WINNER
-  Explanation: Optimal choice under the selected objective.
+  Explanation: Best executable open-search route at the current proof budget.
 [Conventional Alt / Aug / Regal] -> Status: SELECTED_WINNER
-  Explanation: Selected as the most cost-effective path.
-[Harvest Reforges] -> Status: MORE_EXPENSIVE
-  Explanation: Harvest reforges were modeled but proved more expensive than conventional Alteration rolling at current lifeforce prices.
+  Explanation: Summarized from the clean candidate found by open search; use Compare Methods for an independent constrained solve.
+[Harvest Reforge Defences] -> Status: NOT_SEARCHED
+  Explanation: Enabled but not searched. Use Compare Methods to run the required-action family solve.
 [Self-Fracture Glowing (T1)] -> Status: DOMINATED
-  Explanation: Self-fracturing Glowing (T1) was proven dominated by lower-bound pruning.
+  Explanation: The family was dominated by an admissible full-route lower bound.
+[Self-Fracture Glowing (T1) + Harvest Reforge Defences] -> Status: NOT_SEARCHED
+  Explanation: Required self-fracture acquisition is unresolved, so its Harvest downstream family has not started.
 [Self-Fracture of the Prodigy (T1)] -> Status: DOMINATED
-  Explanation: Self-fracturing of the Prodigy (T1) was proven dominated by lower-bound pruning.
+  Explanation: The family was dominated by an admissible full-route lower bound.
+[Self-Fracture of the Prodigy (T1) + Harvest Reforge Defences] -> Status: NOT_SEARCHED
+  Explanation: Required self-fracture acquisition is unresolved, so its Harvest downstream family has not started.
+[Chaos Reforge] -> Status: NOT_MODELED
+  Explanation: Chaos Reforge is advertised only as not modeled; it is never assigned a synthetic route.
 N5 PASS: All non-winning method families provide clear deterministic explanations.
 
---- N6: Method Family Deduplication ---
-Evaluated Methods: 5, Unique Route Actions: 1
-N6 PASS: Duplicate identical policies pruned from default presentation.
+--- N6: Independent Evaluation Before Deduplication Annotation ---
+Independent Methods: 5, Post-solve Duplicate Annotations: 0
+N6 PASS: cards retain family identity; duplicate-policy annotations are assigned only after independent solves.
 
 --- N7: Graph and Session Reuse ---
-Second Run Method Portfolio Count: 5
-Session Reuse Status: RESUMED
-N7 PASS: On-demand method portfolio reuses retained transition distributions safely.
+Compared Method Portfolio Count: 8
+Open Search Session Reuse Status: RESUMED
+N7 PASS: Compare Methods resumes open work and records separate constrained-family sessions.
 
 === ALL PHASE 2N ACCEPTANCE GATES PASS ===

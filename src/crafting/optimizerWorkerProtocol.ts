@@ -25,6 +25,15 @@ export interface OptimizerWorkerResultResponse {
   result: OptimizeCraftResult;
 }
 
+export interface OptimizerWorkerCompleteResponse {
+  type: 'COMPLETE';
+  requestId: string;
+  completion: {
+    recommendationStatus: OptimizeCraftResult['recommendationStatus'];
+    selectedRouteName?: string;
+  };
+}
+
 export interface OptimizerWorkerErrorResponse {
   type: 'ERROR';
   requestId: string;
@@ -36,6 +45,7 @@ export interface OptimizerWorkerErrorResponse {
 
 export type OptimizerWorkerResponse =
   | OptimizerWorkerProgressResponse
+  | OptimizerWorkerCompleteResponse
   | OptimizerWorkerResultResponse
   | OptimizerWorkerErrorResponse;
 
@@ -43,5 +53,6 @@ export function isOptimizerWorkerResponse(value: unknown): value is OptimizerWor
   if (typeof value !== 'object' || value === null) return false;
   const response = value as Partial<OptimizerWorkerResponse>;
   return typeof response.requestId === 'string' &&
-    (response.type === 'PROGRESS' || response.type === 'RESULT' || response.type === 'ERROR');
+    (response.type === 'PROGRESS' || response.type === 'COMPLETE' ||
+      response.type === 'RESULT' || response.type === 'ERROR');
 }

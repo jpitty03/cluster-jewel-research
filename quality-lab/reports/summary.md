@@ -1,60 +1,53 @@
-# Quality Lab Run Summary
-Run Date: 2026-08-25T15:55:42.457Z
-App URL: http://127.0.0.1:5173/
-Total Checks: 41
-Passed Checks: 41
-Status: ALL PASS
+# Phase 2T Real-Browser Release Gate
 
-## Scenario Details
-### Smoke Scenario (PASS)
-- **[WORKER] WORKER_SPAWN_DETECTED**: Dedicated solver Web Worker was spawned successfully (PASS)
-- **[WORKER] WORKER_REQUEST_DISPATCHED**: Solver optimization request was dispatched (PASS)
-- **[WORKER] WORKER_RESULT_RECEIVED**: Solver RESULT payload returned from worker (PASS)
-- **[WORKER] ZERO_WORKER_EXCEPTIONS**: No uncaught worker exceptions encountered (PASS)
-- **[WORKER] PROGRESS_STATES_MONOTONIC**: Expanded state counts monotonically non-decreasing across 2 progress events (PASS)
-- **[WORKER] PROGRESS_TIME_MONOTONIC**: Elapsed wall time monotonically non-decreasing (PASS)
-- **[SEMANTIC] RECOMMENDATION_STATUS_VALIDITY**: Valid status: PROVEN_OPTIMAL (PASS)
-- **[SEMANTIC] EXPECTED_COST_VALIDITY**: Expected cost valid: 142.50c (PASS)
-- **[SEMANTIC] CRAFT_PLAN_STEP_COHERENCE**: Craft plan contains 2 ordered steps (PASS)
-- **[SEMANTIC] METHOD_PORTFOLIO_PRESENCE**: Method portfolio evaluated 3 crafting disciplines (PASS)
-- **[SEMANTIC] EXPLAINABILITY_COMPLETENESS**: All 1 non-winning methods have explicit explanations (PASS)
-- **[PERFORMANCE] SMOKE SCENARIO_LATENCY**: Smoke Scenario completed in 1.0ms (budget: 5000ms) (PASS)
+- Run: 2026-08-25T18-47-19-833Z
+- Started: 2026-08-25T18:47:19.835Z
+- Finished: 2026-08-25T18:51:23.608Z
+- Browser: Playwright Chromium 151.0.7922.34
+- Fixture corpus: Phase2T-Frozen-Browser-Corpus-1
+- Status: PASSED
 
-### Method Portfolio Scenario (PASS)
-- **[SEMANTIC] RECOMMENDATION_STATUS_VALIDITY**: Valid status: PROVEN_OPTIMAL (PASS)
-- **[SEMANTIC] EXPECTED_COST_VALIDITY**: Expected cost valid: 210.40c (PASS)
-- **[SEMANTIC] CRAFT_PLAN_STEP_COHERENCE**: Craft plan contains 3 ordered steps (PASS)
-- **[SEMANTIC] METHOD_PORTFOLIO_PRESENCE**: Method portfolio evaluated 4 crafting disciplines (PASS)
-- **[SEMANTIC] EXPLAINABILITY_COMPLETENESS**: All 2 non-winning methods have explicit explanations (PASS)
-- **[PERFORMANCE] METHOD PORTFOLIO SCENARIO_LATENCY**: Method Portfolio Scenario completed in 1.0ms (budget: 5000ms) (PASS)
+## Observed gates
 
-### Multi-Objective Scenario (PASS)
-- **[SEMANTIC] RECOMMENDATION_STATUS_VALIDITY**: Valid status: PROVEN_OPTIMAL (PASS)
-- **[SEMANTIC] EXPECTED_COST_VALIDITY**: Expected cost valid: 180.00c (PASS)
-- **[SEMANTIC] CRAFT_PLAN_STEP_COHERENCE**: Craft plan contains 1 ordered steps (PASS)
-- **[SEMANTIC] METHOD_PORTFOLIO_PRESENCE**: Method portfolio evaluated 2 crafting disciplines (PASS)
-- **[SEMANTIC] EXPLAINABILITY_COMPLETENESS**: All 0 non-winning methods have explicit explanations (PASS)
-- **[PERFORMANCE] MULTI-OBJECTIVE SCENARIO_LATENCY**: Multi-Objective Scenario completed in 1.0ms (budget: 5000ms) (PASS)
+| Scenario | Gate | Result | Duration | Observed evidence |
+|---|---|---:|---:|---|
+| real-browser-smoke | built-app-and-guide | PASS | 1001 ms | {"title":"PoE Cluster Jewel Research","dialogOpenedAndClosed":true} |
+| real-browser-smoke | presets-observed-through-dom | PASS | 70 ms | {"attackIds":["Feed the Fury","Fuel the Fight"],"shieldIds":["AfflictionJewelSmallPassivesGrantManaRegenSmall4"],"keyboardActivation":true} |
+| real-browser-smoke | import-and-real-worker-result | PASS | 799 ms | {"fixture":"cheap_one_mod","worker":{"requestId":"optimizer_1","types":["PROGRESS","PROGRESS","PROGRESS","PROGRESS","PROGRESS","PROGRESS","COMPLETE","RESULT"],"completeSequence":9,"resultSequence":10},"recommendationStatus":"BEST_RESOLVED_ACQUISITION_SAFE"} |
+| real-browser-smoke | ui-result-export-differential | PASS | 382 ms | {"dom":{"selectedRoute":"Start clean base: Clean Base","proofLabel":"Best among resolved alternatives","pricingLabel":"RESEARCH_ESTIMATE_STALE_PRICING"},"accounting":{"acquisitionCost":1,"downstreamCost":4.783561433333075,"fullCost":5.783561433333075,"difference":1.7763568394002505e-15,"acquisitionRows":1,"downstreamRows":3,"combinedRows":4,"currencies":{"alteration":30.346666666665065,"augmentation":7.836666666666235,"clean_base":1,"transmutation":1}},"exportVersion":"2T.1"} |
+| real-browser-smoke | share-url-reload | PASS | 123 ms | {"shareHashLength":667,"targetIds":["AfflictionJewelSmallPassivesGrantES3"]} |
+| real-browser-smoke | retry-deeper-retains-work | PASS | 4989 ms | {"initialCost":5.783561433333075,"deepenedCost":5.783561433333075,"retainedStates":270,"session":"phase2j-0fbf802a"} |
+| real-browser-smoke | cancel-worker-replacement-and-recovery | PASS | 3878 ms | {"terminateObserved":true,"replacementObserved":true,"recoveredStatus":"BEST_RESOLVED_ACQUISITION_SAFE"} |
+| real-browser-smoke | host-guard-worker-replacement-and-recovery | PASS | 4362 ms | {"hostDeadlineMs":251,"terminateObserved":true,"recoveredStatus":"BEST_RESOLVED_ACQUISITION_SAFE"} |
+| real-browser-smoke | real-worker-error-response | PASS | 436 ms | {"responseType":"ERROR","error":{"name":"TypeError","message":"Cannot read properties of null (reading 'target')"}} |
+| exact-four-mod-release-regression | exact-input-and-search | PASS | 25267 ms | {"fixture":"four_mod_release","targetIds":["AfflictionJewelSmallPassivesGrantInt3","AfflictionJewelSmallPassivesGrantAttributes3","AfflictionJewelSmallPassivesHaveIncreasedEffect2","AfflictionJewelSmallPassivesGrantES3"],"status":"PROVISIONAL_RESOLVED"} |
+| exact-four-mod-release-regression | canonical-dom-and-accounting | PASS | 918 ms | {"dom":{"selectedRoute":"Start self-fracture: Glowing (T1)","proofLabel":"Best among resolved alternatives","pricingLabel":"RESEARCH_ESTIMATE_STALE_PRICING"},"accounting":{"acquisitionCost":1465.7662757333542,"downstreamCost":3793.4274504828263,"fullCost":5259.193726216181,"difference":1.8189894035458565e-12,"acquisitionRows":9,"downstreamRows":6,"combinedRows":10,"currencies":{"alteration":21232.411682626825,"annul":33.54621756808432,"augmentation":898.1440015659149,"clean_base":1,"clean_base_reacquisition":3.000000000000043,"exalt":38.54621756810091,"fracturing":4.000000000000056,"regal":869.7973348992547,"scour":865.7973348992423,"transmutation":4.000000000000053}},"policyHealth":{"onPolicyReachableStates":398,"onPolicyTerminalStates":2,"terminalAbsorptionProbability":1,"selectedPolicyProper":true,"unresolvedOnPolicyProbability":0}} |
+| exact-four-mod-release-regression | independent-method-family-matrix | PASS | 30007 ms | {"families":[{"id":"family_open","kind":"OPEN","status":"SELECTED_WINNER","source":"INDEPENDENT_SOLVE","acquisitionStatus":"RESOLVED","downstreamStatus":"RESOLVED","fullRouteStatus":"RESOLVED"},{"id":"family_conventional","kind":"CONVENTIONAL","status":"UNRESOLVED_AT_BUDGET","source":"INDEPENDENT_SOLVE","acquisitionStatus":"RESOLVED","downstreamStatus":"UNRESOLVED","fullRouteStatus":"UNRESOLVED"},{"id":"family_harvest_defences","kind":"HARVEST","status":"UNRESOLVED_AT_BUDGET","source":"INDEPENDENT_SOLVE","acquisitionStatus":"RESOLVED","downstreamStatus":"UNRESOLVED","fullRouteStatus":"UNRESOLVED"},{"id":"family_fracture_AfflictionJewelSmallPassivesGrantInt3","kind":"SELF_FRACTURE","status":"UNRESOLVED_AT_BUDGET","source":"INDEPENDENT_SOLVE","acquisitionStatus":"RESOLVED","downstreamStatus":"UNRESOLVED","fullRouteStatus":"UNRESOLVED"},{"id":"family_fracture_harvest_AfflictionJewelSmallPassivesGrantInt3_defences","kind":"SELF_FRACTURE_HARVEST","status":"UNRESOLVED_AT_BUDGET","source":"INDEPENDENT_SOLVE","acquisitionStatus":"RESOLVED","downstreamStatus":"UNRESOLVED","fullRouteStatus":"UNRESOLVED"},{"id":"family_fracture_AfflictionJewelSmallPassivesGrantAttributes3","kind":"SELF_FRACTURE","status":"UNRESOLVED_AT_BUDGET","source":"INDEPENDENT_SOLVE","acquisitionStatus":"RESOLVED","downstreamStatus":"UNRESOLVED","fullRouteStatus":"UNRESOLVED"},{"id":"family_fracture_harvest_AfflictionJewelSmallPassivesGrantAttributes3_defences","kind":"SELF_FRACTURE_HARVEST","status":"UNRESOLVED_AT_BUDGET","source":"INDEPENDENT_SOLVE","acquisitionStatus":"RESOLVED","downstreamStatus":"UNRESOLVED","fullRouteStatus":"UNRESOLVED"},{"id":"family_fracture_AfflictionJewelSmallPassivesHaveIncreasedEffect2","kind":"SELF_FRACTURE","status":"MORE_EXPENSIVE","source":"INDEPENDENT_SOLVE","acquisitionStatus":"RESOLVED","downstreamStatus":"RESOLVED","fullRouteStatus":"RESOLVED"},{"id":"family_fracture_harvest_AfflictionJewelSmallPassivesHaveIncreasedEffect2_defences","kind":"SELF_FRACTURE_HARVEST","status":"UNRESOLVED_AT_BUDGET","source":"INDEPENDENT_SOLVE","acquisitionStatus":"RESOLVED","downstreamStatus":"UNRESOLVED","fullRouteStatus":"UNRESOLVED"},{"id":"family_fracture_AfflictionJewelSmallPassivesGrantES3","kind":"SELF_FRACTURE","status":"SELECTED_WINNER","source":"INDEPENDENT_SOLVE","acquisitionStatus":"RESOLVED","downstreamStatus":"RESOLVED","fullRouteStatus":"RESOLVED"},{"id":"family_fracture_harvest_AfflictionJewelSmallPassivesGrantES3_defences","kind":"SELF_FRACTURE_HARVEST","status":"UNRESOLVED_AT_BUDGET","source":"INDEPENDENT_SOLVE","acquisitionStatus":"RESOLVED","downstreamStatus":"UNRESOLVED","fullRouteStatus":"UNRESOLVED"},{"id":"family_chaos_reforge","kind":"CHAOS_REFORGE","status":"NOT_MODELED","source":"NOT_SEARCHED","acquisitionStatus":"NOT_APPLICABLE","downstreamStatus":"NOT_APPLICABLE","fullRouteStatus":"NOT_APPLICABLE"}]} |
+| exact-four-mod-release-regression | four-mod-export-and-real-images | PASS | 1963 ms | {"exportSchema":"2T.1","geometry":{"documentWidth":390,"viewportWidth":390,"overflowers":[{"tag":"BUTTON","className":"selected-route-node","right":516,"width":270,"scrollWidth":268},{"tag":"SPAN","className":"","right":495,"width":240,"scrollWidth":0},{"tag":"BUTTON","className":"selected-route-node","right":726,"width":203,"scrollWidth":201},{"tag":"SPAN","className":"","right":717,"width":118,"scrollWidth":0},{"tag":"BUTTON","className":"selected-route-node","right":961,"width":229,"scrollWidth":227},{"tag":"SPAN","className":"","right":952,"width":95,"scrollWidth":0},{"tag":"BUTTON","className":"selected-route-node","right":1238,"width":270,"scrollWidth":268},{"tag":"SPAN","className":"","right":1179,"width":202,"scrollWidth":0},{"tag":"BUTTON","className":"selected-route-node","right":1498,"width":254,"scrollWidth":252},{"tag":"SPAN","className":"","right":1489,"width":66,"scrollWidth":0},{"tag":"BUTTON","className":"selected-route-node","right":1775,"width":270,"scrollWidth":268},{"tag":"SPAN","className":"","right":1763,"width":248,"scrollWidth":0}]}} |
+| harvest-method-and-economics | armour_evasion | PASS | 38401 ms | {"fixture":"armour_evasion","harvest":{"lifecycle":"ENABLED_UNRESOLVED","harvestFamilies":[{"id":"family_harvest_defences","evaluationSource":"INDEPENDENT_SOLVE","fullRouteStatus":"UNRESOLVED","requiredActionObservedOnPolicy":false,"retainedStates":5000,"budget":{"maxStates":5000,"maxWallTimeMs":15000,"maxExpansionRounds":3,"elapsedMs":9889},"policyHealth":{"selectedPolicyStatus":"NOT CERTIFIED","proofLevel":"NO FULLY RESOLVED POLICY FOUND","onPolicyReachableStates":1,"onPolicyTerminalStates":0,"onPolicyUnresolvedTransitions":1,"terminalAbsorptionProbability":0,"proper":false,"fullyResolved":false,"bellmanConverged":false,"occupancyConverged":true,"costReconciled":false}}],"conventionalStatus":"RESOLVED","explanation":"Harvest was independently searched, but no policy containing a Harvest action resolved within its family budget."},"accounting":{"acquisitionCost":1,"downstreamCost":183.65268918864078,"fullCost":184.65268918864078,"difference":9.379164112033322e-13,"acquisitionRows":1,"downstreamRows":6,"combinedRows":7,"currencies":{"alteration":855.6278916801127,"augmentation":228.48491291912092,"clean_base":1,"exalt":12.117396222309342,"regal":58.311759996373,"scour":57.31175999637252,"transmutation":58.31175999637502}}} |
+| harvest-method-and-economics | armour_energy_shield | PASS | 43887 ms | {"fixture":"armour_energy_shield","harvest":{"lifecycle":"ENABLED_UNRESOLVED","harvestFamilies":[{"id":"family_harvest_defences","evaluationSource":"INDEPENDENT_SOLVE","fullRouteStatus":"UNRESOLVED","requiredActionObservedOnPolicy":false,"retainedStates":5000,"budget":{"maxStates":5000,"maxWallTimeMs":15000,"maxExpansionRounds":3,"elapsedMs":10138},"policyHealth":{"selectedPolicyStatus":"NOT CERTIFIED","proofLevel":"NO FULLY RESOLVED POLICY FOUND","onPolicyReachableStates":1,"onPolicyTerminalStates":0,"onPolicyUnresolvedTransitions":1,"terminalAbsorptionProbability":0,"proper":false,"fullyResolved":false,"bellmanConverged":false,"occupancyConverged":true,"costReconciled":false}}],"conventionalStatus":"RESOLVED","explanation":"Harvest was independently searched, but no policy containing a Harvest action resolved within its family budget."},"accounting":{"acquisitionCost":1,"downstreamCost":183.65268918894608,"fullCost":184.65268918894608,"difference":1.8189894035458565e-12,"acquisitionRows":1,"downstreamRows":6,"combinedRows":7,"currencies":{"alteration":855.6278916815317,"augmentation":228.48491291949964,"clean_base":1,"exalt":12.117396222329498,"regal":58.311759996469654,"scour":57.311759996469334,"transmutation":58.31175999647173}}} |
+| harvest-method-and-economics | harvest_one_mod_math_witness | PASS | 26332 ms | {"fixture":"harvest_one_mod_math_witness","harvest":{"lifecycle":"RESOLVED_MORE_EXPENSIVE","harvestFamilies":[{"id":"family_harvest_defences","evaluationSource":"INDEPENDENT_SOLVE","fullRouteStatus":"RESOLVED","requiredActionObservedOnPolicy":true,"retainedStates":4170,"budget":{"maxStates":10000,"maxWallTimeMs":15000,"maxExpansionRounds":4,"elapsedMs":4458},"policyHealth":{"selectedPolicyStatus":"FULLY RESOLVED / PROPER / ABSORBING / COST-RECONCILED","proofLevel":"OPTIMAL OVER MODELED ACTIONS: PROVEN","onPolicyReachableStates":4170,"onPolicyTerminalStates":922,"onPolicyUnresolvedTransitions":0,"terminalAbsorptionProbability":0.9999999999975241,"proper":true,"fullyResolved":true,"bellmanConverged":true,"occupancyConverged":true,"costReconciled":true,"reconciliationDifferenceChaos":1.1386447340555605e-12}}],"conventionalStatus":"RESOLVED","expectedHarvestApplications":2.482721983514619,"expectedLifeforce":186.2041487635964,"lifeforceType":"primalLifeforce","crossover":0.006592018857529578,"explanation":"Harvest Reforge Defences was independently solved with 2.483 expected applications (186.204 primalLifeforce, 75 per application). +5.657c versus Conventional. Crossover: 0.006592c per primalLifeforce."},"accounting":{"acquisitionCost":10,"downstreamCost":1.3574812599999835,"fullCost":11.357481259999984,"difference":1.7763568394002505e-15,"acquisitionRows":1,"downstreamRows":4,"combinedRows":5,"currencies":{"alteration":7.727999999999918,"augmentation":2.1819999999999737,"clean_base":1,"regal":0.9999999999999876,"transmutation":1}}} |
+| responsive-accessibility-keyboard | real-dom-viewport-matrix | PASS | 320 ms | [{"requestedViewport":320,"clientWidth":320,"documentWidth":320,"bodyWidth":320},{"requestedViewport":390,"clientWidth":390,"documentWidth":390,"bodyWidth":390},{"requestedViewport":768,"clientWidth":768,"documentWidth":768,"bodyWidth":768},{"requestedViewport":1280,"clientWidth":1280,"documentWidth":1280,"bodyWidth":1280},{"requestedViewport":1920,"clientWidth":1920,"documentWidth":1920,"bodyWidth":1920}] |
+| responsive-accessibility-keyboard | semantic-controls-and-keyboard-primary-path | PASS | 6946 ms | {"unnamedButtons":0,"keyboardPreset":true,"keyboardOptimization":true} |
+| constellation-real-render | controls-focus-fullscreen-and-real-frame | PASS | 1454 ms | {"canvas":{"x":82.59375,"y":214.921875,"width":1114.796875,"height":520},"focusableNodes":9,"screenshot":"quality-lab\\reports\\evidence\\constellation-real-frame.png","fullscreenApiEnabled":true,"enteredFullscreen":true,"keyboardExitedFullscreen":false,"rejectedRequestStayedInNormalLayout":false} |
+| constellation-real-render | deterministic-reduced-motion-frames | PASS | 630 ms | {"byteLength":232412,"framesEqual":true} |
+| constellation-real-render | fps-long-task-and-memory-soak | PASS | 5025 ms | {"frames":301,"elapsedMs":5006.099999904633,"fps":60.126645493644574,"longTaskTotalMs":123,"maxLongTaskMs":73,"usedJSHeapSize":31200000} |
+| additional-regression-fixtures | herald_envoy_endbringer | PASS | 9482 ms | {"fixture":"herald_envoy_endbringer","status":"BEST_RESOLVED_ACQUISITION_SAFE","targetIds":["Empowered Envoy","Endbringer"],"accounting":{"acquisitionCost":10,"downstreamCost":58.947500411254815,"fullCost":68.94750041125482,"difference":8.526512829121202e-14,"acquisitionRows":1,"downstreamRows":6,"combinedRows":7,"currencies":{"alteration":235.794701230068,"augmentation":57.63846025371909,"clean_base":1,"exalt":0.9046702308322626,"regal":41.850988162315346,"scour":40.850988162315886,"transmutation":41.8509881623155}}} |
+| additional-regression-fixtures | three_notable | PASS | 18867 ms | {"fixture":"three_notable","status":"PROVISIONAL_RESOLVED","targetIds":["Feed the Fury","Fuel the Fight","Martial Prowess"],"accounting":{"acquisitionCost":1461.4087846301413,"downstreamCost":137.98333949740166,"fullCost":1599.392124127543,"difference":6.821210263296962e-13,"acquisitionRows":9,"downstreamRows":5,"combinedRows":9,"currencies":{"alteration":918.9220686915789,"augmentation":66.39609459042498,"clean_base":1,"clean_base_reacquisition":3.000000000001049,"exalt":16.89525824982304,"fracturing":4.0000000000014015,"regal":25.85905755336918,"scour":21.859057553375408,"transmutation":4.000000000001043}}} |
+| release-process | runtime-error-audit | PASS | 0 ms | {"consoleErrors":0,"pageErrors":0,"networkErrors":0} |
 
-### Responsive & Accessibility Scenario (PASS)
-- **[LAYOUT] NO_HORIZONTAL_OVERFLOW_320PX**: Viewport 320px has 0 horizontal overflow (docWidth=320px, bodyWidth=320px) (PASS)
-- **[LAYOUT] NO_HORIZONTAL_OVERFLOW_390PX**: Viewport 390px has 0 horizontal overflow (docWidth=390px, bodyWidth=390px) (PASS)
-- **[LAYOUT] NO_HORIZONTAL_OVERFLOW_768PX**: Viewport 768px has 0 horizontal overflow (docWidth=768px, bodyWidth=768px) (PASS)
-- **[LAYOUT] NO_HORIZONTAL_OVERFLOW_1280PX**: Viewport 1280px has 0 horizontal overflow (docWidth=1280px, bodyWidth=1280px) (PASS)
-- **[LAYOUT] NO_HORIZONTAL_OVERFLOW_1920PX**: Viewport 1920px has 0 horizontal overflow (docWidth=1920px, bodyWidth=1920px) (PASS)
-- **[ACCESSIBILITY] ALL_INTERACTIVE_CONTROLS_LABELED**: All interactive buttons, selects, and inputs have accessible text or aria-labels (PASS)
-- **[ACCESSIBILITY] SEMANTIC_HEADING_HIERARCHY**: Found 3 headings providing structure for 2 content sections (PASS)
+## Captured runtime issues
 
-### Markov Constellation & Animation Scenario (PASS)
-- **[ANIMATION] DETERMINISTIC_REPRODUCIBILITY**: Graph layout fully reproducible across seeds (4 nodes, 4 edges) (PASS)
-- **[ANIMATION] SELECTED_ROUTE_HIGHLIGHTED**: Selected route contains 3 illuminated nodes (PASS)
-- **[ANIMATION] DOMINATED_BRANCHES_DIMMED**: Dominated branches dimmed below 0.5 glow intensity (PASS)
-- **[ANIMATION] WISP_EDGES_VALID**: All 4 wisps bound to valid graph edges (PASS)
-- **[ANIMATION] WISP_NODES_VALID**: All wisp endpoints connect valid macro-state nodes (PASS)
-- **[ANIMATION] WISP_PROGRESS_BOUNDS**: Wisp trajectory progress stays strictly in [0.0, 1.0] (PASS)
-- **[PERFORMANCE] ANIMATION SCENARIO_LATENCY**: Animation Scenario completed in 0.5ms (budget: 2000ms) (PASS)
+- Console errors: 0
+- Page errors: 0
+- Network errors: 0
 
-### Pricing, Sharing, and Bug-Report Scenario (PASS)
-- **[SEMANTIC] URL_SHARE_ROUNDTRIP_INTEGRITY**: URL encoding and decoding roundtrip preserved all craft fields (PASS)
-- **[SEMANTIC] ANONYMIZED_BUG_REPORT_SAFETY**: Bug report bundle structured correctly with zero credential leakage (PASS)
-- **[PERFORMANCE] SHARING SCENARIO_LATENCY**: Sharing Scenario completed in 0.8ms (budget: 2000ms) (PASS)
+## Artifacts
+
+- fourModDesktop: `quality-lab\reports\evidence\four-mod-desktop.png`
+- fourModMobile: `quality-lab\reports\evidence\four-mod-390.png`
+- constellationFrame: `quality-lab\reports\evidence\constellation-real-frame.png`
+- fullWorkerEvents: `quality-lab\artifacts\2026-08-25T18-47-19-833Z\worker-events-full.json`
+- workerEvents: `quality-lab\reports\evidence\worker-events.json`
+- videoDirectory: `quality-lab\artifacts\2026-08-25T18-47-19-833Z\video`
+- trace: `quality-lab\artifacts\2026-08-25T18-47-19-833Z\phase2t-trace.zip`

@@ -91,6 +91,7 @@ export class OptimizerWorkerClient {
         pending.onProgress?.(event.data.progress);
         return;
       }
+      if (event.data.type === 'COMPLETE') return;
       this.pending.delete(event.data.requestId);
       clearTimeout(pending.timeoutId);
       if (event.data.type === 'RESULT') pending.resolve(event.data.result);

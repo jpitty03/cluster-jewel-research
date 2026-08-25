@@ -4,14 +4,22 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "lab": "tsx src/runner.ts",
+    "lab": "tsx src/runner.ts --scenario release",
+    "lab:release": "tsx src/runner.ts --scenario release",
+    "lab:nightly": "tsx src/runner.ts --scenario nightly",
+    "lab:no-fallback-probe": "tsx src/noFallbackProbe.ts",
     "lab:smoke": "tsx src/runner.ts --scenario smoke",
     "lab:methods": "tsx src/runner.ts --scenario methods",
-    "lab:objectives": "tsx src/runner.ts --scenario objectives",
-    "lab:responsive": "tsx src/runner.ts --scenario responsive"
+    "lab:objectives": "tsx src/runner.ts --scenario four",
+    "lab:responsive": "tsx src/runner.ts --scenario responsive",
+    "lab:animation": "tsx src/runner.ts --scenario animation",
+    "lab:additional": "tsx src/runner.ts --scenario additional"
   },
   "dependencies": {
     "tsx": "^4.23.5",
     "typescript": "~7.0.2"
+  },
+  "devDependencies": {
+    "playwright": "^1.62.1"
   }
 }
