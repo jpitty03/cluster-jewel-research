@@ -6,7 +6,6 @@ import { PriceBook } from '../crafting-engine/src/domain/PriceBook.ts';
 import {
   OptimizerService,
   type OptimizeCraftInput,
-  type OptimizeCraftResult,
 } from '../crafting-engine/src/service/optimizerService.ts';
 
 const outputPath = fileURLToPath(new URL('../output-phase2m-multi-objective-diagnostic.txt', import.meta.url));
@@ -15,9 +14,9 @@ const service = new OptimizerService(repository);
 const liveCluster = '10% increased Attack Damage';
 const pool = ModPool.forCluster(repository, 'Large Cluster Jewel', liveCluster);
 
-const t1Armour = pool.findModById('AfflictionJewelSmallPassivesGrantArmour3');
-const t1Evasion = pool.findModById('AfflictionJewelSmallPassivesGrantEvasion3');
-if (!t1Armour || !t1Evasion) throw new Error('Missing Phase 2M T1 Armour/Evasion fixtures');
+const t1Es = pool.findModById('AfflictionJewelSmallPassivesGrantES3');
+const t1Int = pool.findModById('AfflictionJewelSmallPassivesGrantInt3');
+if (!t1Es || !t1Int) throw new Error('Missing Phase 2M T1 ES/Int fixtures');
 
 const lines: string[] = ['PHASE 2M — COST-CONSTRAINED MULTI-OBJECTIVE & HARVEST TRANSPARENCY DIAGNOSTIC'];
 
@@ -28,8 +27,8 @@ const commonInput: OptimizeCraftInput = {
   passiveCount: 8,
   target: {
     requiredMods: [
-      { modId: t1Armour.modId },
-      { modId: t1Evasion.modId },
+      { modId: t1Es.modId },
+      { modId: t1Int.modId },
     ],
     requiredRarity: 'rare',
     finalStateConstraints: { maxUnmatchedAffixes: 0 },

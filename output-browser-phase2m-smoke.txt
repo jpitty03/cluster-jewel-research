@@ -1,0 +1,16 @@
+PHASE 2M — COST-CONSTRAINED MULTI-OBJECTIVE & HARVEST UI BROWSER SMOKE
+URL: http://127.0.0.1:5173/
+
+M14 BROWSER UI CONTROLS & RENDERING
+  Objective dropdown with 6 distinct modes=PASS
+  Cost ceiling dynamic inputs (Percent/Chaos/Absolute)=PASS
+  Player time value input in Balanced mode=PASS
+  Unconstrained warning banner=PASS
+  Recommendation hero effort facts (actions, time, proof status)=PASS
+  Pareto Comparison Card with non-dominated alternatives=PASS
+  Harvest Comparison Card with delta, savings, and crossover price=PASS
+  Craft Plan step effort badges (~actions, ~time)=PASS
+  320px responsive container geometry (no horizontal overflow)=PASS
+
+ALL PHASE 2M BROWSER UI GATES: PASS
+Unit tests run: NO

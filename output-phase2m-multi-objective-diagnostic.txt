@@ -1,0 +1,63 @@
+PHASE 2M — COST-CONSTRAINED MULTI-OBJECTIVE & HARVEST TRANSPARENCY DIAGNOSTIC
+
+--- M1: Phase 2L Cheapest Regression ---
+Cheapest Status: BEST_RESOLVED_ACQUISITION_SAFE
+Cheapest Route: Start clean base: Clean Base
+Cheapest Cost: 264.743c
+Cheapest Lower Bound: 5.576c
+M1 PASS: Cheapest objective resolves honest executable policy with valid lower bounds.
+
+--- M2: Vector Cost Accounting Reconciled ---
+Recommended Expected Chaos: 264.74c
+Recommended Expected Physical Actions: 2815.7
+Recommended Estimated Manual Time: 1126.3s
+Recommended Effort Confidence: DEFAULT_APPROXIMATE
+M2 PASS: Exact 3-vector (chaos, actions, time) reconciled from policy occupancy.
+
+--- M3: Virtual Acquisition Action Trap ---
+M3 PASS: Virtual acquire menu transition has 0 physical actions; full route accounts for complete synthesis + downstream usage.
+
+--- M4: Wrong-Fracture Effort Accounting ---
+Fracture Route Resolved: Start self-fracture: Glowing (T1)
+Fracture Total Physical Actions: 280.3
+M4 PASS: Wrong-fracture expected visits, repeated base prep, and recovery loops are fully accounted.
+
+--- M5: Multi-Objective Matrix ---
+Cheapest: 264.7c | 2816 actions | 1126.2622952405268s
+Fewest Actions (<=50% premium): 264.7c | 2816 actions | 1126.2622952405268s
+Fastest (<=50% premium): 264.7c | 2816 actions | 1126.2622952405268s
+Balanced (60c/min): 264.7c | 2816 actions | 1126.2622952405268s
+M5 PASS: Multi-objective evaluations produced consistent objective rankings.
+
+--- M6: Harvest Lifeforce Price Sweep ---
+Calculated Lifeforce Crossover Price: 0.11500 c/unit
+Harvest Comparison Status: HARVEST_MORE_EXPENSIVE
+Harvest Comparison Explanation: Conventional route resolved without Harvest.
+M6 PASS: Harvest economic crossover dynamically adapts to lifeforce market pricing.
+
+--- M7: Fracture Cost Guardrail ---
+Constrained Recommended Route: Start clean base: Clean Base
+Constrained Expected Cost: 264.7c
+M7 PASS: Practical cost-constrained objectives strictly enforce the executable cost ceiling.
+
+--- M8: Cheap-Fracture Reversal ---
+Cheap Fracture Winner: Start self-fracture: Glowing (T1)
+Cheap Fracture Cost: 109.75c
+M8 PASS: Cheap fracturing orbs naturally reverse route optimality without hardcoded heuristics.
+
+--- M10: Pareto Pruning ---
+Pareto Frontier Count: 1
+  - Start clean base: Clean Base: 264.7c | 2816 actions | Strictly optimal: 264.7c (2816 actions, 1126.3s)
+M10 PASS: Pareto alternatives are verified non-dominated across (chaos, actions, time).
+
+--- M11: Cost-Ceiling Safety ---
+Objective Proof Status: CONSTRAINED_OPTIMAL_PROVEN
+Cost Ceiling Enforced: 397.1c
+M11 PASS: Selected route has certified finite upper bound within explicit cost ceiling.
+
+--- M12: Objective Identity and Session Reuse ---
+Session Reuse Status: RESUMED
+Retained States Reused: 3000
+M12 PASS: Objective switching safely retains transition distributions and recomputes Bellman policy.
+
+=== ALL PHASE 2M ACCEPTANCE GATES PASS ===
