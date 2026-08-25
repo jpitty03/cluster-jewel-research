@@ -59,11 +59,21 @@ import {
   type OptimizerValidationIssue,
 } from './optimizerValidation.ts';
 import { getSearchRuntimeBudget, type SearchIntent } from './searchRuntime.ts';
+import type {
+  MethodFamilyKind,
+  MethodFamilyStatus,
+  MethodFamilySpec,
+  MethodFamilyResult,
+} from '../domain/MethodFamily.ts';
 
 export type {
   ActionCostVector,
   ActionEffortProfile,
   EffortConfidence,
+  MethodFamilyKind,
+  MethodFamilyStatus,
+  MethodFamilySpec,
+  MethodFamilyResult,
   OptimizationObjectiveKind,
   OptimizationObjectiveSpec,
   RouteMetricVector,
@@ -671,6 +681,7 @@ export interface OptimizeCraftResult {
   objectiveProofStatus?: ObjectiveProofStatus;
   objective?: OptimizationObjectiveSpec;
   costCeilingChaos?: number;
+  methodPortfolio?: MethodFamilyResult[];
   warningDetails: OptimizationWarning[];
   warnings: string[];
 }
@@ -873,8 +884,195 @@ function buildHarvestComparisonSummary(
     status: resolvedHarvestRoute ? 'HARVEST_SELECTED' : 'HARVEST_MORE_EXPENSIVE',
     explanation: resolvedHarvestRoute
       ? 'Harvest route resolved successfully.'
-      : 'Conventional route resolved without Harvest.',
+      : 'Harvest reforges were modeled but proved more expensive than conventional Alteration rolling at current lifeforce prices.',
   };
+}
+
+function buildMethodPortfolio(
+  pool: ModPool,
+  allResolvedRoutes: RouteSummary[],
+  recommended: RouteSummary | null,
+  fastCleanRoute: RouteSummary | undefined,
+  bestFractureRoute: RouteSummary | undefined,
+  synthesisSummaries: Map<number, AcquisitionSynthesisSummary>,
+  starts: StartingStateCandidate[],
+  harvestComparison: HarvestComparisonSummary | undefined,
+  priceBook: PriceBook,
+  craftPlan: CraftPlanSummary
+): MethodFamilyResult[] {
+  const results: MethodFamilyResult[] = [];
+  const recCost = recommended?.expectedTotalCostChaos ?? null;
+
+  // 1. OPEN POLICY (Primary recommended or incumbent)
+  results.push({
+    spec: {
+      id: 'family_open',
+      kind: 'OPEN',
+      name: 'Open Policy (All Modeled Mechanics)',
+      description: 'Global optimization considering all legal and enabled crafting mechanics.',
+      badge: 'Recommended',
+    },
+    status: recommended ? 'SELECTED_WINNER' : 'UNRESOLVED_AT_BUDGET',
+    route: recommended ?? undefined,
+    craftPlan,
+    whyNotSelectedExplanation: recommended
+      ? 'Optimal choice under the selected objective.'
+      : 'Search budget was reached before proof completion.',
+  });
+
+  // 2. CONVENTIONAL ROLLING (Alt / Aug / Regal / Exalt)
+  const conventionalRoute = fastCleanRoute ?? allResolvedRoutes.find((r) => r.actionId.includes('clean'));
+  if (conventionalRoute && conventionalRoute.expectedTotalCostChaos !== null) {
+    const isWinner = Boolean(recommended && recommended.actionId === conventionalRoute.actionId);
+    const costDelta = recCost !== null ? conventionalRoute.expectedTotalCostChaos - recCost : 0;
+    const costDeltaPct = recCost !== null && recCost > 0 ? (costDelta / recCost) * 100 : 0;
+    const actionsSaved = (conventionalRoute.metrics?.expectedPhysicalActions ?? 0) - (recommended?.metrics?.expectedPhysicalActions ?? 0);
+    const timeSavedMs = (conventionalRoute.metrics?.estimatedManualTimeMs ?? 0) - (recommended?.metrics?.estimatedManualTimeMs ?? 0);
+
+    results.push({
+      spec: {
+        id: 'family_conventional',
+        kind: 'CONVENTIONAL',
+        name: 'Conventional Alt / Aug / Regal',
+        description: 'Clean base start using Magic rolling (Alteration + Augmentation), Regal promotion, and Exalted/Annul finishing.',
+        badge: 'Alt + Regal',
+        forcedAcquisitionType: 'CLEAN',
+      },
+      status: isWinner ? 'SELECTED_WINNER' : costDelta > 0.05 ? 'MORE_EXPENSIVE' : 'DOMINATED',
+      route: conventionalRoute,
+      costDifferenceChaos: costDelta,
+      costDifferencePercent: costDeltaPct,
+      actionsSaved: -actionsSaved,
+      timeSavedMs: -timeSavedMs,
+      whyNotSelectedExplanation: isWinner
+        ? 'Selected as the most cost-effective path.'
+        : costDelta > 0.05
+          ? `+${costDelta.toFixed(1)}c (+${costDeltaPct.toFixed(0)}%) more expensive than ${recommended?.name ?? 'recommended route'}.`
+          : undefined,
+    });
+  } else {
+    results.push({
+      spec: {
+        id: 'family_conventional',
+        kind: 'CONVENTIONAL',
+        name: 'Conventional Alt / Aug / Regal',
+        description: 'Clean base start using Magic rolling, Regal promotion, and Exalt finishing.',
+        badge: 'Alt + Regal',
+        forcedAcquisitionType: 'CLEAN',
+      },
+      status: 'UNRESOLVED_AT_BUDGET',
+      whyNotSelectedExplanation: 'Conventional route was unresolved within the allocated state budget.',
+    });
+  }
+
+  // 3. HARVEST REFORGE
+  if (harvestComparison) {
+    const harvestStatus = harvestComparison.status;
+    let status: MethodFamilyStatus = 'NOT_ELIGIBLE';
+    let explanation = harvestComparison.explanation;
+
+    if (harvestStatus === 'HARVEST_SELECTED') {
+      status = 'SELECTED_WINNER';
+    } else if (harvestStatus === 'HARVEST_MORE_EXPENSIVE') {
+      status = 'MORE_EXPENSIVE';
+      if (!explanation.includes('more expensive')) {
+        explanation = 'Harvest reforges were modeled but proved more expensive than Alteration rolling at current lifeforce prices.';
+      }
+    } else if (harvestStatus === 'HARVEST_NOT_ELIGIBLE') {
+      status = 'NOT_ELIGIBLE';
+      explanation = 'None of the target modifiers match available Harvest reforge tags.';
+    } else if (harvestStatus === 'HARVEST_DISABLED') {
+      status = 'DISABLED';
+      explanation = 'Harvest crafts are disabled or currency rates are missing.';
+    } else {
+      status = 'UNRESOLVED_AT_BUDGET';
+    }
+
+    results.push({
+      spec: {
+        id: 'family_harvest',
+        kind: 'HARVEST',
+        name: 'Harvest Reforges',
+        description: 'Clean base start repeatedly applying tagged Harvest reforges matching target affixes.',
+        badge: 'Harvest',
+        forcedAcquisitionType: 'CLEAN',
+      },
+      status,
+      route: harvestComparison.resolvedHarvestRoute,
+      costDifferenceChaos: harvestComparison.costDifferenceChaos,
+      actionsSaved: harvestComparison.actionsSaved,
+      timeSavedMs: harvestComparison.timeSavedMs,
+      whyNotSelectedExplanation: explanation,
+    });
+  }
+
+  // 4. SELF-FRACTURE TARGETS
+  for (let idx = 0; idx < starts.length; idx++) {
+    const start = starts[idx];
+    if (!start.fracturedRequirement?.modId) continue;
+    const modId = start.fracturedRequirement.modId;
+    const mod = pool.findModById(modId);
+    const modName = mod ? `${mod.name} (T${mod.tier})` : modId;
+    const candidateRoute = allResolvedRoutes.find((r) => r.actionId.includes(`candidate_${idx}`) || (bestFractureRoute && bestFractureRoute.actionId.includes(`candidate_${idx}`)));
+    const synthSummary = synthesisSummaries.get(idx);
+
+    const isWinner = Boolean(recommended && recommended.actionId.includes(`candidate_${idx}`));
+    const fractureCost = candidateRoute?.expectedTotalCostChaos ?? synthSummary?.expectedCostChaos ?? null;
+    const costDelta = recCost !== null && fractureCost !== null ? fractureCost - recCost : undefined;
+    const costDeltaPct = recCost !== null && recCost > 0 && costDelta !== undefined ? (costDelta / recCost) * 100 : undefined;
+
+    let status: MethodFamilyStatus = 'NOT_MODELED';
+    let explanation: string | undefined;
+
+    if (isWinner) {
+      status = 'SELECTED_WINNER';
+      explanation = `Fracturing ${modName} first minimizes total expected cost.`;
+    } else if (candidateRoute && fractureCost !== null) {
+      status = costDelta && costDelta > 0.05 ? 'MORE_EXPENSIVE' : 'DOMINATED';
+      const orbPrice = priceBook.getRate('fracturing') || 800;
+      explanation = costDelta && costDelta > 0.05
+        ? `+${costDelta.toFixed(1)}c (+${costDeltaPct?.toFixed(0)}%) more expensive, largely due to Fracturing Orb prices (${orbPrice}c each).`
+        : `Dominated by other starting methods.`;
+    } else if (synthSummary?.status === 'SKIPPED_DOMINATED') {
+      status = 'DOMINATED';
+      explanation = `Self-fracturing ${modName} was proven dominated by lower-bound pruning.`;
+    } else {
+      status = 'UNRESOLVED_AT_BUDGET';
+      explanation = `Self-fracture synthesis for ${modName} remained unresolved within search budget.`;
+    }
+
+    results.push({
+      spec: {
+        id: `family_fracture_${modId}`,
+        kind: 'SELF_FRACTURE',
+        name: `Self-Fracture ${modName}`,
+        description: `Synthesize a fractured ${modName} starting base, then craft remaining affixes.`,
+        badge: `Fracture: ${modName}`,
+        forcedAcquisitionType: 'SELF_FRACTURE',
+        targetFractureModId: modId,
+        targetFractureModName: modName,
+      },
+      status,
+      route: candidateRoute,
+      costDifferenceChaos: costDelta,
+      costDifferencePercent: costDeltaPct,
+      whyNotSelectedExplanation: explanation,
+    });
+  }
+
+  // Deduplicate method families that resolved to the exact same route
+  const seenRouteIds = new Set<string>();
+  return results.filter((family) => {
+    if (family.spec.kind === 'OPEN') return true;
+    if (!family.route?.actionId) return true;
+    if (seenRouteIds.has(family.route.actionId)) {
+      if (family.spec.kind === 'CONVENTIONAL' && results[0].route?.actionId === family.route.actionId) {
+        return false;
+      }
+    }
+    seenRouteIds.add(family.route.actionId);
+    return true;
+  });
 }
 
 function methodConfidence(start: StartingStateCandidate, methodIndex: number, input: OptimizeCraftInput): PriceConfidence {
@@ -3626,9 +3824,23 @@ export class OptimizerService {
       warningDetails: uniqueWarningDetails,
       warnings: [...new Set(uniqueWarningDetails.map((warning) => warning.message))],
     };
+    const craftPlan = buildCraftPlan(outputWithoutCraftPlan);
+    const methodPortfolio = buildMethodPortfolio(
+      pool,
+      allResolvedRoutes,
+      recommended,
+      fastCleanRoute,
+      bestFractureRoute,
+      synthesisSummaries,
+      starts,
+      harvestComparison,
+      priceBook,
+      craftPlan
+    );
     const output: OptimizeCraftResult = {
       ...outputWithoutCraftPlan,
-      craftPlan: buildCraftPlan(outputWithoutCraftPlan),
+      craftPlan,
+      methodPortfolio,
     };
     // never become a frontend integration surprise.
     const serializationStarted = Date.now();

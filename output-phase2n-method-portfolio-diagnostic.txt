@@ -1,0 +1,47 @@
+PHASE 2N — METHOD PORTFOLIO & RESULT EXPLAINABILITY DIAGNOSTIC
+
+--- N1: Open Policy Primary Match ---
+Open Family Winner: Start clean base: Clean Base
+Open Family Cost: 264.74c
+N1 PASS: Open policy correctly matches the primary recommendation.
+
+--- N2: Conventional Alt/Aug/Regal Family ---
+Conventional Status: SELECTED_WINNER
+Conventional Route: Start clean base: Clean Base
+Conventional Cost: 264.74c
+N2 PASS: Conventional family correctly isolated and evaluated.
+
+--- N3: Harvest Family Reporting ---
+Harvest Family Status: MORE_EXPENSIVE
+Harvest Family Explanation: Harvest reforges were modeled but proved more expensive than conventional Alteration rolling at current lifeforce prices.
+N3 PASS: Harvest family accurately models reforge eligibility and reason.
+
+--- N4: Self-Fracture Target Mod Families ---
+Found 2 Self-Fracture Families:
+  - Self-Fracture Glowing (T1): status=DOMINATED, explanation=Self-fracturing Glowing (T1) was proven dominated by lower-bound pruning.
+  - Self-Fracture of the Prodigy (T1): status=DOMINATED, explanation=Self-fracturing of the Prodigy (T1) was proven dominated by lower-bound pruning.
+N4 PASS: Self-fracture families generated for target affixes.
+
+--- N5: Why Not Selected? Explainability ---
+[Open Policy (All Modeled Mechanics)] -> Status: SELECTED_WINNER
+  Explanation: Optimal choice under the selected objective.
+[Conventional Alt / Aug / Regal] -> Status: SELECTED_WINNER
+  Explanation: Selected as the most cost-effective path.
+[Harvest Reforges] -> Status: MORE_EXPENSIVE
+  Explanation: Harvest reforges were modeled but proved more expensive than conventional Alteration rolling at current lifeforce prices.
+[Self-Fracture Glowing (T1)] -> Status: DOMINATED
+  Explanation: Self-fracturing Glowing (T1) was proven dominated by lower-bound pruning.
+[Self-Fracture of the Prodigy (T1)] -> Status: DOMINATED
+  Explanation: Self-fracturing of the Prodigy (T1) was proven dominated by lower-bound pruning.
+N5 PASS: All non-winning method families provide clear deterministic explanations.
+
+--- N6: Method Family Deduplication ---
+Evaluated Methods: 5, Unique Route Actions: 1
+N6 PASS: Duplicate identical policies pruned from default presentation.
+
+--- N7: Graph and Session Reuse ---
+Second Run Method Portfolio Count: 5
+Session Reuse Status: RESUMED
+N7 PASS: On-demand method portfolio reuses retained transition distributions safely.
+
+=== ALL PHASE 2N ACCEPTANCE GATES PASS ===

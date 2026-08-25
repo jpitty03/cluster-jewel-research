@@ -1,0 +1,14 @@
+PHASE 2N — METHOD PORTFOLIO & RESULT EXPLAINABILITY BROWSER SMOKE
+URL: http://127.0.0.1:5173/
+
+N8 BROWSER UI METHOD PORTFOLIO & EXPORT TOOLBAR
+  Method Portfolio card with method count badge=PASS
+  Evaluated method cards (Open, Conventional, Harvest, Self-Fracture)=PASS
+  Why-not-selected explanation callouts=PASS
+  Shopping list export button & formatting=PASS
+  Craft playbook export button=PASS
+  JSON setup bundle export=PASS
+  320px responsive layout geometry=PASS
+
+ALL PHASE 2N BROWSER UI GATES: PASS
+Unit tests run: NO

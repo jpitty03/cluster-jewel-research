@@ -462,6 +462,7 @@ function CraftOptimizer() {
   const [costConstraintType, setCostConstraintType] = useState<'PREMIUM_PERCENT' | 'PREMIUM_CHAOS' | 'ABSOLUTE'>('PREMIUM_PERCENT');
   const [costConstraintValue, setCostConstraintValue] = useState('20');
   const [valueOfTimeChaosPerMin, setValueOfTimeChaosPerMin] = useState('50');
+  const [copiedAction, setCopiedAction] = useState<string | null>(null);
 
   const draftObjective = useMemo<OptimizationObjectiveSpec>(() => {
     switch (objectiveKind) {
@@ -647,6 +648,82 @@ function CraftOptimizer() {
   };
 
   const cancel = () => workerRef.current?.cancel();
+
+  const copyShoppingList = (res: OptimizeCraftResult) => {
+    const lines: string[] = ['=== CLUSTER JEWEL CRAFTING SHOPPING LIST ==='];
+    lines.push(`Target: ${res.target.requiredMods.map((m) => eligibleMods.find((mod) => mod.modId === m.modId)?.displayName ?? m.modId).join(' + ')}`);
+    lines.push(`Expected Total Cost: ~${chaos(res.expectedCostChaos)}`);
+    lines.push('\nEstimated Materials & Bases:');
+
+    const cleanCand = res.acquisition.candidates.find((c) => c.id === 'candidate_clean');
+    const cleanCost = cleanCand?.methods.find((m) => m.id === 'clean-base')?.costChaos;
+    if (cleanCost !== undefined) {
+      lines.push(`- 1x ${baseType} (ilvl ${itemLevel}, ${passiveCount} passives) (~${cleanCost.toFixed(1)}c)`);
+    }
+
+    const currencies = res.expectedCurrencies ?? {};
+    for (const [curr, count] of Object.entries(currencies)) {
+      if (count && count > 0) {
+        lines.push(`- ~${Math.ceil(count).toLocaleString()}x ${curr}`);
+      }
+    }
+
+    void navigator.clipboard.writeText(lines.join('\n'));
+    setCopiedAction('SHOPPING_LIST');
+    setTimeout(() => setCopiedAction(null), 2500);
+  };
+
+  const copyCraftGuide = (res: OptimizeCraftResult) => {
+    const lines: string[] = ['=== CLUSTER JEWEL CRAFTING PLAYBOOK ==='];
+    lines.push(`Target: ${res.target.requiredMods.map((m) => eligibleMods.find((mod) => mod.modId === m.modId)?.displayName ?? m.modId).join(' + ')}`);
+    lines.push(`Starting Point: ${recommendedStart}`);
+    lines.push(`Expected Cost: ~${chaos(res.expectedCostChaos)}`);
+    lines.push(`Expected Actions: ~${res.recommended?.metrics?.expectedPhysicalActions ? Math.round(res.recommended.metrics.expectedPhysicalActions) : 'N/A'}`);
+    lines.push('\n--- Chronological Instructions ---');
+
+    res.craftPlan.steps.forEach((step, idx) => {
+      lines.push(`\nStep ${idx + 1}: ${step.title}`);
+      lines.push(step.instruction);
+      if (step.actionIds.length > 0) {
+        lines.push(`Action: ${step.actionNames.join(', ')}`);
+      }
+    });
+
+    void navigator.clipboard.writeText(lines.join('\n'));
+    setCopiedAction('CRAFT_GUIDE');
+    setTimeout(() => setCopiedAction(null), 2500);
+  };
+
+  const exportSetupJson = (res: OptimizeCraftResult) => {
+    const exportBundle = {
+      appVersion: 'Phase2N',
+      exportedAt: new Date().toISOString(),
+      baseType,
+      clusterType,
+      itemLevel,
+      passiveCount,
+      targetMods: targetModIds.filter(Boolean),
+      finalRarity,
+      objective: draftObjective,
+      prices: res.marketContext,
+      resultSummary: {
+        expectedCostChaos: res.expectedCostChaos,
+        recommendationStatus: res.recommendationStatus,
+        recommendedRoute: res.recommended?.name,
+        metrics: res.recommended?.metrics,
+      },
+    };
+
+    const blob = new Blob([JSON.stringify(exportBundle, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `cluster-craft-${clusterType.toLowerCase().replace(/[^a-z0-9]/g, '-')}-${Date.now()}.json`;
+    a.click();
+    URL.revokeObjectURL(url);
+    setCopiedAction('EXPORT_JSON');
+    setTimeout(() => setCopiedAction(null), 2500);
+  };
   const selectedAcquisition = result?.acquisition.candidates.find(
     (candidate) => candidate.id === result.acquisition.selectedCandidateId,
   );
@@ -1146,8 +1223,106 @@ function CraftOptimizer() {
             </section>
           )}
 
+          {result.methodPortfolio && result.methodPortfolio.length > 0 && (
+            <section className="optimizer-card method-portfolio-card" aria-labelledby="method-portfolio-title">
+              <div className="method-portfolio-heading">
+                <h2 id="method-portfolio-title">Crafting Method Comparison</h2>
+                <span className="portfolio-badge">{result.methodPortfolio.length} Methods Evaluated</span>
+              </div>
+              <p className="muted">
+                These cards compare the major crafting disciplines (Open, Conventional Alt/Regal, Harvest Reforges, and Self-Fracture options) against the chosen objective.
+              </p>
+              <div className="method-portfolio-grid">
+                {result.methodPortfolio.map((method) => {
+                  const isWinner = method.status === 'SELECTED_WINNER';
+                  const isMoreExpensive = method.status === 'MORE_EXPENSIVE';
+                  const isDominated = method.status === 'DOMINATED';
+                  const isNotEligible = method.status === 'NOT_ELIGIBLE';
+                  const isUnresolved = method.status === 'UNRESOLVED_AT_BUDGET';
+
+                  return (
+                    <div
+                      key={method.spec.id}
+                      className={`method-family-card ${isWinner ? 'winner' : ''} status-${method.status.toLowerCase()}`}
+                    >
+                      <div className="method-card-header">
+                        <div className="method-title-group">
+                          <span className="method-badge-pill">{method.spec.badge}</span>
+                          <h3 className="method-name">{method.spec.name}</h3>
+                        </div>
+                        <span className={`method-status-tag ${method.status.toLowerCase()}`}>
+                          {isWinner
+                            ? 'Recommended'
+                            : isMoreExpensive
+                              ? `+${method.costDifferenceChaos !== undefined ? method.costDifferenceChaos.toFixed(1) : ''}c (${method.costDifferencePercent !== undefined ? `+${method.costDifferencePercent.toFixed(0)}%` : ''})`
+                              : isDominated
+                                ? 'Dominated'
+                                : isNotEligible
+                                  ? 'Not Eligible'
+                                  : isUnresolved
+                                    ? 'Unresolved at budget'
+                                    : method.status}
+                        </span>
+                      </div>
+                      <p className="method-desc">{method.spec.description}</p>
+                      {method.route && (
+                        <dl className="method-metrics">
+                          <div>
+                            <dt>Expected Cost</dt>
+                            <dd className="cost-val">{chaos(method.route.expectedTotalCostChaos)}</dd>
+                          </div>
+                          <div>
+                            <dt>Actions</dt>
+                            <dd>{method.route.metrics?.expectedPhysicalActions !== undefined ? Math.round(method.route.metrics.expectedPhysicalActions).toLocaleString() : '—'}</dd>
+                          </div>
+                          <div>
+                            <dt>Time</dt>
+                            <dd>{method.route.metrics?.estimatedManualTimeMs !== undefined ? `${(method.route.metrics.estimatedManualTimeMs / 1000).toFixed(1)}s` : '—'}</dd>
+                          </div>
+                        </dl>
+                      )}
+                      {method.whyNotSelectedExplanation && (
+                        <div className={`method-explanation ${isWinner ? 'winner' : 'not-selected'}`}>
+                          <strong>{isWinner ? 'Why selected:' : 'Why not selected:'}</strong>
+                          <span>{method.whyNotSelectedExplanation}</span>
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            </section>
+          )}
+
           <section className="optimizer-card craft-guide" aria-labelledby="craft-guide-title">
-            <h2 id="craft-guide-title">How to craft it</h2>
+            <div className="craft-guide-heading-row">
+              <h2 id="craft-guide-title">How to craft it</h2>
+              {result.recommended && (
+                <div className="craft-export-toolbar">
+                  <button
+                    type="button"
+                    className="secondary export-btn"
+                    onClick={() => copyShoppingList(result)}
+                  >
+                    {copiedAction === 'SHOPPING_LIST' ? '✓ Copied Shopping List!' : '📋 Copy Shopping List'}
+                  </button>
+                  <button
+                    type="button"
+                    className="secondary export-btn"
+                    onClick={() => copyCraftGuide(result)}
+                  >
+                    {copiedAction === 'CRAFT_GUIDE' ? '✓ Copied Playbook!' : '📖 Copy Playbook'}
+                  </button>
+                  <button
+                    type="button"
+                    className="secondary export-btn"
+                    onClick={() => exportSetupJson(result)}
+                  >
+                    {copiedAction === 'EXPORT_JSON' ? '✓ Exported JSON!' : '💾 Export Setup JSON'}
+                  </button>
+                </div>
+              )}
+            </div>
             {result.recommended && result.craftPlan.status === 'CERTIFIED' ? (
               <>
                 <div className="craft-start">
