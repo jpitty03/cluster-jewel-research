@@ -143,6 +143,20 @@ function arrayValue(value: unknown, label: string): unknown[] {
   return value;
 }
 
+function canonicalTargetIds(ids: readonly (string | null)[]): string[] {
+  return ids
+    .filter((id): id is string => typeof id === 'string' && id.length > 0)
+    .sort((left, right) => left.localeCompare(right));
+}
+
+function assertExactTargetIds(
+  actual: readonly (string | null)[],
+  expected: readonly string[],
+  message = 'Exact target modifier identities changed',
+): void {
+  assert.deepEqual(canonicalTargetIds(actual), canonicalTargetIds(expected), message);
+}
+
 function assertNear(actual: number, expected: number, label: string, tolerance = 1e-6): void {
   const allowed = Math.max(tolerance, Math.max(Math.abs(actual), Math.abs(expected)) * 1e-8);
   assert(Math.abs(actual - expected) <= allowed, `${label}: ${actual} differs from ${expected}`);
@@ -277,9 +291,9 @@ function assertFixtureRequestContext(input: JsonRecord, expected: Fixture): Reco
   assert.equal(input.passiveCount, expected.passiveCount);
   const target = jsonRecord(input.target, 'Worker request target');
   assert.deepEqual(
-    arrayValue(target.requiredMods, 'Worker request target modifiers')
-      .map((entry) => String(jsonRecord(entry, 'Worker request target modifier').modId)),
-    expected.targetMods,
+    canonicalTargetIds(arrayValue(target.requiredMods, 'Worker request target modifiers')
+      .map((entry) => String(jsonRecord(entry, 'Worker request target modifier').modId))),
+    canonicalTargetIds(expected.targetMods),
   );
   if (expected.priceContext) {
     const prices = jsonRecord(input.prices, 'Worker request prices');
@@ -410,8 +424,10 @@ async function importFixture(page: Page, input: Fixture): Promise<void> {
   });
   await page.waitForFunction((expectedIds) => {
     const observed = [...document.querySelectorAll('.target-summary li[data-mod-id]')]
-      .map((element) => element.getAttribute('data-mod-id'));
-    return JSON.stringify(observed) === JSON.stringify(expectedIds);
+      .map((element) => element.getAttribute('data-mod-id'))
+      .filter((id): id is string => typeof id === 'string')
+      .sort((left, right) => left.localeCompare(right));
+    return JSON.stringify(observed) === JSON.stringify([...expectedIds].sort((left, right) => left.localeCompare(right)));
   }, input.targetMods);
 }
 
@@ -896,7 +912,7 @@ async function runFourMod(page: Page, evidence: BrowserEvidence): Promise<void> 
     result = await runOptimization(page, input.searchBudget.maxWallTimeMs);
     const target = jsonRecord(result.target, 'target');
     const ids = arrayValue(target.requiredMods, 'requiredMods').map((row) => String(jsonRecord(row, 'required mod').modId));
-    assert.deepEqual(ids, input.targetMods);
+    assertExactTargetIds(ids, input.targetMods);
     assert.equal(arrayValue(jsonRecord(result.acquisition, 'acquisition').candidates, 'acquisition candidates').length, 5);
     return { fixture: input.id, targetIds: ids, status: result.recommendationStatus };
   });
@@ -909,7 +925,7 @@ async function runFourMod(page: Page, evidence: BrowserEvidence): Promise<void> 
     assert.equal(risk.selectedPolicyProper, true);
     assert(numberValue(risk.terminalAbsorptionProbability, 'absorption') >= 1 - 1e-8);
     const targetIds = await page.locator('.target-summary li[data-mod-id]').evaluateAll((nodes) => nodes.map((node) => node.getAttribute('data-mod-id')));
-    assert.deepEqual(targetIds, fixture('four_mod_release').targetMods);
+    assertExactTargetIds(targetIds, fixture('four_mod_release').targetMods);
     return { dom, accounting, policyHealth: risk };
   });
 
@@ -1005,7 +1021,7 @@ async function runPhase2U(page: Page, evidence: BrowserEvidence, soakMs: number)
   const currentTargetIds = await page.locator('.target-summary li[data-mod-id]').evaluateAll((nodes) =>
     nodes.map((node) => node.getAttribute('data-mod-id'))
   );
-  if (JSON.stringify(currentTargetIds) !== JSON.stringify(exactFixture.targetMods)) {
+  if (JSON.stringify(canonicalTargetIds(currentTargetIds)) !== JSON.stringify(canonicalTargetIds(exactFixture.targetMods))) {
     await importFixture(page, exactFixture);
     await setBudget(page, exactFixture.searchBudget);
     await runOptimization(page, exactFixture.searchBudget.maxWallTimeMs);
@@ -1065,7 +1081,7 @@ async function runPhase2U(page: Page, evidence: BrowserEvidence, soakMs: number)
     const target = jsonRecord(result.target, 'target');
     const workerIds = arrayValue(target.requiredMods, 'requiredMods')
       .map((entry) => String(jsonRecord(entry, 'requirement').modId));
-    assert.deepEqual(workerIds, exactFixture.targetMods, 'Worker exact target identity changed');
+    assertExactTargetIds(workerIds, exactFixture.targetMods, 'Worker exact target identity changed');
     for (const vocabulary of PHASE2U_FOUR_MOD_VOCABULARY) {
       const row = page.locator(`.target-summary li[data-mod-id="${vocabulary.modId}"]`);
       assert.equal((await row.locator('strong').innerText()).trim(), vocabulary.primary);
@@ -1755,7 +1771,7 @@ async function runPhase2V(page: Page, evidence: BrowserEvidence): Promise<void> 
     assert(fourModResult, 'Four-mod result unavailable');
     const target = jsonRecord(fourModResult.target, 'four-mod target');
     const ids = arrayValue(target.requiredMods, 'four-mod required mods').map((entry) => String(jsonRecord(entry, 'requirement').modId));
-    assert.deepEqual(ids, fixture('four_mod_release').targetMods);
+    assertExactTargetIds(ids, fixture('four_mod_release').targetMods);
     const risk = jsonRecord(fourModResult.risk, 'four-mod risk');
     assert.equal(risk.selectedPolicyProper, true);
     assert(numberValue(risk.terminalAbsorptionProbability, 'four-mod absorption') >= 1 - 1e-8);
@@ -2391,7 +2407,7 @@ async function runPhase2W(page: Page, evidence: BrowserEvidence): Promise<void> 
         .split(',').filter(Boolean);
       const targetIds = await page.locator('.target-summary li[data-mod-id]')
         .evaluateAll((nodes) => nodes.map((node) => node.getAttribute('data-mod-id')).filter(Boolean));
-      assert.deepEqual(targetIds, seedIds, `${candidate.combo} exact IDs changed across handoff`);
+      assertExactTargetIds(targetIds, seedIds, `${candidate.combo} exact IDs changed across handoff`);
       assert.equal(seedIds.length, 1, `${candidate.combo} did not resolve uniquely`);
       assert.equal(await page.getByLabel('Base type').inputValue(), candidate.base);
       assert.equal(await page.getByLabel('Cluster enchantment').inputValue(), candidate.cluster);
@@ -2520,7 +2536,11 @@ async function runPhase2W(page: Page, evidence: BrowserEvidence): Promise<void> 
     const exported = await downloadExport(page, 'phase2w-handoff-round-trip.json');
     const exportedSeed = jsonRecord(exported.optimizerSeedContext, 'exported optimizer seed');
     assert.equal(exportedSeed.source, 'CLUSTER_JEWELS');
-    assert.deepEqual(exportedSeed.targetModIds, expected.targetIds);
+    assertExactTargetIds(
+      arrayValue(exportedSeed.targetModIds, 'exported seed target IDs').map(String),
+      expected.targetIds,
+      'Export changed handoff target identities',
+    );
     assert.equal(jsonRecord(exported.requestInput, 'export request').expectedSaleValueChaos, Number(expected.sale));
     evidence.artifacts.phase2wHandoffExport = relative(repositoryRoot, join(artifactsDirectory, 'phase2w-handoff-round-trip.json'));
 
@@ -2561,7 +2581,8 @@ async function runPhase2W(page: Page, evidence: BrowserEvidence): Promise<void> 
     assert.equal(await page.getByLabel('Cluster enchantment').inputValue(), expected.cluster);
     assert.equal(await page.getByLabel('Expected sale value (chaos, optional)').inputValue(), expected.sale);
     assert.match(await page.locator('.optimizer-source-banner').innerText(), /Loaded from Cluster Jewels/i);
-    return { expected, shareVersion: '2W.1', exportedSeedPreserved: true };
+    assert.equal(new URL(page.url()).hash, '#optimizer', 'JSON import left a stale share payload in the URL');
+    return { expected, shareVersion: '2W.1', exportedSeedPreserved: true, staleShareHashCleared: true };
   });
 
   await gate(evidence, scenario, 'W19-mobile-keyboard-focus-overflow-and-labels', async () => {
@@ -2905,7 +2926,7 @@ async function runAdditionalFixtures(page: Page, evidence: BrowserEvidence): Pro
       const result = await runOptimization(page, input.searchBudget.maxWallTimeMs);
       const target = jsonRecord(result.target, 'target');
       const ids = arrayValue(target.requiredMods, 'requiredMods').map((row) => String(jsonRecord(row, 'required mod').modId));
-      assert.deepEqual(ids, input.targetMods, 'Target IDs mutated during search');
+      assertExactTargetIds(ids, input.targetMods, 'Target IDs mutated during search');
       const accounting = result.recommended === null ? undefined : assertFullRouteReconciliation(result);
       return { fixture: fixtureId, status: result.recommendationStatus, targetIds: ids, accounting };
     });

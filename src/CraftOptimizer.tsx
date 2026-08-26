@@ -1061,6 +1061,13 @@ export function CraftOptimizer({ seed = null, onBackToClusterJewels }: CraftOpti
         } else {
           setFinishCondition('any-match');
         }
+        if (window.location.hash.startsWith('#craft=')) {
+          window.history.replaceState(
+            null,
+            '',
+            `${window.location.pathname}${window.location.search}#optimizer`,
+          );
+        }
         setResult(null);
       } catch (err) {
         console.error('Failed to import craft JSON', err);

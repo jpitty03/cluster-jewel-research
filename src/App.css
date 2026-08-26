@@ -2920,6 +2920,8 @@ td a {
   display: flex;
   flex-direction: column;
   gap: 10px;
+  min-width: 0;
+  max-width: 100%;
   transition: all 0.2s ease;
 }
 
@@ -3439,15 +3441,21 @@ td a {
 .method-evaluation-source {
   color: #bfdbfe;
   font-size: 0.78rem;
+  overflow-wrap: anywhere;
 }
 
-.method-stage-metrics {
+.optimizer-card .method-stage-metrics {
   display: grid;
+  grid-template-columns: minmax(0, 1fr);
   gap: 0.35rem;
+  min-width: 0;
+  max-width: 100%;
 
   div {
     display: grid;
     gap: 0.15rem;
+    min-width: 0;
+    max-width: 100%;
   }
 
   dt {
@@ -3458,7 +3466,10 @@ td a {
 
   dd {
     margin: 0;
+    min-width: 0;
+    max-width: 100%;
     overflow-wrap: anywhere;
+    word-break: break-word;
     font-size: 0.78rem;
   }
 }
@@ -3776,8 +3787,16 @@ td a {
 
   .optimizer-card table {
     display: block;
+    box-sizing: border-box;
+    width: 100%;
+    min-width: 0;
     max-width: 100%;
     overflow-x: auto;
+  }
+
+  .optimizer-results > .optimizer-card,
+  .optimizer-result-grid > .optimizer-card {
+    overflow-x: hidden;
   }
 
   .method-card-header,
