@@ -1,0 +1,421 @@
+{
+  "appVersion": "2W.1",
+  "exportedAt": "2026-08-26T12:21:34.949Z",
+  "requestInput": {
+    "baseType": "Small Cluster Jewel",
+    "clusterType": "6% increased maximum Mana",
+    "itemLevel": 84,
+    "passiveCount": 3,
+    "target": {
+      "requiredMods": [
+        {
+          "modId": "AfflictionJewelSmallPassivesHaveIncreasedEffect2"
+        }
+      ]
+    },
+    "prices": {
+      "currencyRates": {
+        "chaos": 1,
+        "divine": 213.5,
+        "fracturing": 298.6,
+        "annul": 11.66,
+        "exalt": 1.17,
+        "scour": 0.5391,
+        "alteration": 0.1336,
+        "transmutation": 0.005012,
+        "augmentation": 0.03941,
+        "regal": 0.03638,
+        "wildLifeforce": 0.02377,
+        "vividLifeforce": 0.08208,
+        "primalLifeforce": 0.04085
+      },
+      "cleanBaseCostChaos": 2,
+      "cleanBasePriceSource": "market",
+      "cleanBasePriceProvenance": "Allflame sampled low listing for Small Cluster Jewel||6% increased maximum Mana||3-3||i84; midpoint 10.000c; 10 sampled of 90 listed at 2026-08-26T05:57:33.050Z"
+    },
+    "marketContext": {
+      "league": "Allflame",
+      "snapshotAt": "2026-08-26T06:31:33.498Z",
+      "snapshotAgeMs": 20998624,
+      "snapshotStale": false,
+      "currencyRatesAt": "2026-08-26T05:36:32.599Z",
+      "currencyRatesAgeMs": 24299523,
+      "currencyRatesStale": false,
+      "stale": false,
+      "cleanBaseQuote": {
+        "status": "AVAILABLE",
+        "costChaos": 2,
+        "lowChaos": 2,
+        "midChaos": 10,
+        "listed": 90,
+        "sampled": 10,
+        "at": "2026-08-26T05:57:33.050Z",
+        "ageMs": 23039072,
+        "stale": false,
+        "provenance": "Allflame sampled low listing for Small Cluster Jewel||6% increased maximum Mana||3-3||i84; midpoint 10.000c; 10 sampled of 90 listed at 2026-08-26T05:57:33.050Z"
+      },
+      "currencyMappings": {
+        "chaos": "chaos",
+        "divine": "divine",
+        "fracturing": "fracturing-orb",
+        "annul": "annul",
+        "exalt": "exalted",
+        "scour": "scour",
+        "alteration": "alt",
+        "transmutation": "transmute",
+        "augmentation": "aug",
+        "regal": "regal",
+        "wildLifeforce": "wild-lifeforce",
+        "vividLifeforce": "vivid-lifeforce",
+        "primalLifeforce": "primal-lifeforce"
+      },
+      "currencyCoverage": {
+        "mappedAndPresent": [
+          "chaos -> chaos",
+          "divine -> divine",
+          "fracturing -> fracturing-orb",
+          "annul -> annul",
+          "exalt -> exalted",
+          "scour -> scour",
+          "alteration -> alt",
+          "transmutation -> transmute",
+          "augmentation -> aug",
+          "regal -> regal",
+          "wildLifeforce -> wild-lifeforce",
+          "vividLifeforce -> vivid-lifeforce",
+          "primalLifeforce -> primal-lifeforce"
+        ],
+        "mappedButMissing": [],
+        "unmappedEngineCurrencies": [
+          "crystallisedRancour"
+        ]
+      }
+    },
+    "expectedSaleValueChaos": 3,
+    "allowResearchFallbackPrices": true,
+    "objective": {
+      "kind": "CHEAPEST_CHAOS"
+    },
+    "searchBudget": {
+      "maxStates": 1200,
+      "maxWallTimeMs": 10000,
+      "maxExpansionRounds": 2
+    },
+    "searchIntent": "RECOMMEND"
+  },
+  "optimizerSeedContext": {
+    "id": "cluster-jewels:1787746892108:Small Cluster Jewel||6% increased maximum Mana:35% increased Small Passive Effect",
+    "source": "CLUSTER_JEWELS",
+    "league": "Allflame",
+    "baseType": "Small Cluster Jewel",
+    "clusterType": "6% increased maximum Mana",
+    "passiveCount": 3,
+    "passiveRange": {
+      "min": 3,
+      "max": 3
+    },
+    "itemLevel": 84,
+    "itemLevelDefaulted": true,
+    "targetModIds": [
+      "AfflictionJewelSmallPassivesHaveIncreasedEffect2"
+    ],
+    "sourceComboLabel": "35% increased Small Passive Effect",
+    "sourceMarketValue": {
+      "chaos": 3,
+      "kind": "LOW",
+      "quotedAt": "2026-08-26T05:57:03.071Z",
+      "passiveRange": {
+        "min": 3,
+        "max": 3
+      },
+      "provenance": "Allflame completed-jewel sampled low; 1631 listings / 10 sampled; priced 2026-08-26T05:57:03.071Z"
+    }
+  },
+  "resultSummary": {
+    "expectedCostChaos": 9.427055174999975,
+    "recommendationStatus": "BEST_RESOLVED_ACQUISITION_SAFE",
+    "recommendedRoute": "Start clean base: Clean Base",
+    "metrics": {
+      "expectedChaosCost": 9.427055174999975,
+      "expectedPhysicalActions": 65.83750000000028,
+      "estimatedManualTimeMs": 26334.99999999998,
+      "objectiveScore": 9.427055174999975,
+      "effortConfidence": "DEFAULT_APPROXIMATE"
+    },
+    "presentation": {
+      "schemaVersion": "2W.1",
+      "releaseStatus": "RELEASE_CANDIDATE_BROWSER_VERIFIED",
+      "selectedRouteName": "Start clean base: Clean Base",
+      "selectedRouteStatus": "BEST_RESOLVED_ACQUISITION_SAFE",
+      "proofLabel": "Best among resolved alternatives",
+      "pricingLabel": "CURRENT_PRICING",
+      "harvestLifecycle": "NOT_ELIGIBLE",
+      "acquisitionContext": {
+        "kind": "CLEAN",
+        "candidateId": "candidate_0",
+        "methodId": "clean-base_0"
+      },
+      "fullRouteCostChaos": 9.427055174999975,
+      "routeScopes": {
+        "acquisitionU": 2,
+        "downstreamU": 7.427055174999975,
+        "fullRouteU": 9.427055174999975
+      },
+      "timingScopes": {
+        "firstCompletedRoundMs": 423,
+        "firstCertifiedDownstreamPolicyMs": 423,
+        "firstUsefulExecutableFullRouteMs": 423,
+        "firstAcquisitionSafeRecommendationMs": 425
+      },
+      "workScopes": {
+        "portfolioTotalStatesExpanded": 350,
+        "portfolioRetainedStates": 350,
+        "selectedPolicyGraphStates": 350,
+        "acquisitionSynthesisStates": 0,
+        "methodFamilyStates": 700,
+        "proofBoundStates": 0
+      },
+      "methodFamilyCounts": {
+        "SELECTED_WINNER": 1,
+        "MORE_EXPENSIVE": 0,
+        "DOMINATED": 2,
+        "NOT_ELIGIBLE": 0,
+        "UNRESOLVED_AT_BUDGET": 0,
+        "DISABLED": 0,
+        "NOT_MODELED": 1,
+        "NOT_SEARCHED": 0
+      }
+    },
+    "fullRouteUsage": {
+      "acquisitionActions": [
+        {
+          "actionId": "clean_base_initial",
+          "actionName": "Initial clean cluster jewel base",
+          "expectedCount": 1,
+          "expectedCostChaos": 2,
+          "scope": "ACQUISITION",
+          "additive": true
+        }
+      ],
+      "downstreamActions": [
+        {
+          "actionId": "alteration_orb",
+          "actionName": "Orb of Alteration",
+          "expectedCount": 51.670000000000066,
+          "expectedCostChaos": 6.903111999999977,
+          "scope": "DOWNSTREAM",
+          "additive": true
+        },
+        {
+          "actionId": "augmentation_orb",
+          "actionName": "Orb of Augmentation",
+          "expectedCount": 13.16749999999994,
+          "expectedCostChaos": 0.5189311749999975,
+          "scope": "DOWNSTREAM",
+          "additive": true
+        },
+        {
+          "actionId": "transmutation_orb",
+          "actionName": "Orb of Transmutation",
+          "expectedCount": 1,
+          "expectedCostChaos": 0.005012,
+          "scope": "DOWNSTREAM",
+          "additive": true
+        }
+      ],
+      "combinedActions": [
+        {
+          "actionId": "alteration_orb",
+          "actionName": "Orb of Alteration",
+          "expectedCount": 51.670000000000066,
+          "expectedCostChaos": 6.903111999999977,
+          "scope": "FULL_ROUTE",
+          "additive": true
+        },
+        {
+          "actionId": "clean_base_initial",
+          "actionName": "Initial clean cluster jewel base",
+          "expectedCount": 1,
+          "expectedCostChaos": 2,
+          "scope": "FULL_ROUTE",
+          "additive": true
+        },
+        {
+          "actionId": "augmentation_orb",
+          "actionName": "Orb of Augmentation",
+          "expectedCount": 13.16749999999994,
+          "expectedCostChaos": 0.5189311749999975,
+          "scope": "FULL_ROUTE",
+          "additive": true
+        },
+        {
+          "actionId": "transmutation_orb",
+          "actionName": "Orb of Transmutation",
+          "expectedCount": 1,
+          "expectedCostChaos": 0.005012,
+          "scope": "FULL_ROUTE",
+          "additive": true
+        }
+      ],
+      "combinedCurrencies": {
+        "alteration": 51.670000000000066,
+        "augmentation": 13.16749999999994,
+        "clean_base": 1,
+        "transmutation": 1
+      },
+      "acquisitionCostChaos": 2,
+      "downstreamCostChaos": 7.427055174999975,
+      "fullRouteCostChaos": 9.427055174999975,
+      "reconciliationDifferenceChaos": 0
+    },
+    "shoppingListCurrencies": {
+      "alteration": 51.670000000000066,
+      "augmentation": 13.16749999999994,
+      "clean_base": 1,
+      "transmutation": 1
+    },
+    "harvestComparison": {
+      "harvestConsidered": false,
+      "harvestEligible": false,
+      "consideredHarvestActions": [],
+      "status": "NOT_ELIGIBLE",
+      "actionEvidenceObserved": false,
+      "explanation": "No target modifier is eligible for an available modeled Harvest reforge tag."
+    },
+    "methodFamilies": [
+      {
+        "id": "family_open",
+        "status": "SELECTED_WINNER",
+        "evaluationSource": "INDEPENDENT_SOLVE",
+        "acquisitionStatus": "RESOLVED",
+        "downstreamStatus": "RESOLVED",
+        "fullRouteStatus": "RESOLVED",
+        "requiredActionObservedOnPolicy": true,
+        "onPolicyActionIds": [
+          "alteration_orb",
+          "augmentation_orb",
+          "transmutation_orb"
+        ],
+        "expectedActionUsage": [
+          {
+            "actionId": "alteration_orb",
+            "actionName": "Orb of Alteration",
+            "expectedCount": 51.670000000000066,
+            "expectedCostChaos": 6.903111999999977
+          },
+          {
+            "actionId": "augmentation_orb",
+            "actionName": "Orb of Augmentation",
+            "expectedCount": 13.16749999999994,
+            "expectedCostChaos": 0.5189311749999975
+          },
+          {
+            "actionId": "transmutation_orb",
+            "actionName": "Orb of Transmutation",
+            "expectedCount": 1,
+            "expectedCostChaos": 0.005012
+          }
+        ],
+        "policyHealth": {
+          "selectedPolicyStatus": "FULLY RESOLVED / PROPER / ABSORBING / COST-RECONCILED",
+          "proofLevel": "BEST FULLY RESOLVED POLICY FOUND",
+          "onPolicyReachableStates": 350,
+          "onPolicyTerminalStates": 14,
+          "onPolicyUnresolvedTransitions": 0,
+          "terminalAbsorptionProbability": 1,
+          "proper": true,
+          "fullyResolved": true,
+          "bellmanConverged": true,
+          "occupancyConverged": true,
+          "costReconciled": true,
+          "reconciliationDifferenceChaos": 9.059419880941277e-13
+        },
+        "sessionIdentity": "phase2j-938881a3:family_open",
+        "retainedStates": 350,
+        "transitionDistributionsGenerated": 0,
+        "budget": {
+          "maxStates": 1200,
+          "maxWallTimeMs": 3150,
+          "maxExpansionRounds": 2,
+          "elapsedMs": 423
+        }
+      },
+      {
+        "id": "family_conventional",
+        "status": "DOMINATED",
+        "evaluationSource": "OPEN_SEARCH_SUMMARY",
+        "acquisitionStatus": "RESOLVED",
+        "downstreamStatus": "RESOLVED",
+        "fullRouteStatus": "RESOLVED",
+        "requiredActionObservedOnPolicy": true,
+        "onPolicyActionIds": [
+          "alteration_orb",
+          "augmentation_orb",
+          "transmutation_orb"
+        ],
+        "expectedActionUsage": [
+          {
+            "actionId": "alteration_orb",
+            "actionName": "Orb of Alteration",
+            "expectedCount": 51.670000000000066,
+            "expectedCostChaos": 6.903111999999977
+          },
+          {
+            "actionId": "augmentation_orb",
+            "actionName": "Orb of Augmentation",
+            "expectedCount": 13.16749999999994,
+            "expectedCostChaos": 0.5189311749999975
+          },
+          {
+            "actionId": "transmutation_orb",
+            "actionName": "Orb of Transmutation",
+            "expectedCount": 1,
+            "expectedCostChaos": 0.005012
+          }
+        ],
+        "policyHealth": {
+          "selectedPolicyStatus": "FULLY RESOLVED / PROPER / ABSORBING / COST-RECONCILED",
+          "proofLevel": "BEST FULLY RESOLVED POLICY FOUND",
+          "onPolicyReachableStates": 350,
+          "onPolicyTerminalStates": 14,
+          "onPolicyUnresolvedTransitions": 0,
+          "terminalAbsorptionProbability": 1,
+          "proper": true,
+          "fullyResolved": true,
+          "bellmanConverged": true,
+          "occupancyConverged": true,
+          "costReconciled": true,
+          "reconciliationDifferenceChaos": 9.059419880941277e-13
+        },
+        "retainedStates": 350,
+        "transitionDistributionsGenerated": 0
+      },
+      {
+        "id": "family_fracture_AfflictionJewelSmallPassivesHaveIncreasedEffect2",
+        "status": "DOMINATED",
+        "evaluationSource": "INDEPENDENT_SOLVE",
+        "acquisitionStatus": "DOMINATED",
+        "downstreamStatus": "DOMINATED",
+        "fullRouteStatus": "DOMINATED",
+        "requiredActionObservedOnPolicy": false,
+        "onPolicyActionIds": [],
+        "expectedActionUsage": [],
+        "sessionIdentity": "phase2j-938881a3:family_fracture_AfflictionJewelSmallPassivesHaveIncreasedEffect2",
+        "retainedStates": 0,
+        "transitionDistributionsGenerated": 0
+      },
+      {
+        "id": "family_chaos_reforge",
+        "status": "NOT_MODELED",
+        "evaluationSource": "NOT_SEARCHED",
+        "acquisitionStatus": "NOT_APPLICABLE",
+        "downstreamStatus": "NOT_APPLICABLE",
+        "fullRouteStatus": "NOT_APPLICABLE",
+        "requiredActionObservedOnPolicy": false,
+        "onPolicyActionIds": [],
+        "retainedStates": 0,
+        "transitionDistributionsGenerated": 0
+      }
+    ]
+  }
+}

@@ -111,7 +111,7 @@
 - phase2vArmourEvasionComparison: `quality-lab\reports\evidence\phase2v-armour-evasion-comparison.png`
 - phase2wEldritchExport: `quality-lab\artifacts\2026-08-26T12-07-53-467Z\phase2w-eldritch-canonical-export.json`
 - phase2wMarketVsCraft: `quality-lab\reports\evidence\phase2w-exact-market-vs-craft.png`
-- phase2wHandoffExport: `quality-lab\artifacts\2026-08-26T12-07-53-467Z\phase2w-handoff-round-trip.json`
+- phase2wHandoffExport: `quality-lab\reports\evidence\phase2w-handoff-round-trip.json`
 - phase2wMobileHandoff: `quality-lab\reports\evidence\phase2w-mobile-handoff.png`
 - constellationFrame: `quality-lab\reports\evidence\constellation-real-frame.png`
 - fullWorkerEvents: `quality-lab\artifacts\2026-08-26T12-07-53-467Z\worker-events-full.json`

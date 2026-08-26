@@ -2534,6 +2534,8 @@ async function runPhase2W(page: Page, evidence: BrowserEvidence): Promise<void> 
       provenance: await page.locator('.optimizer-source-banner').innerText(),
     };
     const exported = await downloadExport(page, 'phase2w-handoff-round-trip.json');
+    const stableHandoffExport = join(evidenceDirectory, 'phase2w-handoff-round-trip.json');
+    writeFileSync(stableHandoffExport, `${JSON.stringify(exported, null, 2)}\n`, 'utf8');
     const exportedSeed = jsonRecord(exported.optimizerSeedContext, 'exported optimizer seed');
     assert.equal(exportedSeed.source, 'CLUSTER_JEWELS');
     assertExactTargetIds(
@@ -2542,7 +2544,7 @@ async function runPhase2W(page: Page, evidence: BrowserEvidence): Promise<void> 
       'Export changed handoff target identities',
     );
     assert.equal(jsonRecord(exported.requestInput, 'export request').expectedSaleValueChaos, Number(expected.sale));
-    evidence.artifacts.phase2wHandoffExport = relative(repositoryRoot, join(artifactsDirectory, 'phase2w-handoff-round-trip.json'));
+    evidence.artifacts.phase2wHandoffExport = relative(repositoryRoot, stableHandoffExport);
 
     const responsesBeforeShareNavigation = await workerResponseCount(page);
     await page.getByRole('button', { name: /Share Link/ }).click();
@@ -2572,7 +2574,7 @@ async function runPhase2W(page: Page, evidence: BrowserEvidence): Promise<void> 
       page.waitForEvent('filechooser'),
       page.getByRole('button', { name: 'Import Setup JSON file' }).click(),
     ]);
-    await chooser.setFiles(join(artifactsDirectory, 'phase2w-handoff-round-trip.json'));
+    await chooser.setFiles(stableHandoffExport);
     await page.waitForFunction((ids) => JSON.stringify(
       [...document.querySelectorAll('.target-summary li[data-mod-id]')]
         .map((node) => node.getAttribute('data-mod-id')).filter(Boolean)
