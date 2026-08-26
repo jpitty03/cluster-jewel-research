@@ -6,37 +6,37 @@ Open Family Cost: 264.74c
 N1 PASS: Open policy correctly matches the primary recommendation.
 
 --- N2: Conventional Alt/Aug/Regal Family ---
-Conventional Status: SELECTED_WINNER
+Conventional Status: DOMINATED
 Conventional Route: Start clean base: Clean Base
 Conventional Cost: 264.74c
 N2 PASS: Conventional family correctly isolated and evaluated.
 
 --- N3: Harvest Family Reporting ---
 Harvest Family Status: NOT_SEARCHED
-Harvest Family Explanation: Enabled but not searched. Use Compare Methods to run the required-action family solve.
+Harvest Family Explanation: This family remains unresolved and could still qualify for the requested objective.
 N3 PASS: Harvest family accurately models reforge eligibility and reason.
 
 --- N4: Self-Fracture Target Mod Families ---
 Found 2 Self-Fracture Families:
-  - Self-Fracture Glowing (T1): status=DOMINATED, explanation=The family was dominated by an admissible full-route lower bound.
-  - Self-Fracture of the Prodigy (T1): status=DOMINATED, explanation=The family was dominated by an admissible full-route lower bound.
+  - Self-Fracture Glowing (T1): status=DOMINATED, explanation=This family remains unresolved and could still qualify for the requested objective.
+  - Self-Fracture of the Prodigy (T1): status=DOMINATED, explanation=This family remains unresolved and could still qualify for the requested objective.
 N4 PASS: Self-fracture families generated for target affixes.
 
 --- N5: Why Not Selected? Explainability ---
 [Open Policy (All Modeled Mechanics)] -> Status: SELECTED_WINNER
-  Explanation: Best executable open-search route at the current proof budget.
-[Conventional Alt / Aug / Regal] -> Status: SELECTED_WINNER
-  Explanation: Summarized from the clean candidate found by open search; use Compare Methods for an independent constrained solve.
+  Explanation: This exact independently resolved policy is selected by the requested objective.
+[Conventional Alt / Aug / Regal] -> Status: DOMINATED
+  Explanation: This summary does not add a distinct resolved policy to the canonical candidate set.
 [Harvest Reforge Defences] -> Status: NOT_SEARCHED
-  Explanation: Enabled but not searched. Use Compare Methods to run the required-action family solve.
+  Explanation: This family remains unresolved and could still qualify for the requested objective.
 [Self-Fracture Glowing (T1)] -> Status: DOMINATED
-  Explanation: The family was dominated by an admissible full-route lower bound.
+  Explanation: This family remains unresolved and could still qualify for the requested objective.
 [Self-Fracture Glowing (T1) + Harvest Reforge Defences] -> Status: NOT_SEARCHED
-  Explanation: Required self-fracture acquisition is unresolved, so its Harvest downstream family has not started.
+  Explanation: This family remains unresolved and could still qualify for the requested objective.
 [Self-Fracture of the Prodigy (T1)] -> Status: DOMINATED
-  Explanation: The family was dominated by an admissible full-route lower bound.
+  Explanation: This family remains unresolved and could still qualify for the requested objective.
 [Self-Fracture of the Prodigy (T1) + Harvest Reforge Defences] -> Status: NOT_SEARCHED
-  Explanation: Required self-fracture acquisition is unresolved, so its Harvest downstream family has not started.
+  Explanation: This family remains unresolved and could still qualify for the requested objective.
 [Chaos Reforge] -> Status: NOT_MODELED
   Explanation: Chaos Reforge is advertised only as not modeled; it is never assigned a synthetic route.
 N5 PASS: All non-winning method families provide clear deterministic explanations.

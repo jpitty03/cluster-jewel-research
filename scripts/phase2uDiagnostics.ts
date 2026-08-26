@@ -26,6 +26,7 @@ interface BrowserCheck {
 interface BrowserReport {
   runId: string;
   startedAt: string;
+  finishedAt?: string;
   browser: string;
   browserVersion: string;
   requestedScenario: string;
@@ -72,7 +73,10 @@ const report = JSON.parse(readFileSync(reportPath, 'utf8')) as BrowserReport;
 assert.equal(report.status, 'PASSED', 'Latest real-browser report did not pass');
 assert(['release', 'nightly'].includes(report.requestedScenario), 'Latest browser report is not a full release/nightly matrix');
 if (!committedEvidenceMode) {
-  assert(Date.now() - Date.parse(report.startedAt) < 60 * 60 * 1000, 'Latest browser report is older than one hour');
+  assert(
+    Date.now() - Date.parse(report.finishedAt ?? report.startedAt) < 60 * 60 * 1000,
+    'Latest browser report completion is older than one hour',
+  );
 }
 lines.push(`Evidence mode: ${committedEvidenceMode ? 'COMMITTED LOCAL RELEASE AUDIT' : 'FRESH LOCAL RELEASE'}`);
 
@@ -260,7 +264,7 @@ lines.push('\nU16 — Local release evidence and lean hosted deploy policy');
 const deploy = readFileSync(join(repositoryRoot, '.github', 'workflows', 'deploy.yml'), 'utf8');
 const nightly = readFileSync(join(repositoryRoot, '.github', 'workflows', 'nightly-quality.yml'), 'utf8');
 const runner = readFileSync(join(repositoryRoot, 'quality-lab', 'src', 'runner.ts'), 'utf8');
-for (const command of ['npm run build', 'npm run lint', 'git diff --check', 'npm run diagnostic:phase2v:committed']) {
+for (const command of ['npm run build', 'npm run lint', 'git diff --check', 'npm run diagnostic:phase2w:committed']) {
   assert(deploy.includes(command), `Deploy validation lacks ${command}`);
 }
 for (const localOnlyCommand of ['npm run diagnostic:mature', 'npm run lab:no-fallback-probe', 'npm run lab:release', 'npm run diagnostic:phase2t']) {
@@ -289,7 +293,7 @@ lines.push('PASS: build/lint/diff are blocking; no unit-test command exists in C
 
 lines.push('\n=== ALL PHASE 2U DIAGNOSTIC GATES PASS ===');
 lines.push(`Real browser: ${report.browser} ${report.browserVersion}; run=${report.runId}; scenario=${report.requestedScenario}`);
-lines.push('Release label/schema: 2V.1 (Phase 2U behavior retained)');
+lines.push('Release label/schema: 2W.1 (Phase 2U behavior retained)');
 lines.push('Unit tests added/run: NO');
 lines.push('Solver mechanics/probabilities changed: NO');
 lines.push('State identity weakened: NO');

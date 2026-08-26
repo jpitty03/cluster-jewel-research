@@ -22,6 +22,10 @@ workerScope.addEventListener('message', (event: MessageEvent<OptimizerWorkerRequ
       completion: {
         recommendationStatus: response.result.recommendationStatus,
         selectedRouteName: response.result.presentation.selectedRouteName,
+        expectedCostChaos: response.result.expectedCostChaos,
+        objective: response.result.objective,
+        selectedPolicySource: response.result.internalConsistency.selectedBundleSource,
+        selectedBundleId: response.result.internalConsistency.selectedBundleId,
       },
     });
   }

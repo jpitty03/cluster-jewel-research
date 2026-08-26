@@ -1,302 +1,302 @@
 {
-  "runId": "2026-08-26T02-43-47-841Z",
-  "startedAt": "2026-08-26T02:43:47.842Z",
+  "runId": "2026-08-26T09-42-59-147Z",
+  "startedAt": "2026-08-26T09:42:59.148Z",
   "browser": "Playwright Chromium",
   "requestedScenario": "release",
-  "fixtureCorpusVersion": "Phase2T-Frozen-Browser-Corpus-1",
+  "fixtureCorpusVersion": "Phase2W-Frozen-Browser-Corpus-1",
   "checks": [
     {
       "id": "built-app-and-guide",
       "scenario": "real-browser-smoke",
       "passed": true,
-      "durationMs": 994,
+      "durationMs": 1012,
       "details": "{\"title\":\"PoE Cluster Jewel Research\",\"dialogOpenedAndClosed\":true}"
     },
     {
       "id": "presets-observed-through-dom",
       "scenario": "real-browser-smoke",
       "passed": true,
-      "durationMs": 70,
+      "durationMs": 56,
       "details": "{\"attackIds\":[\"Feed the Fury\",\"Fuel the Fight\"],\"shieldIds\":[\"AfflictionJewelSmallPassivesGrantManaRegenSmall4\"],\"keyboardActivation\":true}"
     },
     {
       "id": "import-and-real-worker-result",
       "scenario": "real-browser-smoke",
       "passed": true,
-      "durationMs": 724,
+      "durationMs": 627,
       "details": "{\"fixture\":\"cheap_one_mod\",\"worker\":{\"requestId\":\"optimizer_1\",\"types\":[\"PROGRESS\",\"PROGRESS\",\"PROGRESS\",\"PROGRESS\",\"PROGRESS\",\"PROGRESS\",\"COMPLETE\",\"RESULT\"],\"completeSequence\":9,\"resultSequence\":10},\"recommendationStatus\":\"BEST_RESOLVED_ACQUISITION_SAFE\"}"
     },
     {
       "id": "ui-result-export-differential",
       "scenario": "real-browser-smoke",
       "passed": true,
-      "durationMs": 359,
-      "details": "{\"dom\":{\"workerSelectedRoute\":\"Start clean base: Clean Base\",\"publicSelectedRoute\":\"Start clean base: Clean Base\",\"proofLabel\":\"Best among resolved alternatives\",\"pricingLabel\":\"RESEARCH_ESTIMATE_STALE_PRICING\"},\"accounting\":{\"acquisitionCost\":1,\"downstreamCost\":4.783561433333075,\"fullCost\":5.783561433333075,\"difference\":1.7763568394002505e-15,\"acquisitionRows\":1,\"downstreamRows\":3,\"combinedRows\":4,\"currencies\":{\"alteration\":30.346666666665065,\"augmentation\":7.836666666666235,\"clean_base\":1,\"transmutation\":1}},\"exportVersion\":\"2V.1\"}"
+      "durationMs": 349,
+      "details": "{\"dom\":{\"workerSelectedRoute\":\"Start clean base: Clean Base\",\"publicSelectedRoute\":\"Start clean base: Clean Base\",\"proofLabel\":\"Best among resolved alternatives\",\"pricingLabel\":\"CURRENT_PRICING\"},\"accounting\":{\"acquisitionCost\":2,\"downstreamCost\":4.368169699999769,\"fullCost\":6.368169699999769,\"difference\":8.881784197001252e-16,\"acquisitionRows\":1,\"downstreamRows\":3,\"combinedRows\":4,\"currencies\":{\"alteration\":30.346666666665065,\"augmentation\":7.836666666666235,\"clean_base\":1,\"transmutation\":1},\"consistencyMaximumDifferenceChaos\":8.881784197001252e-16,\"canonicalBundleId\":\"core:clean-open-policy\"},\"exportVersion\":\"2W.1\"}"
     },
     {
       "id": "share-url-reload",
       "scenario": "real-browser-smoke",
       "passed": true,
-      "durationMs": 130,
-      "details": "{\"shareHashLength\":667,\"targetIds\":[\"AfflictionJewelSmallPassivesGrantES3\"]}"
+      "durationMs": 96,
+      "details": "{\"shareHashLength\":4279,\"targetIds\":[\"AfflictionJewelSmallPassivesGrantES3\"]}"
     },
     {
       "id": "retry-deeper-retains-work",
       "scenario": "real-browser-smoke",
       "passed": true,
-      "durationMs": 4693,
-      "details": "{\"initialCost\":5.783561433333075,\"deepenedCost\":5.783561433333075,\"retainedStates\":270,\"session\":\"phase2j-0fbf802a\"}"
+      "durationMs": 4660,
+      "details": "{\"initialCost\":6.368169699999769,\"deepenedCost\":6.368169699999769,\"retainedStates\":270,\"session\":\"phase2j-ee1d26c6\"}"
     },
     {
       "id": "cancel-worker-replacement-and-recovery",
       "scenario": "real-browser-smoke",
       "passed": true,
-      "durationMs": 3611,
+      "durationMs": 3250,
       "details": "{\"terminateObserved\":true,\"replacementObserved\":true,\"recoveredStatus\":\"BEST_RESOLVED_ACQUISITION_SAFE\"}"
     },
     {
       "id": "host-guard-worker-replacement-and-recovery",
       "scenario": "real-browser-smoke",
       "passed": true,
-      "durationMs": 4012,
+      "durationMs": 3556,
       "details": "{\"hostDeadlineMs\":251,\"terminateObserved\":true,\"recoveredStatus\":\"BEST_RESOLVED_ACQUISITION_SAFE\"}"
     },
     {
       "id": "real-worker-error-response",
       "scenario": "real-browser-smoke",
       "passed": true,
-      "durationMs": 420,
+      "durationMs": 66,
       "details": "{\"responseType\":\"ERROR\",\"error\":{\"name\":\"TypeError\",\"message\":\"Cannot read properties of null (reading 'target')\"}}"
     },
     {
       "id": "exact-input-and-search",
       "scenario": "exact-four-mod-release-regression",
       "passed": true,
-      "durationMs": 24187,
+      "durationMs": 24116,
       "details": "{\"fixture\":\"four_mod_release\",\"targetIds\":[\"AfflictionJewelSmallPassivesGrantInt3\",\"AfflictionJewelSmallPassivesGrantAttributes3\",\"AfflictionJewelSmallPassivesHaveIncreasedEffect2\",\"AfflictionJewelSmallPassivesGrantES3\"],\"status\":\"PROVISIONAL_RESOLVED\"}"
     },
     {
       "id": "canonical-dom-and-accounting",
       "scenario": "exact-four-mod-release-regression",
       "passed": true,
-      "durationMs": 583,
-      "details": "{\"dom\":{\"workerSelectedRoute\":\"Start self-fracture: of the Meteor (T1)\",\"publicSelectedRoute\":\"Start self-fracture: +4 All Attributes (T1)\",\"proofLabel\":\"Best among resolved alternatives\",\"pricingLabel\":\"RESEARCH_ESTIMATE_STALE_PRICING\"},\"accounting\":{\"acquisitionCost\":1477.9412563329897,\"downstreamCost\":2666.695661575535,\"fullCost\":4144.636917908525,\"difference\":1.8189894035458565e-12,\"acquisitionRows\":9,\"downstreamRows\":6,\"combinedRows\":10,\"currencies\":{\"alteration\":13115.220247317688,\"annul\":34.385049787080945,\"augmentation\":932.0133895642756,\"clean_base\":1,\"clean_base_reacquisition\":2.9999999999992983,\"exalt\":44.28556026393135,\"fracturing\":3.9999999999990683,\"regal\":884.2467228976187,\"scour\":880.2467228975945,\"transmutation\":3.9999999999992926}},\"policyHealth\":{\"onPolicyReachableStates\":462,\"onPolicyTerminalStates\":2,\"terminalAbsorptionProbability\":1,\"selectedPolicyProper\":true,\"unresolvedOnPolicyProbability\":0}}"
+      "durationMs": 707,
+      "details": "{\"dom\":{\"workerSelectedRoute\":\"Start self-fracture: Glowing (T1)\",\"publicSelectedRoute\":\"Start self-fracture: +10–12 Maximum Energy Shield (T1)\",\"proofLabel\":\"Best among resolved alternatives\",\"pricingLabel\":\"CURRENT_PRICING\"},\"accounting\":{\"acquisitionCost\":1221.276708800017,\"downstreamCost\":3783.8319367870135,\"fullCost\":5005.108645587031,\"difference\":5.4569682106375694e-12,\"acquisitionRows\":9,\"downstreamRows\":6,\"combinedRows\":10,\"currencies\":{\"alteration\":21232.411682626825,\"annul\":33.54621756808432,\"augmentation\":898.1440015659149,\"clean_base\":1,\"clean_base_reacquisition\":3.000000000000043,\"exalt\":38.54621756810091,\"fracturing\":4.000000000000056,\"regal\":869.7973348992547,\"scour\":865.7973348992423,\"transmutation\":4.000000000000053},\"consistencyMaximumDifferenceChaos\":5.4569682106375694e-12,\"canonicalBundleId\":\"bundle:family_fracture_AfflictionJewelSmallPassivesGrantES3\"},\"policyHealth\":{\"onPolicyReachableStates\":398,\"onPolicyTerminalStates\":2,\"terminalAbsorptionProbability\":1,\"selectedPolicyProper\":true,\"unresolvedOnPolicyProbability\":0}}"
     },
     {
       "id": "independent-method-family-matrix",
       "scenario": "exact-four-mod-release-regression",
       "passed": true,
-      "durationMs": 29315,
-      "details": "{\"families\":[{\"id\":\"family_open\",\"kind\":\"OPEN\",\"status\":\"SELECTED_WINNER\",\"source\":\"INDEPENDENT_SOLVE\",\"acquisitionStatus\":\"RESOLVED\",\"downstreamStatus\":\"RESOLVED\",\"fullRouteStatus\":\"RESOLVED\"},{\"id\":\"family_conventional\",\"kind\":\"CONVENTIONAL\",\"status\":\"UNRESOLVED_AT_BUDGET\",\"source\":\"INDEPENDENT_SOLVE\",\"acquisitionStatus\":\"RESOLVED\",\"downstreamStatus\":\"UNRESOLVED\",\"fullRouteStatus\":\"UNRESOLVED\"},{\"id\":\"family_harvest_defences\",\"kind\":\"HARVEST\",\"status\":\"UNRESOLVED_AT_BUDGET\",\"source\":\"INDEPENDENT_SOLVE\",\"acquisitionStatus\":\"RESOLVED\",\"downstreamStatus\":\"UNRESOLVED\",\"fullRouteStatus\":\"UNRESOLVED\"},{\"id\":\"family_fracture_AfflictionJewelSmallPassivesGrantInt3\",\"kind\":\"SELF_FRACTURE\",\"status\":\"UNRESOLVED_AT_BUDGET\",\"source\":\"INDEPENDENT_SOLVE\",\"acquisitionStatus\":\"RESOLVED\",\"downstreamStatus\":\"UNRESOLVED\",\"fullRouteStatus\":\"UNRESOLVED\"},{\"id\":\"family_fracture_harvest_AfflictionJewelSmallPassivesGrantInt3_defences\",\"kind\":\"SELF_FRACTURE_HARVEST\",\"status\":\"UNRESOLVED_AT_BUDGET\",\"source\":\"INDEPENDENT_SOLVE\",\"acquisitionStatus\":\"RESOLVED\",\"downstreamStatus\":\"UNRESOLVED\",\"fullRouteStatus\":\"UNRESOLVED\"},{\"id\":\"family_fracture_AfflictionJewelSmallPassivesGrantAttributes3\",\"kind\":\"SELF_FRACTURE\",\"status\":\"SELECTED_WINNER\",\"source\":\"INDEPENDENT_SOLVE\",\"acquisitionStatus\":\"RESOLVED\",\"downstreamStatus\":\"RESOLVED\",\"fullRouteStatus\":\"RESOLVED\"},{\"id\":\"family_fracture_harvest_AfflictionJewelSmallPassivesGrantAttributes3_defences\",\"kind\":\"SELF_FRACTURE_HARVEST\",\"status\":\"UNRESOLVED_AT_BUDGET\",\"source\":\"INDEPENDENT_SOLVE\",\"acquisitionStatus\":\"RESOLVED\",\"downstreamStatus\":\"UNRESOLVED\",\"fullRouteStatus\":\"UNRESOLVED\"},{\"id\":\"family_fracture_AfflictionJewelSmallPassivesHaveIncreasedEffect2\",\"kind\":\"SELF_FRACTURE\",\"status\":\"MORE_EXPENSIVE\",\"source\":\"INDEPENDENT_SOLVE\",\"acquisitionStatus\":\"RESOLVED\",\"downstreamStatus\":\"RESOLVED\",\"fullRouteStatus\":\"RESOLVED\"},{\"id\":\"family_fracture_harvest_AfflictionJewelSmallPassivesHaveIncreasedEffect2_defences\",\"kind\":\"SELF_FRACTURE_HARVEST\",\"status\":\"UNRESOLVED_AT_BUDGET\",\"source\":\"INDEPENDENT_SOLVE\",\"acquisitionStatus\":\"RESOLVED\",\"downstreamStatus\":\"UNRESOLVED\",\"fullRouteStatus\":\"UNRESOLVED\"},{\"id\":\"family_fracture_AfflictionJewelSmallPassivesGrantES3\",\"kind\":\"SELF_FRACTURE\",\"status\":\"MORE_EXPENSIVE\",\"source\":\"INDEPENDENT_SOLVE\",\"acquisitionStatus\":\"RESOLVED\",\"downstreamStatus\":\"RESOLVED\",\"fullRouteStatus\":\"RESOLVED\"},{\"id\":\"family_fracture_harvest_AfflictionJewelSmallPassivesGrantES3_defences\",\"kind\":\"SELF_FRACTURE_HARVEST\",\"status\":\"UNRESOLVED_AT_BUDGET\",\"source\":\"INDEPENDENT_SOLVE\",\"acquisitionStatus\":\"RESOLVED\",\"downstreamStatus\":\"UNRESOLVED\",\"fullRouteStatus\":\"UNRESOLVED\"},{\"id\":\"family_chaos_reforge\",\"kind\":\"CHAOS_REFORGE\",\"status\":\"NOT_MODELED\",\"source\":\"NOT_SEARCHED\",\"acquisitionStatus\":\"NOT_APPLICABLE\",\"downstreamStatus\":\"NOT_APPLICABLE\",\"fullRouteStatus\":\"NOT_APPLICABLE\"}]}"
+      "durationMs": 28663,
+      "details": "{\"families\":[{\"id\":\"family_open\",\"kind\":\"OPEN\",\"status\":\"DOMINATED\",\"source\":\"INDEPENDENT_SOLVE\",\"acquisitionStatus\":\"RESOLVED\",\"downstreamStatus\":\"RESOLVED\",\"fullRouteStatus\":\"RESOLVED\"},{\"id\":\"family_conventional\",\"kind\":\"CONVENTIONAL\",\"status\":\"UNRESOLVED_AT_BUDGET\",\"source\":\"INDEPENDENT_SOLVE\",\"acquisitionStatus\":\"RESOLVED\",\"downstreamStatus\":\"UNRESOLVED\",\"fullRouteStatus\":\"UNRESOLVED\"},{\"id\":\"family_harvest_defences\",\"kind\":\"HARVEST\",\"status\":\"UNRESOLVED_AT_BUDGET\",\"source\":\"INDEPENDENT_SOLVE\",\"acquisitionStatus\":\"RESOLVED\",\"downstreamStatus\":\"UNRESOLVED\",\"fullRouteStatus\":\"UNRESOLVED\"},{\"id\":\"family_fracture_AfflictionJewelSmallPassivesGrantInt3\",\"kind\":\"SELF_FRACTURE\",\"status\":\"UNRESOLVED_AT_BUDGET\",\"source\":\"INDEPENDENT_SOLVE\",\"acquisitionStatus\":\"RESOLVED\",\"downstreamStatus\":\"UNRESOLVED\",\"fullRouteStatus\":\"UNRESOLVED\"},{\"id\":\"family_fracture_harvest_AfflictionJewelSmallPassivesGrantInt3_defences\",\"kind\":\"SELF_FRACTURE_HARVEST\",\"status\":\"UNRESOLVED_AT_BUDGET\",\"source\":\"INDEPENDENT_SOLVE\",\"acquisitionStatus\":\"RESOLVED\",\"downstreamStatus\":\"UNRESOLVED\",\"fullRouteStatus\":\"UNRESOLVED\"},{\"id\":\"family_fracture_AfflictionJewelSmallPassivesGrantAttributes3\",\"kind\":\"SELF_FRACTURE\",\"status\":\"UNRESOLVED_AT_BUDGET\",\"source\":\"INDEPENDENT_SOLVE\",\"acquisitionStatus\":\"RESOLVED\",\"downstreamStatus\":\"UNRESOLVED\",\"fullRouteStatus\":\"UNRESOLVED\"},{\"id\":\"family_fracture_harvest_AfflictionJewelSmallPassivesGrantAttributes3_defences\",\"kind\":\"SELF_FRACTURE_HARVEST\",\"status\":\"UNRESOLVED_AT_BUDGET\",\"source\":\"INDEPENDENT_SOLVE\",\"acquisitionStatus\":\"RESOLVED\",\"downstreamStatus\":\"UNRESOLVED\",\"fullRouteStatus\":\"UNRESOLVED\"},{\"id\":\"family_fracture_AfflictionJewelSmallPassivesHaveIncreasedEffect2\",\"kind\":\"SELF_FRACTURE\",\"status\":\"MORE_EXPENSIVE\",\"source\":\"INDEPENDENT_SOLVE\",\"acquisitionStatus\":\"RESOLVED\",\"downstreamStatus\":\"RESOLVED\",\"fullRouteStatus\":\"RESOLVED\"},{\"id\":\"family_fracture_harvest_AfflictionJewelSmallPassivesHaveIncreasedEffect2_defences\",\"kind\":\"SELF_FRACTURE_HARVEST\",\"status\":\"UNRESOLVED_AT_BUDGET\",\"source\":\"INDEPENDENT_SOLVE\",\"acquisitionStatus\":\"RESOLVED\",\"downstreamStatus\":\"UNRESOLVED\",\"fullRouteStatus\":\"UNRESOLVED\"},{\"id\":\"family_fracture_AfflictionJewelSmallPassivesGrantES3\",\"kind\":\"SELF_FRACTURE\",\"status\":\"SELECTED_WINNER\",\"source\":\"INDEPENDENT_SOLVE\",\"acquisitionStatus\":\"RESOLVED\",\"downstreamStatus\":\"RESOLVED\",\"fullRouteStatus\":\"RESOLVED\"},{\"id\":\"family_fracture_harvest_AfflictionJewelSmallPassivesGrantES3_defences\",\"kind\":\"SELF_FRACTURE_HARVEST\",\"status\":\"UNRESOLVED_AT_BUDGET\",\"source\":\"INDEPENDENT_SOLVE\",\"acquisitionStatus\":\"RESOLVED\",\"downstreamStatus\":\"UNRESOLVED\",\"fullRouteStatus\":\"UNRESOLVED\"},{\"id\":\"family_chaos_reforge\",\"kind\":\"CHAOS_REFORGE\",\"status\":\"NOT_MODELED\",\"source\":\"NOT_SEARCHED\",\"acquisitionStatus\":\"NOT_APPLICABLE\",\"downstreamStatus\":\"NOT_APPLICABLE\",\"fullRouteStatus\":\"NOT_APPLICABLE\"}]}"
     },
     {
       "id": "four-mod-export-and-real-images",
       "scenario": "exact-four-mod-release-regression",
       "passed": true,
-      "durationMs": 1787,
-      "details": "{\"exportSchema\":\"2V.1\",\"geometry\":{\"documentWidth\":390,\"viewportWidth\":390,\"overflowers\":[{\"tag\":\"BUTTON\",\"className\":\" selected-route-node\",\"right\":417,\"width\":77,\"scrollWidth\":75},{\"tag\":\"BUTTON\",\"className\":\" selected-route-node\",\"right\":485,\"width\":61,\"scrollWidth\":59},{\"tag\":\"BUTTON\",\"className\":\" selected-route-node\",\"right\":553,\"width\":62,\"scrollWidth\":60},{\"tag\":\"BUTTON\",\"className\":\" selected-route-node\",\"right\":634,\"width\":74,\"scrollWidth\":72},{\"tag\":\"BUTTON\",\"className\":\" selected-route-node\",\"right\":686,\"width\":45,\"scrollWidth\":43},{\"tag\":\"THEAD\",\"className\":\"\",\"right\":559,\"width\":516,\"scrollWidth\":516},{\"tag\":\"TR\",\"className\":\"\",\"right\":559,\"width\":516,\"scrollWidth\":516},{\"tag\":\"TH\",\"className\":\"\",\"right\":447,\"width\":121,\"scrollWidth\":121},{\"tag\":\"TH\",\"className\":\"\",\"right\":559,\"width\":113,\"scrollWidth\":113},{\"tag\":\"TBODY\",\"className\":\"\",\"right\":559,\"width\":516,\"scrollWidth\":516},{\"tag\":\"TR\",\"className\":\"\",\"right\":559,\"width\":516,\"scrollWidth\":516},{\"tag\":\"TD\",\"className\":\"\",\"right\":447,\"width\":121,\"scrollWidth\":121}]}}"
+      "durationMs": 2097,
+      "details": "{\"exportSchema\":\"2W.1\",\"geometry\":{\"documentWidth\":390,\"viewportWidth\":390,\"overflowers\":[{\"tag\":\"BUTTON\",\"className\":\" selected-route-node\",\"right\":417,\"width\":77,\"scrollWidth\":75},{\"tag\":\"BUTTON\",\"className\":\" selected-route-node\",\"right\":485,\"width\":61,\"scrollWidth\":59},{\"tag\":\"BUTTON\",\"className\":\" selected-route-node\",\"right\":553,\"width\":62,\"scrollWidth\":60},{\"tag\":\"BUTTON\",\"className\":\"active selected-route-node\",\"right\":631,\"width\":71,\"scrollWidth\":69},{\"tag\":\"BUTTON\",\"className\":\" selected-route-node\",\"right\":712,\"width\":74,\"scrollWidth\":72},{\"tag\":\"BUTTON\",\"className\":\" selected-route-node\",\"right\":764,\"width\":45,\"scrollWidth\":43},{\"tag\":\"THEAD\",\"className\":\"\",\"right\":559,\"width\":516,\"scrollWidth\":516},{\"tag\":\"TR\",\"className\":\"\",\"right\":559,\"width\":516,\"scrollWidth\":516},{\"tag\":\"TH\",\"className\":\"\",\"right\":447,\"width\":121,\"scrollWidth\":121},{\"tag\":\"TH\",\"className\":\"\",\"right\":559,\"width\":113,\"scrollWidth\":113},{\"tag\":\"TBODY\",\"className\":\"\",\"right\":559,\"width\":516,\"scrollWidth\":516},{\"tag\":\"TR\",\"className\":\"\",\"right\":559,\"width\":516,\"scrollWidth\":516}]}}"
     },
     {
       "id": "U2-display-descriptor-identity",
       "scenario": "phase2u-interaction-label-readability",
       "passed": true,
-      "durationMs": 1276,
+      "durationMs": 834,
       "details": "{\"workerIds\":[\"AfflictionJewelSmallPassivesGrantInt3\",\"AfflictionJewelSmallPassivesGrantAttributes3\",\"AfflictionJewelSmallPassivesHaveIncreasedEffect2\",\"AfflictionJewelSmallPassivesGrantES3\"],\"exportIdsPreserved\":true,\"descriptorRows\":4}"
     },
     {
       "id": "U3-public-no-id-leakage-and-technical-reveal",
       "scenario": "phase2u-interaction-label-readability",
       "passed": true,
-      "durationMs": 1161,
+      "durationMs": 1305,
       "details": "{\"publicRawIds\":0,\"publicInternalAffixNames\":0,\"technicalExactIds\":4}"
     },
     {
       "id": "U4-player-vocabulary-consistency",
       "scenario": "phase2u-interaction-label-readability",
       "passed": true,
-      "durationMs": 838,
+      "durationMs": 947,
       "details": "{\"picker\":4,\"targetSummary\":4,\"activity\":4,\"methods\":4,\"constellation\":4,\"copiedHeadings\":8}"
     },
     {
       "id": "U5-mouse-pointer-capture-pan",
       "scenario": "phase2u-interaction-label-readability",
       "passed": true,
-      "durationMs": 1337,
-      "details": "{\"deltaX\":142,\"deltaY\":34,\"clickSuppressed\":true,\"pageScrollBefore\":6676}"
+      "durationMs": 1490,
+      "details": "{\"deltaX\":142,\"deltaY\":34,\"clickSuppressed\":true,\"pageScrollBefore\":6604}"
     },
     {
       "id": "U6-touch-pan-and-scroll-boundary",
       "scenario": "phase2u-interaction-label-readability",
       "passed": true,
-      "durationMs": 1271,
+      "durationMs": 1323,
       "details": "{\"deltaX\":126,\"deltaY\":54,\"canvasScrollSuppressed\":true,\"outsideScroll\":600}"
     },
     {
       "id": "U7-pointer-centered-wheel-and-button-zoom",
       "scenario": "phase2u-interaction-label-readability",
       "passed": true,
-      "durationMs": 3289,
-      "details": "{\"anchoredDistance\":0.389216209596286,\"maximum\":{\"fitMode\":\"MANUAL\",\"baseFitMode\":\"SELECTED_ROUTE\",\"panX\":1852.375,\"panY\":0.438,\"zoom\":5},\"minimum\":{\"fitMode\":\"MANUAL\",\"baseFitMode\":\"SELECTED_ROUTE\",\"panX\":128.664,\"panY\":-0.07,\"zoom\":0.35},\"buttonState\":{\"fitMode\":\"MANUAL\",\"baseFitMode\":\"SELECTED_ROUTE\",\"panX\":1543.646,\"panY\":0.365,\"zoom\":4.16667}}"
+      "durationMs": 3404,
+      "details": "{\"anchoredDistance\":0.5729285036655969,\"maximum\":{\"fitMode\":\"MANUAL\",\"baseFitMode\":\"SELECTED_ROUTE\",\"panX\":1876.375,\"panY\":0.375,\"zoom\":5},\"minimum\":{\"fitMode\":\"MANUAL\",\"baseFitMode\":\"SELECTED_ROUTE\",\"panX\":130.344,\"panY\":-0.06,\"zoom\":0.35},\"buttonState\":{\"fitMode\":\"MANUAL\",\"baseFitMode\":\"SELECTED_ROUTE\",\"panX\":1563.646,\"panY\":0.313,\"zoom\":4.16667}}"
     },
     {
       "id": "U8-route-focus-fit-all-and-reset",
       "scenario": "phase2u-interaction-label-readability",
       "passed": true,
-      "durationMs": 1276,
-      "details": "{\"routeCount\":9,\"allCount\":19,\"reset\":{\"fitMode\":\"ALL\",\"baseFitMode\":\"ALL\",\"panX\":0,\"panY\":0,\"zoom\":1}}"
+      "durationMs": 1311,
+      "details": "{\"routeCount\":10,\"allCount\":20,\"reset\":{\"fitMode\":\"ALL\",\"baseFitMode\":\"ALL\",\"panX\":0,\"panY\":0,\"zoom\":1}}"
     },
     {
       "id": "U9-keyboard-camera-and-node-access",
       "scenario": "phase2u-interaction-label-readability",
       "passed": true,
-      "durationMs": 2040,
+      "durationMs": 2158,
       "details": "{\"initial\":{\"fitMode\":\"ALL\",\"baseFitMode\":\"ALL\",\"panX\":0,\"panY\":0,\"zoom\":1},\"panned\":{\"fitMode\":\"MANUAL\",\"baseFitMode\":\"ALL\",\"panX\":-36,\"panY\":0,\"zoom\":1},\"fitMode\":\"ALL\",\"selectedAndCleared\":true,\"noFocusTrap\":true}"
     },
     {
       "id": "U10-dom-label-collision-and-readability",
       "scenario": "phase2u-interaction-label-readability",
       "passed": true,
-      "durationMs": 133,
+      "durationMs": 136,
       "details": "{\"measuredLabels\":10,\"intersections\":0,\"minimumFontSize\":13}"
     },
     {
       "id": "U11-long-label-mobile-and-fullscreen-stress",
       "scenario": "phase2u-interaction-label-readability",
       "passed": true,
-      "durationMs": 275,
+      "durationMs": 299,
       "details": "{\"methodCards\":12,\"mobile\":{\"documentWidth\":390,\"viewportWidth\":390,\"labelOverflow\":false}}"
     },
     {
       "id": "U12-concise-route-rail-and-active-step",
       "scenario": "phase2u-interaction-label-readability",
       "passed": true,
-      "durationMs": 1456,
-      "details": "{\"labels\":[\"Start\",\"1 Fracture\",\"2 Transmute\",\"3 Alter\",\"4 Augment\",\"5 Regal\",\"6 Finish\",\"7 Recover\",\"Goal\"],\"activeVisibility\":{\"found\":true,\"inside\":true,\"scrollLeft\":184}}"
+      "durationMs": 1466,
+      "details": "{\"labels\":[\"Start\",\"1 Fracture\",\"2 Transmute\",\"3 Alter\",\"4 Augment\",\"5 Regal\",\"6 Finish\",\"7 Harvest\",\"8 Recover\",\"Goal\"],\"activeVisibility\":{\"found\":true,\"inside\":true,\"scrollLeft\":0}}"
     },
     {
       "id": "U13-reduced-motion-fullscreen-screensaver-and-soak",
       "scenario": "phase2u-interaction-label-readability",
       "passed": true,
-      "durationMs": 308420,
-      "details": "{\"reducedFramesEqual\":true,\"fullscreen\":true,\"controlsAutoHide\":true,\"soakMs\":300000,\"beforeHeap\":21569608,\"afterHeap\":21770656,\"beforeDom\":82,\"afterDom\":81}"
+      "durationMs": 308687,
+      "details": "{\"reducedFramesEqual\":true,\"fullscreen\":true,\"controlsAutoHide\":true,\"soakMs\":300000,\"beforeHeap\":18816876,\"afterHeap\":19017104,\"beforeDom\":87,\"afterDom\":88}"
     },
     {
       "id": "U14-stable-visual-evidence",
       "scenario": "phase2u-interaction-label-readability",
       "passed": true,
-      "durationMs": 1,
+      "durationMs": 0,
       "details": "[\"constellation-route-focus.png\",\"constellation-fit-all.png\",\"constellation-post-pan.png\",\"constellation-selected-node.png\",\"constellation-touch-390.png\",\"constellation-screensaver-fullscreen.png\",\"constellation-reduced-motion.png\"]"
     },
     {
       "id": "U15-worker-semantics-and-interaction-performance",
       "scenario": "phase2u-interaction-label-readability",
       "passed": true,
-      "durationMs": 4395,
-      "details": "{\"frames\":90,\"medianFrameMs\":16.699999999953434,\"maxFrameMs\":16.79999999998836,\"maxLongTaskMs\":0,\"optimizerOverheadPercent\":0,\"workerMessagesAdded\":0}"
+      "durationMs": 2079,
+      "details": "{\"frames\":90,\"medianFrameMs\":16.70000000001164,\"maxFrameMs\":16.79999999998836,\"maxLongTaskMs\":0,\"optimizerOverheadPercent\":0,\"workerMessagesAdded\":0}"
     },
     {
       "id": "U8-graph-replacement-resets-camera",
       "scenario": "phase2u-interaction-label-readability",
       "passed": true,
-      "durationMs": 3207,
-      "details": "{\"oldIdentity\":\"markov_constellation_default_seed|2V.1|node_start|node_acquisition|node_step_initialize|node_step_roll|node_step_fill|node_step_promote|node_step_finish|node_step_recover|node_terminal_target|node_alt_family_conventional|node_alt_family_harvest_defences|node_alt_family_fracture_AfflictionJewelSmallPassivesGrantInt3|node_alt_family_fracture_harvest_AfflictionJewelSmallPassivesGrantInt3_defences|node_alt_family_fracture_harvest_AfflictionJewelSmallPassivesGrantAttributes3_defences|node_alt_family_fracture_AfflictionJewelSmallPassivesHaveIncreasedEffect2|node_alt_family_fracture_harvest_AfflictionJewelSmallPassivesHaveIncreasedEffect2_defences|node_alt_family_fracture_AfflictionJewelSmallPassivesGrantES3|node_alt_family_fracture_harvest_AfflictionJewelSmallPassivesGrantES3_defences|node_alt_family_chaos_reforge\",\"newIdentity\":\"markov_constellation_default_seed|2V.1|node_start|node_step_initialize|node_step_roll|node_step_fill|node_terminal_target|node_alt_family_harvest_defences|node_alt_family_fracture_AfflictionJewelSmallPassivesGrantES3|node_alt_family_fracture_harvest_AfflictionJewelSmallPassivesGrantES3_defences|node_alt_family_chaos_reforge\",\"reset\":{\"fitMode\":\"SELECTED_ROUTE\",\"baseFitMode\":\"SELECTED_ROUTE\",\"panX\":0,\"panY\":0,\"zoom\":1}}"
+      "durationMs": 2341,
+      "details": "{\"oldIdentity\":\"markov_constellation_default_seed|2V.1|node_start|node_acquisition|node_step_initialize|node_step_roll|node_step_fill|node_step_promote|node_step_finish|node_step_specialized|node_step_recover|node_terminal_target|node_alt_family_conventional|node_alt_family_harvest_defences|node_alt_family_fracture_AfflictionJewelSmallPassivesGrantInt3|node_alt_family_fracture_harvest_AfflictionJewelSmallPassivesGrantInt3_defences|node_alt_family_fracture_AfflictionJewelSmallPassivesGrantAttributes3|node_alt_family_fracture_harvest_AfflictionJewelSmallPassivesGrantAttributes3_defences|node_alt_family_fracture_AfflictionJewelSmallPassivesHaveIncreasedEffect2|node_alt_family_fracture_harvest_AfflictionJewelSmallPassivesHaveIncreasedEffect2_defences|node_alt_family_fracture_harvest_AfflictionJewelSmallPassivesGrantES3_defences|node_alt_family_chaos_reforge\",\"newIdentity\":\"markov_constellation_default_seed|2V.1|node_start|node_step_initialize|node_step_roll|node_step_fill|node_step_specialized|node_terminal_target|node_alt_family_conventional|node_alt_family_harvest_defences|node_alt_family_fracture_AfflictionJewelSmallPassivesGrantES3|node_alt_family_fracture_harvest_AfflictionJewelSmallPassivesGrantES3_defences|node_alt_family_chaos_reforge\",\"reset\":{\"fitMode\":\"SELECTED_ROUTE\",\"baseFitMode\":\"SELECTED_ROUTE\",\"panX\":0,\"panY\":0,\"zoom\":1}}"
     },
     {
       "id": "armour_evasion",
       "scenario": "harvest-method-and-economics",
       "passed": true,
-      "durationMs": 27930,
-      "details": "{\"fixture\":\"armour_evasion\",\"harvest\":{\"lifecycle\":\"RESOLVED_MORE_EXPENSIVE\",\"harvestFamilies\":[{\"id\":\"family_harvest_defences\",\"evaluationSource\":\"INDEPENDENT_SOLVE\",\"fullRouteStatus\":\"RESOLVED\",\"requiredActionObservedOnPolicy\":true,\"retainedStates\":440,\"budget\":{\"maxStates\":5000,\"maxWallTimeMs\":15000,\"maxExpansionRounds\":3,\"elapsedMs\":2372},\"policyHealth\":{\"selectedPolicyStatus\":\"FULLY RESOLVED / PROPER / ABSORBING / COST-RECONCILED\",\"proofLevel\":\"OPTIMAL OVER MODELED ACTIONS: PROVEN\",\"onPolicyReachableStates\":440,\"onPolicyTerminalStates\":150,\"onPolicyUnresolvedTransitions\":0,\"terminalAbsorptionProbability\":1,\"proper\":true,\"fullyResolved\":true,\"bellmanConverged\":true,\"occupancyConverged\":true,\"costReconciled\":true,\"reconciliationDifferenceChaos\":6.821210263296962e-13}}],\"conventionalStatus\":\"RESOLVED\",\"expectedHarvestApplications\":206.45564187753305,\"expectedLifeforce\":15484.173140814979,\"lifeforceType\":\"primalLifeforce\",\"crossover\":0.014645884996518735,\"explanation\":\"Harvest Reforge Defences was independently solved with 206.456 expected applications (15484.173 primalLifeforce, 75 per application). +345.670c versus Conventional. Crossover: 0.014646c per primalLifeforce.\"},\"accounting\":{\"acquisitionCost\":1,\"downstreamCost\":183.65268918864078,\"fullCost\":184.65268918864078,\"difference\":9.379164112033322e-13,\"acquisitionRows\":1,\"downstreamRows\":6,\"combinedRows\":7,\"currencies\":{\"alteration\":855.6278916801127,\"augmentation\":228.48491291912092,\"clean_base\":1,\"exalt\":12.117396222309342,\"regal\":58.311759996373,\"scour\":57.31175999637252,\"transmutation\":58.31175999637502}}}"
+      "durationMs": 28916,
+      "details": "{\"fixture\":\"armour_evasion\",\"harvest\":{\"lifecycle\":\"RESOLVED_MORE_EXPENSIVE\",\"harvestFamilies\":[{\"id\":\"family_harvest_defences\",\"evaluationSource\":\"INDEPENDENT_SOLVE\",\"fullRouteStatus\":\"RESOLVED\",\"requiredActionObservedOnPolicy\":true,\"retainedStates\":440,\"budget\":{\"maxStates\":5000,\"maxWallTimeMs\":15000,\"maxExpansionRounds\":3,\"elapsedMs\":2852},\"policyHealth\":{\"selectedPolicyStatus\":\"FULLY RESOLVED / PROPER / ABSORBING / COST-RECONCILED\",\"proofLevel\":\"OPTIMAL OVER MODELED ACTIONS: PROVEN\",\"onPolicyReachableStates\":440,\"onPolicyTerminalStates\":150,\"onPolicyUnresolvedTransitions\":0,\"terminalAbsorptionProbability\":1,\"proper\":true,\"fullyResolved\":true,\"bellmanConverged\":true,\"occupancyConverged\":true,\"costReconciled\":true,\"reconciliationDifferenceChaos\":3.979039320256561e-12}}],\"conventionalStatus\":\"RESOLVED\",\"expectedHarvestApplications\":206.45564187753305,\"expectedLifeforce\":15484.173140814979,\"lifeforceType\":\"primalLifeforce\",\"crossover\":0.013549294846948773,\"explanation\":\"Harvest Reforge Defences was independently solved with 206.456 expected applications (15484.173 primalLifeforce, 75 per application). +422.729c versus Conventional. Crossover: 0.013549c per primalLifeforce.\"},\"accounting\":{\"acquisitionCost\":2,\"downstreamCost\":170.80424051052188,\"fullCost\":172.80424051052188,\"difference\":1.5916157281026244e-12,\"acquisitionRows\":1,\"downstreamRows\":6,\"combinedRows\":7,\"currencies\":{\"alteration\":855.6278916801127,\"augmentation\":228.48491291912092,\"clean_base\":1,\"exalt\":12.117396222309342,\"regal\":58.311759996373,\"scour\":57.31175999637252,\"transmutation\":58.31175999637502},\"consistencyMaximumDifferenceChaos\":1.5916157281026244e-12,\"canonicalBundleId\":\"core:clean-open-policy\"}}"
     },
     {
       "id": "armour_energy_shield",
       "scenario": "harvest-method-and-economics",
       "passed": true,
-      "durationMs": 28356,
-      "details": "{\"fixture\":\"armour_energy_shield\",\"harvest\":{\"lifecycle\":\"RESOLVED_MORE_EXPENSIVE\",\"harvestFamilies\":[{\"id\":\"family_harvest_defences\",\"evaluationSource\":\"INDEPENDENT_SOLVE\",\"fullRouteStatus\":\"RESOLVED\",\"requiredActionObservedOnPolicy\":true,\"retainedStates\":440,\"budget\":{\"maxStates\":5000,\"maxWallTimeMs\":15000,\"maxExpansionRounds\":3,\"elapsedMs\":3027},\"policyHealth\":{\"selectedPolicyStatus\":\"FULLY RESOLVED / PROPER / ABSORBING / COST-RECONCILED\",\"proofLevel\":\"OPTIMAL OVER MODELED ACTIONS: PROVEN\",\"onPolicyReachableStates\":440,\"onPolicyTerminalStates\":150,\"onPolicyUnresolvedTransitions\":0,\"terminalAbsorptionProbability\":1,\"proper\":true,\"fullyResolved\":true,\"bellmanConverged\":true,\"occupancyConverged\":true,\"costReconciled\":true,\"reconciliationDifferenceChaos\":9.663381206337363e-12}}],\"conventionalStatus\":\"RESOLVED\",\"expectedHarvestApplications\":206.4556418775398,\"expectedLifeforce\":15484.173140815485,\"lifeforceType\":\"primalLifeforce\",\"crossover\":0.01464588499652436,\"explanation\":\"Harvest Reforge Defences was independently solved with 206.456 expected applications (15484.173 primalLifeforce, 75 per application). +345.670c versus Conventional. Crossover: 0.014646c per primalLifeforce.\"},\"accounting\":{\"acquisitionCost\":1,\"downstreamCost\":183.65268918894608,\"fullCost\":184.65268918894608,\"difference\":1.8189894035458565e-12,\"acquisitionRows\":1,\"downstreamRows\":6,\"combinedRows\":7,\"currencies\":{\"alteration\":855.6278916815317,\"augmentation\":228.48491291949964,\"clean_base\":1,\"exalt\":12.117396222329498,\"regal\":58.311759996469654,\"scour\":57.311759996469334,\"transmutation\":58.31175999647173}}}"
+      "durationMs": 26231,
+      "details": "{\"fixture\":\"armour_energy_shield\",\"harvest\":{\"lifecycle\":\"RESOLVED_MORE_EXPENSIVE\",\"harvestFamilies\":[{\"id\":\"family_harvest_defences\",\"evaluationSource\":\"INDEPENDENT_SOLVE\",\"fullRouteStatus\":\"RESOLVED\",\"requiredActionObservedOnPolicy\":true,\"retainedStates\":440,\"budget\":{\"maxStates\":5000,\"maxWallTimeMs\":15000,\"maxExpansionRounds\":3,\"elapsedMs\":3417},\"policyHealth\":{\"selectedPolicyStatus\":\"FULLY RESOLVED / PROPER / ABSORBING / COST-RECONCILED\",\"proofLevel\":\"OPTIMAL OVER MODELED ACTIONS: PROVEN\",\"onPolicyReachableStates\":440,\"onPolicyTerminalStates\":150,\"onPolicyUnresolvedTransitions\":0,\"terminalAbsorptionProbability\":1,\"proper\":true,\"fullyResolved\":true,\"bellmanConverged\":true,\"occupancyConverged\":true,\"costReconciled\":true,\"reconciliationDifferenceChaos\":1.1709744285326451e-11}}],\"conventionalStatus\":\"RESOLVED\",\"expectedHarvestApplications\":206.4556418775398,\"expectedLifeforce\":15484.173140815485,\"lifeforceType\":\"primalLifeforce\",\"crossover\":0.013549294846953885,\"explanation\":\"Harvest Reforge Defences was independently solved with 206.456 expected applications (15484.173 primalLifeforce, 75 per application). +422.729c versus Conventional. Crossover: 0.013549c per primalLifeforce.\"},\"accounting\":{\"acquisitionCost\":2,\"downstreamCost\":170.80424051080558,\"fullCost\":172.80424051080558,\"difference\":4.547473508864641e-13,\"acquisitionRows\":1,\"downstreamRows\":6,\"combinedRows\":7,\"currencies\":{\"alteration\":855.6278916815317,\"augmentation\":228.48491291949964,\"clean_base\":1,\"exalt\":12.117396222329498,\"regal\":58.311759996469654,\"scour\":57.311759996469334,\"transmutation\":58.31175999647173},\"consistencyMaximumDifferenceChaos\":4.547473508864641e-13,\"canonicalBundleId\":\"core:clean-open-policy\"}}"
     },
     {
       "id": "harvest_one_mod_math_witness",
       "scenario": "harvest-method-and-economics",
       "passed": true,
-      "durationMs": 16209,
-      "details": "{\"fixture\":\"harvest_one_mod_math_witness\",\"harvest\":{\"lifecycle\":\"RESOLVED_MORE_EXPENSIVE\",\"harvestFamilies\":[{\"id\":\"family_harvest_defences\",\"evaluationSource\":\"INDEPENDENT_SOLVE\",\"fullRouteStatus\":\"RESOLVED\",\"requiredActionObservedOnPolicy\":true,\"retainedStates\":1074,\"budget\":{\"maxStates\":10000,\"maxWallTimeMs\":15000,\"maxExpansionRounds\":4,\"elapsedMs\":58},\"policyHealth\":{\"selectedPolicyStatus\":\"FULLY RESOLVED / PROPER / ABSORBING / COST-RECONCILED\",\"proofLevel\":\"OPTIMAL OVER MODELED ACTIONS: PROVEN\",\"onPolicyReachableStates\":1074,\"onPolicyTerminalStates\":922,\"onPolicyUnresolvedTransitions\":0,\"terminalAbsorptionProbability\":1,\"proper\":true,\"fullyResolved\":true,\"bellmanConverged\":true,\"occupancyConverged\":true,\"costReconciled\":true,\"reconciliationDifferenceChaos\":2.3092638912203256e-14}}],\"conventionalStatus\":\"RESOLVED\",\"expectedHarvestApplications\":2.482721983514642,\"expectedLifeforce\":186.20414876359814,\"lifeforceType\":\"primalLifeforce\",\"crossover\":0.0065920188575301275,\"explanation\":\"Harvest Reforge Defences was independently solved with 2.483 expected applications (186.204 primalLifeforce, 75 per application). +5.657c versus Conventional. Crossover: 0.006592c per primalLifeforce.\"},\"accounting\":{\"acquisitionCost\":10,\"downstreamCost\":1.3574812599999835,\"fullCost\":11.357481259999984,\"difference\":1.7763568394002505e-15,\"acquisitionRows\":1,\"downstreamRows\":4,\"combinedRows\":5,\"currencies\":{\"alteration\":7.727999999999918,\"augmentation\":2.1819999999999737,\"clean_base\":1,\"regal\":0.9999999999999876,\"transmutation\":1}}}"
+      "durationMs": 11998,
+      "details": "{\"fixture\":\"harvest_one_mod_math_witness\",\"harvest\":{\"lifecycle\":\"RESOLVED_MORE_EXPENSIVE\",\"harvestFamilies\":[{\"id\":\"family_harvest_defences\",\"evaluationSource\":\"INDEPENDENT_SOLVE\",\"fullRouteStatus\":\"RESOLVED\",\"requiredActionObservedOnPolicy\":true,\"retainedStates\":1074,\"budget\":{\"maxStates\":10000,\"maxWallTimeMs\":15000,\"maxExpansionRounds\":4,\"elapsedMs\":64},\"policyHealth\":{\"selectedPolicyStatus\":\"FULLY RESOLVED / PROPER / ABSORBING / COST-RECONCILED\",\"proofLevel\":\"OPTIMAL OVER MODELED ACTIONS: PROVEN\",\"onPolicyReachableStates\":1074,\"onPolicyTerminalStates\":922,\"onPolicyUnresolvedTransitions\":0,\"terminalAbsorptionProbability\":1,\"proper\":true,\"fullyResolved\":true,\"bellmanConverged\":true,\"occupancyConverged\":true,\"costReconciled\":true,\"reconciliationDifferenceChaos\":7.638334409421077e-14}}],\"conventionalStatus\":\"RESOLVED\",\"expectedHarvestApplications\":2.482721983514642,\"expectedLifeforce\":186.20414876359814,\"lifeforceType\":\"primalLifeforce\",\"crossover\":0.0060065977446074875,\"explanation\":\"Harvest Reforge Defences was independently solved with 2.483 expected applications (186.204 primalLifeforce, 75 per application). +6.488c versus Conventional. Crossover: 0.006007c per primalLifeforce.\"},\"accounting\":{\"acquisitionCost\":10,\"downstreamCost\":1.159845419999985,\"fullCost\":11.159845419999986,\"difference\":3.552713678800501e-15,\"acquisitionRows\":1,\"downstreamRows\":4,\"combinedRows\":5,\"currencies\":{\"alteration\":7.727999999999918,\"augmentation\":2.1819999999999737,\"clean_base\":1,\"regal\":0.9999999999999876,\"transmutation\":1},\"consistencyMaximumDifferenceChaos\":3.552713678800501e-15,\"canonicalBundleId\":\"bundle:family_conventional\"}}"
     },
     {
       "id": "V2-initial-result-does-not-reclaim-document-scroll",
       "scenario": "phase2v-scroll-semantics-harvest-closure",
       "passed": true,
-      "durationMs": 7647,
+      "durationMs": 2897,
       "details": "{\"before\":0,\"after\":0,\"activeFocusRetained\":true}"
     },
     {
       "id": "V3-replay-three-steps-window-scroll-and-focus-stable",
       "scenario": "phase2v-scroll-semantics-harvest-closure",
       "passed": true,
-      "durationMs": 1915,
-      "details": "{\"before\":0,\"after\":0,\"replayNodes\":[\"node_step_roll\",\"node_step_fill\",\"node_terminal_target\",\"node_start\",\"node_step_initialize\"],\"focusRetained\":true}"
+      "durationMs": 1932,
+      "details": "{\"before\":0,\"after\":0,\"replayNodes\":[\"node_step_initialize\",\"node_step_roll\",\"node_step_fill\",\"node_step_specialized\",\"node_terminal_target\"],\"focusRetained\":true}"
     },
     {
       "id": "V5-pause-resume-and-speed-controls-preserve-scroll-focus",
       "scenario": "phase2v-scroll-semantics-harvest-closure",
       "passed": true,
-      "durationMs": 9183,
-      "details": "[{\"label\":\"Pause Animation\",\"before\":4886,\"after\":4886,\"focused\":true},{\"label\":\"Resume Animation\",\"before\":4886,\"after\":4886,\"focused\":true},{\"label\":\"0.5x\",\"before\":4886,\"after\":4886,\"focused\":true},{\"label\":\"1x\",\"before\":4886,\"after\":4886,\"focused\":true},{\"label\":\"2x\",\"before\":4886,\"after\":4886,\"focused\":true},{\"label\":\"5x\",\"before\":4886,\"after\":4886,\"focused\":true}]"
+      "durationMs": 9293,
+      "details": "[{\"label\":\"Pause Animation\",\"before\":4747,\"after\":4747,\"focused\":true},{\"label\":\"Resume Animation\",\"before\":4747,\"after\":4747,\"focused\":true},{\"label\":\"0.5x\",\"before\":4747,\"after\":4747,\"focused\":true},{\"label\":\"1x\",\"before\":4747,\"after\":4747,\"focused\":true},{\"label\":\"2x\",\"before\":4747,\"after\":4747,\"focused\":true},{\"label\":\"5x\",\"before\":4747,\"after\":4747,\"focused\":true}]"
     },
     {
       "id": "V6-mobile-replay-and-touch-scroll-ownership",
       "scenario": "phase2v-scroll-semantics-harvest-closure",
       "passed": true,
-      "durationMs": 1237,
-      "details": "{\"before\":8313,\"duringReplay\":8313,\"outsideScroll\":600,\"railGeometry\":{\"clientWidth\":300,\"scrollWidth\":355,\"scrollLeft\":0}}"
+      "durationMs": 1492,
+      "details": "{\"before\":8203,\"duringReplay\":8203,\"outsideScroll\":600,\"railGeometry\":{\"clientWidth\":300,\"scrollWidth\":432,\"scrollLeft\":57}}"
     },
     {
       "id": "V7-clean-one-mod-chronology-and-accounting",
       "scenario": "phase2v-scroll-semantics-harvest-closure",
       "passed": true,
-      "durationMs": 347,
-      "details": "{\"resultCost\":8.78356143333325,\"route\":{\"nodes\":[\"node_start\",\"node_step_initialize\",\"node_step_roll\",\"node_step_fill\",\"node_terminal_target\"],\"edges\":[\"edge_node_start_to_node_step_initialize\",\"edge_node_step_initialize_to_node_step_roll\",\"edge_node_step_roll_to_node_step_fill\",\"edge_node_step_fill_to_node_terminal_target\"]},\"labels\":[\"Start\",\"1 Transmute\",\"2 Alter\",\"3 Augment\",\"Goal\"],\"terminal\":{\"graphTerminalCount\":1,\"goalLabels\":1,\"completeLabels\":0,\"labels\":[\"Start\",\"1 Transmute\",\"2 Alter\",\"3 Augment\",\"Goal\"]},\"phases\":[\"ACQUIRE\",\"INITIALIZE\",\"ROLL\",\"FILL\",\"SUCCESS\"],\"accounting\":{\"acquisitionCost\":4,\"downstreamCost\":4.783561433333252,\"fullCost\":8.78356143333325,\"difference\":1.0658141036401503e-14,\"acquisitionRows\":1,\"downstreamRows\":3,\"combinedRows\":4,\"currencies\":{\"alteration\":30.346666666666188,\"augmentation\":7.836666666666571,\"clean_base\":1,\"transmutation\":1}}}"
+      "durationMs": 396,
+      "details": "{\"resultCost\":8.78356143333325,\"route\":{\"nodes\":[\"node_start\",\"node_step_initialize\",\"node_step_roll\",\"node_step_fill\",\"node_step_specialized\",\"node_terminal_target\"],\"edges\":[\"edge_node_start_to_node_step_initialize\",\"edge_node_step_initialize_to_node_step_roll\",\"edge_node_step_roll_to_node_step_fill\",\"edge_node_step_fill_to_node_step_specialized\",\"edge_node_step_specialized_to_node_terminal_target\"]},\"labels\":[\"Start\",\"1 Transmute\",\"2 Alter\",\"3 Augment\",\"4 Harvest\",\"Goal\"],\"terminal\":{\"graphTerminalCount\":1,\"goalLabels\":1,\"completeLabels\":0,\"labels\":[\"Start\",\"1 Transmute\",\"2 Alter\",\"3 Augment\",\"4 Harvest\",\"Goal\"]},\"phases\":[\"ACQUIRE\",\"INITIALIZE\",\"ROLL\",\"FILL\",\"SPECIALIZED\",\"SUCCESS\"],\"accounting\":{\"acquisitionCost\":4,\"downstreamCost\":4.783561433333252,\"fullCost\":8.78356143333325,\"difference\":1.0658141036401503e-14,\"acquisitionRows\":1,\"downstreamRows\":3,\"combinedRows\":4,\"currencies\":{\"alteration\":30.346666666666188,\"augmentation\":7.836666666666571,\"clean_base\":1,\"transmutation\":1},\"consistencyMaximumDifferenceChaos\":1.0658141036401503e-14,\"canonicalBundleId\":\"core:clean-open-policy\"}}"
     },
     {
       "id": "V8-self-fracture-chronology-and-exact-target",
       "scenario": "phase2v-scroll-semantics-harvest-closure",
       "passed": true,
-      "durationMs": 32916,
-      "details": "{\"acquisitionContext\":{\"kind\":\"SELF_FRACTURE\",\"candidateId\":\"candidate_2\",\"methodId\":\"self-fracture_executable\",\"targetModId\":\"AfflictionJewelSmallPassivesGrantAttributes3\"},\"routeLabels\":[\"Start\",\"1 Fracture\",\"2 Transmute\",\"3 Alter\",\"4 Augment\",\"5 Regal\",\"6 Finish\",\"7 Recover\",\"Goal\"],\"selectedIds\":{\"nodes\":[\"node_start\",\"node_acquisition\",\"node_step_initialize\",\"node_step_roll\",\"node_step_fill\",\"node_step_promote\",\"node_step_finish\",\"node_step_recover\",\"node_terminal_target\"],\"edges\":[\"edge_node_start_to_node_acquisition\",\"edge_node_acquisition_to_node_step_initialize\",\"edge_node_step_initialize_to_node_step_roll\",\"edge_node_step_roll_to_node_step_fill\",\"edge_node_step_fill_to_node_step_promote\",\"edge_node_step_promote_to_node_step_finish\",\"edge_node_step_finish_to_node_step_recover\",\"edge_node_step_recover_to_node_terminal_target\"]},\"exactTechnicalTarget\":true}"
+      "durationMs": 28764,
+      "details": "{\"acquisitionContext\":{\"kind\":\"SELF_FRACTURE\",\"candidateId\":\"candidate_4\",\"methodId\":\"self-fracture_executable\",\"targetModId\":\"AfflictionJewelSmallPassivesGrantES3\"},\"routeLabels\":[\"Start\",\"1 Fracture\",\"2 Transmute\",\"3 Alter\",\"4 Augment\",\"5 Regal\",\"6 Finish\",\"7 Harvest\",\"8 Recover\",\"Goal\"],\"selectedIds\":{\"nodes\":[\"node_start\",\"node_acquisition\",\"node_step_initialize\",\"node_step_roll\",\"node_step_fill\",\"node_step_promote\",\"node_step_finish\",\"node_step_specialized\",\"node_step_recover\",\"node_terminal_target\"],\"edges\":[\"edge_node_start_to_node_acquisition\",\"edge_node_acquisition_to_node_step_initialize\",\"edge_node_step_initialize_to_node_step_roll\",\"edge_node_step_roll_to_node_step_fill\",\"edge_node_step_fill_to_node_step_promote\",\"edge_node_step_promote_to_node_step_finish\",\"edge_node_step_finish_to_node_step_specialized\",\"edge_node_step_specialized_to_node_step_recover\",\"edge_node_step_recover_to_node_terminal_target\"]},\"exactTechnicalTarget\":true}"
     },
     {
       "id": "V4-route-rail-horizontal-following-only",
       "scenario": "phase2v-scroll-semantics-harvest-closure",
       "passed": true,
-      "durationMs": 6201,
-      "details": "{\"scrollLeft\":352,\"activeNodeId\":\"node_terminal_target\",\"activeInside\":true,\"windowY\":14390,\"workerMessagesAdded\":0}"
+      "durationMs": 1469,
+      "details": "{\"scrollLeft\":35,\"activeNodeId\":\"node_step_initialize\",\"activeInside\":true,\"windowY\":14534,\"workerMessagesAdded\":0}"
     },
     {
       "id": "V9-single-terminal-one-two-and-four-mod",
       "scenario": "phase2v-scroll-semantics-harvest-closure",
       "passed": true,
-      "durationMs": 81,
-      "details": "{\"oneMod\":\"one Goal / zero Complete\",\"fourMod\":{\"graphTerminalCount\":1,\"goalLabels\":1,\"completeLabels\":0,\"labels\":[\"Start\",\"1 Fracture\",\"2 Transmute\",\"3 Alter\",\"4 Augment\",\"5 Regal\",\"6 Finish\",\"7 Recover\",\"Goal\"]},\"twoMod\":\"checked after Harvest solve\"}"
+      "durationMs": 83,
+      "details": "{\"oneMod\":\"one Goal / zero Complete\",\"fourMod\":{\"graphTerminalCount\":1,\"goalLabels\":1,\"completeLabels\":0,\"labels\":[\"Start\",\"1 Fracture\",\"2 Transmute\",\"3 Alter\",\"4 Augment\",\"5 Regal\",\"6 Finish\",\"7 Harvest\",\"8 Recover\",\"Goal\"]},\"twoMod\":\"checked after Harvest solve\"}"
     },
     {
       "id": "V14-four-mod-solver-proof-accounting-regression",
       "scenario": "phase2v-scroll-semantics-harvest-closure",
       "passed": true,
       "durationMs": 0,
-      "details": "{\"ids\":[\"AfflictionJewelSmallPassivesGrantInt3\",\"AfflictionJewelSmallPassivesGrantAttributes3\",\"AfflictionJewelSmallPassivesHaveIncreasedEffect2\",\"AfflictionJewelSmallPassivesGrantES3\"],\"risk\":{\"onPolicyReachableStates\":462,\"onPolicyTerminalStates\":2,\"terminalAbsorptionProbability\":1,\"selectedPolicyProper\":true,\"unresolvedOnPolicyProbability\":0},\"accounting\":{\"acquisitionCost\":1477.9412563329897,\"downstreamCost\":2666.695661575535,\"fullCost\":4144.636917908525,\"difference\":1.8189894035458565e-12,\"acquisitionRows\":9,\"downstreamRows\":6,\"combinedRows\":10,\"currencies\":{\"alteration\":13115.220247317688,\"annul\":34.385049787080945,\"augmentation\":932.0133895642756,\"clean_base\":1,\"clean_base_reacquisition\":2.9999999999992983,\"exalt\":44.28556026393135,\"fracturing\":3.9999999999990683,\"regal\":884.2467228976187,\"scour\":880.2467228975945,\"transmutation\":3.9999999999992926}}}"
+      "details": "{\"ids\":[\"AfflictionJewelSmallPassivesGrantInt3\",\"AfflictionJewelSmallPassivesGrantAttributes3\",\"AfflictionJewelSmallPassivesHaveIncreasedEffect2\",\"AfflictionJewelSmallPassivesGrantES3\"],\"risk\":{\"onPolicyReachableStates\":398,\"onPolicyTerminalStates\":2,\"terminalAbsorptionProbability\":1,\"selectedPolicyProper\":true,\"unresolvedOnPolicyProbability\":0},\"accounting\":{\"acquisitionCost\":1221.276708800017,\"downstreamCost\":3783.8319367870135,\"fullCost\":5005.108645587031,\"difference\":5.4569682106375694e-12,\"acquisitionRows\":9,\"downstreamRows\":6,\"combinedRows\":10,\"currencies\":{\"alteration\":21232.411682626825,\"annul\":33.54621756808432,\"augmentation\":898.1440015659149,\"clean_base\":1,\"clean_base_reacquisition\":3.000000000000043,\"exalt\":38.54621756810091,\"fracturing\":4.000000000000056,\"regal\":869.7973348992547,\"scour\":865.7973348992423,\"transmutation\":4.000000000000053},\"consistencyMaximumDifferenceChaos\":5.4569682106375694e-12,\"canonicalBundleId\":\"bundle:family_fracture_AfflictionJewelSmallPassivesGrantES3\"}}"
     },
     {
       "id": "V10-V13-harvest-certified-mechanics-math-and-methods",
       "scenario": "phase2v-scroll-semantics-harvest-closure",
       "passed": true,
-      "durationMs": 31525,
-      "details": "{\"lifecycle\":\"RESOLVED_MORE_EXPENSIVE\",\"certification\":{\"status\":\"CERTIFIED\",\"contractVersion\":\"REPEATABLE_FULL_REROLL_V1\",\"actionId\":\"harvest_reforge_defences\",\"kernelIdentity\":\"Large Cluster Jewel|10% increased Attack Damage|84|8|rare|influenced=false|synthesised=false|acquisitionMenu=false|methodFamilyActionEvidence=\",\"transitionOutcomeCount\":140076,\"successOutcomeCount\":743,\"missOutcomeCount\":139333,\"totalProbabilityMass\":1.0000000000001161,\"successProbabilityPerApplication\":0.004843655474498472,\"expectedApplications\":206.45564187315432,\"allMissesRemainLegal\":true,\"allMissesShareKernel\":true,\"preservedComponentsIdentical\":true,\"nonPersistentAffixesReplaced\":true,\"enabledActionSetAudit\":\"ONLY_CERTIFIED_REROLL_LEGAL_IN_QUOTIENT\",\"absorbingSuccess\":true,\"rejectionReasons\":[]},\"expectedApplications\":206.45564187315432,\"reportedApplications\":206.45564187753305,\"monteCarlo\":{\"trials\":20000,\"mean\":208.46645,\"relativeDifference\":0.009739661791762139},\"actionSets\":{\"harvest\":[\"harvest_reforge_defences\",\"regal_orb\",\"transmutation_orb\"],\"conventional\":[\"alteration_orb\",\"augmentation_orb\",\"exalted_orb\",\"regal_orb\",\"scouring_orb\",\"transmutation_orb\"]},\"accounting\":{\"acquisitionCost\":1,\"downstreamCost\":183.65268918864078,\"fullCost\":184.65268918864078,\"difference\":9.379164112033322e-13,\"acquisitionRows\":1,\"downstreamRows\":6,\"combinedRows\":7,\"currencies\":{\"alteration\":855.6278916801127,\"augmentation\":228.48491291912092,\"clean_base\":1,\"exalt\":12.117396222309342,\"regal\":58.311759996373,\"scour\":57.31175999637252,\"transmutation\":58.31175999637502}},\"terminal\":{\"graphTerminalCount\":1,\"goalLabels\":1,\"completeLabels\":0,\"labels\":[\"Start\",\"1 Transmute\",\"2 Alter\",\"3 Augment\",\"4 Regal\",\"5 Finish\",\"6 Recover\",\"Goal\"]}}"
+      "durationMs": 23888,
+      "details": "{\"lifecycle\":\"RESOLVED_MORE_EXPENSIVE\",\"certification\":{\"status\":\"CERTIFIED\",\"contractVersion\":\"REPEATABLE_FULL_REROLL_V1\",\"actionId\":\"harvest_reforge_defences\",\"kernelIdentity\":\"Large Cluster Jewel|10% increased Attack Damage|84|8|rare|influenced=false|synthesised=false|acquisitionMenu=false|methodFamilyActionEvidence=\",\"transitionOutcomeCount\":140076,\"successOutcomeCount\":743,\"missOutcomeCount\":139333,\"totalProbabilityMass\":1.0000000000001161,\"successProbabilityPerApplication\":0.004843655474498472,\"expectedApplications\":206.45564187315432,\"allMissesRemainLegal\":true,\"allMissesShareKernel\":true,\"preservedComponentsIdentical\":true,\"nonPersistentAffixesReplaced\":true,\"enabledActionSetAudit\":\"ONLY_CERTIFIED_REROLL_LEGAL_IN_QUOTIENT\",\"absorbingSuccess\":true,\"rejectionReasons\":[]},\"expectedApplications\":206.45564187315432,\"reportedApplications\":206.45564187753305,\"monteCarlo\":{\"trials\":20000,\"mean\":208.46645,\"relativeDifference\":0.009739661791762139},\"actionSets\":{\"harvest\":[\"harvest_reforge_defences\",\"regal_orb\",\"transmutation_orb\"],\"conventional\":[\"alteration_orb\",\"augmentation_orb\",\"exalted_orb\",\"regal_orb\",\"scouring_orb\",\"transmutation_orb\"]},\"accounting\":{\"acquisitionCost\":2,\"downstreamCost\":170.80424051052188,\"fullCost\":172.80424051052188,\"difference\":1.5916157281026244e-12,\"acquisitionRows\":1,\"downstreamRows\":6,\"combinedRows\":7,\"currencies\":{\"alteration\":855.6278916801127,\"augmentation\":228.48491291912092,\"clean_base\":1,\"exalt\":12.117396222309342,\"regal\":58.311759996373,\"scour\":57.31175999637252,\"transmutation\":58.31175999637502},\"consistencyMaximumDifferenceChaos\":1.5916157281026244e-12,\"canonicalBundleId\":\"core:clean-open-policy\"},\"terminal\":{\"graphTerminalCount\":1,\"goalLabels\":1,\"completeLabels\":0,\"labels\":[\"Start\",\"1 Transmute\",\"2 Alter\",\"3 Augment\",\"4 Regal\",\"5 Finish\",\"6 Harvest\",\"7 Recover\",\"Goal\"]}}"
     },
     {
       "id": "V15-V16-performance-memory-worker-and-evidence-audit",
       "scenario": "phase2v-scroll-semantics-harvest-closure",
       "passed": true,
-      "durationMs": 9238,
+      "durationMs": 2238,
       "details": "{\"performance\":{\"retainedStates\":440,\"analyticalOutcomes\":140076,\"compressionRatio\":318.3545454545455,\"workerMessagesAdded\":0,\"memoryDeltaBytes\":0},\"artifacts\":[\"phase2vOneModCleanGraph\",\"phase2vSelfFractureChronology\",\"phase2vScrolledAbovePlaying\",\"phase2vHorizontalRailFollow\",\"phase2vArmourEvasionComparison\"]}"
     },
     {
@@ -304,56 +304,224 @@
       "scenario": "phase2v-scroll-semantics-harvest-closure",
       "passed": true,
       "durationMs": 0,
-      "details": "{\"phase2tAccountingPreserved\":true,\"phase2uInteractionAndLabelsPreserved\":true,\"fallbackSubstitutionUsed\":false,\"schemaVersion\":\"2V.1\"}"
+      "details": "{\"phase2tAccountingPreserved\":true,\"phase2uInteractionAndLabelsPreserved\":true,\"fallbackSubstitutionUsed\":false,\"schemaVersion\":\"2W.1\"}"
+    },
+    {
+      "id": "W0-phase-session-worker-lifecycle-isolation",
+      "scenario": "phase2w-canonical-objective-handoff-autonomous",
+      "passed": true,
+      "durationMs": 372,
+      "details": "{\"priorWorkerDisposed\":true,\"phaseWorkerSpawned\":true,\"evidenceHistoryPreserved\":true}"
+    },
+    {
+      "id": "W2-eldritch-canonical-selected-policy-binding",
+      "scenario": "phase2w-canonical-objective-handoff-autonomous",
+      "passed": true,
+      "durationMs": 19833,
+      "details": "{\"fixture\":\"phase2w_eldritch_low_tolerance\",\"metrics\":{\"cost\":593.4825975838229,\"actions\":4381.56715199588,\"timeMs\":1752626.860798385,\"actionId\":\"acquire_candidate_0_clean-base_0\"},\"accounting\":{\"acquisitionCost\":4,\"downstreamCost\":589.4825975838229,\"fullCost\":593.4825975838229,\"difference\":5.229594535194337e-12,\"acquisitionRows\":1,\"downstreamRows\":6,\"combinedRows\":7,\"currencies\":{\"alteration\":3197.339926989517,\"augmentation\":827.5913137452802,\"clean_base\":1,\"exalt\":18.559927286636803,\"regal\":113.02532799149499,\"scour\":112.02532799147909,\"transmutation\":113.025327991485},\"consistencyMaximumDifferenceChaos\":5.229594535194337e-12,\"canonicalBundleId\":\"core:clean-open-policy\"},\"consistency\":{\"status\":\"OK\",\"toleranceChaos\":0.05,\"selectedBundleId\":\"core:clean-open-policy\",\"selectedBundleSource\":\"OPEN\",\"routeActionId\":\"acquire_candidate_0_clean-base_0\",\"acquisitionCandidateId\":\"candidate_0\",\"acquisitionMethodId\":\"clean-base_0\",\"routeCostChaos\":593.4825975838281,\"solverCostChaos\":593.4825975838281,\"usageCostChaos\":593.4825975838229,\"metricsCostChaos\":593.4825975838281,\"maximumDifferenceChaos\":5.229594535194337e-12}}"
+    },
+    {
+      "id": "W2b-fail-closed-reconciliation-invariant",
+      "scenario": "phase2w-canonical-objective-handoff-autonomous",
+      "passed": true,
+      "durationMs": 55,
+      "details": "{\"status\":\"OK\",\"toleranceChaos\":0.05,\"selectedBundleId\":\"core:clean-open-policy\",\"selectedBundleSource\":\"OPEN\",\"routeActionId\":\"acquire_candidate_0_clean-base_0\",\"acquisitionCandidateId\":\"candidate_0\",\"acquisitionMethodId\":\"clean-base_0\",\"routeCostChaos\":593.4825975838281,\"solverCostChaos\":593.4825975838281,\"usageCostChaos\":593.4825975838229,\"metricsCostChaos\":593.4825975838281,\"maximumDifferenceChaos\":5.229594535194337e-12}"
+    },
+    {
+      "id": "W3-selected-policy-action-evidence",
+      "scenario": "phase2w-canonical-objective-handoff-autonomous",
+      "passed": true,
+      "durationMs": 0,
+      "details": "{\"acquisitionKind\":\"CLEAN\",\"fractureUsage\":0,\"selectedActions\":[\"alteration_orb\",\"augmentation_orb\",\"scouring_orb\",\"exalted_orb\",\"regal_orb\",\"clean_base_initial\",\"transmutation_orb\"]}"
+    },
+    {
+      "id": "W4-final-progress-result-dom-export-differential",
+      "scenario": "phase2w-canonical-objective-handoff-autonomous",
+      "passed": true,
+      "durationMs": 1093,
+      "details": "{\"requestId\":\"optimizer_1\",\"completion\":{\"recommendationStatus\":\"PROVISIONAL_RESOLVED\",\"selectedRouteName\":\"Start clean base: Clean Base\",\"expectedCostChaos\":593.4825975838229,\"objective\":{\"kind\":\"CHEAPEST_CHAOS\"},\"selectedPolicySource\":\"OPEN\",\"selectedBundleId\":\"core:clean-open-policy\"},\"dom\":{\"workerSelectedRoute\":\"Start clean base: Clean Base\",\"publicSelectedRoute\":\"Start clean base: Clean Base\",\"proofLabel\":\"Best among resolved alternatives\",\"pricingLabel\":\"CURRENT_PRICING\"},\"exportReconciled\":true}"
+    },
+    {
+      "id": "W5-armour-evasion-cheapest-baseline",
+      "scenario": "phase2w-canonical-objective-handoff-autonomous",
+      "passed": true,
+      "durationMs": 7257,
+      "details": "{\"metrics\":{\"cost\":175.36284723500762,\"actions\":1160.5457125638522,\"timeMs\":464218.28502554406,\"actionId\":\"acquire_candidate_0_clean-base_0\"},\"candidateCount\":1,\"accounting\":{\"acquisitionCost\":4,\"downstreamCost\":171.36284723500762,\"fullCost\":175.36284723500762,\"difference\":1.3926637620897964e-12,\"acquisitionRows\":1,\"downstreamRows\":6,\"combinedRows\":7,\"currencies\":{\"alteration\":780.2200186642889,\"augmentation\":208.34816718306672,\"clean_base\":1,\"exalt\":13.459576512520412,\"regal\":53.172650067988705,\"scour\":52.17265006798861,\"transmutation\":53.17265006798894},\"consistencyMaximumDifferenceChaos\":1.3926637620897964e-12,\"canonicalBundleId\":\"core:clean-open-policy\"},\"requestContext\":{\"baseType\":\"Large Cluster Jewel\",\"clusterType\":\"10% increased Attack Damage\",\"itemLevel\":84,\"passiveCount\":12,\"targetMods\":[\"AfflictionJewelSmallPassivesGrantArmour3_\",\"AfflictionJewelSmallPassivesGrantEvasion3\"],\"prices\":{\"currencyRates\":{\"chaos\":1,\"divine\":193.9,\"fracturing\":355.8,\"annul\":8.67,\"exalt\":1.63,\"scour\":0.3711,\"alteration\":0.1405,\"transmutation\":0.01102,\"augmentation\":0.06493,\"regal\":0.119,\"wildLifeforce\":0.01838,\"vividLifeforce\":0.06815,\"primalLifeforce\":0.03697},\"cleanBaseCostChaos\":4,\"cleanBasePriceSource\":\"manual\",\"cleanBasePriceProvenance\":\"Phase 2W frozen browser fixture; 2026-08-13 Allflame exact 12-passive ilvl 84 base quote\"}}}"
+    },
+    {
+      "id": "W6-armour-evasion-fewest-at-600",
+      "scenario": "phase2w-canonical-objective-handoff-autonomous",
+      "passed": true,
+      "durationMs": 21065,
+      "details": "{\"metrics\":{\"cost\":576.57990101593,\"actions\":208.45564187753305,\"timeMs\":413711.2837550661,\"actionId\":\"method:family_harvest_defences\"},\"eligiblePolicies\":3,\"accounting\":{\"acquisitionCost\":4,\"downstreamCost\":572.57990101593,\"fullCost\":576.57990101593,\"difference\":1.1368683772161603e-13,\"acquisitionRows\":1,\"downstreamRows\":3,\"combinedRows\":4,\"currencies\":{\"clean_base\":1,\"primalLifeforce\":15484.173140814979,\"regal\":0.9999999999999898,\"transmutation\":1},\"consistencyMaximumDifferenceChaos\":1.1368683772161603e-13,\"canonicalBundleId\":\"bundle:family_harvest_defences\"},\"proof\":\"BEST_RESOLVED_WITHIN_COST\",\"repeatableCertification\":{\"status\":\"CERTIFIED\",\"contractVersion\":\"REPEATABLE_FULL_REROLL_V1\",\"actionId\":\"harvest_reforge_defences\",\"kernelIdentity\":\"Large Cluster Jewel|10% increased Attack Damage|84|12|rare|influenced=false|synthesised=false|acquisitionMenu=false|methodFamilyActionEvidence=\",\"transitionOutcomeCount\":140076,\"successOutcomeCount\":743,\"missOutcomeCount\":139333,\"totalProbabilityMass\":1.0000000000001161,\"successProbabilityPerApplication\":0.004843655474498472,\"expectedApplications\":206.45564187315432,\"allMissesRemainLegal\":true,\"allMissesShareKernel\":true,\"preservedComponentsIdentical\":true,\"nonPersistentAffixesReplaced\":true,\"enabledActionSetAudit\":\"ONLY_CERTIFIED_REROLL_LEGAL_IN_QUOTIENT\",\"absorbingSuccess\":true,\"rejectionReasons\":[]},\"requestContext\":{\"baseType\":\"Large Cluster Jewel\",\"clusterType\":\"10% increased Attack Damage\",\"itemLevel\":84,\"passiveCount\":12,\"targetMods\":[\"AfflictionJewelSmallPassivesGrantArmour3_\",\"AfflictionJewelSmallPassivesGrantEvasion3\"],\"prices\":{\"currencyRates\":{\"chaos\":1,\"divine\":193.9,\"fracturing\":355.8,\"annul\":8.67,\"exalt\":1.63,\"scour\":0.3711,\"alteration\":0.1405,\"transmutation\":0.01102,\"augmentation\":0.06493,\"regal\":0.119,\"wildLifeforce\":0.01838,\"vividLifeforce\":0.06815,\"primalLifeforce\":0.03697},\"cleanBaseCostChaos\":4,\"cleanBasePriceSource\":\"manual\",\"cleanBasePriceProvenance\":\"Phase 2W frozen browser fixture; 2026-08-13 Allflame exact 12-passive ilvl 84 base quote\"}}}"
+    },
+    {
+      "id": "W7-armour-evasion-fastest-at-600",
+      "scenario": "phase2w-canonical-objective-handoff-autonomous",
+      "passed": true,
+      "durationMs": 27015,
+      "details": "{\"metrics\":{\"cost\":347.75267148497517,\"actions\":742.212545830537,\"timeMs\":296885.018332211,\"actionId\":\"method:family_conventional\"},\"eligiblePolicies\":3,\"accounting\":{\"acquisitionCost\":4,\"downstreamCost\":343.75267148497517,\"fullCost\":347.75267148497517,\"difference\":9.094947017729282e-13,\"acquisitionRows\":1,\"downstreamRows\":7,\"combinedRows\":8,\"currencies\":{\"alteration\":528.897472776974,\"annul\":22.751373314109976,\"augmentation\":66.17482210501325,\"clean_base\":1,\"exalt\":32.343728199775306,\"regal\":31.015049811553094,\"scour\":30.015049811551425,\"transmutation\":31.01504981155174},\"consistencyMaximumDifferenceChaos\":9.094947017729282e-13,\"canonicalBundleId\":\"bundle:family_conventional\"},\"proof\":\"BEST_RESOLVED_WITHIN_COST\"}"
+    },
+    {
+      "id": "W8-armour-evasion-500-ceiling",
+      "scenario": "phase2w-canonical-objective-handoff-autonomous",
+      "passed": true,
+      "durationMs": 26362,
+      "details": "{\"metrics\":{\"cost\":347.75267148497517,\"actions\":742.212545830537,\"timeMs\":296885.018332211,\"actionId\":\"method:family_conventional\"},\"eligiblePolicies\":2,\"accounting\":{\"acquisitionCost\":4,\"downstreamCost\":343.75267148497517,\"fullCost\":347.75267148497517,\"difference\":9.094947017729282e-13,\"acquisitionRows\":1,\"downstreamRows\":7,\"combinedRows\":8,\"currencies\":{\"alteration\":528.897472776974,\"annul\":22.751373314109976,\"augmentation\":66.17482210501325,\"clean_base\":1,\"exalt\":32.343728199775306,\"regal\":31.015049811553094,\"scour\":30.015049811551425,\"transmutation\":31.01504981155174},\"consistencyMaximumDifferenceChaos\":9.094947017729282e-13,\"canonicalBundleId\":\"bundle:family_conventional\"}}"
+    },
+    {
+      "id": "W12-final-unified-pareto-policy-set",
+      "scenario": "phase2w-canonical-objective-handoff-autonomous",
+      "passed": true,
+      "durationMs": 0,
+      "details": "{\"unifiedPolicies\":5,\"resolvedFamilies\":7,\"paretoPolicies\":4}"
+    },
+    {
+      "id": "W10-objective-proof-truthfulness",
+      "scenario": "phase2w-canonical-objective-handoff-autonomous",
+      "passed": true,
+      "durationMs": 0,
+      "details": "{\"fewest\":\"BEST_RESOLVED_WITHIN_COST\",\"fastest\":\"BEST_RESOLVED_WITHIN_COST\",\"ceiling500\":\"BEST_RESOLVED_WITHIN_COST\"}"
+    },
+    {
+      "id": "W11-objective-aware-acquisition-pruning",
+      "scenario": "phase2w-canonical-objective-handoff-autonomous",
+      "passed": true,
+      "durationMs": 0,
+      "details": "{\"cheapest\":{\"cost\":175.36284723500762,\"actions\":1160.5457125638522,\"timeMs\":464218.28502554406,\"actionId\":\"acquire_candidate_0_clean-base_0\"},\"fewest\":{\"cost\":576.57990101593,\"actions\":208.45564187753305,\"timeMs\":413711.2837550661,\"actionId\":\"method:family_harvest_defences\"},\"fastest\":{\"cost\":347.75267148497517,\"actions\":742.212545830537,\"timeMs\":296885.018332211,\"actionId\":\"method:family_conventional\"}}"
+    },
+    {
+      "id": "W1-phase2v-mechanics-proof-worker-and-label-preservation",
+      "scenario": "phase2w-canonical-objective-handoff-autonomous",
+      "passed": true,
+      "durationMs": 394,
+      "details": "{\"phase2vAccounting\":true,\"repeatableHarvest\":true,\"playerLabels\":true,\"workerProtocol\":{\"types\":[\"PROGRESS\",\"PROGRESS\",\"PROGRESS\",\"PROGRESS\",\"PROGRESS\",\"PROGRESS\",\"COMPLETE\",\"RESULT\",\"PROGRESS\",\"PROGRESS\",\"PROGRESS\",\"PROGRESS\",\"PROGRESS\",\"COMPLETE\",\"RESULT\",\"PROGRESS\",\"PROGRESS\",\"PROGRESS\",\"PROGRESS\",\"PROGRESS\",\"COMPLETE\",\"RESULT\",\"PROGRESS\",\"PROGRESS\",\"PROGRESS\",\"PROGRESS\",\"PROGRESS\",\"PROGRESS\",\"PROGRESS\",\"PROGRESS\",\"COMPLETE\",\"RESULT\",\"PROGRESS\",\"PROGRESS\",\"PROGRESS\",\"PROGRESS\",\"PROGRESS\",\"PROGRESS\",\"COMPLETE\",\"RESULT\",\"ERROR\",\"PROGRESS\",\"PROGRESS\",\"PROGRESS\",\"PROGRESS\",\"PROGRESS\",\"PROGRESS\",\"PROGRESS\",\"PROGRESS\",\"PROGRESS\",\"PROGRESS\",\"PROGRESS\",\"PROGRESS\",\"PROGRESS\",\"PROGRESS\",\"PROGRESS\",\"PROGRESS\",\"PROGRESS\",\"PROGRESS\",\"PROGRESS\",\"PROGRESS\",\"PROGRESS\",\"PROGRESS\",\"PROGRESS\",\"PROGRESS\",\"PROGRESS\",\"PROGRESS\",\"PROGRESS\",\"COMPLETE\",\"RESULT\",\"PROGRESS\",\"PROGRESS\",\"PROGRESS\",\"PROGRESS\",\"PROGRESS\",\"PROGRESS\",\"PROGRESS\",\"PROGRESS\",\"PROGRESS\",\"PROGRESS\",\"PROGRESS\",\"PROGRESS\",\"PROGRESS\",\"PROGRESS\",\"PROGRESS\",\"PROGRESS\",\"COMPLETE\",\"RESULT\",\"PROGRESS\",\"PROGRESS\",\"PROGRESS\",\"PROGRESS\",\"PROGRESS\",\"COMPLETE\",\"RESULT\",\"PROGRESS\",\"PROGRESS\",\"PROGRESS\",\"PROGRESS\",\"PROGRESS\",\"PROGRESS\",\"PROGRESS\",\"COMPLETE\",\"RESULT\",\"PROGRESS\",\"PROGRESS\",\"PROGRESS\",\"PROGRESS\",\"PROGRESS\",\"COMPLETE\",\"RESULT\",\"PROGRESS\",\"PROGRESS\",\"PROGRESS\",\"PROGRESS\",\"PROGRESS\",\"PROGRESS\",\"PROGRESS\",\"COMPLETE\",\"RESULT\",\"PROGRESS\",\"PROGRESS\",\"PROGRESS\",\"PROGRESS\",\"PROGRESS\",\"COMPLETE\",\"RESULT\",\"PROGRESS\",\"PROGRESS\",\"PROGRESS\",\"PROGRESS\",\"PROGRESS\",\"PROGRESS\",\"PROGRESS\",\"PROGRESS\",\"COMPLETE\",\"RESULT\",\"PROGRESS\",\"PROGRESS\",\"PROGRESS\",\"PROGRESS\",\"PROGRESS\",\"COMPLETE\",\"RESULT\",\"PROGRESS\",\"PROGRESS\",\"PROGRESS\",\"PROGRESS\",\"PROGRESS\",\"PROGRESS\",\"COMPLETE\",\"RESULT\",\"PROGRESS\",\"PROGRESS\",\"PROGRESS\",\"PROGRESS\",\"PROGRESS\",\"PROGRESS\",\"PROGRESS\",\"PROGRESS\",\"PROGRESS\",\"COMPLETE\",\"RESULT\",\"PROGRESS\",\"PROGRESS\",\"PROGRESS\",\"PROGRESS\",\"PROGRESS\",\"COMPLETE\",\"RESULT\",\"PROGRESS\",\"PROGRESS\",\"PROGRESS\",\"PROGRESS\",\"PROGRESS\",\"COMPLETE\",\"RESULT\",\"PROGRESS\",\"PROGRESS\",\"PROGRESS\",\"PROGRESS\",\"PROGRESS\",\"PROGRESS\",\"PROGRESS\",\"PROGRESS\",\"PROGRESS\",\"PROGRESS\",\"PROGRESS\",\"PROGRESS\",\"PROGRESS\",\"PROGRESS\",\"PROGRESS\",\"PROGRESS\",\"PROGRESS\",\"PROGRESS\",\"PROGRESS\",\"PROGRESS\",\"PROGRESS\",\"COMPLETE\",\"RESULT\",\"PROGRESS\",\"PROGRESS\",\"PROGRESS\",\"PROGRESS\",\"PROGRESS\",\"PROGRESS\",\"PROGRESS\",\"COMPLETE\",\"RESULT\",\"PROGRESS\",\"PROGRESS\",\"PROGRESS\",\"PROGRESS\",\"PROGRESS\",\"PROGRESS\",\"PROGRESS\",\"PROGRESS\",\"PROGRESS\",\"PROGRESS\",\"PROGRESS\",\"PROGRESS\",\"PROGRESS\",\"PROGRESS\",\"PROGRESS\",\"PROGRESS\",\"PROGRESS\",\"COMPLETE\",\"RESULT\",\"PROGRESS\",\"PROGRESS\",\"PROGRESS\",\"PROGRESS\",\"PROGRESS\",\"PROGRESS\",\"PROGRESS\",\"PROGRESS\",\"PROGRESS\",\"PROGRESS\",\"PROGRESS\",\"COMPLETE\",\"RESULT\",\"PROGRESS\",\"PROGRESS\",\"PROGRESS\",\"PROGRESS\",\"PROGRESS\",\"PROGRESS\",\"PROGRESS\",\"PROGRESS\",\"PROGRESS\",\"PROGRESS\",\"PROGRESS\",\"PROGRESS\",\"PROGRESS\",\"PROGRESS\",\"COMPLETE\",\"RESULT\"],\"completeSequence\":291,\"resultSequence\":292}}"
+    },
+    {
+      "id": "W13-signed-tradeoff-copy",
+      "scenario": "phase2w-canonical-objective-handoff-autonomous",
+      "passed": true,
+      "durationMs": 222,
+      "details": "{\"actionsSaved\":533.756903953004,\"timeSavedMs\":-116826.2654228551,\"directionalCopy\":[\"fewer\",\"slower\"]}"
+    },
+    {
+      "id": "W9-dynamic-open-conventional-harvest-ceiling-boundaries",
+      "scenario": "phase2w-canonical-objective-handoff-autonomous",
+      "passed": true,
+      "durationMs": 165796,
+      "details": "[{\"kind\":\"OPEN\",\"position\":\"below\",\"ceiling\":298.17977983058114,\"resolvedCost\":298.18977983058113,\"eligibility\":\"OVER_COST_CEILING\"},{\"kind\":\"OPEN\",\"position\":\"at\",\"ceiling\":298.18977983058113,\"resolvedCost\":298.18977983058113,\"eligibility\":\"RESOLVED_ELIGIBLE\"},{\"kind\":\"OPEN\",\"position\":\"above\",\"ceiling\":298.1997798305811,\"resolvedCost\":298.18977983058113,\"eligibility\":\"RESOLVED_ELIGIBLE\"},{\"kind\":\"CONVENTIONAL\",\"position\":\"below\",\"ceiling\":347.7426714849752,\"resolvedCost\":347.75267148497517,\"eligibility\":\"OVER_COST_CEILING\"},{\"kind\":\"CONVENTIONAL\",\"position\":\"at\",\"ceiling\":347.75267148497517,\"resolvedCost\":347.75267148497517,\"eligibility\":\"RESOLVED_ELIGIBLE\"},{\"kind\":\"CONVENTIONAL\",\"position\":\"above\",\"ceiling\":347.76267148497516,\"resolvedCost\":347.75267148497517,\"eligibility\":\"RESOLVED_ELIGIBLE\"},{\"kind\":\"HARVEST\",\"position\":\"below\",\"ceiling\":576.56990101593,\"resolvedCost\":576.57990101593,\"eligibility\":\"OVER_COST_CEILING\"},{\"kind\":\"HARVEST\",\"position\":\"at\",\"ceiling\":576.57990101593,\"resolvedCost\":576.57990101593,\"eligibility\":\"RESOLVED_ELIGIBLE\"},{\"kind\":\"HARVEST\",\"position\":\"above\",\"ceiling\":576.58990101593,\"resolvedCost\":576.57990101593,\"eligibility\":\"RESOLVED_ELIGIBLE\"}]"
+    },
+    {
+      "id": "W21-objective-transition-reuse-and-runtime",
+      "scenario": "phase2w-canonical-objective-handoff-autonomous",
+      "passed": true,
+      "durationMs": 6834,
+      "details": "{\"cheapestMs\":5642,\"fewestMs\":20640,\"fastestMs\":20448,\"repeatedCheapestMs\":5462,\"retainedStates\":5000,\"retainedTransitions\":17231,\"memoryDeltaBytes\":0}"
+    },
+    {
+      "id": "W14-cluster-group-handoff",
+      "scenario": "phase2w-canonical-objective-handoff-autonomous",
+      "passed": true,
+      "durationMs": 551,
+      "details": "{\"sourceLeague\":\"Allflame\",\"passiveChoice\":\"8\",\"handoffRenderMs\":115.03590000001714,\"targets\":[]}"
+    },
+    {
+      "id": "W15-three-real-notable-combo-handoffs",
+      "scenario": "phase2w-canonical-objective-handoff-autonomous",
+      "passed": true,
+      "durationMs": 896,
+      "details": "[{\"query\":\"Smite the Weak\",\"combo\":\"Smite the Weak\",\"base\":\"Large Cluster Jewel\",\"cluster\":\"10% increased Attack Damage\",\"targetIds\":[\"Smite the Weak\"],\"chosenPassive\":8,\"chosenItemLevel\":83,\"passiveOptions\":[\"8\"]},{\"query\":\"Enduring Composure\",\"combo\":\"Enduring Composure\",\"base\":\"Small Cluster Jewel\",\"cluster\":\"15% increased Armour\",\"targetIds\":[\"Enduring Composure\"],\"chosenPassive\":2,\"chosenItemLevel\":84,\"passiveOptions\":[\"2\",\"3\"]},{\"query\":\"Pure Agony\",\"combo\":\"Pure Agony\",\"base\":\"Medium Cluster Jewel\",\"cluster\":\"Minions deal 10% increased Damage while you are affected by a Herald\",\"targetIds\":[\"Pure Agony\"],\"chosenPassive\":4,\"chosenItemLevel\":83,\"passiveOptions\":[\"4\"]}]"
+    },
+    {
+      "id": "W16-eldritch-market-sku-passive-range-handoff",
+      "scenario": "phase2w-canonical-objective-handoff-autonomous",
+      "passed": true,
+      "durationMs": 287,
+      "details": "{\"combo\":\"Eldritch Inspiration + Low Tolerance\",\"passiveOptions\":[\"4\",\"5\"],\"selectedPassive\":5,\"targetIds\":[\"Eldritch Inspiration\",\"Low Tolerance\"]}"
+    },
+    {
+      "id": "W17-exact-sale-value-provenance-and-profit-only",
+      "scenario": "phase2w-canonical-objective-handoff-autonomous",
+      "passed": true,
+      "durationMs": 2716,
+      "details": "{\"saleValueChaos\":3,\"withSaleMetrics\":{\"cost\":9.427055174999975,\"actions\":65.83750000000028,\"timeMs\":26334.99999999998,\"actionId\":\"acquire_candidate_0_clean-base_0\"},\"mechanicsUnaffected\":true,\"artifact\":\"quality-lab\\\\reports\\\\evidence\\\\phase2w-exact-market-vs-craft.png\"}"
+    },
+    {
+      "id": "W18-handoff-export-share-import-round-trip",
+      "scenario": "phase2w-canonical-objective-handoff-autonomous",
+      "passed": true,
+      "durationMs": 574,
+      "details": "{\"expected\":{\"base\":\"Small Cluster Jewel\",\"cluster\":\"6% increased maximum Mana\",\"passive\":\"3\",\"itemLevel\":\"84\",\"league\":\"Allflame\",\"objective\":\"CHEAPEST_CHAOS\",\"sale\":\"3\",\"targetIds\":[\"AfflictionJewelSmallPassivesHaveIncreasedEffect2\"],\"provenance\":\"Loaded from Cluster Jewels\\n35% increased Small Passive Effect · 6% increased maximum Mana · 3 passives\\nBack to Cluster Jewels\\n\\nItem level was not unique in the source data; ilvl 84 was supplied as an editable default.\\n\\nSource market low: 3.0c · Allflame completed-jewel sampled low; 1631 listings / 10 sampled; priced 2026-08-26T05:57:03.071Z\\n\\nTechnical handoff details\"},\"shareVersion\":\"2W.1\",\"exportedSeedPreserved\":true}"
+    },
+    {
+      "id": "W19-mobile-keyboard-focus-overflow-and-labels",
+      "scenario": "phase2w-canonical-objective-handoff-autonomous",
+      "passed": true,
+      "durationMs": 292,
+      "details": "{\"keyboard\":true,\"passive\":5,\"beforeScrollY\":0,\"geometry\":{\"viewport\":390,\"documentWidth\":390,\"bodyWidth\":390,\"scrollY\":0},\"bannerRect\":{\"top\":190.5,\"bottom\":550.890625,\"viewportHeight\":844},\"artifact\":\"quality-lab\\\\reports\\\\evidence\\\\phase2w-mobile-handoff.png\"}"
+    },
+    {
+      "id": "W20-autonomous-generated-cluster-snapshot-matrix",
+      "scenario": "phase2w-canonical-objective-handoff-autonomous",
+      "passed": true,
+      "durationMs": 5926,
+      "details": "{\"seed\":\"phase2w-cluster-matrix-v1\",\"appCommit\":\"0800515ed5816745bf4c01b63cbe91aa72d88705\",\"fixtureInputs\":{\"generatedHandoffs\":[{\"query\":\"Smite the Weak\",\"combo\":\"Smite the Weak\",\"base\":\"Large Cluster Jewel\",\"cluster\":\"10% increased Attack Damage\",\"targetIds\":[\"Smite the Weak\"],\"chosenPassive\":8,\"chosenItemLevel\":83,\"passiveOptions\":[\"8\"]},{\"query\":\"Enduring Composure\",\"combo\":\"Enduring Composure\",\"base\":\"Small Cluster Jewel\",\"cluster\":\"15% increased Armour\",\"targetIds\":[\"Enduring Composure\"],\"chosenPassive\":2,\"chosenItemLevel\":84,\"passiveOptions\":[\"2\",\"3\"]},{\"query\":\"Pure Agony\",\"combo\":\"Pure Agony\",\"base\":\"Medium Cluster Jewel\",\"cluster\":\"Minions deal 10% increased Damage while you are affected by a Herald\",\"targetIds\":[\"Pure Agony\"],\"chosenPassive\":4,\"chosenItemLevel\":83,\"passiveOptions\":[\"4\"]},{\"combo\":\"Eldritch Inspiration + Low Tolerance\",\"passiveOptions\":[\"4\",\"5\"],\"selectedPassive\":5,\"targetIds\":[\"Eldritch Inspiration\",\"Low Tolerance\"]},{\"combo\":\"35% increased Small Passive Effect\",\"base\":\"Small Cluster Jewel\",\"cluster\":\"6% increased maximum Mana\",\"passiveOptions\":[\"3\"],\"saleValueChaos\":3,\"targetIds\":[\"AfflictionJewelSmallPassivesHaveIncreasedEffect2\"]}],\"targetOrderMetamorphic\":{\"baseType\":\"Large Cluster Jewel\",\"clusterType\":\"10% increased Attack Damage\",\"itemLevel\":84,\"passiveCount\":12,\"targetMods\":[\"AfflictionJewelSmallPassivesGrantArmour3_\",\"AfflictionJewelSmallPassivesGrantEvasion3\"],\"permutedTargetMods\":[\"AfflictionJewelSmallPassivesGrantEvasion3\",\"AfflictionJewelSmallPassivesGrantArmour3_\"]}},\"prices\":{\"currencyRates\":{\"chaos\":1,\"divine\":193.9,\"fracturing\":355.8,\"annul\":8.67,\"exalt\":1.63,\"scour\":0.3711,\"alteration\":0.1405,\"transmutation\":0.01102,\"augmentation\":0.06493,\"regal\":0.119,\"wildLifeforce\":0.01838,\"vividLifeforce\":0.06815,\"primalLifeforce\":0.03697},\"cleanBaseCostChaos\":4,\"cleanBasePriceSource\":\"manual\",\"cleanBasePriceProvenance\":\"Phase 2W frozen browser fixture; 2026-08-13 Allflame exact 12-passive ilvl 84 base quote\"},\"objective\":{\"kind\":\"CHEAPEST_CHAOS\"},\"budgets\":{\"maxStates\":5000,\"maxWallTimeMs\":30000,\"maxExpansionRounds\":3},\"browserVersion\":\"151.0.7922.34\",\"cases\":[{\"query\":\"Smite the Weak\",\"combo\":\"Smite the Weak\",\"base\":\"Large Cluster Jewel\",\"cluster\":\"10% increased Attack Damage\",\"targetIds\":[\"Smite the Weak\"],\"chosenPassive\":8,\"chosenItemLevel\":83,\"passiveOptions\":[\"8\"]},{\"query\":\"Enduring Composure\",\"combo\":\"Enduring Composure\",\"base\":\"Small Cluster Jewel\",\"cluster\":\"15% increased Armour\",\"targetIds\":[\"Enduring Composure\"],\"chosenPassive\":2,\"chosenItemLevel\":84,\"passiveOptions\":[\"2\",\"3\"]},{\"query\":\"Pure Agony\",\"combo\":\"Pure Agony\",\"base\":\"Medium Cluster Jewel\",\"cluster\":\"Minions deal 10% increased Damage while you are affected by a Herald\",\"targetIds\":[\"Pure Agony\"],\"chosenPassive\":4,\"chosenItemLevel\":83,\"passiveOptions\":[\"4\"]},{\"combo\":\"Eldritch Inspiration + Low Tolerance\",\"passiveOptions\":[\"4\",\"5\"],\"selectedPassive\":5,\"targetIds\":[\"Eldritch Inspiration\",\"Low Tolerance\"]},{\"combo\":\"35% increased Small Passive Effect\",\"base\":\"Small Cluster Jewel\",\"cluster\":\"6% increased maximum Mana\",\"passiveOptions\":[\"3\"],\"saleValueChaos\":3,\"targetIds\":[\"AfflictionJewelSmallPassivesHaveIncreasedEffect2\"]}],\"targetOrderMetamorphic\":{\"inputOrder\":[\"AfflictionJewelSmallPassivesGrantArmour3_\",\"AfflictionJewelSmallPassivesGrantEvasion3\"],\"permutedOrder\":[\"AfflictionJewelSmallPassivesGrantEvasion3\",\"AfflictionJewelSmallPassivesGrantArmour3_\"],\"canonicalTargetIds\":[\"AfflictionJewelSmallPassivesGrantArmour3_\",\"AfflictionJewelSmallPassivesGrantEvasion3\"],\"metrics\":{\"cost\":175.36284723500762,\"actions\":1160.5457125638522,\"timeMs\":464218.28502554406,\"actionId\":\"acquire_candidate_0_clean-base_0\"},\"enabledHarvestActions\":[\"harvest_reforge_defences\"]}}"
+    },
+    {
+      "id": "W22-browser-release-hygiene-and-stable-evidence",
+      "scenario": "phase2w-canonical-objective-handoff-autonomous",
+      "passed": true,
+      "durationMs": 271,
+      "details": "{\"appVersion\":\"2W.1\",\"fixtureCorpus\":\"Phase2W-Frozen-Browser-Corpus-1\",\"artifacts\":[\"phase2wMarketVsCraft\",\"phase2wHandoffExport\",\"phase2wMobileHandoff\"],\"unitTestsAddedOrRun\":false}"
     },
     {
       "id": "real-dom-viewport-matrix",
       "scenario": "responsive-accessibility-keyboard",
       "passed": true,
-      "durationMs": 269,
+      "durationMs": 345,
       "details": "[{\"requestedViewport\":320,\"clientWidth\":320,\"documentWidth\":320,\"bodyWidth\":320},{\"requestedViewport\":390,\"clientWidth\":390,\"documentWidth\":390,\"bodyWidth\":390},{\"requestedViewport\":768,\"clientWidth\":768,\"documentWidth\":768,\"bodyWidth\":768},{\"requestedViewport\":1280,\"clientWidth\":1280,\"documentWidth\":1280,\"bodyWidth\":1280},{\"requestedViewport\":1920,\"clientWidth\":1920,\"documentWidth\":1920,\"bodyWidth\":1920}]"
     },
     {
       "id": "semantic-controls-and-keyboard-primary-path",
       "scenario": "responsive-accessibility-keyboard",
       "passed": true,
-      "durationMs": 7764,
+      "durationMs": 647,
       "details": "{\"unnamedButtons\":0,\"keyboardPreset\":true,\"keyboardOptimization\":true}"
     },
     {
       "id": "controls-focus-fullscreen-and-real-frame",
       "scenario": "constellation-real-render",
       "passed": true,
-      "durationMs": 1382,
-      "details": "{\"canvas\":{\"x\":82.59375,\"y\":237.921875,\"width\":1114.796875,\"height\":520},\"focusableNodes\":5,\"screenshot\":\"quality-lab\\\\reports\\\\evidence\\\\constellation-real-frame.png\",\"fullscreenApiEnabled\":true,\"enteredFullscreen\":true,\"keyboardExitedFullscreen\":false,\"rejectedRequestStayedInNormalLayout\":false}"
+      "durationMs": 1509,
+      "details": "{\"canvas\":{\"x\":82.59375,\"y\":237.515625,\"width\":1114.796875,\"height\":520},\"focusableNodes\":6,\"screenshot\":\"quality-lab\\\\reports\\\\evidence\\\\constellation-real-frame.png\",\"fullscreenApiEnabled\":true,\"enteredFullscreen\":true,\"keyboardExitedFullscreen\":false,\"rejectedRequestStayedInNormalLayout\":false}"
     },
     {
       "id": "deterministic-reduced-motion-frames",
       "scenario": "constellation-real-render",
       "passed": true,
-      "durationMs": 611,
-      "details": "{\"byteLength\":190362,\"framesEqual\":true}"
+      "durationMs": 636,
+      "details": "{\"byteLength\":195540,\"framesEqual\":true}"
     },
     {
       "id": "fps-long-task-and-memory-soak",
       "scenario": "constellation-real-render",
       "passed": true,
-      "durationMs": 5029,
-      "details": "{\"frames\":301,\"elapsedMs\":5011.200000047684,\"fps\":60.065453383847355,\"longTaskTotalMs\":68,\"maxLongTaskMs\":68,\"usedJSHeapSize\":157000000}"
+      "durationMs": 5025,
+      "details": "{\"frames\":301,\"elapsedMs\":5007.900000095367,\"fps\":60.10503404506239,\"longTaskTotalMs\":1447,\"maxLongTaskMs\":115,\"usedJSHeapSize\":44700000}"
     },
     {
       "id": "herald_envoy_endbringer",
       "scenario": "additional-regression-fixtures",
       "passed": true,
-      "durationMs": 9440,
-      "details": "{\"fixture\":\"herald_envoy_endbringer\",\"status\":\"BEST_RESOLVED_ACQUISITION_SAFE\",\"targetIds\":[\"Empowered Envoy\",\"Endbringer\"],\"accounting\":{\"acquisitionCost\":10,\"downstreamCost\":58.947500411254815,\"fullCost\":68.94750041125482,\"difference\":8.526512829121202e-14,\"acquisitionRows\":1,\"downstreamRows\":6,\"combinedRows\":7,\"currencies\":{\"alteration\":235.794701230068,\"augmentation\":57.63846025371909,\"clean_base\":1,\"exalt\":0.9046702308322626,\"regal\":41.850988162315346,\"scour\":40.850988162315886,\"transmutation\":41.8509881623155}}}"
+      "durationMs": 2894,
+      "details": "{\"fixture\":\"herald_envoy_endbringer\",\"status\":\"BEST_RESOLVED_ACQUISITION_SAFE\",\"targetIds\":[\"Empowered Envoy\",\"Endbringer\"],\"accounting\":{\"acquisitionCost\":10,\"downstreamCost\":58.44396822166496,\"fullCost\":68.44396822166496,\"difference\":1.1368683772161603e-13,\"acquisitionRows\":1,\"downstreamRows\":6,\"combinedRows\":7,\"currencies\":{\"alteration\":229.10621503236257,\"augmentation\":67.89824136641434,\"clean_base\":1,\"exalt\":0.8849482637311907,\"regal\":42.48675043329606,\"scour\":41.48675043329717,\"transmutation\":42.48675043329616},\"consistencyMaximumDifferenceChaos\":1.1368683772161603e-13,\"canonicalBundleId\":\"core:clean-open-policy\"}}"
     },
     {
       "id": "three_notable",
       "scenario": "additional-regression-fixtures",
       "passed": true,
-      "durationMs": 18010,
-      "details": "{\"fixture\":\"three_notable\",\"status\":\"PROVISIONAL_RESOLVED\",\"targetIds\":[\"Feed the Fury\",\"Fuel the Fight\",\"Martial Prowess\"],\"accounting\":{\"acquisitionCost\":1461.4087846301413,\"downstreamCost\":137.98333949740166,\"fullCost\":1599.392124127543,\"difference\":6.821210263296962e-13,\"acquisitionRows\":9,\"downstreamRows\":5,\"combinedRows\":9,\"currencies\":{\"alteration\":918.9220686915789,\"augmentation\":66.39609459042498,\"clean_base\":1,\"clean_base_reacquisition\":3.000000000001049,\"exalt\":16.89525824982304,\"fracturing\":4.0000000000014015,\"regal\":25.85905755336918,\"scour\":21.859057553375408,\"transmutation\":4.000000000001043}}}"
+      "durationMs": 10877,
+      "details": "{\"fixture\":\"three_notable\",\"status\":\"PROVISIONAL_RESOLVED\",\"targetIds\":[\"Feed the Fury\",\"Fuel the Fight\",\"Martial Prowess\"],\"accounting\":{\"acquisitionCost\":1227.5191370274936,\"downstreamCost\":100.38035345019924,\"fullCost\":1327.8994904776928,\"difference\":4.547473508864641e-13,\"acquisitionRows\":9,\"downstreamRows\":5,\"combinedRows\":9,\"currencies\":{\"alteration\":574.8553576249604,\"augmentation\":68.65735595911065,\"clean_base\":1,\"clean_base_reacquisition\":2.9999999999993023,\"exalt\":23.231059275923986,\"fracturing\":3.999999999999071,\"regal\":36.40272632948685,\"scour\":32.40272632949372,\"transmutation\":3.999999999999301},\"consistencyMaximumDifferenceChaos\":4.547473508864641e-13,\"canonicalBundleId\":\"bundle:family_fracture_Martial Prowess\"}}"
     },
     {
       "id": "runtime-error-audit",
@@ -369,7 +537,7 @@
   "performance": {
     "phase2u": {
       "frames": 90,
-      "medianFrameMs": 16.699999999953434,
+      "medianFrameMs": 16.70000000001164,
       "maxFrameMs": 16.79999999998836,
       "maxLongTaskMs": 0,
       "optimizerOverheadPercent": 0,
@@ -382,13 +550,90 @@
       "workerMessagesAdded": 0,
       "memoryDeltaBytes": 0
     },
+    "phase2wBoundaryRuns": [
+      {
+        "kind": "OPEN",
+        "position": "below",
+        "ceiling": 298.17977983058114,
+        "resolvedCost": 298.18977983058113,
+        "eligibility": "OVER_COST_CEILING"
+      },
+      {
+        "kind": "OPEN",
+        "position": "at",
+        "ceiling": 298.18977983058113,
+        "resolvedCost": 298.18977983058113,
+        "eligibility": "RESOLVED_ELIGIBLE"
+      },
+      {
+        "kind": "OPEN",
+        "position": "above",
+        "ceiling": 298.1997798305811,
+        "resolvedCost": 298.18977983058113,
+        "eligibility": "RESOLVED_ELIGIBLE"
+      },
+      {
+        "kind": "CONVENTIONAL",
+        "position": "below",
+        "ceiling": 347.7426714849752,
+        "resolvedCost": 347.75267148497517,
+        "eligibility": "OVER_COST_CEILING"
+      },
+      {
+        "kind": "CONVENTIONAL",
+        "position": "at",
+        "ceiling": 347.75267148497517,
+        "resolvedCost": 347.75267148497517,
+        "eligibility": "RESOLVED_ELIGIBLE"
+      },
+      {
+        "kind": "CONVENTIONAL",
+        "position": "above",
+        "ceiling": 347.76267148497516,
+        "resolvedCost": 347.75267148497517,
+        "eligibility": "RESOLVED_ELIGIBLE"
+      },
+      {
+        "kind": "HARVEST",
+        "position": "below",
+        "ceiling": 576.56990101593,
+        "resolvedCost": 576.57990101593,
+        "eligibility": "OVER_COST_CEILING"
+      },
+      {
+        "kind": "HARVEST",
+        "position": "at",
+        "ceiling": 576.57990101593,
+        "resolvedCost": 576.57990101593,
+        "eligibility": "RESOLVED_ELIGIBLE"
+      },
+      {
+        "kind": "HARVEST",
+        "position": "above",
+        "ceiling": 576.58990101593,
+        "resolvedCost": 576.57990101593,
+        "eligibility": "RESOLVED_ELIGIBLE"
+      }
+    ],
+    "phase2wObjectives": {
+      "cheapestMs": 5642,
+      "fewestMs": 20640,
+      "fastestMs": 20448,
+      "repeatedCheapestMs": 5462,
+      "retainedStates": 5000,
+      "retainedTransitions": 17231,
+      "memoryDeltaBytes": 0
+    },
+    "phase2wHandoff": {
+      "renderMs": 115.03590000001714
+    },
     "constellation": {
       "frames": 301,
-      "elapsedMs": 5011.200000047684,
-      "fps": 60.065453383847355,
-      "longTaskTotalMs": 68,
-      "maxLongTaskMs": 68,
-      "usedJSHeapSize": 157000000
+      "elapsedMs": 5007.900000095367,
+      "fps": 60.10503404506239,
+      "longTaskTotalMs": 1447,
+      "maxLongTaskMs": 115,
+      "usedJSHeapSize": 44700000
     }
   },
   "artifacts": {
@@ -406,20 +651,24 @@
     "phase2vSelfFractureChronology": "quality-lab\\reports\\evidence\\phase2v-self-fracture-chronology.png",
     "phase2vHorizontalRailFollow": "quality-lab\\reports\\evidence\\phase2v-horizontal-route-rail-follow.png",
     "phase2vArmourEvasionComparison": "quality-lab\\reports\\evidence\\phase2v-armour-evasion-comparison.png",
+    "phase2wEldritchExport": "quality-lab\\artifacts\\2026-08-26T09-42-59-147Z\\phase2w-eldritch-canonical-export.json",
+    "phase2wMarketVsCraft": "quality-lab\\reports\\evidence\\phase2w-exact-market-vs-craft.png",
+    "phase2wHandoffExport": "quality-lab\\artifacts\\2026-08-26T09-42-59-147Z\\phase2w-handoff-round-trip.json",
+    "phase2wMobileHandoff": "quality-lab\\reports\\evidence\\phase2w-mobile-handoff.png",
     "constellationFrame": "quality-lab\\reports\\evidence\\constellation-real-frame.png",
-    "fullWorkerEvents": "quality-lab\\artifacts\\2026-08-26T02-43-47-841Z\\worker-events-full.json",
+    "fullWorkerEvents": "quality-lab\\artifacts\\2026-08-26T09-42-59-147Z\\worker-events-full.json",
     "workerEvents": "quality-lab\\reports\\evidence\\worker-events.json",
-    "videoDirectory": "quality-lab\\artifacts\\2026-08-26T02-43-47-841Z\\video",
-    "trace": "quality-lab\\artifacts\\2026-08-26T02-43-47-841Z\\phase2v-trace.zip"
+    "videoDirectory": "quality-lab\\artifacts\\2026-08-26T09-42-59-147Z\\video",
+    "trace": "quality-lab\\artifacts\\2026-08-26T09-42-59-147Z\\phase2w-trace.zip"
   },
   "workerEventCounts": {
-    "WORKER_SPAWN": 4,
-    "POST_MESSAGE_TO_WORKER": 25,
-    "MESSAGE_FROM_WORKER": 229,
-    "WORKER_TERMINATE": 3
+    "WORKER_SPAWN": 12,
+    "POST_MESSAGE_TO_WORKER": 44,
+    "MESSAGE_FROM_WORKER": 424,
+    "WORKER_TERMINATE": 11
   },
   "productionUrl": "http://127.0.0.1:4173/",
   "browserVersion": "151.0.7922.34",
-  "finishedAt": "2026-08-26T02:54:30.467Z",
+  "finishedAt": "2026-08-26T09:57:23.579Z",
   "status": "PASSED"
 }

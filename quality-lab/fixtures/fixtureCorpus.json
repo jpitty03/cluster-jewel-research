@@ -1,5 +1,5 @@
 {
-  "version": "Phase2T-Frozen-Browser-Corpus-1",
+  "version": "Phase2W-Frozen-Browser-Corpus-1",
   "fixtures": [
     {
       "id": "cheap_one_mod",
@@ -23,6 +23,26 @@
       "finalRarity": "any",
       "extraAffixes": "allow-extra",
       "targetMods": ["AfflictionJewelSmallPassivesHaveIncreasedEffect2"],
+      "priceContext": {
+        "currencyRates": {
+          "chaos": 1,
+          "divine": 193.9,
+          "fracturing": 355.8,
+          "annul": 8.67,
+          "exalt": 1.63,
+          "scour": 0.3711,
+          "alteration": 0.1405,
+          "transmutation": 0.01102,
+          "augmentation": 0.06493,
+          "regal": 0.119,
+          "wildLifeforce": 0.01838,
+          "vividLifeforce": 0.06815,
+          "primalLifeforce": 0.03697
+        },
+        "cleanBaseCostChaos": 4,
+        "cleanBasePriceSource": "manual",
+        "cleanBasePriceProvenance": "Phase 2V frozen browser fixture; 2026-08-13 Allflame exact 12-passive ilvl 84 base quote"
+      },
       "searchBudget": { "maxStates": 1200, "maxWallTimeMs": 10000, "maxExpansionRounds": 2 }
     },
     {
@@ -67,6 +87,73 @@
         "AfflictionJewelSmallPassivesGrantArmour3_",
         "AfflictionJewelSmallPassivesGrantEvasion3"
       ],
+      "searchBudget": { "maxStates": 5000, "maxWallTimeMs": 30000, "maxExpansionRounds": 3 }
+    },
+    {
+      "id": "phase2w_armour_evasion_12",
+      "name": "Phase 2W T1 Armour plus T1 Evasion objective matrix",
+      "baseType": "Large Cluster Jewel",
+      "clusterType": "10% increased Attack Damage",
+      "itemLevel": 84,
+      "passiveCount": 12,
+      "finalRarity": "any",
+      "extraAffixes": "allow-extra",
+      "targetMods": [
+        "AfflictionJewelSmallPassivesGrantArmour3_",
+        "AfflictionJewelSmallPassivesGrantEvasion3"
+      ],
+      "priceContext": {
+        "currencyRates": {
+          "chaos": 1,
+          "divine": 193.9,
+          "fracturing": 355.8,
+          "annul": 8.67,
+          "exalt": 1.63,
+          "scour": 0.3711,
+          "alteration": 0.1405,
+          "transmutation": 0.01102,
+          "augmentation": 0.06493,
+          "regal": 0.119,
+          "wildLifeforce": 0.01838,
+          "vividLifeforce": 0.06815,
+          "primalLifeforce": 0.03697
+        },
+        "cleanBaseCostChaos": 4,
+        "cleanBasePriceSource": "manual",
+        "cleanBasePriceProvenance": "Phase 2W frozen browser fixture; 2026-08-13 Allflame exact 12-passive ilvl 84 base quote"
+      },
+      "searchBudget": { "maxStates": 5000, "maxWallTimeMs": 30000, "maxExpansionRounds": 3 }
+    },
+    {
+      "id": "phase2w_eldritch_low_tolerance",
+      "name": "Phase 2W Eldritch Inspiration plus Low Tolerance canonical reconciliation",
+      "baseType": "Medium Cluster Jewel",
+      "clusterType": "12% increased Chaos Damage over Time",
+      "itemLevel": 84,
+      "passiveCount": 6,
+      "finalRarity": "any",
+      "extraAffixes": "allow-extra",
+      "targetMods": ["Eldritch Inspiration", "Low Tolerance"],
+      "priceContext": {
+        "currencyRates": {
+          "chaos": 1,
+          "divine": 193.9,
+          "fracturing": 355.8,
+          "annul": 8.67,
+          "exalt": 1.63,
+          "scour": 0.3711,
+          "alteration": 0.1405,
+          "transmutation": 0.01102,
+          "augmentation": 0.06493,
+          "regal": 0.119,
+          "wildLifeforce": 0.01838,
+          "vividLifeforce": 0.06815,
+          "primalLifeforce": 0.03697
+        },
+        "cleanBaseCostChaos": 4,
+        "cleanBasePriceSource": "manual",
+        "cleanBasePriceProvenance": "Phase 2W frozen browser fixture; 2026-08-13 Allflame exact 6-passive ilvl 84 base quote"
+      },
       "searchBudget": { "maxStates": 5000, "maxWallTimeMs": 30000, "maxExpansionRounds": 3 }
     },
     {

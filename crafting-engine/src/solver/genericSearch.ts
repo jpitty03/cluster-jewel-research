@@ -2463,6 +2463,27 @@ export class GenericSearchEngine {
     const nodes = graphResult.nodes;
     const startKey = this.stateKey(normalizedStartState);
 
+    // Persistent continuation sessions intentionally retain the mechanics graph across
+    // objective changes. Objective values and effort overrides are policy-solve state,
+    // however, not transition identity. Refresh every retained edge before Bellman work
+    // so Cheapest -> Fewest -> Cheapest reuses distributions without reusing stale
+    // scalar costs, policies, or occupancy.
+    for (const node of nodes.values()) {
+      for (const action of node.actions.values()) {
+        const costVector = computeActionCostVector(
+          action.action,
+          action.immediateCostChaos,
+          effectiveOptions.effortProfile,
+        );
+        action.costVector = costVector;
+        action.immediateObjectiveCost = computeImmediateObjectiveCost(
+          action.action.id,
+          costVector,
+          effectiveOptions.objective,
+        );
+      }
+    }
+
     // Initialize Value Function V(s): terminal = 0, non-terminal = a small optimistic
     // seed, i.e. strictly from below.
     //

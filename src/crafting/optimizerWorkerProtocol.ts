@@ -31,6 +31,10 @@ export interface OptimizerWorkerCompleteResponse {
   completion: {
     recommendationStatus: OptimizeCraftResult['recommendationStatus'];
     selectedRouteName?: string;
+    expectedCostChaos: number | null;
+    objective?: OptimizeCraftResult['objective'];
+    selectedPolicySource?: OptimizeCraftResult['internalConsistency']['selectedBundleSource'];
+    selectedBundleId?: string;
   };
 }
 

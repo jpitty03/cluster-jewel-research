@@ -14,6 +14,7 @@ import {
   baseKey,
   baseTradeUrl,
   comboTradeUrl,
+  effectPercent,
   pinnedPassives,
   priceKey,
   type ComboCount,
@@ -30,6 +31,9 @@ import {
   type PriceEntry,
   type PriceFile,
 } from './priceModel'
+import type { BaseType } from '../crafting-engine/src/domain/ItemState.ts'
+import { browserCraftingCatalog } from './crafting/browserEngine.ts'
+import type { OptimizerSeed, OptimizerSeedMarketValue } from './optimizerSeed.ts'
 
 // In dev the Vite plugin serves a live scraping API; a production build is a static
 // site with no backend, so it reads the committed per-league snapshots bundled here.
@@ -76,6 +80,50 @@ for (const p of Object.values(priceSnapshots)) pricesByLeague[p.league] = p
 const daysAgo = (iso: string) => {
   const d = Math.round((Date.now() - Date.parse(iso)) / 86_400_000)
   return d <= 0 ? 'today' : d === 1 ? 'yesterday' : `${d} days ago`
+}
+
+interface PendingOptimizerLaunch {
+  group: Group
+  combo?: ComboCount
+  targetModIds: string[]
+  passiveRange: { min: number; max: number }
+  passiveCount: number
+  itemLevel: number
+  itemLevelDefaulted: boolean
+  sourceMarketValue?: OptimizerSeedMarketValue
+}
+
+function exactBaseType(base: string): BaseType | undefined {
+  return base === 'Large Cluster Jewel' || base === 'Medium Cluster Jewel' ||
+    base === 'Small Cluster Jewel'
+    ? base
+    : undefined
+}
+
+function resolveComboTargetIds(
+  base: BaseType,
+  clusterType: string,
+  combo: ComboCount,
+  itemLevel: number,
+): string[] {
+  const eligible = browserCraftingCatalog.getEligibleMods(base, clusterType, itemLevel)
+  return combo.notables.map((name) => {
+    const effect = effectPercent(name)
+    const matches = effect === null
+      ? eligible.filter((mod) => mod.isNotable && mod.technicalName === name)
+      : eligible.filter((mod) =>
+          !mod.isNotable &&
+          new RegExp(`\\b${effect}% increased Effect\\b`, 'i').test(mod.statText)
+        )
+    if (matches.length !== 1) {
+      throw new Error(
+        matches.length === 0
+          ? `“${name}” is unavailable as an exact optimizer modifier for this cluster type.`
+          : `“${name}” resolves to ${matches.length} exact modifiers; choose the target manually.`
+      )
+    }
+    return matches[0].modId
+  })
 }
 
 // The passive roll a group's base price is quoted at. A group can mix rolls — an
@@ -546,7 +594,7 @@ const sortValue = (r: Row, key: SortKey): string | number | null => {
   }
 }
 
-function ClusterJewels() {
+function ClusterJewels({ onOptimize }: { onOptimize: (seed: OptimizerSeed) => void }) {
   const [data, setData] = useState<ClusterData | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [progress, setProgress] = useState<Progress | null>(null)
@@ -560,6 +608,9 @@ function ClusterJewels() {
   const [expanded, setExpanded] = useState<string | null>(null)
   const [sortKey, setSortKey] = useState<SortKey>('count')
   const [sortDesc, setSortDesc] = useState(true)
+  const [pendingOptimizerLaunch, setPendingOptimizerLaunch] =
+    useState<PendingOptimizerLaunch | null>(null)
+  const [optimizerHandoffError, setOptimizerHandoffError] = useState<string | null>(null)
   const [, setTick] = useState(0)
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null)
 
@@ -708,6 +759,98 @@ function ClusterJewels() {
 
   const totalShown = groups.reduce((s, g) => s + g.jewels.length, 0)
 
+  const beginOptimizerLaunch = (group: Group, combo?: ComboCount) => {
+    setOptimizerHandoffError(null)
+    const baseType = exactBaseType(group.base)
+    if (!baseType) {
+      setOptimizerHandoffError(`Unsupported optimizer base: ${group.base}`)
+      return
+    }
+    const observedPassives = group.jewels.flatMap((jewel) =>
+      jewel.passives === null ? [] : [jewel.passives]
+    )
+    const fallbackPassive = browserCraftingCatalog.getPassiveCounts(baseType)[0]
+    const pinned = combo
+      ? pinnedPassives(group.base, combo.notables, combo.passivesMin, combo.passivesMax)
+      : groupBasePassives(pricesByLeague[league] ?? { bases: {} } as PriceFile, group)?.passives ?? {
+          min: observedPassives.length ? Math.min(...observedPassives) : fallbackPassive,
+          max: observedPassives.length ? Math.max(...observedPassives) : fallbackPassive,
+        }
+    const catalogPassives = browserCraftingCatalog.getPassiveCounts(baseType)
+    const validMin = pinned.min !== null && catalogPassives.includes(pinned.min)
+      ? pinned.min
+      : catalogPassives[0]
+    const validMax = pinned.max !== null && catalogPassives.includes(pinned.max)
+      ? pinned.max
+      : validMin
+    const passiveRange = {
+      min: Math.min(validMin, validMax),
+      max: Math.max(validMin, validMax),
+    }
+    const matchingJewels = combo
+      ? group.jewels.filter((jewel) =>
+          [...jewel.notables].sort().join(' + ') === combo.combo
+        )
+      : group.jewels
+    const observedItemLevels = [...new Set(matchingJewels.flatMap((jewel) =>
+      jewel.ilvl === null ? [] : [jewel.ilvl]
+    ))]
+    const itemLevel = observedItemLevels.length === 1 ? observedItemLevels[0] : 84
+    let targetModIds: string[] = []
+    try {
+      if (combo) targetModIds = resolveComboTargetIds(baseType, group.clusterType, combo, itemLevel)
+    } catch (error) {
+      setOptimizerHandoffError(error instanceof Error ? error.message : String(error))
+      return
+    }
+    const file = pricesByLeague[league]
+    const entry = combo ? file?.prices[priceKey(group.base, group.clusterType, combo.combo)] : undefined
+    const lowChaos = entry ? chaosValue(file?.rates, entry.low) : null
+    const sourceMarketValue = entry && lowChaos !== null
+      ? {
+          chaos: lowChaos,
+          kind: 'LOW' as const,
+          quotedAt: entry.at,
+          passiveRange,
+          provenance:
+            `${league} completed-jewel sampled low; ${entry.listed} listings / ${entry.sampled} sampled; ` +
+            `priced ${entry.at}`,
+        }
+      : undefined
+    setPendingOptimizerLaunch({
+      group,
+      combo,
+      targetModIds,
+      passiveRange,
+      passiveCount: passiveRange.min,
+      itemLevel,
+      itemLevelDefaulted: observedItemLevels.length !== 1,
+      sourceMarketValue,
+    })
+  }
+
+  const completeOptimizerLaunch = () => {
+    const pending = pendingOptimizerLaunch
+    if (!pending) return
+    const baseType = exactBaseType(pending.group.base)
+    if (!baseType) return
+    onOptimize({
+      id: `cluster-jewels:${Date.now()}:${pending.group.key}:${pending.combo?.combo ?? 'group'}`,
+      source: 'CLUSTER_JEWELS',
+      league,
+      baseType,
+      clusterType: pending.group.clusterType,
+      passiveCount: pending.passiveCount,
+      passiveRange: pending.passiveRange,
+      itemLevel: pending.itemLevel,
+      itemLevelDefaulted: pending.itemLevelDefaulted,
+      targetModIds: pending.targetModIds,
+      sourceComboLabel: pending.combo?.combo,
+      sourceMarketValue: pending.sourceMarketValue,
+    })
+    setPendingOptimizerLaunch(null)
+  }
+
   return (
     <>
       <p className="subtitle">
@@ -813,6 +956,86 @@ function ClusterJewels() {
       </div>
 
       {error && <div className="error">Failed to load: {error}</div>}
+      {optimizerHandoffError && (
+        <div className="error optimizer-handoff-error" role="alert">
+          Optimizer handoff unavailable: {optimizerHandoffError}
+        </div>
+      )}
+
+      {pendingOptimizerLaunch && (
+        <section className="optimizer-handoff-panel" aria-labelledby="optimizer-handoff-title">
+          <div>
+            <h2 id="optimizer-handoff-title">Open this jewel in Craft Optimizer</h2>
+            <p>
+              <strong>{pendingOptimizerLaunch.group.base}</strong> ·{' '}
+              {pendingOptimizerLaunch.group.clusterType}
+              {pendingOptimizerLaunch.combo && <> · {pendingOptimizerLaunch.combo.combo}</>}
+            </p>
+          </div>
+          <div className="optimizer-handoff-fields">
+            <label>
+              <span>Passive skills</span>
+              <select
+                aria-label="Optimizer passive skills"
+                value={pendingOptimizerLaunch.passiveCount}
+                onChange={(event) => setPendingOptimizerLaunch((current) => current && ({
+                  ...current,
+                  passiveCount: Number(event.target.value),
+                }))}
+              >
+                {browserCraftingCatalog
+                  .getPassiveCounts(exactBaseType(pendingOptimizerLaunch.group.base)!)
+                  .filter((count) => count >= pendingOptimizerLaunch.passiveRange.min && count <= pendingOptimizerLaunch.passiveRange.max)
+                  .map((count) => <option key={count}>{count}</option>)}
+              </select>
+            </label>
+            <label>
+              <span>Item level</span>
+              <input
+                aria-label="Optimizer item level"
+                type="number"
+                min="1"
+                max="100"
+                value={pendingOptimizerLaunch.itemLevel}
+                onChange={(event) => setPendingOptimizerLaunch((current) => current && ({
+                  ...current,
+                  itemLevel: event.target.valueAsNumber,
+                  itemLevelDefaulted: false,
+                }))}
+              />
+            </label>
+          </div>
+          <div className="optimizer-handoff-disclosure">
+            {pendingOptimizerLaunch.passiveRange.min !== pendingOptimizerLaunch.passiveRange.max && (
+              <p>
+                This listing group covers {pendingOptimizerLaunch.passiveRange.min}–{pendingOptimizerLaunch.passiveRange.max} passives.
+                Choose the exact craft identity before continuing.
+              </p>
+            )}
+            {pendingOptimizerLaunch.itemLevelDefaulted && (
+              <p>Item level was not uniquely observed, so ilvl 84 is the editable default.</p>
+            )}
+            {pendingOptimizerLaunch.combo ? (
+              <p>
+                {pendingOptimizerLaunch.targetModIds.length} exact modifier ID
+                {pendingOptimizerLaunch.targetModIds.length === 1 ? '' : 's'} will be transferred.
+              </p>
+            ) : (
+              <p>No modifiers are preselected for a group-level handoff.</p>
+            )}
+            {pendingOptimizerLaunch.sourceMarketValue && (
+              <p>
+                Optional sampled-low sale value: {pendingOptimizerLaunch.sourceMarketValue.chaos.toFixed(1)}c.
+                Its quote provenance remains visible in the optimizer.
+              </p>
+            )}
+          </div>
+          <div className="optimizer-handoff-actions">
+            <button type="button" onClick={completeOptimizerLaunch}>Open Craft Optimizer</button>
+            <button type="button" className="ghost" onClick={() => setPendingOptimizerLaunch(null)}>Cancel</button>
+          </div>
+        </section>
+      )}
 
       {running && progress && (
         <div className="status crawling">
@@ -875,6 +1098,7 @@ function ClusterJewels() {
                   >
                     Median{arrow('median')}
                   </th>
+                  <th className="optimizer-launch-col">Craft</th>
                 </tr>
               </thead>
               <tbody>
@@ -897,10 +1121,22 @@ function ClusterJewels() {
                       <td className="price-col">
                         <GroupPriceCell league={league} g={g} quote={median} label="median" />
                       </td>
+                      <td className="optimizer-launch-col">
+                        <button
+                          type="button"
+                          className="cluster-optimize-button"
+                          onClick={(event) => {
+                            event.stopPropagation()
+                            beginOptimizerLaunch(g)
+                          }}
+                        >
+                          Open in Optimizer
+                        </button>
+                      </td>
                     </tr>
                     {expanded === g.key && (
                       <tr className="detail-row">
-                        <td colSpan={7}>
+                        <td colSpan={8}>
                           <div className="detail">
                             <div>
                               <h3>Notable combinations</h3>
@@ -928,6 +1164,13 @@ function ClusterJewels() {
                                         clusterType={g.clusterType}
                                         cc={cc}
                                       />
+                                      <button
+                                        type="button"
+                                        className="combo-optimize-button"
+                                        onClick={() => beginOptimizerLaunch(g, cc)}
+                                      >
+                                        Optimize this combo
+                                      </button>
                                     </li>
                                   )
                                 })}

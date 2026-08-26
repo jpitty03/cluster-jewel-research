@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react'
 import ClusterJewels from './ClusterJewels'
 import CraftOptimizer from './CraftOptimizer'
 import { DEFAULT_LEAGUE } from '../league'
+import type { OptimizerSeed } from './optimizerSeed'
 import './App.css'
 
 // Dev serves a live scraping API; a production build reads the committed snapshots.
@@ -58,6 +59,18 @@ function App() {
   const [query, setQuery] = useState('');
   const [sortKey, setSortKey] = useState<SortKey>('level');
   const [sortDesc, setSortDesc] = useState(true);
+  const [optimizerSeed, setOptimizerSeed] = useState<OptimizerSeed | null>(null);
+
+  const openOptimizerSeed = (seed: OptimizerSeed) => {
+    window.history.replaceState(null, '', `${window.location.pathname}${window.location.search}#optimizer`);
+    setOptimizerSeed(seed);
+    setTab('optimizer');
+  };
+
+  const backToClusterJewels = () => {
+    window.history.replaceState(null, '', `${window.location.pathname}${window.location.search}`);
+    setTab('jewels');
+  };
 
   useEffect(() => {
     const onHash = () => {
@@ -158,9 +171,14 @@ function App() {
         </nav>
       </header>
 
-      {tab === 'jewels' && <ClusterJewels />}
+      {tab === 'jewels' && <ClusterJewels onOptimize={openOptimizerSeed} />}
 
-      {tab === 'optimizer' && <CraftOptimizer />}
+      {tab === 'optimizer' && (
+        <CraftOptimizer
+          seed={optimizerSeed}
+          onBackToClusterJewels={backToClusterJewels}
+        />
+      )}
 
       {tab === 'characters' && (
         <>

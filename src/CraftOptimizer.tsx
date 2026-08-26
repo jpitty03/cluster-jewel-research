@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { BaseType } from '../crafting-engine/src/domain/ItemState.ts';
 import type {
   AcquisitionCandidateSummary,
@@ -40,6 +40,7 @@ import {
   generateBugReportBundle,
   type CraftSharePayload,
 } from '../crafting-engine/src/service/shareBundle.ts';
+import type { OptimizerSeed } from './optimizerSeed.ts';
 
 const DEFAULT_ITEM_LEVEL = 84;
 const DEFAULT_BUDGET = { maxStates: 5000, maxWallTimeMs: 30_000, maxExpansionRounds: 3 };
@@ -60,6 +61,10 @@ const STATUS_COPY: Record<RecommendationStatus, { title: string; detail: string 
   NO_RESOLVED_ROUTE: {
     title: 'No fully resolved route found within this search budget',
     detail: 'Increase a search budget or adjust the target; this is a valid search outcome.',
+  },
+  INTERNAL_RESULT_MISMATCH: {
+    title: 'Internal result mismatch',
+    detail: 'The solver withheld this recommendation because its route, policy, and material totals did not reconcile.',
   },
 };
 
@@ -470,9 +475,14 @@ export function SearchActivityVisualizer({
   );
 }
 
-export const APP_RELEASE_VERSION = '2V.1';
+export const APP_RELEASE_VERSION = '2W.1';
 
-export function CraftOptimizer() {
+interface CraftOptimizerProps {
+  seed?: OptimizerSeed | null;
+  onBackToClusterJewels?: () => void;
+}
+
+export function CraftOptimizer({ seed = null, onBackToClusterJewels }: CraftOptimizerProps) {
   const baseTypes = useMemo(() => browserCraftingCatalog.getBaseTypes(), []);
   const initialBase = baseTypes[0] ?? 'Large Cluster Jewel';
   const [baseType, setBaseType] = useState<BaseType>(initialBase);
@@ -492,6 +502,10 @@ export function CraftOptimizer() {
   const [finishCondition, setFinishCondition] = useState<'any-match' | 'no-unwanted'>('any-match');
   const [cleanBaseCost, setCleanBaseCost] = useState('');
   const [saleValue, setSaleValue] = useState('');
+  const [importedPriceContext, setImportedPriceContext] =
+    useState<OptimizeCraftInput['prices'] | null>(null);
+  const [importedMarketContext, setImportedMarketContext] =
+    useState<OptimizeCraftInput['marketContext'] | null>(null);
   const pricingLeagues = useMemo(() => getOptimizerPricingLeagues(), []);
   const [league, setLeague] = useState(pricingLeagues[0] ?? '');
   const [allowFallback, setAllowFallback] = useState(true);
@@ -512,6 +526,10 @@ export function CraftOptimizer() {
   const [runtimeMs, setRuntimeMs] = useState<number | null>(null);
   const workerRef = useRef<OptimizerWorkerClient | null>(null);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
+  const sourceBannerRef = useRef<HTMLElement | null>(null);
+  const appliedSeedIdRef = useRef<string | null>(null);
+  const [activeSeed, setActiveSeed] = useState<OptimizerSeed | null>(null);
+  const [seedWarning, setSeedWarning] = useState<string | null>(null);
 
   const marketPricing = useMemo(
     () => getBrowserOptimizerPricing(league, baseType, clusterType, passiveCount, itemLevel),
@@ -606,17 +624,22 @@ export function CraftOptimizer() {
       },
       prices: {
         ...marketPricing?.priceContext,
+        ...importedPriceContext,
+        currencyRates: {
+          ...marketPricing?.priceContext.currencyRates,
+          ...importedPriceContext?.currencyRates,
+        },
         cleanBaseCostChaos: Number.isFinite(manualClean) && manualClean !== undefined && manualClean >= 0
           ? manualClean
-          : marketPricing?.priceContext.cleanBaseCostChaos,
+          : importedPriceContext?.cleanBaseCostChaos ?? marketPricing?.priceContext.cleanBaseCostChaos,
         cleanBasePriceSource: Number.isFinite(manualClean) && manualClean !== undefined
           ? 'manual'
-          : marketPricing?.priceContext.cleanBasePriceSource,
+          : importedPriceContext?.cleanBasePriceSource ?? marketPricing?.priceContext.cleanBasePriceSource,
         cleanBasePriceProvenance: Number.isFinite(manualClean) && manualClean !== undefined
           ? 'manual clean-base override supplied in Developer UI'
-          : marketPricing?.priceContext.cleanBasePriceProvenance,
+          : importedPriceContext?.cleanBasePriceProvenance ?? marketPricing?.priceContext.cleanBasePriceProvenance,
       },
-      marketContext: marketPricing?.marketContext,
+      marketContext: importedMarketContext ?? marketPricing?.marketContext,
       expectedSaleValueChaos: Number.isFinite(parsedSaleValue) && parsedSaleValue !== undefined && parsedSaleValue >= 0
         ? parsedSaleValue
         : undefined,
@@ -634,6 +657,8 @@ export function CraftOptimizer() {
     effectiveRarity,
     finishCondition,
     itemLevel,
+    importedMarketContext,
+    importedPriceContext,
     marketPricing,
     maxExpansionRounds,
     maxStates,
@@ -646,6 +671,58 @@ export function CraftOptimizer() {
   const validation = useMemo(() => validateBrowserOptimizeInput(draftInput), [draftInput]);
   const previousDraftInputRef = useRef(draftInput);
 
+  const applySharedCraftHash = useCallback(() => {
+    if (typeof window === 'undefined' || !window.location.hash.startsWith('#craft=')) return;
+    const encoded = window.location.hash.slice(7);
+    const decoded = decodeCraftFromUrl(encoded);
+    if (!decoded) return;
+    if (decoded.baseType) setBaseType(decoded.baseType);
+    if (decoded.clusterType) setClusterType(decoded.clusterType);
+    if (decoded.itemLevel) setItemLevel(decoded.itemLevel);
+    if (decoded.passiveCount) setPassiveCount(decoded.passiveCount);
+    setTargetModIds(decoded.targetMods.length > 0 ? decoded.targetMods : ['']);
+    if (decoded.finalRarity) setFinalRarity(decoded.finalRarity);
+    if (decoded.objectiveSpec) setObjectiveKind(decoded.objectiveSpec.kind);
+    if (decoded.costConstraintType) setCostConstraintType(decoded.costConstraintType);
+    if (decoded.costConstraintValue) setCostConstraintValue(decoded.costConstraintValue);
+    if (decoded.valueOfTimeChaosPerMin) setValueOfTimeChaosPerMin(decoded.valueOfTimeChaosPerMin);
+    setCleanBaseCost(decoded.cleanBaseCostChaos === undefined ? '' : String(decoded.cleanBaseCostChaos));
+    if (decoded.maxUnmatchedAffixes === 0) setFinishCondition('no-unwanted');
+    else setFinishCondition('any-match');
+    setSaleValue(decoded.expectedSaleValueChaos === undefined ? '' : String(decoded.expectedSaleValueChaos));
+    setImportedPriceContext(decoded.prices ?? null);
+    setImportedMarketContext(decoded.marketContext ?? null);
+    if (decoded.sourceContext) {
+      if (pricingLeagues.includes(decoded.sourceContext.league)) {
+        setLeague(decoded.sourceContext.league);
+        setSeedWarning(null);
+      } else {
+        setSeedWarning(
+          `${decoded.sourceContext.league} is not available in optimizer pricing. The existing pricing league was preserved.`
+        );
+      }
+      setActiveSeed({
+        id: `shared-cluster-jewels:${encoded.slice(0, 16)}`,
+        source: 'CLUSTER_JEWELS',
+        league: decoded.sourceContext.league,
+        baseType: decoded.baseType,
+        clusterType: decoded.clusterType,
+        passiveCount: decoded.passiveCount,
+        passiveRange: decoded.sourceContext.passiveRange,
+        itemLevel: decoded.itemLevel,
+        itemLevelDefaulted: decoded.sourceContext.itemLevelDefaulted,
+        targetModIds: [...decoded.targetMods],
+        sourceComboLabel: decoded.sourceContext.sourceComboLabel,
+        sourceMarketValue: decoded.sourceContext.sourceMarketValue,
+      });
+    } else {
+      setActiveSeed(null);
+    }
+    setResult(null);
+    setProgress(null);
+    setError(null);
+  }, [pricingLeagues]);
+
   useEffect(() => {
     if (previousDraftInputRef.current === draftInput) return;
     previousDraftInputRef.current = draftInput;
@@ -656,33 +733,54 @@ export function CraftOptimizer() {
     const client = new OptimizerWorkerClient();
     workerRef.current = client;
 
-    // Load shared craft URL if present
-    if (typeof window !== 'undefined' && window.location.hash.startsWith('#craft=')) {
-      const encoded = window.location.hash.slice(7);
-      const decoded = decodeCraftFromUrl(encoded);
-      if (decoded) {
-        if (decoded.baseType) setBaseType(decoded.baseType);
-        if (decoded.clusterType) setClusterType(decoded.clusterType);
-        if (decoded.itemLevel) setItemLevel(decoded.itemLevel);
-        if (decoded.passiveCount) setPassiveCount(decoded.passiveCount);
-        if (Array.isArray(decoded.targetMods) && decoded.targetMods.length > 0) setTargetModIds(decoded.targetMods);
-        if (decoded.finalRarity) setFinalRarity(decoded.finalRarity);
-        if (decoded.objectiveSpec) {
-          setObjectiveKind(decoded.objectiveSpec.kind);
-        }
-        if (decoded.costConstraintType) setCostConstraintType(decoded.costConstraintType);
-        if (decoded.costConstraintValue) setCostConstraintValue(decoded.costConstraintValue);
-        if (decoded.valueOfTimeChaosPerMin) setValueOfTimeChaosPerMin(decoded.valueOfTimeChaosPerMin);
-        if (decoded.cleanBaseCostChaos !== undefined) setCleanBaseCost(String(decoded.cleanBaseCostChaos));
-        if (decoded.maxUnmatchedAffixes === 0) setFinishCondition('no-unwanted');
-      }
-    }
+    applySharedCraftHash();
 
     return () => {
       client.dispose();
       if (workerRef.current === client) workerRef.current = null;
     };
-  }, []);
+  }, [applySharedCraftHash]);
+
+  useEffect(() => {
+    window.addEventListener('hashchange', applySharedCraftHash);
+    return () => window.removeEventListener('hashchange', applySharedCraftHash);
+  }, [applySharedCraftHash]);
+
+  useEffect(() => {
+    if (!seed || appliedSeedIdRef.current === seed.id) return;
+    appliedSeedIdRef.current = seed.id;
+    setActiveSeed(seed);
+    setBaseType(seed.baseType);
+    setClusterType(seed.clusterType);
+    setPassiveCount(seed.passiveCount ?? seed.passiveRange?.min ?? 1);
+    setItemLevel(seed.itemLevel);
+    setTargetModIds(seed.targetModIds.length > 0 ? [...seed.targetModIds] : ['']);
+    setFinalRarity('any');
+    setFinishCondition('any-match');
+    setCleanBaseCost('');
+    setImportedPriceContext(null);
+    setImportedMarketContext(null);
+    setSaleValue(seed.sourceMarketValue ? String(seed.sourceMarketValue.chaos) : '');
+    if (pricingLeagues.includes(seed.league)) {
+      setLeague(seed.league);
+      setSeedWarning(null);
+    } else {
+      setSeedWarning(
+        `${seed.league} is not available in optimizer pricing. The existing pricing league was preserved.`
+      );
+    }
+    setResult(null);
+    setProgress(null);
+    setError(null);
+    setWallTimeExceeded(false);
+    setRuntimeMs(null);
+  }, [pricingLeagues, seed]);
+
+  useEffect(() => {
+    if (!activeSeed) return;
+    const frame = requestAnimationFrame(() => sourceBannerRef.current?.focus());
+    return () => cancelAnimationFrame(frame);
+  }, [activeSeed]);
 
   const validationError = validation.errors.map((issue) => issue.message).join(' ') || null;
 
@@ -839,7 +937,7 @@ export function CraftOptimizer() {
 
   const copyShareUrl = () => {
     const payload: CraftSharePayload = {
-      version: '2R.1',
+      version: '2W.1',
       baseType,
       clusterType,
       itemLevel,
@@ -852,6 +950,17 @@ export function CraftOptimizer() {
       valueOfTimeChaosPerMin,
       cleanBaseCostChaos: cleanBaseCost ? Number(cleanBaseCost) : undefined,
       maxUnmatchedAffixes: finishCondition === 'no-unwanted' ? 0 : undefined,
+      expectedSaleValueChaos: draftInput.expectedSaleValueChaos,
+      prices: draftInput.prices,
+      marketContext: draftInput.marketContext,
+      sourceContext: activeSeed ? {
+        source: 'CLUSTER_JEWELS',
+        league: activeSeed.league,
+        passiveRange: activeSeed.passiveRange,
+        itemLevelDefaulted: activeSeed.itemLevelDefaulted,
+        sourceComboLabel: activeSeed.sourceComboLabel,
+        sourceMarketValue: activeSeed.sourceMarketValue,
+      } : undefined,
     };
     const encoded = encodeCraftToUrl(payload);
     const fullUrl = `${window.location.origin}${window.location.pathname}#craft=${encoded}`;
@@ -862,7 +971,7 @@ export function CraftOptimizer() {
 
   const copyBugReport = (res?: OptimizeCraftResult) => {
     const payload: CraftSharePayload = {
-      version: '2R.1',
+      version: '2W.1',
       baseType,
       clusterType,
       itemLevel,
@@ -875,6 +984,17 @@ export function CraftOptimizer() {
       valueOfTimeChaosPerMin,
       cleanBaseCostChaos: cleanBaseCost ? Number(cleanBaseCost) : undefined,
       maxUnmatchedAffixes: finishCondition === 'no-unwanted' ? 0 : undefined,
+      expectedSaleValueChaos: draftInput.expectedSaleValueChaos,
+      prices: draftInput.prices,
+      marketContext: draftInput.marketContext,
+      sourceContext: activeSeed ? {
+        source: 'CLUSTER_JEWELS',
+        league: activeSeed.league,
+        passiveRange: activeSeed.passiveRange,
+        itemLevelDefaulted: activeSeed.itemLevelDefaulted,
+        sourceComboLabel: activeSeed.sourceComboLabel,
+        sourceMarketValue: activeSeed.sourceMarketValue,
+      } : undefined,
     };
     const bundle = generateBugReportBundle(payload, res, APP_RELEASE_VERSION);
     void navigator.clipboard.writeText(JSON.stringify(bundle, null, 2));
@@ -900,7 +1020,7 @@ export function CraftOptimizer() {
         if (input.clusterType) setClusterType(input.clusterType);
         if (input.itemLevel) setItemLevel(input.itemLevel);
         if (input.passiveCount) setPassiveCount(input.passiveCount);
-        if (targetMods.length > 0) setTargetModIds(targetMods);
+        setTargetModIds(targetMods.length > 0 ? targetMods : ['']);
 
         const rarity = input.finalRarity || input.target?.requiredRarity;
         if (rarity) setFinalRarity(rarity);
@@ -914,9 +1034,32 @@ export function CraftOptimizer() {
         if (input.costConstraintType) setCostConstraintType(input.costConstraintType);
         if (input.costConstraintValue) setCostConstraintValue(input.costConstraintValue);
         if (input.valueOfTimeChaosPerMin) setValueOfTimeChaosPerMin(input.valueOfTimeChaosPerMin);
-        if (input.cleanBaseCostChaos !== undefined) setCleanBaseCost(String(input.cleanBaseCostChaos));
+        setCleanBaseCost(input.cleanBaseCostChaos === undefined ? '' : String(input.cleanBaseCostChaos));
+        if (input.expectedSaleValueChaos !== undefined) setSaleValue(String(input.expectedSaleValueChaos));
+        else setSaleValue('');
+        if (input.prices && typeof input.prices === 'object') setImportedPriceContext(input.prices);
+        else setImportedPriceContext(null);
+        if (input.marketContext && typeof input.marketContext === 'object') setImportedMarketContext(input.marketContext);
+        else setImportedMarketContext(null);
+        if (parsed.optimizerSeedContext?.source === 'CLUSTER_JEWELS') {
+          const importedSeed = parsed.optimizerSeedContext as OptimizerSeed;
+          setActiveSeed(importedSeed);
+          if (pricingLeagues.includes(importedSeed.league)) {
+            setLeague(importedSeed.league);
+            setSeedWarning(null);
+          } else {
+            setSeedWarning(
+              `${importedSeed.league} is not available in optimizer pricing. The existing pricing league was preserved.`
+            );
+          }
+        } else {
+          setActiveSeed(null);
+          setSeedWarning(null);
+        }
         if (input.target?.finalStateConstraints?.maxUnmatchedAffixes === 0 || input.maxUnmatchedAffixes === 0) {
           setFinishCondition('no-unwanted');
+        } else {
+          setFinishCondition('any-match');
         }
         setResult(null);
       } catch (err) {
@@ -931,6 +1074,7 @@ export function CraftOptimizer() {
       appVersion: APP_RELEASE_VERSION,
       exportedAt: new Date().toISOString(),
       requestInput: draftInput,
+      optimizerSeedContext: activeSeed,
       resultSummary: {
         expectedCostChaos: res.expectedCostChaos,
         recommendationStatus: res.recommendationStatus,
@@ -996,6 +1140,26 @@ export function CraftOptimizer() {
       result.recommendationStatus === 'NO_RESOLVED_ROUTE'
     ))
   ) ?? [];
+  const seedTargetIdentityMatches = activeSeed !== null &&
+    activeSeed.targetModIds.length === selectedTargetIds.length &&
+    activeSeed.targetModIds.every((modId, index) => selectedTargetIds[index] === modId);
+  const seedIdentityMatches = activeSeed !== null &&
+    activeSeed.baseType === baseType &&
+    activeSeed.clusterType === clusterType &&
+    activeSeed.passiveCount === passiveCount &&
+    activeSeed.itemLevel === itemLevel &&
+    seedTargetIdentityMatches &&
+    (!pricingLeagues.includes(activeSeed.league) || activeSeed.league === league);
+  const sourceQuoteExactForSelectedPassive = activeSeed?.sourceMarketValue !== undefined &&
+    activeSeed.sourceMarketValue.passiveRange.min === activeSeed.sourceMarketValue.passiveRange.max &&
+    activeSeed.sourceMarketValue.passiveRange.min === passiveCount;
+  const sourceEconomicsReady = Boolean(
+    result?.recommended &&
+    result.internalConsistency.status === 'OK' &&
+    activeSeed?.sourceMarketValue &&
+    seedIdentityMatches &&
+    sourceQuoteExactForSelectedPassive
+  );
   const selectedSynthesis = selectedMethod?.executable ? selectedAcquisition?.synthesis : undefined;
 
   const constellationGraph = useMemo(() => {
@@ -1013,6 +1177,56 @@ export function CraftOptimizer() {
 
   return (
     <main className="optimizer-page">
+      {activeSeed && (
+        <section
+          ref={sourceBannerRef}
+          tabIndex={-1}
+          className="optimizer-source-banner"
+          aria-label="Cluster Jewels handoff source"
+          data-seed-id={activeSeed.id}
+          data-seed-target-ids={activeSeed.targetModIds.join(',')}
+        >
+          <div>
+            <strong>Loaded from Cluster Jewels</strong>
+            <span>
+              {activeSeed.sourceComboLabel ?? 'Base and enchantment'} · {activeSeed.clusterType} ·{' '}
+              {activeSeed.passiveCount ?? activeSeed.passiveRange?.min} passives
+            </span>
+          </div>
+          {onBackToClusterJewels && (
+            <button type="button" className="secondary" onClick={onBackToClusterJewels}>
+              Back to Cluster Jewels
+            </button>
+          )}
+          {activeSeed.itemLevelDefaulted && (
+            <p>Item level was not unique in the source data; ilvl 84 was supplied as an editable default.</p>
+          )}
+          {activeSeed.sourceMarketValue && (
+            <p>
+              Source market {activeSeed.sourceMarketValue.kind.toLowerCase()}: {activeSeed.sourceMarketValue.chaos.toFixed(1)}c ·{' '}
+              {activeSeed.sourceMarketValue.provenance}
+            </p>
+          )}
+          {activeSeed.sourceMarketValue && !sourceQuoteExactForSelectedPassive && (
+            <p className="warning-note" role="status">
+              This quote spans {activeSeed.sourceMarketValue.passiveRange.min}–{activeSeed.sourceMarketValue.passiveRange.max} passives.
+              It is shown with provenance, but no single-passive profit comparison will be claimed.
+            </p>
+          )}
+          {!seedIdentityMatches && (
+            <p className="warning-note" role="status">
+              The craft identity has changed since handoff; source pricing is retained as context only.
+            </p>
+          )}
+          {seedWarning && <p className="warning-note" role="status">{seedWarning}</p>}
+          {activeSeed.targetModIds.length > 0 && (
+            <details>
+              <summary>Technical handoff details</summary>
+              <code>{activeSeed.targetModIds.join(' + ')}</code>
+            </details>
+          )}
+        </section>
+      )}
       <p className="subtitle">
         Find the cheapest modeled way to acquire and craft your target cluster jewel. The guide
         follows the optimizer's actual branching policy and keeps technical proof details available.
@@ -1105,7 +1319,7 @@ export function CraftOptimizer() {
           <label>
             <span>Extra affixes</span>
             <select value={finishCondition} onChange={(event) => setFinishCondition(event.target.value as typeof finishCondition)}>
-              <option value="allow-extra">Allow extra affixes</option>
+              <option value="any-match">Allow extra affixes</option>
               <option value="no-unwanted">No unwanted affixes</option>
             </select>
           </label>
@@ -1114,6 +1328,11 @@ export function CraftOptimizer() {
         <p className="muted">
           {marketPricing?.marketContext.cleanBaseQuote.provenance ?? 'No league price snapshot is available.'}
         </p>
+        {importedPriceContext && (
+          <p className="muted imported-price-context" role="status">
+            Imported pricing context is active for this reproducible setup and overrides matching snapshot rates.
+          </p>
+        )}
         <details className="pricing-controls">
           <summary>Pricing &amp; optional economics</summary>
           <div className="optimizer-grid">
@@ -1336,6 +1555,28 @@ export function CraftOptimizer() {
 
       {result && (
         <div className="optimizer-results">
+          {activeSeed?.sourceMarketValue && (
+            <section className="optimizer-card source-market-summary" aria-labelledby="source-market-summary-title">
+              <h2 id="source-market-summary-title">Market vs craft</h2>
+              {sourceEconomicsReady ? (
+                <dl>
+                  <dt>Completed market {activeSeed.sourceMarketValue.kind.toLowerCase()}</dt>
+                  <dd>{chaos(activeSeed.sourceMarketValue.chaos)}</dd>
+                  <dt>Expected craft EV</dt>
+                  <dd>{chaos(result.expectedCostChaos)}</dd>
+                  <dt>Gross EV spread</dt>
+                  <dd>{result.expectedCostChaos === null
+                    ? '—'
+                    : `${activeSeed.sourceMarketValue.chaos - result.expectedCostChaos >= 0 ? '+' : ''}${(activeSeed.sourceMarketValue.chaos - result.expectedCostChaos).toFixed(1)}c`}</dd>
+                </dl>
+              ) : (
+                <p className="warning-note">
+                  No spread is calculated because the source quote and executable result do not describe the same exact passive-count craft identity.
+                </p>
+              )}
+              <p className="muted">Expected value, not guaranteed profit. {activeSeed.sourceMarketValue.provenance}</p>
+            </section>
+          )}
           <section
             className="optimizer-card optimizer-summary recommendation-hero"
             data-selected-route={publicSelectedRouteName}
@@ -1343,7 +1584,11 @@ export function CraftOptimizer() {
             data-pricing-label={result.presentation.pricingLabel}
           >
             <div className="recommendation-heading">
-              <h2>{result.recommendationStatus === 'NO_RESOLVED_ROUTE' ? 'Search outcome' : 'Craft recommendation'}</h2>
+              <h2>{result.recommendationStatus === 'INTERNAL_RESULT_MISMATCH'
+                ? 'Internal consistency failure'
+                : result.recommendationStatus === 'NO_RESOLVED_ROUTE'
+                  ? 'Search outcome'
+                  : 'Craft recommendation'}</h2>
               <span className={`confidence-badge ${result.recommendationStatus.toLowerCase()}`}>
                 {result.recommendationStatus === 'PROVEN_OPTIMAL'
                   ? 'Proven optimal'
@@ -1351,7 +1596,9 @@ export function CraftOptimizer() {
                     ? 'Acquisition-safe start'
                     : result.recommendationStatus === 'PROVISIONAL_RESOLVED'
                       ? 'Provisional — acquisition not yet safe'
-                      : 'No resolved route'}
+                      : result.recommendationStatus === 'INTERNAL_RESULT_MISMATCH'
+                        ? 'Recommendation withheld'
+                        : 'No resolved route'}
               </span>
             </div>
             {result.presentation.pricingLabel === 'RESEARCH_ESTIMATE_STALE_PRICING' && (
@@ -1368,7 +1615,7 @@ export function CraftOptimizer() {
             </div>
             <dl className="recommendation-facts">
               <dt>Selected route</dt><dd>{publicSelectedRouteName ?? 'none certified'}</dd>
-              <dt>{result.recommendationStatus === 'NO_RESOLVED_ROUTE' ? 'Resolved start' : 'Recommended start'}</dt><dd>{recommendedStart}</dd>
+              <dt>{result.recommendationStatus === 'NO_RESOLVED_ROUTE' || result.recommendationStatus === 'INTERNAL_RESULT_MISMATCH' ? 'Resolved start' : 'Recommended start'}</dt><dd>{recommendedStart}</dd>
               <dt>Expected cost</dt><dd className="recommendation-cost">{chaos(result.expectedCostChaos)}</dd>
               <dt>Expected physical actions</dt>
               <dd>{result.recommended?.metrics?.expectedPhysicalActions !== undefined ? `${Math.round(result.recommended.metrics.expectedPhysicalActions).toLocaleString()} actions` : '—'}</dd>
@@ -1399,7 +1646,9 @@ export function CraftOptimizer() {
               {result.expectedSaleValueChaos !== undefined && <><dt>Expected sale value</dt><dd>{chaos(result.expectedSaleValueChaos)}</dd></>}
               {result.expectedProfitChaos !== undefined && <><dt>Expected profit</dt><dd>{chaos(result.expectedProfitChaos)}</dd></>}
               <dt>Starting acquisition confidence</dt>
-              <dd>{result.recommendationStatus === 'NO_RESOLVED_ROUTE'
+              <dd>{result.recommendationStatus === 'INTERNAL_RESULT_MISMATCH'
+                ? 'Recommendation withheld because canonical result fields did not reconcile'
+                : result.recommendationStatus === 'NO_RESOLVED_ROUTE'
                 ? 'No fully resolved route is available'
                 : result.recommendationStatus === 'PROVISIONAL_RESOLVED'
                   ? 'Not acquisition-safe; cheaper unresolved acquisition may exist'
@@ -1439,6 +1688,12 @@ export function CraftOptimizer() {
               <div className="no-route-warning" role="alert">
                 <strong>No craft recommendation is available from this search.</strong>
                 <span>Nothing displayed below should be treated as a resolved route. Increase a search budget or adjust the target.</span>
+              </div>
+            )}
+            {result.recommendationStatus === 'INTERNAL_RESULT_MISMATCH' && (
+              <div className="no-route-warning" role="alert">
+                <strong>The recommendation was withheld.</strong>
+                <span>Route, policy, and material totals exceeded the 0.05c reconciliation tolerance. Diagnostic evidence remains available below.</span>
               </div>
             )}
             {materialWarnings.length > 0 && (
@@ -1563,19 +1818,27 @@ export function CraftOptimizer() {
                     </strong>
                   </div>
                   <div className="harvest-stat-box">
-                    <span className="stat-label">Physical Actions Saved</span>
-                    <strong className="stat-value good">
-                      {result.harvestComparison.actionsSaved !== undefined && result.harvestComparison.actionsSaved > 0
-                        ? `${Math.round(result.harvestComparison.actionsSaved).toLocaleString()}`
-                        : '0'}
+                    <span className="stat-label">Physical Action Difference</span>
+                    <strong className={`stat-value ${(result.harvestComparison.actionsSaved ?? 0) >= 0 ? 'good' : 'more-cost'}`}>
+                      {result.harvestComparison.actionsSaved === undefined
+                        ? '—'
+                        : result.harvestComparison.actionsSaved > 0
+                          ? `${Math.round(result.harvestComparison.actionsSaved).toLocaleString()} fewer`
+                          : result.harvestComparison.actionsSaved < 0
+                            ? `${Math.round(Math.abs(result.harvestComparison.actionsSaved)).toLocaleString()} more`
+                            : 'No difference'}
                     </strong>
                   </div>
                   <div className="harvest-stat-box">
-                    <span className="stat-label">Manual Time Saved</span>
-                    <strong className="stat-value good">
-                      {result.harvestComparison.timeSavedMs !== undefined && result.harvestComparison.timeSavedMs > 0
-                        ? `${(result.harvestComparison.timeSavedMs / 1000).toFixed(0)}s`
-                        : '0s'}
+                    <span className="stat-label">Manual Time Difference</span>
+                    <strong className={`stat-value ${(result.harvestComparison.timeSavedMs ?? 0) >= 0 ? 'good' : 'more-cost'}`}>
+                      {result.harvestComparison.timeSavedMs === undefined
+                        ? '—'
+                        : result.harvestComparison.timeSavedMs > 0
+                          ? `${(result.harvestComparison.timeSavedMs / 1000).toFixed(0)}s faster`
+                          : result.harvestComparison.timeSavedMs < 0
+                            ? `${(Math.abs(result.harvestComparison.timeSavedMs) / 1000).toFixed(0)}s slower`
+                            : 'No difference'}
                     </strong>
                   </div>
                   {result.harvestComparison.lifeforceCrossoverPriceChaosPerUnit !== undefined && result.harvestComparison.lifeforceCrossoverPriceChaosPerUnit > 0 && (
@@ -1622,6 +1885,7 @@ export function CraftOptimizer() {
                       className={`method-family-card ${isWinner ? 'winner' : ''} status-${method.status.toLowerCase()}`}
                       data-method-family-id={method.spec.id}
                       data-evaluation-source={method.evaluationSource}
+                      data-objective-eligibility={method.objectiveEligibility}
                       data-required-action-observed={method.requiredActionObservedOnPolicy}
                       data-duplicate-of={method.duplicateOfMethodFamilyId}
                     >
@@ -1653,6 +1917,12 @@ export function CraftOptimizer() {
                         <strong>Evidence:</strong> {method.evaluationSource.replace(/_/g, ' ')}
                         {method.duplicateOfMethodFamilyId ? ` · same independently evaluated policy as ${method.duplicateOfMethodFamilyId}` : ''}
                       </p>
+                      {method.objectiveEligibility && (
+                        <p className="method-objective-eligibility">
+                          <strong>Objective eligibility:</strong>{' '}
+                          {method.objectiveEligibility.replace(/_/g, ' ').toLowerCase()}
+                        </p>
+                      )}
                       {method.route && (
                         <dl className="method-metrics">
                           <div>

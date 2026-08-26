@@ -1,4 +1,5 @@
 import assert from 'node:assert/strict';
+import { execFileSync } from 'node:child_process';
 import {
   mkdirSync,
   readFileSync,
@@ -29,6 +30,8 @@ interface Fixture {
   finalRarity: 'magic' | 'rare' | 'any';
   extraAffixes: 'allow-extra' | 'no-unwanted';
   targetMods: string[];
+  priceContext?: JsonRecord;
+  marketContext?: JsonRecord;
   searchBudget: {
     maxStates: number;
     maxWallTimeMs: number;
@@ -187,6 +190,120 @@ async function workerEvents(page: Page): Promise<CapturedWorkerEvent[]> {
   });
 }
 
+async function workerEventsSince(page: Page, offset: number): Promise<CapturedWorkerEvent[]> {
+  return page.evaluate((start) => {
+    const qualityWindow = window as Window & { __QUALITY_LAB_EVENTS__?: CapturedWorkerEvent[] };
+    return (qualityWindow.__QUALITY_LAB_EVENTS__ ?? []).slice(start);
+  }, offset);
+}
+
+async function workerEventCount(page: Page): Promise<number> {
+  return page.evaluate(() => {
+    const qualityWindow = window as Window & { __QUALITY_LAB_EVENTS__?: CapturedWorkerEvent[] };
+    return qualityWindow.__QUALITY_LAB_EVENTS__?.length ?? 0;
+  });
+}
+
+async function workerResponseCount(page: Page): Promise<number> {
+  return page.evaluate(() => {
+    const qualityWindow = window as Window & { __QUALITY_LAB_EVENTS__?: CapturedWorkerEvent[] };
+    return (qualityWindow.__QUALITY_LAB_EVENTS__ ?? [])
+      .filter((event) => event.kind === 'MESSAGE_FROM_WORKER').length;
+  });
+}
+
+async function workerProtocolEvents(page: Page): Promise<CapturedWorkerEvent[]> {
+  return page.evaluate(() => {
+    const qualityWindow = window as Window & { __QUALITY_LAB_EVENTS__?: CapturedWorkerEvent[] };
+    return (qualityWindow.__QUALITY_LAB_EVENTS__ ?? []).map((event) => {
+      if (!event.payload) return event;
+      const payload = event.payload as JsonRecord;
+      return {
+        sequence: event.sequence,
+        kind: event.kind,
+        elapsedMs: event.elapsedMs,
+        scriptUrl: event.scriptUrl,
+        message: event.message,
+        payload: {
+          type: payload.type,
+          requestId: payload.requestId,
+          sequence: payload.sequence,
+          completion: payload.completion,
+          error: payload.error,
+        },
+      };
+    });
+  });
+}
+
+async function latestWorkerResponseEvent(
+  page: Page,
+  responseType: 'RESULT' | 'ERROR' = 'RESULT',
+): Promise<CapturedWorkerEvent | undefined> {
+  return page.evaluate((expectedType) => {
+    const qualityWindow = window as Window & { __QUALITY_LAB_EVENTS__?: CapturedWorkerEvent[] };
+    const events = qualityWindow.__QUALITY_LAB_EVENTS__ ?? [];
+    for (let index = events.length - 1; index >= 0; index -= 1) {
+      const event = events[index];
+      if (
+        event.kind === 'MESSAGE_FROM_WORKER' &&
+        event.payload &&
+        (event.payload as JsonRecord).type === expectedType
+      ) return event;
+    }
+    return undefined;
+  }, responseType);
+}
+
+async function latestWorkerRequestInput(page: Page): Promise<JsonRecord> {
+  const input = await page.evaluate(() => {
+    const qualityWindow = window as Window & { __QUALITY_LAB_EVENTS__?: CapturedWorkerEvent[] };
+    const events = qualityWindow.__QUALITY_LAB_EVENTS__ ?? [];
+    for (let index = events.length - 1; index >= 0; index -= 1) {
+      const event = events[index];
+      if (event.kind !== 'POST_MESSAGE_TO_WORKER' || !event.payload) continue;
+      const payload = event.payload as JsonRecord;
+      if (payload.type === 'OPTIMIZE') return payload.input;
+    }
+    return undefined;
+  });
+  return jsonRecord(input, 'latest Worker request input');
+}
+
+function assertFixtureRequestContext(input: JsonRecord, expected: Fixture): Record<string, unknown> {
+  assert.equal(input.baseType, expected.baseType);
+  assert.equal(input.clusterType, expected.clusterType);
+  assert.equal(input.itemLevel, expected.itemLevel);
+  assert.equal(input.passiveCount, expected.passiveCount);
+  const target = jsonRecord(input.target, 'Worker request target');
+  assert.deepEqual(
+    arrayValue(target.requiredMods, 'Worker request target modifiers')
+      .map((entry) => String(jsonRecord(entry, 'Worker request target modifier').modId)),
+    expected.targetMods,
+  );
+  if (expected.priceContext) {
+    const prices = jsonRecord(input.prices, 'Worker request prices');
+    assert.deepEqual(prices, expected.priceContext, 'Worker request did not preserve the frozen price context');
+  }
+  return {
+    baseType: input.baseType,
+    clusterType: input.clusterType,
+    itemLevel: input.itemLevel,
+    passiveCount: input.passiveCount,
+    targetMods: expected.targetMods,
+    prices: input.prices,
+  };
+}
+
+async function compactCapturedWorkerResults(page: Page): Promise<void> {
+  await page.evaluate(() => {
+    const qualityWindow = window as Window & {
+      __QUALITY_LAB_COMPACT_WORKER_EVENTS__?: () => void;
+    };
+    qualityWindow.__QUALITY_LAB_COMPACT_WORKER_EVENTS__?.();
+  });
+}
+
 async function ensureOptimizerPage(page: Page, productionUrl: string): Promise<void> {
   if (await page.getByRole('heading', { name: 'Craft target' }).count()) return;
   await page.goto(`${productionUrl}#optimizer`, { waitUntil: 'networkidle' });
@@ -210,16 +327,24 @@ function compactWorkerEvents(events: CapturedWorkerEvent[]): CapturedWorkerEvent
           return {
             id: spec.id,
             kind: spec.kind,
+            spec: {
+              id: spec.id,
+              kind: spec.kind,
+            },
             status: family.status,
+            objectiveEligibility: family.objectiveEligibility,
             evaluationSource: family.evaluationSource,
             acquisitionStatus: family.acquisitionStatus,
             downstreamStatus: family.downstreamStatus,
             fullRouteStatus: family.fullRouteStatus,
             fullRouteL: family.fullRouteL,
             fullRouteU: family.fullRouteU,
+            route: family.route,
             requiredActionObservedOnPolicy: family.requiredActionObservedOnPolicy,
             onPolicyActionIds: family.onPolicyActionIds,
+            expectedActionUsage: family.expectedActionUsage,
             policyHealth: family.policyHealth,
+            repeatableRerollCertification: family.repeatableRerollCertification,
             retainedStates: family.retainedStates,
             budget: family.budget,
           };
@@ -233,12 +358,21 @@ function compactWorkerEvents(events: CapturedWorkerEvent[]): CapturedWorkerEvent
         result: {
           target: result.target,
           recommendationStatus: result.recommendationStatus,
+          recommended: result.recommended,
           expectedCostChaos: result.expectedCostChaos,
+          alternatives: result.alternatives,
+          expectedActionUsage: result.expectedActionUsage,
           presentation: result.presentation,
+          internalConsistency: result.internalConsistency,
           fullRouteUsage: result.fullRouteUsage,
           expectedCurrencies: result.expectedCurrencies,
           harvestComparison: result.harvestComparison,
           methodPortfolio,
+          paretoAlternatives: result.paretoAlternatives,
+          objective: result.objective,
+          objectiveProofStatus: result.objectiveProofStatus,
+          costCeilingChaos: result.costCeilingChaos,
+          craftPlan: result.craftPlan,
           proof: result.proof,
           risk: result.risk,
           solver: result.solver,
@@ -270,6 +404,8 @@ async function importFixture(page: Page, input: Fixture): Promise<void> {
       targetMods: input.targetMods,
       finalRarity: input.finalRarity,
       maxUnmatchedAffixes: input.extraAffixes === 'no-unwanted' ? 0 : undefined,
+      prices: input.priceContext,
+      marketContext: input.marketContext,
     })),
   });
   await page.waitForFunction((expectedIds) => {
@@ -289,6 +425,34 @@ async function setBudget(page: Page, input: Fixture['searchBudget']): Promise<vo
   await page.getByLabel('Expansion rounds').fill(String(input.maxExpansionRounds));
 }
 
+async function setObjective(
+  page: Page,
+  kind: 'CHEAPEST_CHAOS' | 'FEWEST_ACTIONS_WITHIN_COST' | 'FASTEST_WITHIN_COST',
+  absoluteCostCeilingChaos?: number,
+): Promise<void> {
+  await page.getByLabel('Optimization goal').selectOption(kind);
+  if (kind === 'CHEAPEST_CHAOS') return;
+  await page.getByLabel('Cost ceiling type').selectOption('ABSOLUTE');
+  assert(absoluteCostCeilingChaos !== undefined, `${kind} requires an absolute cost ceiling`);
+  await page.getByLabel('Max total cost (chaos)').fill(String(absoluteCostCeilingChaos));
+}
+
+function routeMetrics(result: JsonRecord): { cost: number; actions: number; timeMs: number; actionId: string } {
+  const route = jsonRecord(result.recommended, 'recommended route');
+  const metrics = jsonRecord(route.metrics, 'recommended route metrics');
+  return {
+    cost: numberValue(route.expectedTotalCostChaos, 'recommended route cost'),
+    actions: numberValue(metrics.expectedPhysicalActions, 'recommended physical actions'),
+    timeMs: numberValue(metrics.estimatedManualTimeMs, 'recommended manual time'),
+    actionId: String(route.actionId),
+  };
+}
+
+function finalResolvedRoutes(result: JsonRecord): JsonRecord[] {
+  const selected = jsonRecord(result.recommended, 'recommended route');
+  return [selected, ...arrayValue(result.alternatives, 'alternatives').map((route) => jsonRecord(route, 'alternative route'))];
+}
+
 async function waitForNewWorkerResponse(
   page: Page,
   eventOffset: number,
@@ -302,8 +466,8 @@ async function waitForNewWorkerResponse(
       return type === 'RESULT' || type === 'ERROR';
     });
   }, eventOffset, { timeout: timeoutMs });
-  const events = await workerEvents(page);
-  const terminal = events.slice(eventOffset).find((event) => {
+  const events = await workerEventsSince(page, eventOffset);
+  const terminal = events.find((event) => {
     if (event.kind !== 'MESSAGE_FROM_WORKER' || !event.payload) return false;
     const type = workerPayload(event).type;
     return type === 'RESULT' || type === 'ERROR';
@@ -313,7 +477,7 @@ async function waitForNewWorkerResponse(
 }
 
 async function runOptimization(page: Page, maxWallTimeMs: number): Promise<JsonRecord> {
-  const offset = (await workerEvents(page)).length;
+  const offset = await workerEventCount(page);
   const optimizeButton = page.getByRole('button', { name: /Find cheapest craft|Optimize craft/ });
   await optimizeButton.waitFor({ state: 'visible' });
   assert(await optimizeButton.isEnabled(), 'Optimization action is disabled');
@@ -327,12 +491,11 @@ async function runOptimization(page: Page, maxWallTimeMs: number): Promise<JsonR
 async function compareMethods(page: Page, maxWallTimeMs: number): Promise<JsonRecord> {
   const compareButton = page.getByRole('button', { name: 'Compare Methods Independently' });
   if (!(await compareButton.isVisible())) {
-    const events = responseEvents(await workerEvents(page));
-    const lastResult = [...events].reverse().find((event) => workerPayload(event).type === 'RESULT');
+    const lastResult = await latestWorkerResponseEvent(page);
     assert(lastResult, 'No result exists when every method is already independently evaluated');
     return jsonRecord(workerPayload(lastResult).result, 'Worker result');
   }
-  const offset = (await workerEvents(page)).length;
+  const offset = await workerEventCount(page);
   await compareButton.click();
   const response = await waitForNewWorkerResponse(page, offset, maxWallTimeMs + 8_000);
   assert.equal(response.type, 'RESULT', `Method comparison returned ${String(response.type)}`);
@@ -354,6 +517,11 @@ function assertWorkerProtocol(events: CapturedWorkerEvent[], requestId?: string)
 }
 
 function assertFullRouteReconciliation(result: JsonRecord): Record<string, unknown> {
+  const consistency = jsonRecord(result.internalConsistency, 'internalConsistency');
+  assert.equal(consistency.status, 'OK', `Canonical result failed closed: ${JSON.stringify(consistency)}`);
+  const consistencyTolerance = numberValue(consistency.toleranceChaos, 'canonical tolerance');
+  const maximumDifference = numberValue(consistency.maximumDifferenceChaos, 'canonical maximum difference');
+  assert(maximumDifference <= consistencyTolerance + 1e-9, 'Canonical bundle exceeds its reconciliation tolerance');
   const usage = jsonRecord(result.fullRouteUsage, 'fullRouteUsage');
   const acquisitionCost = numberValue(usage.acquisitionCostChaos, 'acquisitionCostChaos');
   const downstreamCost = numberValue(usage.downstreamCostChaos, 'downstreamCostChaos');
@@ -390,6 +558,26 @@ function assertFullRouteReconciliation(result: JsonRecord): Record<string, unkno
   const shopping = jsonRecord(result.expectedCurrencies, 'expectedCurrencies');
   assert.deepEqual(shopping, combinedCurrencies, 'Shopping-list currencies differ from full-route currencies');
   assertNear(numberValue(result.expectedCostChaos, 'expectedCostChaos'), fullCost, 'Result and full-route cost');
+  const recommended = jsonRecord(result.recommended, 'recommended route');
+  assertNear(numberValue(recommended.expectedTotalCostChaos, 'recommended route cost'), fullCost, 'Recommended route cost');
+  const metrics = jsonRecord(recommended.metrics, 'recommended metrics');
+  assertNear(numberValue(metrics.expectedChaosCost, 'recommended metric cost'), fullCost, 'Recommended metric cost');
+  const presentation = jsonRecord(result.presentation, 'presentation');
+  assertNear(numberValue(presentation.fullRouteCostChaos, 'presentation full route cost'), fullCost, 'Presentation cost');
+  const routeScopes = jsonRecord(presentation.routeScopes, 'presentation route scopes');
+  assertNear(numberValue(routeScopes.fullRouteU, 'presentation fullRouteU'), fullCost, 'Presentation route scope cost');
+  const selectedMethodCards = arrayValue(result.methodPortfolio, 'methodPortfolio')
+    .map((entry) => jsonRecord(entry, 'method family'))
+    .filter((family) => family.status === 'SELECTED_WINNER');
+  assert.equal(selectedMethodCards.length, 1, 'Exactly one method card must own the canonical winner');
+  const selectedMethodRoute = jsonRecord(selectedMethodCards[0].route, 'selected method route');
+  assertNear(numberValue(selectedMethodRoute.expectedTotalCostChaos, 'selected method cost'), fullCost, 'Selected method card cost');
+  const requestedPareto = arrayValue(result.paretoAlternatives, 'paretoAlternatives')
+    .map((entry) => jsonRecord(entry, 'Pareto alternative'))
+    .filter((entry) => entry.isRequestedObjective === true);
+  assert.equal(requestedPareto.length, 1, 'Exactly one Pareto route must be marked for the requested objective');
+  const requestedParetoRoute = jsonRecord(requestedPareto[0].route, 'requested Pareto route');
+  assertNear(numberValue(requestedParetoRoute.expectedTotalCostChaos, 'requested Pareto cost'), fullCost, 'Requested Pareto cost');
   return {
     acquisitionCost,
     downstreamCost,
@@ -399,6 +587,8 @@ function assertFullRouteReconciliation(result: JsonRecord): Record<string, unkno
     downstreamRows: downstream.length,
     combinedRows: combined.length,
     currencies: combinedCurrencies,
+    consistencyMaximumDifferenceChaos: maximumDifference,
+    canonicalBundleId: consistency.selectedBundleId,
   };
 }
 
@@ -566,7 +756,7 @@ async function runSmoke(page: Page, evidence: BrowserEvidence): Promise<void> {
     const target = jsonRecord(smokeResult.target, 'target');
     const required = arrayValue(target.requiredMods, 'target.requiredMods').map((row) => String(jsonRecord(row, 'required mod').modId));
     assert.deepEqual(required, input.targetMods);
-    const events = await workerEvents(page);
+    const events = await workerProtocolEvents(page);
     const resultEvent = [...responseEvents(events)].reverse().find((event) => workerPayload(event).type === 'RESULT');
     assert(resultEvent);
     const requestId = String(workerPayload(resultEvent).requestId);
@@ -603,7 +793,7 @@ async function runSmoke(page: Page, evidence: BrowserEvidence): Promise<void> {
     await setBudget(page, input.searchBudget);
     const initial = await runOptimization(page, input.searchBudget.maxWallTimeMs);
     const initialCost = numberValue(initial.expectedCostChaos, 'initial expected cost');
-    const eventOffset = (await workerEvents(page)).length;
+    const eventOffset = await workerEventCount(page);
     await page.getByRole('button', { name: 'Retry Deeper' }).first().click();
     const response = await waitForNewWorkerResponse(page, eventOffset, input.searchBudget.maxWallTimeMs * 2 + 8_000);
     assert.equal(response.type, 'RESULT');
@@ -621,7 +811,7 @@ async function runSmoke(page: Page, evidence: BrowserEvidence): Promise<void> {
     const complex = fixture('four_mod_release');
     await importFixture(page, complex);
     await setBudget(page, complex.searchBudget);
-    const offset = (await workerEvents(page)).length;
+    const offset = await workerEventCount(page);
     await page.getByRole('button', { name: 'Find cheapest craft' }).click();
     await page.waitForFunction((start) => {
       const events = (window as Window & { __QUALITY_LAB_EVENTS__?: CapturedWorkerEvent[] }).__QUALITY_LAB_EVENTS__ ?? [];
@@ -629,7 +819,7 @@ async function runSmoke(page: Page, evidence: BrowserEvidence): Promise<void> {
     }, offset);
     await page.getByRole('button', { name: 'Cancel' }).first().click();
     await page.getByText(/Optimization cancelled\. The worker was replaced/).waitFor({ timeout: 5_000 });
-    const cancelEvents = (await workerEvents(page)).slice(offset);
+    const cancelEvents = await workerEventsSince(page, offset);
     assert(cancelEvents.some((event) => event.kind === 'WORKER_TERMINATE'));
     assert(cancelEvents.some((event) => event.kind === 'WORKER_SPAWN'));
 
@@ -650,11 +840,11 @@ async function runSmoke(page: Page, evidence: BrowserEvidence): Promise<void> {
       const deadline = Date.now() + 700;
       while (Date.now() < deadline) { /* deliberate external host-guard probe */ }
     });
-    const offset = (await workerEvents(page)).length;
+    const offset = await workerEventCount(page);
     await page.getByRole('button', { name: 'Find cheapest craft' }).click();
     await page.getByText(/configured 1 ms runtime budget/).waitFor({ timeout: 4_000 });
     await stall.catch(() => undefined);
-    const guardEvents = (await workerEvents(page)).slice(offset);
+    const guardEvents = await workerEventsSince(page, offset);
     assert(guardEvents.some((event) => event.kind === 'WORKER_TERMINATE'));
     assert(guardEvents.some((event) => event.kind === 'WORKER_SPAWN'));
 
@@ -666,7 +856,7 @@ async function runSmoke(page: Page, evidence: BrowserEvidence): Promise<void> {
   });
 
   await gate(evidence, scenario, 'real-worker-error-response', async () => {
-    const events = await workerEvents(page);
+    const events = await workerProtocolEvents(page);
     const scriptUrl = events.find((event) => event.kind === 'WORKER_SPAWN')?.scriptUrl;
     assert(scriptUrl, 'Captured production Worker URL is unavailable');
     const response = await page.evaluate((url) => new Promise<JsonRecord>((resolveResponse, rejectResponse) => {
@@ -699,7 +889,10 @@ async function runFourMod(page: Page, evidence: BrowserEvidence): Promise<void> 
     assert.equal(await page.getByRole('spinbutton', { name: /^Item level/ }).inputValue(), String(input.itemLevel));
     assert.equal(await page.getByRole('combobox', { name: /^Passive skills/ }).inputValue(), String(input.passiveCount));
     assert.equal(await page.getByRole('combobox', { name: /^Final rarity/ }).inputValue(), input.finalRarity);
-    assert.equal(await page.getByRole('combobox', { name: /^Extra affixes/ }).inputValue(), input.extraAffixes);
+    assert.equal(
+      await page.getByRole('combobox', { name: /^Extra affixes/ }).inputValue(),
+      input.extraAffixes === 'no-unwanted' ? 'no-unwanted' : 'any-match',
+    );
     result = await runOptimization(page, input.searchBudget.maxWallTimeMs);
     const target = jsonRecord(result.target, 'target');
     const ids = arrayValue(target.requiredMods, 'requiredMods').map((row) => String(jsonRecord(row, 'required mod').modId));
@@ -826,10 +1019,9 @@ async function runPhase2U(page: Page, evidence: BrowserEvidence, soakMs: number)
   await container.scrollIntoViewIfNeeded();
 
   const latestWorkerResult = async (): Promise<JsonRecord> => {
-    const results = responseEvents(await workerEvents(page))
-      .filter((event) => workerPayload(event).type === 'RESULT');
-    assert(results.length > 0, 'No Worker result is available for Phase 2U');
-    return jsonRecord(workerPayload(results.at(-1)!).result, 'latest Worker result');
+    const result = await latestWorkerResponseEvent(page);
+    assert(result, 'No Worker result is available for Phase 2U');
+    return jsonRecord(workerPayload(result).result, 'latest Worker result');
   };
   const cameraState = async () => ({
     fitMode: await container.getAttribute('data-camera-fit-mode'),
@@ -1259,7 +1451,7 @@ async function runPhase2U(page: Page, evidence: BrowserEvidence, soakMs: number)
   });
 
   await gate(evidence, scenario, 'U15-worker-semantics-and-interaction-performance', async () => {
-    const beforeEvents = responseEvents(await workerEvents(page)).length;
+    const beforeEvents = await workerResponseCount(page);
     const beforeResult = await latestWorkerResult();
     const observed = await page.evaluate(async () => {
       const region = document.querySelector<HTMLElement>('.constellation-viewport');
@@ -1298,7 +1490,7 @@ async function runPhase2U(page: Page, evidence: BrowserEvidence, soakMs: number)
     });
     assert(observed.medianFrameMs < 25, `Median interaction frame was ${observed.medianFrameMs}ms`);
     assert(observed.maxLongTaskMs < 100, `Interaction caused a ${observed.maxLongTaskMs}ms long task`);
-    const afterEvents = responseEvents(await workerEvents(page)).length;
+    const afterEvents = await workerResponseCount(page);
     const afterResult = await latestWorkerResult();
     assert.equal(afterEvents, beforeEvents, 'Camera interaction started solver/Worker work');
     assert.deepEqual(afterResult.target, beforeResult.target, 'Camera interaction changed Worker target semantics');
@@ -1349,13 +1541,13 @@ async function runPhase2V(page: Page, evidence: BrowserEvidence): Promise<void> 
       labels,
     };
   };
-  const responseCount = async () => responseEvents(await workerEvents(page)).length;
+  const responseCount = () => workerResponseCount(page);
 
   await gate(evidence, scenario, 'V2-initial-result-does-not-reclaim-document-scroll', async () => {
     await page.setViewportSize({ width: 1280, height: 960 });
     await importFixture(page, oneModFixture);
     await setBudget(page, oneModFixture.searchBudget);
-    const offset = (await workerEvents(page)).length;
+    const offset = await workerEventCount(page);
     const optimizeButton = page.getByRole('button', { name: /Find cheapest craft|Optimize craft/ });
     await optimizeButton.click();
     const stableFocus = page.getByLabel('Max states');
@@ -1463,7 +1655,7 @@ async function runPhase2V(page: Page, evidence: BrowserEvidence): Promise<void> 
     const presentation = jsonRecord(oneModResult.presentation, 'one-mod presentation');
     const acquisitionContext = jsonRecord(presentation.acquisitionContext, 'one-mod acquisition context');
     assert.equal(acquisitionContext.kind, 'CLEAN');
-    assert.equal(presentation.schemaVersion, '2V.1');
+    assert.equal(presentation.schemaVersion, '2W.1');
     const resultCost = numberValue(oneModResult.expectedCostChaos, 'one-mod expected cost');
     assert(resultCost >= 8.7 && resultCost <= 8.9, `One-mod cost moved outside the ~8.784c regression: ${resultCost}`);
     const craftPlan = jsonRecord(oneModResult.craftPlan, 'one-mod craft plan');
@@ -1688,7 +1880,7 @@ async function runPhase2V(page: Page, evidence: BrowserEvidence): Promise<void> 
     assert(oneModResult && fourModResult && armourEvasionResult, 'Phase 2V regression fixtures unavailable');
     for (const result of [oneModResult, fourModResult, armourEvasionResult]) {
       const presentation = jsonRecord(result.presentation, 'presentation');
-      assert.equal(presentation.schemaVersion, '2V.1');
+      assert.equal(presentation.schemaVersion, '2W.1');
       assert.equal(presentation.releaseStatus, 'RELEASE_CANDIDATE_BROWSER_VERIFIED');
       if (result.recommended !== null) assertFullRouteReconciliation(result);
     }
@@ -1696,7 +1888,820 @@ async function runPhase2V(page: Page, evidence: BrowserEvidence): Promise<void> 
       phase2tAccountingPreserved: true,
       phase2uInteractionAndLabelsPreserved: true,
       fallbackSubstitutionUsed: false,
-      schemaVersion: '2V.1',
+      schemaVersion: '2W.1',
+    };
+  });
+}
+
+async function runPhase2W(page: Page, evidence: BrowserEvidence): Promise<void> {
+  const scenario = 'phase2w-canonical-objective-handoff-autonomous';
+  const eldritch = fixture('phase2w_eldritch_low_tolerance');
+  const armourEvasion = fixture('phase2w_armour_evasion_12');
+  let eldritchResult: JsonRecord | undefined;
+  let cheapestResult: JsonRecord | undefined;
+  let fewestResult: JsonRecord | undefined;
+  let fastestResult: JsonRecord | undefined;
+  let constrained500Result: JsonRecord | undefined;
+  const generatedHandoffSeeds: Array<Record<string, unknown>> = [];
+  let exactMarketHandoffResult: JsonRecord | undefined;
+  let handoffRenderMs: number | undefined;
+
+  if (['release', 'nightly'].includes(evidence.requestedScenario)) {
+    await gate(evidence, scenario, 'W0-phase-session-worker-lifecycle-isolation', async () => {
+      await ensureOptimizerPage(page, evidence.productionUrl!);
+      await compactCapturedWorkerResults(page);
+      const offset = await workerEventCount(page);
+      await page.getByRole('button', { name: 'Cluster Jewels', exact: true }).click();
+      await page.locator('.table-wrap table').waitFor();
+      await page.getByRole('button', { name: 'Craft Optimizer', exact: true }).click();
+      await page.getByRole('heading', { name: 'Craft target' }).waitFor();
+      await page.waitForFunction((start) => {
+        const events = (window as Window & { __QUALITY_LAB_EVENTS__?: CapturedWorkerEvent[] })
+          .__QUALITY_LAB_EVENTS__ ?? [];
+        return events.slice(start).some((event) => event.kind === 'WORKER_SPAWN');
+      }, offset);
+      const lifecycle = await workerEventsSince(page, offset);
+      assert(lifecycle.some((event) => event.kind === 'WORKER_TERMINATE'), 'Prior phase Worker was not disposed');
+      assert(lifecycle.some((event) => event.kind === 'WORKER_SPAWN'), 'Phase 2W Worker was not created');
+      return { priorWorkerDisposed: true, phaseWorkerSpawned: true, evidenceHistoryPreserved: true };
+    });
+  }
+
+  if (evidence.requestedScenario !== 'phase2w-handoff') {
+  await gate(evidence, scenario, 'W2-eldritch-canonical-selected-policy-binding', async () => {
+    await ensureOptimizerPage(page, evidence.productionUrl!);
+    await importFixture(page, eldritch);
+    await setBudget(page, eldritch.searchBudget);
+    await setObjective(page, 'CHEAPEST_CHAOS');
+    eldritchResult = await runOptimization(page, eldritch.searchBudget.maxWallTimeMs);
+    assert.notEqual(eldritchResult.recommendationStatus, 'INTERNAL_RESULT_MISMATCH');
+    assert.notEqual(eldritchResult.recommendationStatus, 'NO_RESOLVED_ROUTE');
+    const accounting = assertFullRouteReconciliation(eldritchResult);
+    const consistency = jsonRecord(eldritchResult.internalConsistency, 'internal consistency');
+    assert.equal(consistency.selectedBundleSource !== undefined, true);
+    return { fixture: eldritch.id, metrics: routeMetrics(eldritchResult), accounting, consistency };
+  });
+
+  await gate(evidence, scenario, 'W2b-fail-closed-reconciliation-invariant', async () => {
+    assert(eldritchResult, 'Eldritch canonical result unavailable');
+    const consistency = jsonRecord(eldritchResult.internalConsistency, 'internal consistency');
+    assert.equal(consistency.status, 'OK');
+    assert.equal(numberValue(consistency.toleranceChaos, 'tolerance'), 0.05);
+    assert(numberValue(consistency.maximumDifferenceChaos, 'maximum difference') <= 0.05);
+    const publicText = await page.locator('.recommendation-hero').innerText();
+    assert(!/7243\.718/.test(publicText), 'Historic mismatched public cost resurfaced');
+    return consistency;
+  });
+
+  await gate(evidence, scenario, 'W3-selected-policy-action-evidence', async () => {
+    assert(eldritchResult, 'Eldritch canonical result unavailable');
+    const presentation = jsonRecord(eldritchResult.presentation, 'presentation');
+    const acquisitionContext = jsonRecord(presentation.acquisitionContext, 'acquisition context');
+    const combined = arrayValue(jsonRecord(eldritchResult.fullRouteUsage, 'full route usage').combinedActions, 'combined actions')
+      .map((row) => jsonRecord(row, 'combined action'));
+    const plan = jsonRecord(eldritchResult.craftPlan, 'craft plan');
+    const planText = JSON.stringify(plan);
+    const fractureUsage = combined.find((row) => row.actionId === 'fracturing_orb');
+    if (acquisitionContext.kind === 'CLEAN') {
+      assert.equal(fractureUsage, undefined, 'Clean canonical route contains Fracturing Orb usage');
+      assert(!/fracturing_orb|use a fracturing orb/i.test(planText), 'Clean canonical craft plan contains a fracture instruction');
+    } else if (acquisitionContext.kind === 'SELF_FRACTURE') {
+      assert(fractureUsage && numberValue(fractureUsage.expectedCount, 'Fracturing Orb count') > 0);
+      assert.equal(typeof acquisitionContext.targetModId, 'string');
+    }
+    return {
+      acquisitionKind: acquisitionContext.kind,
+      fractureUsage: fractureUsage?.expectedCount ?? 0,
+      selectedActions: combined.map((row) => row.actionId),
+    };
+  });
+
+  await gate(evidence, scenario, 'W4-final-progress-result-dom-export-differential', async () => {
+    assert(eldritchResult, 'Eldritch canonical result unavailable');
+    const events = await workerProtocolEvents(page);
+    const terminal = [...responseEvents(events)].reverse();
+    const resultEvent = terminal.find((event) => workerPayload(event).type === 'RESULT');
+    assert(resultEvent, 'Worker RESULT unavailable');
+    const requestId = String(workerPayload(resultEvent).requestId);
+    const complete = terminal.find((event) => {
+      const payload = workerPayload(event);
+      return payload.type === 'COMPLETE' && payload.requestId === requestId;
+    });
+    assert(complete, 'Matching terminal COMPLETE unavailable');
+    const completion = jsonRecord(workerPayload(complete).completion, 'completion');
+    assert.equal(completion.recommendationStatus, eldritchResult.recommendationStatus);
+    assert.equal(completion.selectedRouteName, jsonRecord(eldritchResult.presentation, 'presentation').selectedRouteName);
+    assertNear(numberValue(completion.expectedCostChaos, 'completion expected cost'), numberValue(eldritchResult.expectedCostChaos, 'result expected cost'), 'COMPLETE and RESULT cost');
+    assert.deepEqual(completion.objective, eldritchResult.objective);
+    const consistency = jsonRecord(eldritchResult.internalConsistency, 'internal consistency');
+    assert.equal(completion.selectedPolicySource, consistency.selectedBundleSource);
+    assert.equal(completion.selectedBundleId, consistency.selectedBundleId);
+    const dom = await assertDomMatchesResult(page, eldritchResult);
+    const exported = await downloadExport(page, 'phase2w-eldritch-canonical-export.json');
+    const summary = jsonRecord(exported.resultSummary, 'export result summary');
+    assertNear(numberValue(summary.expectedCostChaos, 'export expected cost'), numberValue(eldritchResult.expectedCostChaos, 'result expected cost'), 'Export expected cost');
+    assert.deepEqual(summary.fullRouteUsage, eldritchResult.fullRouteUsage);
+    assert.deepEqual(summary.shoppingListCurrencies, eldritchResult.expectedCurrencies);
+    evidence.artifacts.phase2wEldritchExport = relative(repositoryRoot, join(artifactsDirectory, 'phase2w-eldritch-canonical-export.json'));
+    return { requestId, completion, dom, exportReconciled: true };
+  });
+
+  await gate(evidence, scenario, 'W5-armour-evasion-cheapest-baseline', async () => {
+    await importFixture(page, armourEvasion);
+    await setBudget(page, armourEvasion.searchBudget);
+    await setObjective(page, 'CHEAPEST_CHAOS');
+    cheapestResult = await runOptimization(page, armourEvasion.searchBudget.maxWallTimeMs);
+    const requestContext = assertFixtureRequestContext(await latestWorkerRequestInput(page), armourEvasion);
+    const accounting = assertFullRouteReconciliation(cheapestResult);
+    const metrics = routeMetrics(cheapestResult);
+    const routes = finalResolvedRoutes(cheapestResult);
+    const minimum = Math.min(...routes.map((route) => numberValue(route.expectedTotalCostChaos, 'resolved route cost')));
+    assertNear(metrics.cost, minimum, 'Cheapest selected from final resolved policies');
+    assertNear(metrics.cost, 175.363, 'Frozen cheapest fixture cost', 0.2);
+    assert(Math.abs(metrics.actions - 1161) <= 3, `Frozen cheapest actions changed: ${metrics.actions}`);
+    assert(Math.abs(metrics.timeMs / 1000 - 464.2) <= 2, `Frozen cheapest time changed: ${metrics.timeMs / 1000}s`);
+    return { metrics, candidateCount: routes.length, accounting, requestContext };
+  });
+
+  await gate(evidence, scenario, 'W6-armour-evasion-fewest-at-600', async () => {
+    await setObjective(page, 'FEWEST_ACTIONS_WITHIN_COST', 600);
+    fewestResult = await runOptimization(page, armourEvasion.searchBudget.maxWallTimeMs);
+    const requestContext = assertFixtureRequestContext(await latestWorkerRequestInput(page), armourEvasion);
+    const accounting = assertFullRouteReconciliation(fewestResult);
+    const metrics = routeMetrics(fewestResult);
+    const eligible = finalResolvedRoutes(fewestResult)
+      .filter((route) => numberValue(route.expectedTotalCostChaos, 'route cost') <= 600 + 1e-9)
+      .sort((left, right) => {
+        const lm = jsonRecord(left.metrics, 'left metrics');
+        const rm = jsonRecord(right.metrics, 'right metrics');
+        return numberValue(lm.expectedPhysicalActions, 'left actions') - numberValue(rm.expectedPhysicalActions, 'right actions') ||
+          numberValue(left.expectedTotalCostChaos, 'left cost') - numberValue(right.expectedTotalCostChaos, 'right cost') ||
+          numberValue(lm.estimatedManualTimeMs, 'left time') - numberValue(rm.estimatedManualTimeMs, 'right time') ||
+          String(left.actionId).localeCompare(String(right.actionId));
+      });
+    assert(eligible.length > 0, 'No resolved policies were eligible at 600c');
+    assertNear(metrics.actions, numberValue(jsonRecord(eligible[0].metrics, 'oracle metrics').expectedPhysicalActions, 'oracle actions'), 'Fewest objective oracle');
+    assert(metrics.cost <= 600 + 1e-9, 'Fewest selection exceeded 600c');
+    const selectedFamily = arrayValue(fewestResult.methodPortfolio, 'fewest method portfolio')
+      .map((entry) => jsonRecord(entry, 'fewest method family'))
+      .find((family) => family.status === 'SELECTED_WINNER');
+    assert(selectedFamily, 'Fewest objective has no selected method family');
+    assert.equal(jsonRecord(selectedFamily.spec, 'fewest selected family spec').kind, 'HARVEST');
+    const repeatableCertification = jsonRecord(
+      selectedFamily.repeatableRerollCertification,
+      'fewest selected Harvest repeatable certification',
+    );
+    assert.equal(repeatableCertification.transitionOutcomeCount, 140_076);
+    assert.equal(repeatableCertification.successOutcomeCount, 743);
+    assertNear(metrics.cost, 576.58, 'Frozen fewest fixture cost', 0.3);
+    assert(Math.abs(metrics.actions - 208) <= 2, `Frozen fewest actions changed: ${metrics.actions}`);
+    return {
+      metrics,
+      eligiblePolicies: eligible.length,
+      accounting,
+      proof: fewestResult.objectiveProofStatus,
+      repeatableCertification,
+      requestContext,
+    };
+  });
+
+  await gate(evidence, scenario, 'W7-armour-evasion-fastest-at-600', async () => {
+    await setObjective(page, 'FASTEST_WITHIN_COST', 600);
+    fastestResult = await runOptimization(page, armourEvasion.searchBudget.maxWallTimeMs);
+    const accounting = assertFullRouteReconciliation(fastestResult);
+    const metrics = routeMetrics(fastestResult);
+    const eligible = finalResolvedRoutes(fastestResult)
+      .filter((route) => numberValue(route.expectedTotalCostChaos, 'route cost') <= 600 + 1e-9)
+      .sort((left, right) => {
+        const lm = jsonRecord(left.metrics, 'left metrics');
+        const rm = jsonRecord(right.metrics, 'right metrics');
+        return numberValue(lm.estimatedManualTimeMs, 'left time') - numberValue(rm.estimatedManualTimeMs, 'right time') ||
+          numberValue(left.expectedTotalCostChaos, 'left cost') - numberValue(right.expectedTotalCostChaos, 'right cost') ||
+          numberValue(lm.expectedPhysicalActions, 'left actions') - numberValue(rm.expectedPhysicalActions, 'right actions') ||
+          String(left.actionId).localeCompare(String(right.actionId));
+      });
+    assert(eligible.length > 0, 'No resolved policies were eligible at 600c');
+    assertNear(metrics.timeMs, numberValue(jsonRecord(eligible[0].metrics, 'oracle metrics').estimatedManualTimeMs, 'oracle time'), 'Fastest objective oracle');
+    assert(metrics.cost <= 600 + 1e-9, 'Fastest selection exceeded 600c');
+    assertNear(metrics.cost, 347.753, 'Frozen fastest fixture cost', 0.3);
+    assert(Math.abs(metrics.timeMs / 1000 - 296.9) <= 2, `Frozen fastest time changed: ${metrics.timeMs / 1000}s`);
+    return { metrics, eligiblePolicies: eligible.length, accounting, proof: fastestResult.objectiveProofStatus };
+  });
+
+  await gate(evidence, scenario, 'W8-armour-evasion-500-ceiling', async () => {
+    await setObjective(page, 'FEWEST_ACTIONS_WITHIN_COST', 500);
+    constrained500Result = await runOptimization(page, armourEvasion.searchBudget.maxWallTimeMs);
+    const accounting = assertFullRouteReconciliation(constrained500Result);
+    const metrics = routeMetrics(constrained500Result);
+    assert(metrics.cost <= 500 + 1e-9, `500c selection cost ${metrics.cost} exceeded the ceiling`);
+    const eligible = finalResolvedRoutes(constrained500Result)
+      .filter((route) => numberValue(route.expectedTotalCostChaos, 'route cost') <= 500 + 1e-9);
+    const fewest = Math.min(...eligible.map((route) =>
+      numberValue(jsonRecord(route.metrics, 'route metrics').expectedPhysicalActions, 'route actions')
+    ));
+    assertNear(metrics.actions, fewest, '500c objective oracle');
+    return { metrics, eligiblePolicies: eligible.length, accounting };
+  });
+
+  await gate(evidence, scenario, 'W12-final-unified-pareto-policy-set', async () => {
+    assert(fastestResult, 'Fastest result unavailable');
+    const routes = finalResolvedRoutes(fastestResult);
+    const routeFingerprints = new Set(routes.map((route) => {
+      const metrics = jsonRecord(route.metrics, 'route metrics');
+      return [
+        numberValue(route.expectedTotalCostChaos, 'route cost').toFixed(5),
+        numberValue(metrics.expectedPhysicalActions, 'route actions').toFixed(5),
+        numberValue(metrics.estimatedManualTimeMs, 'route time').toFixed(3),
+      ].join('|');
+    }));
+    const resolvedFamilies = arrayValue(fastestResult.methodPortfolio, 'method portfolio')
+      .map((entry) => jsonRecord(entry, 'method family'))
+      .filter((family) => family.fullRouteStatus === 'RESOLVED' && family.route !== undefined);
+    for (const family of resolvedFamilies) {
+      const route = jsonRecord(family.route, 'family route');
+      const metrics = jsonRecord(route.metrics, 'family metrics');
+      const fingerprint = [
+        numberValue(route.expectedTotalCostChaos, 'family cost').toFixed(5),
+        numberValue(metrics.expectedPhysicalActions, 'family actions').toFixed(5),
+        numberValue(metrics.estimatedManualTimeMs, 'family time').toFixed(3),
+      ].join('|');
+      assert(routeFingerprints.has(fingerprint), `Resolved method family ${jsonRecord(family.spec, 'family spec').id} is absent from the final unified set`);
+    }
+    assert(resolvedFamilies.length >= 2, 'Objective run did not independently resolve multiple families');
+    const pareto = arrayValue(fastestResult.paretoAlternatives, 'Pareto alternatives')
+      .map((entry) => jsonRecord(jsonRecord(entry, 'Pareto entry').route, 'Pareto route'));
+    for (let index = 0; index < pareto.length; index++) {
+      const candidate = pareto[index];
+      const cm = jsonRecord(candidate.metrics, 'candidate metrics');
+      const c = {
+        cost: numberValue(candidate.expectedTotalCostChaos, 'candidate cost'),
+        actions: numberValue(cm.expectedPhysicalActions, 'candidate actions'),
+        time: numberValue(cm.estimatedManualTimeMs, 'candidate time'),
+      };
+      for (let otherIndex = 0; otherIndex < pareto.length; otherIndex++) {
+        if (index === otherIndex) continue;
+        const other = pareto[otherIndex];
+        const om = jsonRecord(other.metrics, 'other metrics');
+        const o = {
+          cost: numberValue(other.expectedTotalCostChaos, 'other cost'),
+          actions: numberValue(om.expectedPhysicalActions, 'other actions'),
+          time: numberValue(om.estimatedManualTimeMs, 'other time'),
+        };
+        const dominates = o.cost <= c.cost + 1e-9 && o.actions <= c.actions + 1e-9 && o.time <= c.time + 1e-9 &&
+          (o.cost < c.cost - 1e-9 || o.actions < c.actions - 1e-9 || o.time < c.time - 1e-9);
+        assert(!dominates, `Pareto route ${String(candidate.actionId)} is dominated by ${String(other.actionId)}`);
+      }
+    }
+    const familyActionIds = new Set(resolvedFamilies.map((family) => jsonRecord(family.route, 'family route').actionId));
+    assert(pareto.some((route) => familyActionIds.has(route.actionId)), 'No independently resolved family participates in the final Pareto set');
+    return { unifiedPolicies: routeFingerprints.size, resolvedFamilies: resolvedFamilies.length, paretoPolicies: pareto.length };
+  });
+
+  await gate(evidence, scenario, 'W10-objective-proof-truthfulness', async () => {
+    for (const result of [fewestResult, fastestResult, constrained500Result]) {
+      assert(result, 'Objective result unavailable');
+      const selected = routeMetrics(result);
+      const ceiling = numberValue(result.costCeilingChaos, 'cost ceiling');
+      assert(selected.cost <= ceiling + 1e-9);
+      if (result.objectiveProofStatus === 'CONSTRAINED_OPTIMAL_PROVEN') {
+        const unresolvedCouldQualify = arrayValue(result.methodPortfolio, 'method portfolio')
+          .map((entry) => jsonRecord(entry, 'method family'))
+          .filter((family) => family.objectiveEligibility === 'UNRESOLVED_COULD_QUALIFY');
+        assert.equal(unresolvedCouldQualify.length, 0, 'Constrained proof ignored an unresolved family that could qualify');
+      }
+    }
+    return {
+      fewest: fewestResult?.objectiveProofStatus,
+      fastest: fastestResult?.objectiveProofStatus,
+      ceiling500: constrained500Result?.objectiveProofStatus,
+    };
+  });
+
+  await gate(evidence, scenario, 'W11-objective-aware-acquisition-pruning', async () => {
+    assert(cheapestResult && fewestResult && fastestResult, 'Objective matrix incomplete');
+    const cheapest = routeMetrics(cheapestResult);
+    const fewest = routeMetrics(fewestResult);
+    const fastest = routeMetrics(fastestResult);
+    assert(fewest.cost > cheapest.cost && fewest.cost <= 600, 'Fewest route did not demonstrate a costlier eligible policy surviving pruning');
+    assert(fewest.actions < cheapest.actions, 'Fewest route did not improve actions');
+    assert(fastest.cost > cheapest.cost && fastest.cost <= 600, 'Fastest route did not demonstrate a costlier eligible policy surviving pruning');
+    assert(fastest.timeMs < cheapest.timeMs, 'Fastest route did not improve manual time');
+    return { cheapest, fewest, fastest };
+  });
+
+  await gate(evidence, scenario, 'W1-phase2v-mechanics-proof-worker-and-label-preservation', async () => {
+    assert(eldritchResult && cheapestResult && fewestResult && fastestResult && constrained500Result, 'Preservation matrix is incomplete');
+    for (const result of [eldritchResult, cheapestResult, fewestResult, fastestResult, constrained500Result]) {
+      assert.equal(jsonRecord(result.presentation, 'presentation').schemaVersion, '2W.1');
+      assert.equal(jsonRecord(result.internalConsistency, 'consistency').status, 'OK');
+      assertFullRouteReconciliation(result);
+    }
+    const harvest = jsonRecord(fewestResult.harvestComparison, 'Harvest comparison');
+    assert.equal(harvest.actionEvidenceObserved, true);
+    assertNear(numberValue(harvest.certifiedSuccessProbabilityPerApplication, 'Harvest p'), 0.004843655474498472, 'Preserved Harvest mechanics probability', 1e-12);
+    assertNear(numberValue(harvest.expectedLifeforce, 'Harvest Lifeforce'), numberValue(harvest.expectedHarvestApplications, 'Harvest applications') * 75, 'Preserved Lifeforce economics');
+    const publicText = await page.locator('.optimizer-results').innerText();
+    assert(!PUBLIC_RAW_MOD_ID.test(publicText), 'Player-facing result leaked a raw modifier ID');
+    const terminalProtocol = assertWorkerProtocol(await workerProtocolEvents(page));
+    return {
+      phase2vAccounting: true,
+      repeatableHarvest: true,
+      playerLabels: true,
+      workerProtocol: terminalProtocol,
+    };
+  });
+
+  await gate(evidence, scenario, 'W13-signed-tradeoff-copy', async () => {
+    assert(constrained500Result, '500c result unavailable');
+    const harvest = jsonRecord(constrained500Result.harvestComparison, 'Harvest comparison');
+    const actionsSaved = numberValue(harvest.actionsSaved, 'actions saved');
+    const timeSavedMs = numberValue(harvest.timeSavedMs, 'time saved');
+    assert(actionsSaved > 0, 'Fixture no longer demonstrates fewer Harvest actions');
+    assert(timeSavedMs < 0, 'Fixture no longer demonstrates slower Harvest manual time');
+    const cardText = await page.locator('.harvest-comparison-card').innerText();
+    assert.match(cardText, /\d[\d,]* fewer/i);
+    assert.match(cardText, /\d+s slower/i);
+    assert(!/Physical Actions Saved\s+0\b|Manual Time Saved\s+0s\b/i.test(cardText), 'Signed loss was zero-clamped');
+    return { actionsSaved, timeSavedMs, directionalCopy: ['fewer', 'slower'] };
+  });
+
+  await gate(evidence, scenario, 'W9-dynamic-open-conventional-harvest-ceiling-boundaries', async () => {
+    assert(fewestResult, 'Fewest result unavailable');
+    const portfolio = arrayValue(fewestResult.methodPortfolio, 'method portfolio')
+      .map((entry) => jsonRecord(entry, 'method family'));
+    const familyVectors = ['OPEN', 'CONVENTIONAL', 'HARVEST'].map((kind) => {
+      const family = portfolio.find((candidate) => jsonRecord(candidate.spec, 'method spec').kind === kind && candidate.route !== undefined);
+      assert(family, `${kind} family was not resolved for boundary generation`);
+      return {
+        kind,
+        cost: numberValue(jsonRecord(family.route, `${kind} route`).expectedTotalCostChaos, `${kind} cost`),
+      };
+    });
+    await setBudget(page, { ...armourEvasion.searchBudget, maxWallTimeMs: 20_000 });
+    const matrix: Array<Record<string, unknown>> = [];
+    for (const vector of familyVectors) {
+      for (const [position, ceiling] of [
+        ['below', vector.cost - 0.01] as const,
+        ['at', vector.cost] as const,
+        ['above', vector.cost + 0.01] as const,
+      ]) {
+        await setObjective(page, 'FEWEST_ACTIONS_WITHIN_COST', ceiling);
+        const result = await runOptimization(page, 20_000);
+        const family = arrayValue(result.methodPortfolio, 'boundary portfolio')
+          .map((entry) => jsonRecord(entry, 'boundary family'))
+          .find((candidate) => jsonRecord(candidate.spec, 'boundary spec').kind === vector.kind);
+        assert(family, `${vector.kind} family disappeared at ${position} boundary`);
+        const resolvedCost = family.route === undefined
+          ? family.fullRouteU
+          : jsonRecord(family.route, 'boundary route').expectedTotalCostChaos;
+        assert(typeof resolvedCost === 'number', `${vector.kind} did not retain a resolved U at ${position}`);
+        if (position === 'below') {
+          assert.equal(family.objectiveEligibility, 'OVER_COST_CEILING');
+          assert(numberValue(resolvedCost, 'resolved cost') > ceiling);
+        } else {
+          assert.notEqual(family.objectiveEligibility, 'OVER_COST_CEILING');
+          assert(numberValue(resolvedCost, 'resolved cost') <= ceiling + 1e-6);
+        }
+        matrix.push({ kind: vector.kind, position, ceiling, resolvedCost, eligibility: family.objectiveEligibility });
+      }
+    }
+    evidence.performance.phase2wBoundaryRuns = matrix;
+    return matrix;
+  });
+
+  await gate(evidence, scenario, 'W21-objective-transition-reuse-and-runtime', async () => {
+    assert(cheapestResult && fewestResult && fastestResult, 'Performance baselines unavailable');
+    await setBudget(page, armourEvasion.searchBudget);
+    await setObjective(page, 'CHEAPEST_CHAOS');
+    const memoryBefore = await page.evaluate(() => 'memory' in performance
+      ? (performance as Performance & { memory: { usedJSHeapSize: number } }).memory.usedJSHeapSize
+      : undefined);
+    const repeatedCheapest = await runOptimization(page, armourEvasion.searchBudget.maxWallTimeMs);
+    const memoryAfter = await page.evaluate(() => 'memory' in performance
+      ? (performance as Performance & { memory: { usedJSHeapSize: number } }).memory.usedJSHeapSize
+      : undefined);
+    const repeatedMetrics = routeMetrics(repeatedCheapest);
+    const cheapestOracle = Math.min(...finalResolvedRoutes(repeatedCheapest)
+      .map((route) => numberValue(route.expectedTotalCostChaos, 'reused route cost')));
+    assertNear(repeatedMetrics.cost, cheapestOracle, 'Cheapest after objective graph reuse');
+    const search = jsonRecord(repeatedCheapest.search, 'reused search');
+    const reuse = jsonRecord(search.sessionReuse, 'session reuse');
+    assert.equal(reuse.status, 'RESUMED');
+    assert(numberValue(reuse.retainedStates, 'retained states') > 0);
+    assert(numberValue(reuse.retainedTransitionDistributions, 'retained transitions') > 0);
+    if (memoryBefore !== undefined && memoryAfter !== undefined) {
+      assert(memoryAfter - memoryBefore < 96 * 1024 * 1024, `Objective reuse grew heap by ${memoryAfter - memoryBefore} bytes`);
+    }
+    const performanceEvidence = {
+      cheapestMs: numberValue(jsonRecord(cheapestResult.search, 'cheapest search').totalElapsedMs, 'cheapest elapsed'),
+      fewestMs: numberValue(jsonRecord(fewestResult.search, 'fewest search').totalElapsedMs, 'fewest elapsed'),
+      fastestMs: numberValue(jsonRecord(fastestResult.search, 'fastest search').totalElapsedMs, 'fastest elapsed'),
+      repeatedCheapestMs: numberValue(search.totalElapsedMs, 'repeated cheapest elapsed'),
+      retainedStates: reuse.retainedStates,
+      retainedTransitions: reuse.retainedTransitionDistributions,
+      memoryDeltaBytes: memoryBefore === undefined || memoryAfter === undefined ? undefined : memoryAfter - memoryBefore,
+    };
+    evidence.performance.phase2wObjectives = performanceEvidence;
+    return performanceEvidence;
+  });
+  }
+
+  await gate(evidence, scenario, 'W14-cluster-group-handoff', async () => {
+    if (await page.getByRole('button', { name: 'Cluster Jewels', exact: true }).count() === 0) {
+      await page.goto(evidence.productionUrl!, { waitUntil: 'networkidle' });
+    }
+    const messagesBefore = await workerResponseCount(page);
+    await page.getByRole('button', { name: 'Cluster Jewels', exact: true }).click();
+    await page.locator('.table-wrap table').waitFor();
+    const filter = page.locator('input[type="search"]').first();
+    await filter.fill('10% increased Attack Damage');
+    const row = page.locator('tbody tr.clickable')
+      .filter({ hasText: '10% increased Attack Damage' })
+      .filter({ hasText: 'Large' })
+      .first();
+    await row.waitFor();
+    const sourceLeague = await page.locator('.controls .league-select select').first().inputValue();
+    const started = performance.now();
+    await row.getByRole('button', { name: 'Open in Optimizer' }).click();
+    const panel = page.locator('.optimizer-handoff-panel');
+    await panel.waitFor();
+    const passiveChoice = await panel.getByLabel('Optimizer passive skills').inputValue();
+    await panel.getByRole('button', { name: 'Open Craft Optimizer', exact: true }).click();
+    const banner = page.locator('.optimizer-source-banner');
+    await banner.waitFor();
+    handoffRenderMs = performance.now() - started;
+    evidence.performance.phase2wHandoff = { renderMs: handoffRenderMs };
+    assert.equal(await page.getByLabel('Base type').inputValue(), 'Large Cluster Jewel');
+    assert.equal(await page.getByLabel('Cluster enchantment').inputValue(), '10% increased Attack Damage');
+    assert.equal(await page.locator('.optimizer-form .optimizer-grid label').filter({ has: page.getByText('Passive skills', { exact: true }) }).locator('select').first().inputValue(), passiveChoice);
+    assert.equal(await page.getByLabel('Pricing league').inputValue(), sourceLeague);
+    assert.equal(await page.locator('.target-summary li[data-mod-id]').count(), 0, 'Group handoff invented target modifiers');
+    assert.equal((await banner.getAttribute('data-seed-target-ids')) ?? '', '');
+    assert.equal(await page.evaluate(() => document.activeElement?.classList.contains('optimizer-source-banner')), true, 'Focus did not land on the source banner');
+    assert.equal(await workerResponseCount(page), messagesBefore, 'Group handoff triggered an automatic optimizer search');
+    return { sourceLeague, passiveChoice, handoffRenderMs, targets: [] };
+  });
+
+  await gate(evidence, scenario, 'W15-three-real-notable-combo-handoffs', async () => {
+    const cases = [
+      {
+        query: 'Smite the Weak',
+        combo: 'Smite the Weak',
+        base: 'Large Cluster Jewel',
+        cluster: '10% increased Attack Damage',
+      },
+      {
+        query: 'Enduring Composure',
+        combo: 'Enduring Composure',
+        base: 'Small Cluster Jewel',
+        cluster: '15% increased Armour',
+      },
+      {
+        query: 'Pure Agony',
+        combo: 'Pure Agony',
+        base: 'Medium Cluster Jewel',
+        cluster: 'Minions deal 10% increased Damage while you are affected by a Herald',
+      },
+    ];
+    for (const candidate of cases) {
+      await page.getByRole('button', { name: 'Back to Cluster Jewels' }).click();
+      await page.locator('.table-wrap table').waitFor();
+      await page.locator('input[type="search"]').first().fill(candidate.query);
+      const row = page.locator('tbody tr.clickable')
+        .filter({ hasText: candidate.cluster })
+        .first();
+      await row.click();
+      const comboRow = page.locator('.detail-row li')
+        .filter({ hasText: candidate.combo })
+        .filter({ has: page.getByRole('button', { name: 'Optimize this combo' }) })
+        .first();
+      await comboRow.getByRole('button', { name: 'Optimize this combo' }).click();
+      const panel = page.locator('.optimizer-handoff-panel');
+      await panel.waitFor();
+      const passiveSelect = panel.getByLabel('Optimizer passive skills');
+      const passiveOptions = await passiveSelect.locator('option').allTextContents();
+      assert(passiveOptions.length >= 1, `${candidate.combo} has no explicit passive choice`);
+      await passiveSelect.selectOption(passiveOptions[0]);
+      const chosenPassive = Number(await passiveSelect.inputValue());
+      const chosenItemLevel = Number(await panel.getByLabel('Optimizer item level').inputValue());
+      const responsesBefore = await workerResponseCount(page);
+      await panel.getByRole('button', { name: 'Open Craft Optimizer', exact: true }).click();
+      await page.locator('.optimizer-source-banner').waitFor();
+      const seedIds = ((await page.locator('.optimizer-source-banner').getAttribute('data-seed-target-ids')) ?? '')
+        .split(',').filter(Boolean);
+      const targetIds = await page.locator('.target-summary li[data-mod-id]')
+        .evaluateAll((nodes) => nodes.map((node) => node.getAttribute('data-mod-id')).filter(Boolean));
+      assert.deepEqual(targetIds, seedIds, `${candidate.combo} exact IDs changed across handoff`);
+      assert.equal(seedIds.length, 1, `${candidate.combo} did not resolve uniquely`);
+      assert.equal(await page.getByLabel('Base type').inputValue(), candidate.base);
+      assert.equal(await page.getByLabel('Cluster enchantment').inputValue(), candidate.cluster);
+      assert.equal(Number(await page.locator('.optimizer-form .optimizer-grid label').filter({ has: page.getByText('Passive skills', { exact: true }) }).locator('select').first().inputValue()), chosenPassive);
+      assert.equal(Number(await page.getByLabel('Item level').inputValue()), chosenItemLevel);
+      assert.equal(await workerResponseCount(page), responsesBefore, `${candidate.combo} auto-ran the Worker`);
+      generatedHandoffSeeds.push({ ...candidate, targetIds, chosenPassive, chosenItemLevel, passiveOptions });
+    }
+    assert.equal(new Set(generatedHandoffSeeds.map((seed) => JSON.stringify(seed.targetIds))).size, cases.length, 'Generated combo seeds were not distinct');
+    return generatedHandoffSeeds;
+  });
+
+  await gate(evidence, scenario, 'W16-eldritch-market-sku-passive-range-handoff', async () => {
+    await page.getByRole('button', { name: 'Back to Cluster Jewels' }).click();
+    await page.locator('.table-wrap table').waitFor();
+    await page.locator('input[type="search"]').first().fill('Eldritch Inspiration');
+    const row = page.locator('tbody tr.clickable')
+      .filter({ hasText: '12% increased Chaos Damage over Time' })
+      .first();
+    await row.click();
+    const comboRow = page.locator('.detail-row li')
+      .filter({ hasText: 'Eldritch Inspiration + Low Tolerance' })
+      .first();
+    const responsesBefore = await workerResponseCount(page);
+    await comboRow.getByRole('button', { name: 'Optimize this combo' }).click();
+    const panel = page.locator('.optimizer-handoff-panel');
+    const passiveSelect = panel.getByLabel('Optimizer passive skills');
+    const options = await passiveSelect.locator('option').allTextContents();
+    assert.deepEqual(options, ['4', '5'], 'Eldritch market SKU must expose its 4-5 passive range');
+    assert.match(await panel.innerText(), /quote spans|listing group covers|sampled-low sale value/i);
+    await passiveSelect.selectOption('5');
+    await panel.getByRole('button', { name: 'Open Craft Optimizer', exact: true }).click();
+    const banner = page.locator('.optimizer-source-banner');
+    await banner.waitFor();
+    assert.equal(await page.getByLabel('Base type').inputValue(), 'Medium Cluster Jewel');
+    assert.equal(await page.getByLabel('Cluster enchantment').inputValue(), '12% increased Chaos Damage over Time');
+    assert.equal(await page.locator('.optimizer-form .optimizer-grid label').filter({ has: page.getByText('Passive skills', { exact: true }) }).locator('select').first().inputValue(), '5');
+    assert.notEqual(await page.locator('.optimizer-form .optimizer-grid label').filter({ has: page.getByText('Passive skills', { exact: true }) }).locator('select').first().inputValue(), '6');
+    assert.match(await banner.innerText(), /quote spans 4.*5 passives|spans 4.*5 passives/i);
+    assert.match(await banner.innerText(), /priced|listings|sampled/i);
+    assert.equal(await workerResponseCount(page), responsesBefore, 'Eldritch handoff auto-ran the Worker');
+    generatedHandoffSeeds.push({
+      combo: 'Eldritch Inspiration + Low Tolerance',
+      passiveOptions: options,
+      selectedPassive: 5,
+      targetIds: ((await banner.getAttribute('data-seed-target-ids')) ?? '').split(',').filter(Boolean),
+    });
+    return generatedHandoffSeeds.at(-1);
+  });
+
+  await gate(evidence, scenario, 'W17-exact-sale-value-provenance-and-profit-only', async () => {
+    await page.getByRole('button', { name: 'Back to Cluster Jewels' }).click();
+    await page.locator('.table-wrap table').waitFor();
+    await page.locator('input[type="search"]').first().fill('6% increased maximum Mana');
+    const row = page.locator('tbody tr.clickable')
+      .filter({ hasText: '6% increased maximum Mana' })
+      .filter({ hasText: 'Small' })
+      .first();
+    await row.click();
+    const comboRow = page.locator('.detail-row li')
+      .filter({ hasText: '35% increased Small Passive Effect' })
+      .first();
+    await comboRow.getByRole('button', { name: 'Optimize this combo' }).click();
+    const panel = page.locator('.optimizer-handoff-panel');
+    const passiveOptions = await panel.getByLabel('Optimizer passive skills').locator('option').allTextContents();
+    assert.deepEqual(passiveOptions, ['3'], 'Exact market economics fixture is not a single-passive SKU');
+    assert.match(await panel.innerText(), /sampled-low sale value/i);
+    await panel.getByRole('button', { name: 'Open Craft Optimizer', exact: true }).click();
+    const banner = page.locator('.optimizer-source-banner');
+    await banner.waitFor();
+    const saleInput = page.getByLabel('Expected sale value (chaos, optional)');
+    const saleValueChaos = Number(await saleInput.inputValue());
+    assert(Number.isFinite(saleValueChaos) && saleValueChaos > 0, 'Known source quote was not populated');
+    assert(!/quote spans/i.test(await banner.innerText()), 'Exact single-passive quote was labeled as a range');
+    assert.match(await banner.innerText(), /priced|listings|sampled/i);
+    await setBudget(page, fixture('cheap_one_mod').searchBudget);
+    await setObjective(page, 'CHEAPEST_CHAOS');
+    const withSale = await runOptimization(page, fixture('cheap_one_mod').searchBudget.maxWallTimeMs);
+    const withSaleMetrics = routeMetrics(withSale);
+    assertNear(numberValue(withSale.expectedSaleValueChaos, 'expected sale value'), saleValueChaos, 'Handoff sale value');
+    assertNear(numberValue(withSale.expectedProfitChaos, 'expected profit'), saleValueChaos - withSaleMetrics.cost, 'Profit arithmetic');
+    const summary = page.locator('.source-market-summary');
+    assert.match(await summary.innerText(), /Expected value, not guaranteed profit/i);
+    assert.match(await summary.innerText(), /Gross EV spread/i);
+    const screenshot = join(evidenceDirectory, 'phase2w-exact-market-vs-craft.png');
+    await summary.screenshot({ path: screenshot });
+    evidence.artifacts.phase2wMarketVsCraft = relative(repositoryRoot, screenshot);
+
+    const pricingControls = page.locator('details.pricing-controls');
+    if (!(await pricingControls.evaluate((element) => (element as HTMLDetailsElement).open))) {
+      await pricingControls.locator('summary').first().click();
+    }
+    await saleInput.fill('');
+    const withoutSale = await runOptimization(page, fixture('cheap_one_mod').searchBudget.maxWallTimeMs);
+    assert.deepEqual(routeMetrics(withoutSale), withSaleMetrics, 'Sale value changed mechanics/policy metrics');
+    assert.deepEqual(withoutSale.expectedActionUsage, withSale.expectedActionUsage, 'Sale value changed action evidence');
+    await saleInput.fill(String(saleValueChaos));
+    exactMarketHandoffResult = await runOptimization(page, fixture('cheap_one_mod').searchBudget.maxWallTimeMs);
+    assertFullRouteReconciliation(exactMarketHandoffResult);
+    generatedHandoffSeeds.push({
+      combo: '35% increased Small Passive Effect',
+      base: 'Small Cluster Jewel',
+      cluster: '6% increased maximum Mana',
+      passiveOptions,
+      saleValueChaos,
+      targetIds: ((await banner.getAttribute('data-seed-target-ids')) ?? '').split(',').filter(Boolean),
+    });
+    return { saleValueChaos, withSaleMetrics, mechanicsUnaffected: true, artifact: evidence.artifacts.phase2wMarketVsCraft };
+  });
+
+  await gate(evidence, scenario, 'W18-handoff-export-share-import-round-trip', async () => {
+    assert(exactMarketHandoffResult, 'Exact market handoff result unavailable');
+    const expected = {
+      base: await page.getByLabel('Base type').inputValue(),
+      cluster: await page.getByLabel('Cluster enchantment').inputValue(),
+      passive: await page.locator('.optimizer-form .optimizer-grid label').filter({ has: page.getByText('Passive skills', { exact: true }) }).locator('select').first().inputValue(),
+      itemLevel: await page.getByLabel('Item level').inputValue(),
+      league: await page.getByLabel('Pricing league').inputValue(),
+      objective: await page.getByLabel('Optimization goal').inputValue(),
+      sale: await page.getByLabel('Expected sale value (chaos, optional)').inputValue(),
+      targetIds: await page.locator('.target-summary li[data-mod-id]').evaluateAll((nodes) =>
+        nodes.map((node) => node.getAttribute('data-mod-id')).filter(Boolean)
+      ),
+      provenance: await page.locator('.optimizer-source-banner').innerText(),
+    };
+    const exported = await downloadExport(page, 'phase2w-handoff-round-trip.json');
+    const exportedSeed = jsonRecord(exported.optimizerSeedContext, 'exported optimizer seed');
+    assert.equal(exportedSeed.source, 'CLUSTER_JEWELS');
+    assert.deepEqual(exportedSeed.targetModIds, expected.targetIds);
+    assert.equal(jsonRecord(exported.requestInput, 'export request').expectedSaleValueChaos, Number(expected.sale));
+    evidence.artifacts.phase2wHandoffExport = relative(repositoryRoot, join(artifactsDirectory, 'phase2w-handoff-round-trip.json'));
+
+    const responsesBeforeShareNavigation = await workerResponseCount(page);
+    await page.getByRole('button', { name: /Share Link/ }).click();
+    const shareUrl = await page.evaluate(() => navigator.clipboard.readText());
+    assert.match(shareUrl, /#craft=/);
+    await page.goto(shareUrl, { waitUntil: 'networkidle' });
+    await page.locator('.optimizer-source-banner').waitFor();
+    assert.equal(await page.getByLabel('Base type').inputValue(), expected.base);
+    assert.equal(await page.getByLabel('Cluster enchantment').inputValue(), expected.cluster);
+    assert.equal(await page.locator('.optimizer-form .optimizer-grid label').filter({ has: page.getByText('Passive skills', { exact: true }) }).locator('select').first().inputValue(), expected.passive);
+    assert.equal(await page.getByLabel('Item level').inputValue(), expected.itemLevel);
+    assert.equal(await page.getByLabel('Pricing league').inputValue(), expected.league);
+    assert.equal(await page.getByLabel('Optimization goal').inputValue(), expected.objective);
+    assert.equal(await page.getByLabel('Expected sale value (chaos, optional)').inputValue(), expected.sale);
+    assert.deepEqual(
+      await page.locator('.target-summary li[data-mod-id]').evaluateAll((nodes) =>
+        nodes.map((node) => node.getAttribute('data-mod-id')).filter(Boolean)
+      ),
+      expected.targetIds,
+    );
+    assert.match(await page.locator('.optimizer-source-banner').innerText(), /priced|listings|sampled/i);
+    assert.equal(await page.locator('.imported-price-context').count(), 1, 'Share did not retain pricing context');
+    assert.equal(await workerResponseCount(page), responsesBeforeShareNavigation, 'Share navigation automatically searched');
+
+    await page.getByRole('button', { name: 'Large Attack (8p / 2-Notable)' }).click();
+    const [chooser] = await Promise.all([
+      page.waitForEvent('filechooser'),
+      page.getByRole('button', { name: 'Import Setup JSON file' }).click(),
+    ]);
+    await chooser.setFiles(join(artifactsDirectory, 'phase2w-handoff-round-trip.json'));
+    await page.waitForFunction((ids) => JSON.stringify(
+      [...document.querySelectorAll('.target-summary li[data-mod-id]')]
+        .map((node) => node.getAttribute('data-mod-id')).filter(Boolean)
+    ) === JSON.stringify(ids), expected.targetIds);
+    assert.equal(await page.getByLabel('Base type').inputValue(), expected.base);
+    assert.equal(await page.getByLabel('Cluster enchantment').inputValue(), expected.cluster);
+    assert.equal(await page.getByLabel('Expected sale value (chaos, optional)').inputValue(), expected.sale);
+    assert.match(await page.locator('.optimizer-source-banner').innerText(), /Loaded from Cluster Jewels/i);
+    return { expected, shareVersion: '2W.1', exportedSeedPreserved: true };
+  });
+
+  await gate(evidence, scenario, 'W19-mobile-keyboard-focus-overflow-and-labels', async () => {
+    await page.setViewportSize({ width: 390, height: 844 });
+    await page.getByRole('button', { name: 'Back to Cluster Jewels' }).click();
+    await page.locator('.table-wrap table').waitFor();
+    await page.locator('input[type="search"]').first().fill('Eldritch Inspiration');
+    const row = page.locator('tbody tr.clickable')
+      .filter({ hasText: '12% increased Chaos Damage over Time' })
+      .first();
+    await row.click();
+    const comboButton = page.locator('.detail-row li')
+      .filter({ hasText: 'Eldritch Inspiration + Low Tolerance' })
+      .getByRole('button', { name: 'Optimize this combo' });
+    await comboButton.focus();
+    await page.keyboard.press('Enter');
+    const passive = page.locator('.optimizer-handoff-panel').getByLabel('Optimizer passive skills');
+    await passive.focus();
+    await page.keyboard.press('End');
+    assert.equal(await passive.inputValue(), '5');
+    const beforeScrollY = await page.evaluate(() => window.scrollY);
+    const open = page.locator('.optimizer-handoff-panel').getByRole('button', { name: 'Open Craft Optimizer', exact: true });
+    await open.focus();
+    await page.keyboard.press('Enter');
+    const banner = page.locator('.optimizer-source-banner');
+    await banner.waitFor();
+    await page.waitForFunction(() => document.activeElement?.classList.contains('optimizer-source-banner'));
+    assert.equal(await page.evaluate(() => document.activeElement?.classList.contains('optimizer-source-banner')), true);
+    const geometry = await page.evaluate(() => ({
+      viewport: document.documentElement.clientWidth,
+      documentWidth: document.documentElement.scrollWidth,
+      bodyWidth: document.body.scrollWidth,
+      scrollY: window.scrollY,
+    }));
+    assert(geometry.documentWidth <= geometry.viewport + 1, `Document overflow ${geometry.documentWidth} > ${geometry.viewport}`);
+    assert(geometry.bodyWidth <= geometry.viewport + 1, `Body overflow ${geometry.bodyWidth} > ${geometry.viewport}`);
+    const bannerRect = await banner.evaluate((element) => {
+      const rect = element.getBoundingClientRect();
+      return { top: rect.top, bottom: rect.bottom, viewportHeight: window.innerHeight };
+    });
+    assert(bannerRect.top >= -1 && bannerRect.bottom <= bannerRect.viewportHeight + 1, `Focused source banner is outside the viewport: ${JSON.stringify(bannerRect)}`);
+    assert(!PUBLIC_RAW_MOD_ID.test(await banner.innerText()), 'Source banner leaked raw modifier IDs');
+    const screenshot = join(evidenceDirectory, 'phase2w-mobile-handoff.png');
+    await page.screenshot({ path: screenshot, fullPage: false });
+    evidence.artifacts.phase2wMobileHandoff = relative(repositoryRoot, screenshot);
+    await page.setViewportSize({ width: 1280, height: 960 });
+    return { keyboard: true, passive: 5, beforeScrollY, geometry, bannerRect, artifact: evidence.artifacts.phase2wMobileHandoff };
+  });
+
+  await gate(evidence, scenario, 'W20-autonomous-generated-cluster-snapshot-matrix', async () => {
+    assert(generatedHandoffSeeds.length >= 5, 'Generated snapshot handoff matrix is too small');
+    const bases = new Set(generatedHandoffSeeds.map((seed) => seed.base).filter(Boolean));
+    assert(bases.has('Large Cluster Jewel') && bases.has('Medium Cluster Jewel') && bases.has('Small Cluster Jewel'), 'Generated matrix did not span every cluster base size');
+    for (const seed of generatedHandoffSeeds) {
+      const ids = seed.targetIds as unknown[];
+      assert(Array.isArray(ids) && ids.length > 0, `Generated seed ${String(seed.combo)} lacks exact IDs`);
+      assert.equal(new Set(ids).size, ids.length, `Generated seed ${String(seed.combo)} contains duplicate IDs`);
+    }
+    const serviceSource = readFileSync(join(repositoryRoot, 'crafting-engine', 'src', 'service', 'optimizerService.ts'), 'utf8');
+    assert(!/Eldritch Inspiration|Low Tolerance|AfflictionJewelSmallPassivesGrantArmour3_|AfflictionJewelSmallPassivesGrantEvasion3/.test(serviceSource), 'Fixture-specific winner logic leaked into the optimizer service');
+    assert.equal(await page.locator('.optimizer-handoff-error').count(), 0, 'Generated matrix left a handoff error visible');
+    let targetOrderMetamorphic: Record<string, unknown> | undefined;
+    if (cheapestResult) {
+      const reversedFixture: Fixture = {
+        ...armourEvasion,
+        id: `${armourEvasion.id}_target_order_reversed`,
+        targetMods: [...armourEvasion.targetMods].reverse(),
+      };
+      await importFixture(page, reversedFixture);
+      await setBudget(page, reversedFixture.searchBudget);
+      await setObjective(page, 'CHEAPEST_CHAOS');
+      const reversedResult = await runOptimization(page, reversedFixture.searchBudget.maxWallTimeMs);
+      assertFullRouteReconciliation(reversedResult);
+      const baselineMetrics = routeMetrics(cheapestResult);
+      const reversedMetrics = routeMetrics(reversedResult);
+      assertNear(reversedMetrics.cost, baselineMetrics.cost, 'Target-order cost metamorphic');
+      assertNear(reversedMetrics.actions, baselineMetrics.actions, 'Target-order action metamorphic');
+      assertNear(reversedMetrics.timeMs, baselineMetrics.timeMs, 'Target-order time metamorphic');
+      assert.equal(reversedMetrics.actionId, baselineMetrics.actionId, 'Target order changed the selected route identity');
+      const targetIds = (result: JsonRecord) => arrayValue(jsonRecord(result.target, 'metamorphic target').requiredMods, 'metamorphic requirements')
+        .map((entry) => String(jsonRecord(entry, 'metamorphic requirement').modId))
+        .sort();
+      assert.deepEqual(targetIds(reversedResult), targetIds(cheapestResult), 'Target-order permutation changed exact target identity');
+      const enabledHarvestActions = (result: JsonRecord) => arrayValue(
+        jsonRecord(jsonRecord(result.search, 'metamorphic search').harvestActionScope, 'Harvest scope').enabledCrafts,
+        'enabled Harvest crafts',
+      ).map((entry) => String(jsonRecord(entry, 'enabled Harvest craft').actionId)).sort();
+      assert.deepEqual(
+        enabledHarvestActions(reversedResult),
+        enabledHarvestActions(cheapestResult),
+        'Target-order permutation changed the eligible Harvest action set',
+      );
+      targetOrderMetamorphic = {
+        inputOrder: armourEvasion.targetMods,
+        permutedOrder: reversedFixture.targetMods,
+        canonicalTargetIds: targetIds(reversedResult),
+        metrics: reversedMetrics,
+        enabledHarvestActions: enabledHarvestActions(reversedResult),
+      };
+    }
+    return {
+      seed: 'phase2w-cluster-matrix-v1',
+      appCommit: execFileSync('git', ['rev-parse', 'HEAD'], {
+        cwd: repositoryRoot,
+        encoding: 'utf8',
+      }).trim(),
+      fixtureInputs: {
+        generatedHandoffs: generatedHandoffSeeds,
+        targetOrderMetamorphic: {
+          baseType: armourEvasion.baseType,
+          clusterType: armourEvasion.clusterType,
+          itemLevel: armourEvasion.itemLevel,
+          passiveCount: armourEvasion.passiveCount,
+          targetMods: armourEvasion.targetMods,
+          permutedTargetMods: [...armourEvasion.targetMods].reverse(),
+        },
+      },
+      prices: armourEvasion.priceContext,
+      objective: { kind: 'CHEAPEST_CHAOS' },
+      budgets: armourEvasion.searchBudget,
+      browserVersion: evidence.browserVersion,
+      cases: generatedHandoffSeeds,
+      targetOrderMetamorphic: targetOrderMetamorphic ?? 'HANDOFF_FOCUS_ONLY',
+    };
+  });
+
+  await gate(evidence, scenario, 'W22-browser-release-hygiene-and-stable-evidence', async () => {
+    await page.getByRole('button', { name: 'Craft Optimizer', exact: true }).click();
+    await page.getByText(/Browser-Verified Release Candidate 2W\.1/).waitFor();
+    assert.equal(fixtureCorpus.version, 'Phase2W-Frozen-Browser-Corpus-1');
+    for (const artifact of ['phase2wMarketVsCraft', 'phase2wHandoffExport', 'phase2wMobileHandoff']) {
+      const path = evidence.artifacts[artifact];
+      assert(path && statSync(join(repositoryRoot, path)).size > 0, `Missing Phase 2W artifact ${artifact}`);
+    }
+    assert(handoffRenderMs !== undefined && handoffRenderMs < 1_000, `Handoff render took ${handoffRenderMs}ms`);
+    return {
+      appVersion: '2W.1',
+      fixtureCorpus: fixtureCorpus.version,
+      artifacts: ['phase2wMarketVsCraft', 'phase2wHandoffExport', 'phase2wMobileHandoff'],
+      unitTestsAddedOrRun: false,
     };
   });
 }
@@ -1765,8 +2770,8 @@ async function runResponsiveAndKeyboard(page: Page, evidence: BrowserEvidence): 
     await setBudget(page, fixture('cheap_one_mod').searchBudget);
     const optimize = page.getByRole('button', { name: 'Find cheapest craft' });
     await optimize.focus();
+    const offset = await workerEventCount(page);
     await page.keyboard.press('Enter');
-    const offset = Math.max(0, (await workerEvents(page)).length - 2);
     const response = await waitForNewWorkerResponse(page, offset, fixture('cheap_one_mod').searchBudget.maxWallTimeMs + 8_000);
     assert.equal(response.type, 'RESULT');
     await page.locator('.recommendation-hero').waitFor();
@@ -1913,7 +2918,8 @@ function scenarioEnabled(requested: string, name: string): boolean {
     smoke: ['smoke'],
     four: ['four', 'objectives', 'consistency', 'phase2u', 'phase2u-quick'],
     phase2u: ['phase2u', 'phase2u-quick'],
-    phase2v: ['phase2v'],
+    phase2v: ['phase2v', 'phase2w-integration'],
+    phase2w: ['phase2w', 'phase2w-handoff', 'phase2w-integration'],
     methods: ['methods', 'harvest', 'portfolio', 'harvest-witness'],
     responsive: ['responsive', 'accessibility'],
     animation: ['animation', 'constellation'],
@@ -1927,7 +2933,7 @@ function writeReports(evidence: BrowserEvidence): void {
   evidence.status = evidence.checks.every((check) => check.passed) ? 'PASSED' : 'FAILED';
   writeFileSync(join(reportsDirectory, 'release-gate.json'), `${JSON.stringify(evidence, null, 2)}\n`, 'utf8');
   const lines = [
-    '# Phase 2V Real-Browser Release Gate',
+    '# Phase 2W Real-Browser Release Gate',
     '',
     `- Run: ${evidence.runId}`,
     `- Started: ${evidence.startedAt}`,
@@ -1961,7 +2967,7 @@ async function closeBrowser(
 ): Promise<void> {
   if (context) {
     try {
-      const tracePath = join(artifactsDirectory, 'phase2v-trace.zip');
+      const tracePath = join(artifactsDirectory, 'phase2w-trace.zip');
       await context.tracing.stop({ path: tracePath });
       evidence.artifacts.trace = relative(repositoryRoot, tracePath);
     } catch (error) {
@@ -2022,10 +3028,12 @@ async function main(): Promise<void> {
     }
     if (scenarioEnabled(requested, 'methods')) await runHarvestFixtures(page, evidence);
     if (scenarioEnabled(requested, 'phase2v')) await runPhase2V(page, evidence);
+    if (scenarioEnabled(requested, 'phase2w')) await runPhase2W(page, evidence);
     if (scenarioEnabled(requested, 'responsive')) await runResponsiveAndKeyboard(page, evidence);
     if (scenarioEnabled(requested, 'animation')) await runConstellation(page, evidence, requested === 'nightly' ? 60_000 : 5_000);
     if (scenarioEnabled(requested, 'additional')) await runAdditionalFixtures(page, evidence);
 
+    await compactCapturedWorkerResults(page);
     const events = await workerEvents(page);
     for (const event of events) evidence.workerEventCounts[event.kind] = (evidence.workerEventCounts[event.kind] ?? 0) + 1;
     const fullWorkerTrace = join(artifactsDirectory, 'worker-events-full.json');
@@ -2062,7 +3070,7 @@ async function main(): Promise<void> {
   for (const check of evidence.checks) {
     console.log(`${check.passed ? 'PASS' : 'FAIL'} ${check.scenario}/${check.id} (${check.durationMs} ms)`);
   }
-  console.log(`Phase 2V Quality Lab: ${evidence.status} (${evidence.checks.filter((check) => check.passed).length}/${evidence.checks.length} gates)`);
+  console.log(`Phase 2W Quality Lab: ${evidence.status} (${evidence.checks.filter((check) => check.passed).length}/${evidence.checks.length} gates)`);
   if (evidence.status !== 'PASSED') process.exitCode = 1;
 }
 

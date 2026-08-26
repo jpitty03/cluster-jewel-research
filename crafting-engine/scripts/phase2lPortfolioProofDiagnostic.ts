@@ -449,24 +449,102 @@ requireGate(
 
 console.error('[phase2l] L8 target permutation neutrality');
 const permutationBudget = { maxStates: 4_000, maxWallTimeMs: 24_000, maxExpansionRounds: 3 };
-const permutationA = run(
+const coldPermutationA = run(
   'L8 target order A',
   new OptimizerService(repo),
   controlledInput(twoTargetIds, PHASE2K1_FROZEN_CURRENCY_RATES, permutationBudget, 'RECOMMEND')
 );
-const permutationB = run(
+const coldPermutationB = run(
   'L8 target order B',
   new OptimizerService(repo),
   controlledInput([...twoTargetIds].reverse(), PHASE2K1_FROZEN_CURRENCY_RATES, permutationBudget, 'RECOMMEND')
 );
-auditAdmissibility(permutationA);
-auditAdmissibility(permutationB);
+auditAdmissibility(coldPermutationA);
+auditAdmissibility(coldPermutationB);
+const permutationRunEvidence = (recorded: RecordedRun) => ({
+    expectedCostChaos: recorded.result.expectedCostChaos,
+    selected: recorded.result.recommended?.name,
+    elapsedMs: recorded.elapsedMs,
+    states: recorded.result.search.statesExpanded,
+    rounds: recorded.result.search.expansionRounds,
+    newStatesByRound: recorded.result.search.newStatesByRound,
+    budget: {
+      state: recorded.result.search.stateBudgetExhausted,
+      wall: recorded.result.search.wallTimeBudgetExhausted,
+      round: recorded.result.search.roundBudgetExhausted,
+    },
+    identity: recorded.result.search.sessionReuse.identityHash,
+});
+const coldPermutationEvidence = {
+  orderA: permutationRunEvidence(coldPermutationA),
+  orderB: permutationRunEvidence(coldPermutationB),
+};
+requireGate(
+  coldPermutationA.result.search.sessionReuse.identityHash ===
+    coldPermutationB.result.search.sessionReuse.identityHash,
+  `L8 target permutation changed canonical search identity: ${JSON.stringify(coldPermutationEvidence)}`
+);
+
+let permutationA = coldPermutationA;
+let permutationB = coldPermutationB;
+let comparisonMode = 'DIRECT_EQUAL_DEPTH';
+if (
+  coldPermutationA.result.search.statesExpanded !==
+    coldPermutationB.result.search.statesExpanded
+) {
+  requireGate(
+    coldPermutationA.result.search.wallTimeBudgetExhausted ||
+      coldPermutationB.result.search.wallTimeBudgetExhausted,
+    `L8 permutations reached unequal proof depth without a wall interruption: ${JSON.stringify(coldPermutationEvidence)}`
+  );
+  const commonStates = Math.min(
+    coldPermutationA.result.search.statesExpanded,
+    coldPermutationB.result.search.statesExpanded,
+  );
+  const commonRounds = Math.min(
+    coldPermutationA.result.search.expansionRounds,
+    coldPermutationB.result.search.expansionRounds,
+  );
+  requireGate(commonStates > 0 && commonRounds > 0, 'L8 wall interruption produced no comparable proof tranche');
+  const equalWorkBudget = {
+    ...permutationBudget,
+    maxStates: commonStates,
+    maxExpansionRounds: commonRounds,
+  };
+  comparisonMode = `FRESH_EQUAL_WORK_${commonStates}_STATES_${commonRounds}_ROUNDS`;
+  permutationA = run(
+    'L8 equal-work target order A',
+    new OptimizerService(repo),
+    controlledInput(twoTargetIds, PHASE2K1_FROZEN_CURRENCY_RATES, equalWorkBudget, 'RECOMMEND')
+  );
+  permutationB = run(
+    'L8 equal-work target order B',
+    new OptimizerService(repo),
+    controlledInput([...twoTargetIds].reverse(), PHASE2K1_FROZEN_CURRENCY_RATES, equalWorkBudget, 'RECOMMEND')
+  );
+  auditAdmissibility(permutationA);
+  auditAdmissibility(permutationB);
+  requireGate(
+    permutationA.result.search.statesExpanded === permutationB.result.search.statesExpanded &&
+      permutationA.result.search.expansionRounds === permutationB.result.search.expansionRounds,
+    'L8 equal-work rerun did not finish at equal proof depth'
+  );
+}
+const permutationEvidence = {
+  comparisonMode,
+  cold: coldPermutationEvidence,
+  comparable: {
+    orderA: permutationRunEvidence(permutationA),
+    orderB: permutationRunEvidence(permutationB),
+  },
+};
+console.error(`[phase2l] L8 evidence ${JSON.stringify(permutationEvidence)}`);
 requireGate(
   Math.abs(
     (permutationA.result.expectedCostChaos ?? Infinity) -
       (permutationB.result.expectedCostChaos ?? Infinity)
   ) <= tolerance,
-  'L8 target permutation changed selected portfolio economics'
+  `L8 target permutation changed selected portfolio economics: ${JSON.stringify(permutationEvidence)}`
 );
 requireGate(
   permutationA.result.acquisition.portfolioProof.status ===
@@ -502,6 +580,7 @@ const lines = [
   ...priceRegimes.map(runSummary),
   '',
   'L8 TARGET PERMUTATION',
+  `  evidence=${JSON.stringify(permutationEvidence)}`,
   runSummary(permutationA),
   runSummary(permutationB),
   '',

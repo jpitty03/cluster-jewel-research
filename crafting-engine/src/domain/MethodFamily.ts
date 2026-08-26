@@ -33,6 +33,13 @@ export type MethodFamilyStageStatus =
   | 'RESOLVED'
   | 'DOMINATED';
 
+export type MethodFamilyObjectiveEligibility =
+  | 'RESOLVED_ELIGIBLE'
+  | 'OVER_COST_CEILING'
+  | 'OBJECTIVE_DOMINATED'
+  | 'UNRESOLVED_COULD_QUALIFY'
+  | 'UNRESOLVED_COST_INELIGIBLE_BY_BOUND';
+
 export interface MethodFamilySpec {
   id: string;
   kind: MethodFamilyKind;
@@ -51,6 +58,7 @@ export interface MethodFamilyResult {
   spec: MethodFamilySpec;
   status: MethodFamilyStatus;
   evaluationSource: MethodFamilyEvaluationSource;
+  objectiveEligibility?: MethodFamilyObjectiveEligibility;
   route?: RouteSummary;
   craftPlan?: CraftPlanSummary;
   costDifferenceChaos?: number;

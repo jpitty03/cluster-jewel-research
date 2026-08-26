@@ -1,5 +1,6 @@
 import type { ClusterModRepository } from '../data/clusterModRepository.ts';
 import type { BaseType, ItemRarity } from '../domain/ItemState.ts';
+import type { ModRequirement } from '../domain/TargetDefinition.ts';
 import { getMaxNotables, getMaxPrefixes, getMaxSuffixes } from '../rules/affixRules.ts';
 import type { OptimizeCraftInput } from './optimizerService.ts';
 
@@ -33,6 +34,23 @@ const PASSIVE_COUNTS: Record<BaseType, readonly number[]> = {
   'Small Cluster Jewel': [2, 3],
 };
 
+function modRequirementIdentity(requirement: ModRequirement): string {
+  return JSON.stringify([
+    requirement.modId ?? null,
+    requirement.modGroup ?? null,
+    requirement.name ?? null,
+    requirement.minTierNumber ?? null,
+    requirement.maxTierNumber ?? null,
+    requirement.mustBeFractured ?? null,
+  ]);
+}
+
+function canonicalRequiredMods(requiredMods: readonly ModRequirement[]): ModRequirement[] {
+  return [...requiredMods].sort((left, right) =>
+    modRequirementIdentity(left).localeCompare(modRequirementIdentity(right))
+  );
+}
+
 function runtimeBaseType(value: unknown): value is BaseType {
   return value === 'Large Cluster Jewel' ||
     value === 'Medium Cluster Jewel' ||
@@ -53,9 +71,14 @@ export function validateOptimizeCraftInput(
   const notices: OptimizerValidationIssue[] = [];
   const modCount = input.target.requiredMods.length;
   const autoRare = modCount >= 3 && input.target.requiredRarity === undefined;
-  const normalizedInput: OptimizeCraftInput = autoRare
-    ? { ...input, target: { ...input.target, requiredRarity: 'rare' } }
-    : input;
+  const normalizedInput: OptimizeCraftInput = {
+    ...input,
+    target: {
+      ...input.target,
+      requiredMods: canonicalRequiredMods(input.target.requiredMods),
+      requiredRarity: autoRare ? 'rare' : input.target.requiredRarity,
+    },
+  };
 
   if (!runtimeBaseType(input.baseType) || !repository.getBaseTypes().includes(input.baseType)) {
     errors.push({ code: 'INVALID_BASE_TYPE', field: 'baseType', message: 'Choose a supported cluster-jewel base type.' });
@@ -77,7 +100,9 @@ export function validateOptimizeCraftInput(
     errors.push({ code: 'EXACT_MOD_ID_REQUIRED', field: 'target.requiredMods', message: 'Every desired modifier must use an exact modifier ID.' });
   }
 
-  const requestedIds = input.target.requiredMods.flatMap((requirement) => requirement.modId ? [requirement.modId] : []);
+  const requestedIds = normalizedInput.target.requiredMods.flatMap((requirement) =>
+    requirement.modId ? [requirement.modId] : []
+  );
   if (new Set(requestedIds).size !== requestedIds.length) {
     errors.push({ code: 'DUPLICATE_MOD_ID', field: 'target.requiredMods', message: 'Desired modifier IDs must be unique.' });
   }

@@ -1,5 +1,10 @@
 import type { BaseType } from '../domain/ItemState.ts';
-import type { OptimizationObjectiveSpec, OptimizeCraftResult } from '../service/optimizerService.ts';
+import type {
+  OptimizationObjectiveSpec,
+  OptimizeCraftPriceContext,
+  OptimizeCraftResult,
+  OptimizerMarketContext,
+} from '../service/optimizerService.ts';
 
 const VALID_BASE_TYPES = new Set<string>([
   'Small Cluster Jewel',
@@ -8,7 +13,7 @@ const VALID_BASE_TYPES = new Set<string>([
 ]);
 
 export interface CraftSharePayload {
-  version: '2R.1';
+  version: '2R.1' | '2W.1';
   baseType: BaseType;
   clusterType: string;
   itemLevel: number;
@@ -22,6 +27,23 @@ export interface CraftSharePayload {
   costConstraintType?: 'PREMIUM_PERCENT' | 'PREMIUM_CHAOS' | 'ABSOLUTE';
   costConstraintValue?: string;
   valueOfTimeChaosPerMin?: string;
+  expectedSaleValueChaos?: number;
+  prices?: OptimizeCraftPriceContext;
+  marketContext?: OptimizerMarketContext;
+  sourceContext?: {
+    source: 'CLUSTER_JEWELS';
+    league: string;
+    passiveRange?: { min: number; max: number };
+    itemLevelDefaulted: boolean;
+    sourceComboLabel?: string;
+    sourceMarketValue?: {
+      chaos: number;
+      kind: 'LOW' | 'MEDIAN';
+      quotedAt: string;
+      passiveRange: { min: number; max: number };
+      provenance: string;
+    };
+  };
 }
 
 export interface BugReportBundle {
@@ -86,7 +108,7 @@ export function decodeCraftFromUrl(encoded: string): CraftSharePayload | null {
     const parsed = JSON.parse(json) as Partial<CraftSharePayload>;
 
     // Strict schema & enum validation
-    if (parsed.version !== '2R.1') return null;
+    if (parsed.version !== '2R.1' && parsed.version !== '2W.1') return null;
     if (!parsed.baseType || !VALID_BASE_TYPES.has(parsed.baseType)) return null;
     if (typeof parsed.clusterType !== 'string' || parsed.clusterType.trim().length === 0) return null;
     if (typeof parsed.itemLevel !== 'number' || parsed.itemLevel < 1 || parsed.itemLevel > 100 || !Number.isFinite(parsed.itemLevel)) return null;
@@ -96,6 +118,10 @@ export function decodeCraftFromUrl(encoded: string): CraftSharePayload | null {
       return null;
     }
     if (parsed.finalRarity !== undefined && !['magic', 'rare', 'any'].includes(parsed.finalRarity)) {
+      return null;
+    }
+    if (parsed.expectedSaleValueChaos !== undefined &&
+      (!Number.isFinite(parsed.expectedSaleValueChaos) || parsed.expectedSaleValueChaos < 0)) {
       return null;
     }
 

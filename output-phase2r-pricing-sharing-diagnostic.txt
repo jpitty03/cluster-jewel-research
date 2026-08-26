@@ -8,9 +8,9 @@ R1 PASS: Full craft target preserved across encode/decode and invalid payloads s
 R2 PASS: Bug report bundle structured with complete diagnostics and zero credential leakage.
 
 --- R3: Pricing Invalidation Invariant ---
-Base Price 10c Total: 1498.63c
-Base Price 50c Total: 1658.63c
-R3 PASS: Price updates safely invalidate cached search sessions and update total costs (+160.0c total scaling).
+Base Price 10c Total: 13.30c
+Base Price 50c Total: 53.30c
+R3 PASS: Price updates safely invalidate cached search sessions and update total costs (+40.0c total scaling).
 
 --- R4: Price Provenance Honesty ---
 Alteration (provided): 0.1c (confidence: known)
