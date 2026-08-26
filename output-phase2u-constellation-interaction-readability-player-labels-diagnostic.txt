@@ -20,22 +20,22 @@ U6 — Touch pan and scroll boundary
 PASS: a real CDP touch stream pans at 390px, suppresses canvas scroll, and preserves ordinary scrolling outside the canvas.
 
 U7 — Pointer-centered wheel and button zoom
-PASS: pointer anchor drift=0.598px; 0.35×–5× clamps and shared button state updates passed.
+PASS: pointer anchor drift=0.385px; 0.35×–5× clamps and shared button state updates passed.
 
 U8 — Route Focus, Fit All, Reset, and replacement reset
-PASS: Route Focus framed 10 nodes, Fit All framed 20, and reset/replacement camera state was exact.
+PASS: Route Focus framed 9 nodes, Fit All framed 19, and reset/replacement camera state was exact.
 
 U9 — Keyboard camera and node access
 PASS: arrows, +, 0, F, A, Enter, Escape, and focus escape operate through the focusable graph region.
 
 U10 — Browser-measured label collision/readability
-PASS: Chromium measured 11 persistent labels with zero intersections and 13px minimum text.
+PASS: Chromium measured 10 persistent labels with zero intersections and 13px minimum text.
 
 U11 — Long-label and mobile stress
 PASS: 12 long method cards and the 390px graph stay within their rendered boundaries.
 
 U12 — Concise route rail
-PASS: 10 concise chips; the active step scrolled into view.
+PASS: 9 concise chips; the active step scrolled into view.
 
 U13 — Reduced motion, fullscreen, Screensaver, and five-minute soak
 PASS: static frames, fullscreen lifecycle, Screensaver controls, and 5-minute DOM/heap soak passed.
@@ -44,7 +44,7 @@ U14 — Stable visual evidence
 PASS: 7 committed real-browser camera/readability images are non-empty.
 
 U15 — Worker semantics and performance
-PASS: camera interaction added no Worker work; median frame=16.700ms, max long task=0.000ms, retained optimizer overhead=4.566%.
+PASS: camera interaction added no Worker work; median frame=16.700ms, max long task=0.000ms, retained optimizer overhead=-0.563%.
 
 U16 — Local release evidence and lean hosted deploy policy
 PASS: the full fresh browser/solver matrix is a mandatory local completion gate; automatic Pages CI blocks on build/lint/diff plus committed-evidence integrity, and the remote extended matrix is unscheduled/opt-in.
@@ -53,8 +53,8 @@ U17 — Build hygiene and prohibited-change audit
 PASS: build/lint/diff are blocking; no unit-test command exists in CI; camera state is presentation-only.
 
 === ALL PHASE 2U DIAGNOSTIC GATES PASS ===
-Real browser: Playwright Chromium 151.0.7922.34; run=2026-08-26T12-07-53-467Z; scenario=release
-Release label/schema: 2W.1 (Phase 2U behavior retained)
+Real browser: Playwright Chromium 151.0.7922.34; run=2026-08-26T17-32-13-469Z; scenario=release
+Release label/schema: 2X.1 (Phase 2U behavior retained)
 Unit tests added/run: NO
 Solver mechanics/probabilities changed: NO
 State identity weakened: NO

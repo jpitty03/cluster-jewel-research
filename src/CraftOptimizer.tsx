@@ -43,7 +43,87 @@ import {
 import type { OptimizerSeed } from './optimizerSeed.ts';
 
 const DEFAULT_ITEM_LEVEL = 84;
-const DEFAULT_BUDGET = { maxStates: 5000, maxWallTimeMs: 30_000, maxExpansionRounds: 3 };
+interface SearchDepthBudget {
+  maxStates: number;
+  maxWallTimeMs: number;
+  maxExpansionRounds: number;
+}
+
+const SEARCH_DEPTH_PRESETS = {
+  NORMAL: { label: 'Normal', maxStates: 5_000, maxWallTimeMs: 30_000, maxExpansionRounds: 3 },
+  DEEP: { label: 'Deep', maxStates: 10_000, maxWallTimeMs: 60_000, maxExpansionRounds: 4 },
+  VERY_DEEP: { label: 'Very Deep', maxStates: 20_000, maxWallTimeMs: 120_000, maxExpansionRounds: 5 },
+  RESEARCH: { label: 'Research', maxStates: 50_000, maxWallTimeMs: 300_000, maxExpansionRounds: 6 },
+} as const;
+
+type SearchDepthPreset = keyof typeof SEARCH_DEPTH_PRESETS | 'CUSTOM';
+const SEARCH_DEPTH_ORDER: Array<Exclude<SearchDepthPreset, 'CUSTOM'>> = [
+  'NORMAL',
+  'DEEP',
+  'VERY_DEEP',
+  'RESEARCH',
+];
+const DEFAULT_BUDGET: SearchDepthBudget = SEARCH_DEPTH_PRESETS.NORMAL;
+
+function matchingSearchDepthPreset(budget: SearchDepthBudget): SearchDepthPreset {
+  return SEARCH_DEPTH_ORDER.find((preset) => {
+    const candidate = SEARCH_DEPTH_PRESETS[preset];
+    return candidate.maxStates === budget.maxStates &&
+      candidate.maxWallTimeMs === budget.maxWallTimeMs &&
+      candidate.maxExpansionRounds === budget.maxExpansionRounds;
+  }) ?? 'CUSTOM';
+}
+
+function nextDeeperBudget(budget: SearchDepthBudget): SearchDepthBudget {
+  return {
+    maxStates: Math.max(budget.maxStates + 1, budget.maxStates * 2),
+    maxWallTimeMs: Math.max(budget.maxWallTimeMs + 1, budget.maxWallTimeMs * 2),
+    maxExpansionRounds: budget.maxExpansionRounds + 1,
+  };
+}
+
+function compactBudgetValue(value: number): string {
+  return value >= 1_000 && value % 1_000 === 0 ? `${value / 1_000}k` : value.toLocaleString();
+}
+
+function budgetPreview(budget: SearchDepthBudget): string {
+  return `${compactBudgetValue(budget.maxStates)} states · up to ${Math.round(budget.maxWallTimeMs / 1000)}s · ` +
+    `${budget.maxExpansionRounds} rounds · reuses compatible retained graph`;
+}
+
+function nextNamedDepth(budget: SearchDepthBudget): Exclude<SearchDepthPreset, 'CUSTOM'> | undefined {
+  return SEARCH_DEPTH_ORDER.find((preset) => {
+    const candidate = SEARCH_DEPTH_PRESETS[preset];
+    return candidate.maxStates > budget.maxStates ||
+      candidate.maxWallTimeMs > budget.maxWallTimeMs ||
+      candidate.maxExpansionRounds > budget.maxExpansionRounds;
+  });
+}
+
+function RetryDeeperButton({
+  onClick,
+  preview,
+  className = 'secondary',
+}: {
+  onClick: () => void;
+  preview: SearchDepthBudget;
+  className?: string;
+}) {
+  return (
+    <button
+      type="button"
+      className={`${className} retry-deeper-button`}
+      onClick={onClick}
+      aria-label="Retry Deeper"
+      data-next-max-states={preview.maxStates}
+      data-next-max-wall-time-ms={preview.maxWallTimeMs}
+      data-next-max-expansion-rounds={preview.maxExpansionRounds}
+    >
+      <span>Retry deeper</span>
+      <small>{budgetPreview(preview)}</small>
+    </button>
+  );
+}
 
 const STATUS_COPY: Record<RecommendationStatus, { title: string; detail: string }> = {
   PROVEN_OPTIMAL: {
@@ -190,6 +270,7 @@ interface SearchActivityVisualizerProps {
   selectedRouteName?: string;
   modifierDescriptors: ReturnType<typeof browserCraftingCatalog.getEligibleMods>;
   onRetryDeeper?: () => void;
+  retryDeeperBudget: SearchDepthBudget;
   onCancel?: () => void;
 }
 
@@ -235,6 +316,7 @@ export function SearchActivityVisualizer({
   selectedRouteName,
   modifierDescriptors,
   onRetryDeeper,
+  retryDeeperBudget,
   onCancel,
 }: SearchActivityVisualizerProps) {
   if (!progress && !running) return null;
@@ -294,9 +376,11 @@ export function SearchActivityVisualizer({
             </button>
           )}
           {!running && onRetryDeeper && (
-            <button type="button" className="secondary small-btn" onClick={onRetryDeeper}>
-              Retry Deeper
-            </button>
+            <RetryDeeperButton
+              className="secondary small-btn"
+              onClick={onRetryDeeper}
+              preview={retryDeeperBudget}
+            />
           )}
         </div>
       </div>
@@ -475,7 +559,7 @@ export function SearchActivityVisualizer({
   );
 }
 
-export const APP_RELEASE_VERSION = '2W.1';
+export const APP_RELEASE_VERSION = '2X.1';
 
 interface CraftOptimizerProps {
   seed?: OptimizerSeed | null;
@@ -516,6 +600,7 @@ export function CraftOptimizer({ seed = null, onBackToClusterJewels }: CraftOpti
   const [maxStates, setMaxStates] = useState(DEFAULT_BUDGET.maxStates);
   const [maxWallTimeMs, setMaxWallTimeMs] = useState(DEFAULT_BUDGET.maxWallTimeMs);
   const [maxExpansionRounds, setMaxExpansionRounds] = useState(DEFAULT_BUDGET.maxExpansionRounds);
+  const [searchDepthPreset, setSearchDepthPreset] = useState<SearchDepthPreset>('NORMAL');
   const [searchIntent, setSearchIntent] = useState<SearchIntent>('RECOMMEND');
   const [result, setResult] = useState<OptimizeCraftResult | null>(null);
   const [progress, setProgress] = useState<OptimizerProgressSnapshot | null>(null);
@@ -530,6 +615,45 @@ export function CraftOptimizer({ seed = null, onBackToClusterJewels }: CraftOpti
   const appliedSeedIdRef = useRef<string | null>(null);
   const [activeSeed, setActiveSeed] = useState<OptimizerSeed | null>(null);
   const [seedWarning, setSeedWarning] = useState<string | null>(null);
+
+  const currentSearchBudget = useMemo<SearchDepthBudget>(() => ({
+    maxStates,
+    maxWallTimeMs,
+    maxExpansionRounds,
+  }), [maxExpansionRounds, maxStates, maxWallTimeMs]);
+  const retryDeeperBudget = useMemo(
+    () => nextDeeperBudget(currentSearchBudget),
+    [currentSearchBudget],
+  );
+  const unresolvedCompetitiveFamilies = result?.acquisition.portfolioProof.unresolvedCompetitiveCandidates ??
+    progress?.unresolvedCompetitiveCandidates ?? 0;
+  const suggestedDepth = unresolvedCompetitiveFamilies > 0
+    ? nextNamedDepth(currentSearchBudget)
+    : undefined;
+  const exceedsMeasuredResearchPreset =
+    maxStates > SEARCH_DEPTH_PRESETS.RESEARCH.maxStates ||
+    maxWallTimeMs > SEARCH_DEPTH_PRESETS.RESEARCH.maxWallTimeMs ||
+    maxExpansionRounds > SEARCH_DEPTH_PRESETS.RESEARCH.maxExpansionRounds;
+
+  const selectSearchDepthPreset = (preset: SearchDepthPreset) => {
+    setSearchDepthPreset(preset);
+    if (preset === 'CUSTOM') return;
+    const budget = SEARCH_DEPTH_PRESETS[preset];
+    setMaxStates(budget.maxStates);
+    setMaxWallTimeMs(budget.maxWallTimeMs);
+    setMaxExpansionRounds(budget.maxExpansionRounds);
+  };
+
+  const updateCustomBudget = (
+    field: keyof SearchDepthBudget,
+    value: number,
+  ) => {
+    const normalized = Number.isFinite(value) ? value : 0;
+    setSearchDepthPreset('CUSTOM');
+    if (field === 'maxStates') setMaxStates(normalized);
+    else if (field === 'maxWallTimeMs') setMaxWallTimeMs(normalized);
+    else setMaxExpansionRounds(normalized);
+  };
 
   const marketPricing = useMemo(
     () => getBrowserOptimizerPricing(league, baseType, clusterType, passiveCount, itemLevel),
@@ -854,14 +978,11 @@ export function CraftOptimizer({ seed = null, onBackToClusterJewels }: CraftOpti
   };
 
   const retryDeeper = () => {
-    const budget = {
-      maxStates: Math.max(maxStates + 1, maxStates * 2),
-      maxWallTimeMs: Math.max(maxWallTimeMs + 1, maxWallTimeMs * 2),
-      maxExpansionRounds: maxExpansionRounds + 1,
-    };
+    const budget = retryDeeperBudget;
     setMaxStates(budget.maxStates);
     setMaxWallTimeMs(budget.maxWallTimeMs);
     setMaxExpansionRounds(budget.maxExpansionRounds);
+    setSearchDepthPreset(matchingSearchDepthPreset(budget));
     setSearchIntent('DEEPEN');
     void optimize(budget, 'DEEPEN');
   };
@@ -937,7 +1058,7 @@ export function CraftOptimizer({ seed = null, onBackToClusterJewels }: CraftOpti
 
   const copyShareUrl = () => {
     const payload: CraftSharePayload = {
-      version: '2W.1',
+      version: '2X.1',
       baseType,
       clusterType,
       itemLevel,
@@ -971,7 +1092,7 @@ export function CraftOptimizer({ seed = null, onBackToClusterJewels }: CraftOpti
 
   const copyBugReport = (res?: OptimizeCraftResult) => {
     const payload: CraftSharePayload = {
-      version: '2W.1',
+      version: '2X.1',
       baseType,
       clusterType,
       itemLevel,
@@ -1511,6 +1632,46 @@ export function CraftOptimizer({ seed = null, onBackToClusterJewels }: CraftOpti
           )}
         </section>
 
+        <section className="search-depth-control" aria-labelledby="search-depth-title">
+          <div>
+            <h3 id="search-depth-title">Search depth</h3>
+            <p>
+              {searchDepthPreset === 'CUSTOM'
+                ? `Custom · ${maxStates.toLocaleString()} states / ${Math.round(maxWallTimeMs / 1000)}s / ${maxExpansionRounds} rounds`
+                : `${SEARCH_DEPTH_PRESETS[searchDepthPreset].label} · ${maxStates.toLocaleString()} states / ${Math.round(maxWallTimeMs / 1000)}s / ${maxExpansionRounds} rounds`}
+            </p>
+          </div>
+          <label>
+            <span>Search depth preset</span>
+            <select
+              value={searchDepthPreset}
+              onChange={(event) => selectSearchDepthPreset(event.target.value as SearchDepthPreset)}
+            >
+              {SEARCH_DEPTH_ORDER.map((preset) => {
+                const budget = SEARCH_DEPTH_PRESETS[preset];
+                return (
+                  <option key={preset} value={preset}>
+                    {budget.label} — {budget.maxStates.toLocaleString()} states / {budget.maxWallTimeMs / 1000}s / {budget.maxExpansionRounds} rounds
+                  </option>
+                );
+              })}
+              <option value="CUSTOM">Custom — use Advanced values</option>
+            </select>
+          </label>
+        </section>
+        {unresolvedCompetitiveFamilies > 0 && (
+          <p
+            className="search-depth-recommendation"
+            data-competitive-families={unresolvedCompetitiveFamilies}
+            data-suggested-depth={suggestedDepth ?? 'CUSTOM'}
+          >
+            <strong>{unresolvedCompetitiveFamilies} competitive {unresolvedCompetitiveFamilies === 1 ? 'family remains' : 'families remain'}.</strong>{' '}
+            Suggested next depth: {suggestedDepth
+              ? `${SEARCH_DEPTH_PRESETS[suggestedDepth].label} (${compactBudgetValue(SEARCH_DEPTH_PRESETS[suggestedDepth].maxStates)} / ${SEARCH_DEPTH_PRESETS[suggestedDepth].maxWallTimeMs / 1000}s / ${SEARCH_DEPTH_PRESETS[suggestedDepth].maxExpansionRounds} rounds)`
+              : `Custom (${budgetPreview(retryDeeperBudget).replace(' · reuses compatible retained graph', '')})`}.
+          </p>
+        )}
+
         <details className="advanced-controls">
           <summary>Advanced search settings</summary>
           <p>Defaults: 5,000 states, 30,000 ms, 3 lazy-expansion rounds.</p>
@@ -1523,10 +1684,15 @@ export function CraftOptimizer({ seed = null, onBackToClusterJewels }: CraftOpti
                 <option value="PROVE">Attempt proof</option>
               </select>
             </label>
-            <label><span>Max states</span><input type="number" min="1" step="100" value={maxStates} onChange={(event) => setMaxStates(event.target.valueAsNumber)} /></label>
-            <label><span>Max wall time (ms)</span><input type="number" min="1" step="1000" value={maxWallTimeMs} onChange={(event) => setMaxWallTimeMs(event.target.valueAsNumber)} /></label>
-            <label><span>Expansion rounds</span><input type="number" min="1" max="20" value={maxExpansionRounds} onChange={(event) => setMaxExpansionRounds(event.target.valueAsNumber)} /></label>
+            <label><span>Max states</span><input type="number" min="1" step="100" value={maxStates} onChange={(event) => updateCustomBudget('maxStates', event.target.valueAsNumber)} /></label>
+            <label><span>Max wall time (ms)</span><input type="number" min="1" step="1000" value={maxWallTimeMs} onChange={(event) => updateCustomBudget('maxWallTimeMs', event.target.valueAsNumber)} /></label>
+            <label><span>Expansion rounds</span><input type="number" min="1" max="20" value={maxExpansionRounds} onChange={(event) => updateCustomBudget('maxExpansionRounds', event.target.valueAsNumber)} /></label>
           </div>
+          {exceedsMeasuredResearchPreset && (
+            <p className="warning-note" role="status">
+              This custom budget exceeds the browser-measured Research preset (50,000 states / 300s / 6 rounds). Cancellation and the requested-runtime host guard remain active.
+            </p>
+          )}
           <label className="optimizer-checkbox">
             <input type="checkbox" checked={allowFallback} onChange={(event) => setAllowFallback(event.target.checked)} />
             Allow research-fallback currency and acquisition prices
@@ -1546,7 +1712,7 @@ export function CraftOptimizer({ seed = null, onBackToClusterJewels }: CraftOpti
         <div className="error">
           {error}
           {wallTimeExceeded && !running && (
-            <button type="button" className="secondary" onClick={retryDeeper}>Retry deeper</button>
+            <RetryDeeperButton onClick={retryDeeper} preview={retryDeeperBudget} />
           )}
         </div>
       )}
@@ -1557,6 +1723,7 @@ export function CraftOptimizer({ seed = null, onBackToClusterJewels }: CraftOpti
         selectedRouteName={publicSelectedRouteName}
         modifierDescriptors={targetDescriptors}
         onRetryDeeper={retryDeeper}
+        retryDeeperBudget={retryDeeperBudget}
         onCancel={cancel}
       />
 
@@ -1567,11 +1734,11 @@ export function CraftOptimizer({ seed = null, onBackToClusterJewels }: CraftOpti
               <h2 id="source-market-summary-title">Market vs craft</h2>
               {sourceEconomicsReady ? (
                 <dl>
-                  <dt>Completed market {activeSeed.sourceMarketValue.kind.toLowerCase()}</dt>
+                  <dt>Market sampled {activeSeed.sourceMarketValue.kind.toLowerCase()}</dt>
                   <dd>{chaos(activeSeed.sourceMarketValue.chaos)}</dd>
-                  <dt>Expected craft EV</dt>
+                  <dt>Selected executable route EV</dt>
                   <dd>{chaos(result.expectedCostChaos)}</dd>
-                  <dt>Gross EV spread</dt>
+                  <dt>Spread using this executable route</dt>
                   <dd>{result.expectedCostChaos === null
                     ? '—'
                     : `${activeSeed.sourceMarketValue.chaos - result.expectedCostChaos >= 0 ? '+' : ''}${(activeSeed.sourceMarketValue.chaos - result.expectedCostChaos).toFixed(1)}c`}</dd>
@@ -1579,6 +1746,14 @@ export function CraftOptimizer({ seed = null, onBackToClusterJewels }: CraftOpti
               ) : (
                 <p className="warning-note">
                   No spread is calculated because the source quote and executable result do not describe the same exact passive-count craft identity.
+                </p>
+              )}
+              {sourceEconomicsReady && (
+                result.recommendationStatus === 'PROVISIONAL_RESOLVED' ||
+                result.acquisition.portfolioProof.unresolvedCompetitiveCandidates > 0
+              ) && (
+                <p className="market-proof-caveat">
+                  A cheaper crafting route may exist; resolving it would increase the modeled spread, not invalidate this executable route&apos;s EV.
                 </p>
               )}
               <p className="muted">Expected value, not guaranteed profit. {activeSeed.sourceMarketValue.provenance}</p>
@@ -1716,7 +1891,7 @@ export function CraftOptimizer({ seed = null, onBackToClusterJewels }: CraftOpti
               </section>
             )}
             {(result.recommendationStatus !== 'PROVEN_OPTIMAL' || result.search.budgetExhausted) && (
-              <button type="button" className="secondary" onClick={retryDeeper}>Retry deeper</button>
+              <RetryDeeperButton onClick={retryDeeper} preview={retryDeeperBudget} />
             )}
           </section>
 
@@ -2137,6 +2312,13 @@ export function CraftOptimizer({ seed = null, onBackToClusterJewels }: CraftOpti
                   </p>
                 )}
               </>
+            ) : result.recommended && result.craftPlan.status === 'UNCERTIFIED' ? (
+              <div className="plan-withheld-warning" role="alert" data-plan-status="UNCERTIFIED">
+                <strong>Player instruction plan withheld</strong>
+                <p>{result.craftPlan.withheldReason ??
+                  'The optimizer found an executable policy, but its selected mechanic evidence did not reconcile with a safe player plan.'}</p>
+                <p className="muted">Exact action IDs remain available in Advanced optimizer details and exports.</p>
+              </div>
             ) : <p>No certified acquisition route is available under this search budget.</p>}
           </section>
 
@@ -2229,6 +2411,21 @@ export function CraftOptimizer({ seed = null, onBackToClusterJewels }: CraftOpti
                   <dt>Worker round trip</dt><dd>{runtimeMs === null ? 'not recorded' : `${runtimeMs.toFixed(0)} ms`}</dd>
                 </dl>
                 {selectedMethod && <p className="muted">{selectedMethod.provenance}</p>}
+              </section>
+
+              <section className="advanced-section craft-plan-action-audit" data-plan-status={result.craftPlan.status}>
+                <h2>Craft-plan action audit</h2>
+                <dl>
+                  <dt>Plan certification</dt><dd>{result.craftPlan.status}</dd>
+                  <dt>Selected physical mechanics</dt><dd>{result.craftPlan.selectedActionIds.join(', ') || 'none'}</dd>
+                  <dt>Represented physical mechanics</dt><dd>{result.craftPlan.representedActionIds.join(', ') || 'none'}</dd>
+                  <dt>Uncovered physical mechanics</dt><dd>{result.craftPlan.uncoveredActionIds.join(', ') || 'none'}</dd>
+                  <dt>Invented mechanics</dt><dd>{result.craftPlan.inventedActionIds.join(', ') || 'none'}</dd>
+                  <dt>Excluded accounting entries</dt><dd>{result.craftPlan.excludedAccountingActionIds.join(', ') || 'none'}</dd>
+                  <dt>Excluded virtual/service actions</dt><dd>{result.craftPlan.excludedVirtualActionIds.join(', ') || 'none'}</dd>
+                  <dt>Unknown action IDs</dt><dd>{result.craftPlan.unknownActionIds.join(', ') || 'none'}</dd>
+                </dl>
+                {result.craftPlan.withheldReason && <p>{result.craftPlan.withheldReason}</p>}
               </section>
 
               {result.recommended === null && result.expectedActionUsage.length > 0 && (

@@ -1,13 +1,13 @@
 PHASE 2S — RETAINED RELEASE-CANDIDATE REGRESSION (BROWSER CERTIFICATION REOPENED BY PHASE 2T)
 
 S1 — Retained optimizer integration
-PASS: BEST_RESOLVED_ACQUISITION_SAFE, 13.603233c, 6 executable playbook steps.
+PASS: BEST_RESOLVED_ACQUISITION_SAFE, 13.603233c, 5 executable playbook steps.
 
 S2 — Share serialization regression
 PASS: exact target IDs survive the supported share URL round trip.
 
 S3 — Release-status truthfulness
-PASS: retained UI advances to Release Candidate 2W.1 and prominently distinguishes stale-pricing research estimates.
+PASS: retained UI advances to Release Candidate 2X.1 and prominently distinguishes stale-pricing research estimates.
 
 S4 — Certification boundary
 PASS: no browser claim is made here. Phase 2T Playwright owns rendered UI, Worker, responsive, keyboard, and canvas certification.

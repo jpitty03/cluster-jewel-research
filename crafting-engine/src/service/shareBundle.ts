@@ -13,7 +13,7 @@ const VALID_BASE_TYPES = new Set<string>([
 ]);
 
 export interface CraftSharePayload {
-  version: '2R.1' | '2W.1';
+  version: '2R.1' | '2W.1' | '2X.1';
   baseType: BaseType;
   clusterType: string;
   itemLevel: number;
@@ -108,7 +108,7 @@ export function decodeCraftFromUrl(encoded: string): CraftSharePayload | null {
     const parsed = JSON.parse(json) as Partial<CraftSharePayload>;
 
     // Strict schema & enum validation
-    if (parsed.version !== '2R.1' && parsed.version !== '2W.1') return null;
+    if (parsed.version !== '2R.1' && parsed.version !== '2W.1' && parsed.version !== '2X.1') return null;
     if (!parsed.baseType || !VALID_BASE_TYPES.has(parsed.baseType)) return null;
     if (typeof parsed.clusterType !== 'string' || parsed.clusterType.trim().length === 0) return null;
     if (typeof parsed.itemLevel !== 'number' || parsed.itemLevel < 1 || parsed.itemLevel > 100 || !Number.isFinite(parsed.itemLevel)) return null;

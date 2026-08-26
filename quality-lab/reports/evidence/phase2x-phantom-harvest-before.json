@@ -1,0 +1,58 @@
+{
+  "phase": "2X",
+  "capture": "PRE_FIX",
+  "baselineCommit": "b86ebddb9ed8816244c3697899e4c29d4a714c91",
+  "fixture": {
+    "baseType": "Large Cluster Jewel",
+    "clusterType": "12% increased Attack Damage while holding a Shield",
+    "itemLevel": 84,
+    "passiveCount": 8,
+    "finalRarity": "rare",
+    "extraAffixes": "allow-extra",
+    "targetModIds": [
+      "Prodigious Defence",
+      "Riot Queller",
+      "Smite the Weak"
+    ],
+    "objective": "CHEAPEST_CHAOS",
+    "searchBudget": {
+      "maxStates": 5000,
+      "maxWallTimeMs": 30000,
+      "maxExpansionRounds": 3
+    },
+    "priceProvenance": "Direct pre-fix service reproduction with a frozen manual price book; route winner is observed evidence, not an assertion."
+  },
+  "selectedPolicy": {
+    "recommendationStatus": "PROVISIONAL_RESOLVED",
+    "route": "Start self-fracture: Riot Queller",
+    "bundleId": "bundle:family_fracture_Riot Queller",
+    "source": "SELF_FRACTURE",
+    "expectedCostChaos": 1850.4388947075893,
+    "selectedHarvestActionIds": []
+  },
+  "contradiction": {
+    "accountingResource": {
+      "actionId": "clean_base_initial",
+      "actionName": "Initial clean cluster jewel base",
+      "scope": "ACQUISITION",
+      "expectedCount": 1,
+      "expectedCostChaos": 4
+    },
+    "craftPlanStep": {
+      "id": "specialized",
+      "phase": "SPECIALIZED",
+      "title": "Use the selected specialized craft",
+      "instruction": "Use Initial clean cluster jewel base in the exact states assigned to it by the selected policy.",
+      "actionIds": [
+        "clean_base_initial"
+      ]
+    },
+    "constellationNode": {
+      "id": "node_step_specialized",
+      "label": "Harvest",
+      "kind": "HARVEST_REFORGE",
+      "isSelectedRoute": true
+    }
+  },
+  "reproductionVerdict": "A positive acquisition accounting resource was treated as an unknown downstream action, defaulted to SPECIALIZED, and rendered as Harvest despite zero selected harvest_reforge_* evidence."
+}

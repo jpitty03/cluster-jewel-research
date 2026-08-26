@@ -1,6 +1,6 @@
 {
-  "appVersion": "2W.1",
-  "exportedAt": "2026-08-26T12:21:34.949Z",
+  "appVersion": "2X.1",
+  "exportedAt": "2026-08-26T17:46:14.838Z",
   "requestInput": {
     "baseType": "Small Cluster Jewel",
     "clusterType": "6% increased maximum Mana",
@@ -36,10 +36,10 @@
     "marketContext": {
       "league": "Allflame",
       "snapshotAt": "2026-08-26T06:31:33.498Z",
-      "snapshotAgeMs": 20998624,
+      "snapshotAgeMs": 40478794,
       "snapshotStale": false,
       "currencyRatesAt": "2026-08-26T05:36:32.599Z",
-      "currencyRatesAgeMs": 24299523,
+      "currencyRatesAgeMs": 43779693,
       "currencyRatesStale": false,
       "stale": false,
       "cleanBaseQuote": {
@@ -50,7 +50,7 @@
         "listed": 90,
         "sampled": 10,
         "at": "2026-08-26T05:57:33.050Z",
-        "ageMs": 23039072,
+        "ageMs": 42519242,
         "stale": false,
         "provenance": "Allflame sampled low listing for Small Cluster Jewel||6% increased maximum Mana||3-3||i84; midpoint 10.000c; 10 sampled of 90 listed at 2026-08-26T05:57:33.050Z"
       },
@@ -104,7 +104,7 @@
     "searchIntent": "RECOMMEND"
   },
   "optimizerSeedContext": {
-    "id": "cluster-jewels:1787746892108:Small Cluster Jewel||6% increased maximum Mana:35% increased Small Passive Effect",
+    "id": "cluster-jewels:1787766372279:Small Cluster Jewel||6% increased maximum Mana:35% increased Small Passive Effect",
     "source": "CLUSTER_JEWELS",
     "league": "Allflame",
     "baseType": "Small Cluster Jewel",
@@ -143,7 +143,7 @@
       "effortConfidence": "DEFAULT_APPROXIMATE"
     },
     "presentation": {
-      "schemaVersion": "2W.1",
+      "schemaVersion": "2X.1",
       "releaseStatus": "RELEASE_CANDIDATE_BROWSER_VERIFIED",
       "selectedRouteName": "Start clean base: Clean Base",
       "selectedRouteStatus": "BEST_RESOLVED_ACQUISITION_SAFE",
@@ -162,10 +162,10 @@
         "fullRouteU": 9.427055174999975
       },
       "timingScopes": {
-        "firstCompletedRoundMs": 423,
-        "firstCertifiedDownstreamPolicyMs": 423,
-        "firstUsefulExecutableFullRouteMs": 423,
-        "firstAcquisitionSafeRecommendationMs": 425
+        "firstCompletedRoundMs": 322,
+        "firstCertifiedDownstreamPolicyMs": 322,
+        "firstUsefulExecutableFullRouteMs": 322,
+        "firstAcquisitionSafeRecommendationMs": 324
       },
       "workScopes": {
         "portfolioTotalStatesExpanded": 350,
@@ -337,7 +337,7 @@
           "maxStates": 1200,
           "maxWallTimeMs": 3150,
           "maxExpansionRounds": 2,
-          "elapsedMs": 423
+          "elapsedMs": 322
         }
       },
       {

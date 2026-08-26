@@ -785,7 +785,7 @@ export interface InternalResultConsistency {
 }
 
 export interface CanonicalResultPresentation {
-  schemaVersion: '2W.1';
+  schemaVersion: '2X.1';
   releaseStatus: 'RELEASE_CANDIDATE_BROWSER_VERIFIED';
   selectedRouteName?: string;
   selectedRouteStatus: RecommendationStatus;
@@ -5387,7 +5387,7 @@ export class OptimizerService {
         : undefined,
     };
     const presentation: CanonicalResultPresentation = {
-      schemaVersion: '2W.1',
+      schemaVersion: '2X.1',
       releaseStatus: 'RELEASE_CANDIDATE_BROWSER_VERIFIED',
       selectedRouteName: canonicalRecommended?.name,
       selectedRouteStatus: finalRecommendationStatus,

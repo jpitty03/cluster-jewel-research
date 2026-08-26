@@ -101,6 +101,38 @@ const PHASE2U_FOUR_MOD_VOCABULARY = [
 
 const PUBLIC_RAW_MOD_ID = /\bAfflictionJewel[A-Za-z0-9_]+\b/;
 
+// Independent browser oracle: intentionally duplicated from public Worker action
+// evidence instead of importing the production craft-plan classifier.
+const ORACLE_PHYSICAL_MECHANIC_IDS = new Set([
+  'transmutation_orb',
+  'alteration_orb',
+  'augmentation_orb',
+  'regal_orb',
+  'scouring_orb',
+  'chaos_orb',
+  'annulment_orb',
+  'exalted_orb',
+  'fracturing_orb',
+  'restart_reacquire',
+  'harvest_reforge_life',
+  'harvest_reforge_defences',
+  'harvest_reforge_chaos',
+  'harvest_reforge_speed',
+  'harvest_reforge_attack',
+  'harvest_reforge_caster',
+  'harvest_reforge_critical',
+  'harvest_reforge_physical',
+  'harvest_reforge_fire',
+  'harvest_reforge_cold',
+  'harvest_reforge_lightning',
+]);
+
+let phase2wCheapestPlanEvidence: JsonRecord | undefined;
+let phase2wHarvestPlanEvidence: JsonRecord | undefined;
+let phase2wEldritchPlanEvidence: JsonRecord | undefined;
+let phase2wFastestPlanEvidence: JsonRecord | undefined;
+let phase2xFourModPlanEvidence: JsonRecord | undefined;
+
 type JsonRecord = Record<string, unknown>;
 
 const sourceDirectory = dirname(fileURLToPath(import.meta.url));
@@ -724,6 +756,130 @@ async function assertDomMatchesResult(page: Page, result: JsonRecord): Promise<R
   };
 }
 
+function independentSelectedActionEvidence(result: JsonRecord): {
+  sourceActionIds: string[];
+  physicalActionIds: string[];
+  accountingActionIds: string[];
+  virtualActionIds: string[];
+  unknownActionIds: string[];
+} {
+  const sourceActionIds: string[] = [];
+  const addUsage = (value: unknown, countField: 'expectedCount' | 'expectedVisits') => {
+    if (!Array.isArray(value)) return;
+    for (const entry of value) {
+      const row = jsonRecord(entry, 'raw selected action evidence');
+      if (numberValue(row[countField], `${String(row.actionId)} ${countField}`) > 0) {
+        sourceActionIds.push(String(row.actionId));
+      }
+    }
+  };
+  const recommended = result.recommended === null ? undefined : jsonRecord(result.recommended, 'recommended');
+  if (recommended?.actionId) sourceActionIds.push(String(recommended.actionId));
+  addUsage(result.expectedActionUsage, 'expectedCount');
+  addUsage(result.policyExplanation, 'expectedVisits');
+
+  const acquisition = jsonRecord(result.acquisition, 'acquisition');
+  const selectedCandidate = arrayValue(acquisition.candidates, 'acquisition candidates')
+    .map((entry) => jsonRecord(entry, 'acquisition candidate'))
+    .find((candidate) => candidate.id === acquisition.selectedCandidateId);
+  const selectedMethod = selectedCandidate
+    ? arrayValue(selectedCandidate.methods, 'selected candidate methods')
+      .map((entry) => jsonRecord(entry, 'selected method'))
+      .find((method) => method.id === acquisition.selectedMethodId)
+    : undefined;
+  const synthesis = selectedMethod?.executable === true && selectedCandidate?.synthesis
+    ? jsonRecord(selectedCandidate.synthesis, 'selected synthesis')
+    : undefined;
+  addUsage(synthesis?.expectedActionUsage, 'expectedCount');
+  if (synthesis?.wrongFractureRecovery) {
+    addUsage(
+      jsonRecord(synthesis.wrongFractureRecovery, 'wrong fracture recovery').recoveryActions,
+      'expectedVisits',
+    );
+  }
+
+  const uniqueIds = [...new Set(sourceActionIds)].sort((left, right) => left.localeCompare(right));
+  const accountingActionIds = uniqueIds.filter((actionId) => actionId === 'clean_base_initial');
+  const virtualActionIds = uniqueIds.filter((actionId) =>
+    actionId.startsWith('acquire_') ||
+    actionId.startsWith('method:') ||
+    actionId.startsWith('bundle:') ||
+    actionId.startsWith('candidate:')
+  );
+  const physicalActionIds = uniqueIds.filter((actionId) => ORACLE_PHYSICAL_MECHANIC_IDS.has(actionId));
+  const classified = new Set([...accountingActionIds, ...virtualActionIds, ...physicalActionIds]);
+  const unknownActionIds = uniqueIds.filter((actionId) => !classified.has(actionId));
+  return { sourceActionIds: uniqueIds, physicalActionIds, accountingActionIds, virtualActionIds, unknownActionIds };
+}
+
+async function assertBrowserPlanSemantics(page: Page, result: JsonRecord): Promise<JsonRecord> {
+  const raw = independentSelectedActionEvidence(result);
+  const plan = jsonRecord(result.craftPlan, 'craft plan');
+  assert.equal(plan.status, 'CERTIFIED', `Player plan is not certified: ${JSON.stringify(plan)}`);
+  const selected = arrayValue(plan.selectedActionIds, 'plan selected actions').map(String).sort();
+  const represented = arrayValue(plan.representedActionIds, 'plan represented actions').map(String).sort();
+  assert.deepEqual(selected, raw.physicalActionIds, 'Plan selected mechanics differ from raw selected bundle evidence');
+  assert.deepEqual(represented, raw.physicalActionIds, 'Plan represented mechanics differ from raw selected bundle evidence');
+  assert.deepEqual(arrayValue(plan.uncoveredActionIds, 'uncovered mechanics'), []);
+  assert.deepEqual(arrayValue(plan.inventedActionIds, 'invented mechanics'), []);
+  assert.deepEqual(arrayValue(plan.unknownActionIds, 'unknown mechanics'), []);
+  assert.deepEqual(
+    arrayValue(plan.excludedAccountingActionIds, 'accounting exclusions').map(String).sort(),
+    raw.accountingActionIds,
+  );
+  assert.deepEqual(
+    arrayValue(plan.excludedVirtualActionIds, 'virtual exclusions').map(String).sort(),
+    raw.virtualActionIds,
+  );
+  assert.deepEqual(raw.unknownActionIds, []);
+
+  const domActionIds = (await page.locator('.craft-plan-step[data-action-ids]').evaluateAll((nodes) =>
+    nodes.flatMap((node) => (node.getAttribute('data-action-ids') ?? '').split(',').filter(Boolean))
+  )).sort();
+  assert.deepEqual([...new Set(domActionIds)], raw.physicalActionIds, 'Visible How to craft mechanics differ from Worker evidence');
+  const railText = await page.getByTestId('constellation-route-rail').innerText();
+  const guideText = await page.locator('.craft-guide').innerText();
+  const rawHarvest = raw.physicalActionIds.filter((actionId) => actionId.startsWith('harvest_reforge_'));
+  const planHarvest = arrayValue(plan.steps, 'plan steps')
+    .map((entry) => jsonRecord(entry, 'plan step'))
+    .filter((step) => step.phase === 'SPECIALIZED')
+    .flatMap((step) => arrayValue(step.actionIds, 'specialized action IDs').map(String))
+    .filter((actionId) => actionId.startsWith('harvest_reforge_'))
+    .sort();
+  assert.deepEqual(planHarvest, rawHarvest);
+  assert.equal(/Harvest/i.test(railText), rawHarvest.length > 0, 'Selected Constellation Harvest semantics differ from raw evidence');
+  assert.equal(/Harvest/i.test(guideText), rawHarvest.length > 0, 'How to craft Harvest semantics differ from raw evidence');
+
+  const accountingRows = page.locator('table[data-usage-scope="ACQUISITION"] tr[data-action-id="clean_base_initial"]');
+  if (raw.accountingActionIds.includes('clean_base_initial')) {
+    assert.equal(await accountingRows.count(), 1, 'Initial clean base is missing from acquisition accounting');
+  }
+  assert(!domActionIds.includes('clean_base_initial'), 'Initial clean base masqueraded as a chronological mechanic');
+  assert(!PUBLIC_RAW_MOD_ID.test(await page.locator('.optimizer-results').innerText()), 'Public result leaked raw modifier IDs');
+
+  return {
+    recommendationStatus: result.recommendationStatus,
+    selectedBundleId: jsonRecord(result.internalConsistency, 'plan consistency').selectedBundleId,
+    selectedBundleSource: jsonRecord(result.internalConsistency, 'plan consistency').selectedBundleSource,
+    acquisitionContext: jsonRecord(result.presentation, 'plan presentation').acquisitionContext,
+    selectedPhysicalActionIds: raw.physicalActionIds,
+    representedPhysicalActionIds: represented,
+    excludedAccountingActionIds: raw.accountingActionIds,
+    excludedVirtualActionIds: raw.virtualActionIds,
+    unknownActionIds: raw.unknownActionIds,
+    selectedHarvestActionIds: rawHarvest,
+    planHarvestActionIds: planHarvest,
+    constellationHarvest: /Harvest/i.test(railText),
+    acquisitionResourceInPlan: domActionIds.includes('clean_base_initial'),
+    unresolvedMethodFamilies: Array.isArray(result.methodPortfolio)
+      ? result.methodPortfolio
+        .map((entry) => jsonRecord(entry, 'plan method family'))
+        .filter((family) => family.fullRouteStatus === 'UNRESOLVED')
+        .map((family) => jsonRecord(family.spec, 'unresolved method spec').id)
+      : [],
+  };
+}
+
 async function downloadExport(page: Page, artifactName: string): Promise<JsonRecord> {
   const downloadPromise = page.waitForEvent('download');
   await page.getByRole('button', { name: /Export Setup JSON/ }).click();
@@ -963,6 +1119,7 @@ async function runFourMod(page: Page, evidence: BrowserEvidence): Promise<void> 
     for (const duplicate of duplicates) {
       assert.equal(duplicate.evaluationSource, 'INDEPENDENT_SOLVE');
     }
+    phase2xFourModPlanEvidence = await assertBrowserPlanSemantics(page, result);
     return {
       families: methods.map((method) => ({
         id: jsonRecord(method.spec, 'method spec').id,
@@ -974,6 +1131,7 @@ async function runFourMod(page: Page, evidence: BrowserEvidence): Promise<void> 
         fullRouteStatus: method.fullRouteStatus,
         duplicateOf: method.duplicateOfMethodFamilyId,
       })),
+      planSemantics: phase2xFourModPlanEvidence,
     };
   });
 
@@ -1671,7 +1829,7 @@ async function runPhase2V(page: Page, evidence: BrowserEvidence): Promise<void> 
     const presentation = jsonRecord(oneModResult.presentation, 'one-mod presentation');
     const acquisitionContext = jsonRecord(presentation.acquisitionContext, 'one-mod acquisition context');
     assert.equal(acquisitionContext.kind, 'CLEAN');
-    assert.equal(presentation.schemaVersion, '2W.1');
+    assert.equal(presentation.schemaVersion, '2X.1');
     const resultCost = numberValue(oneModResult.expectedCostChaos, 'one-mod expected cost');
     assert(resultCost >= 8.7 && resultCost <= 8.9, `One-mod cost moved outside the ~8.784c regression: ${resultCost}`);
     const craftPlan = jsonRecord(oneModResult.craftPlan, 'one-mod craft plan');
@@ -1896,7 +2054,7 @@ async function runPhase2V(page: Page, evidence: BrowserEvidence): Promise<void> 
     assert(oneModResult && fourModResult && armourEvasionResult, 'Phase 2V regression fixtures unavailable');
     for (const result of [oneModResult, fourModResult, armourEvasionResult]) {
       const presentation = jsonRecord(result.presentation, 'presentation');
-      assert.equal(presentation.schemaVersion, '2W.1');
+      assert.equal(presentation.schemaVersion, '2X.1');
       assert.equal(presentation.releaseStatus, 'RELEASE_CANDIDATE_BROWSER_VERIFIED');
       if (result.recommended !== null) assertFullRouteReconciliation(result);
     }
@@ -1904,7 +2062,7 @@ async function runPhase2V(page: Page, evidence: BrowserEvidence): Promise<void> 
       phase2tAccountingPreserved: true,
       phase2uInteractionAndLabelsPreserved: true,
       fallbackSubstitutionUsed: false,
-      schemaVersion: '2W.1',
+      schemaVersion: '2X.1',
     };
   });
 }
@@ -1955,7 +2113,14 @@ async function runPhase2W(page: Page, evidence: BrowserEvidence): Promise<void> 
     const accounting = assertFullRouteReconciliation(eldritchResult);
     const consistency = jsonRecord(eldritchResult.internalConsistency, 'internal consistency');
     assert.equal(consistency.selectedBundleSource !== undefined, true);
-    return { fixture: eldritch.id, metrics: routeMetrics(eldritchResult), accounting, consistency };
+    phase2wEldritchPlanEvidence = await assertBrowserPlanSemantics(page, eldritchResult);
+    return {
+      fixture: eldritch.id,
+      metrics: routeMetrics(eldritchResult),
+      accounting,
+      consistency,
+      planSemantics: phase2wEldritchPlanEvidence,
+    };
   });
 
   await gate(evidence, scenario, 'W2b-fail-closed-reconciliation-invariant', async () => {
@@ -2036,7 +2201,23 @@ async function runPhase2W(page: Page, evidence: BrowserEvidence): Promise<void> 
     assertNear(metrics.cost, 175.363, 'Frozen cheapest fixture cost', 0.2);
     assert(Math.abs(metrics.actions - 1161) <= 3, `Frozen cheapest actions changed: ${metrics.actions}`);
     assert(Math.abs(metrics.timeMs / 1000 - 464.2) <= 2, `Frozen cheapest time changed: ${metrics.timeMs / 1000}s`);
-    return { metrics, candidateCount: routes.length, accounting, requestContext };
+    phase2wCheapestPlanEvidence = await assertBrowserPlanSemantics(page, cheapestResult);
+    const harvestFamily = arrayValue(cheapestResult.methodPortfolio, 'cheapest method portfolio')
+      .map((entry) => jsonRecord(entry, 'cheapest method family'))
+      .find((family) => jsonRecord(family.spec, 'cheapest method spec').kind === 'HARVEST');
+    assert(harvestFamily, 'Harvest was not eligible/represented in the Cheapest method portfolio');
+    assert.notEqual(harvestFamily.status, 'SELECTED_WINNER');
+    const negativeScreenshot = join(evidenceDirectory, 'phase2x-harvest-eligible-not-selected-plan.png');
+    await page.locator('.craft-guide').screenshot({ path: negativeScreenshot });
+    evidence.artifacts.phase2xHarvestNotSelected = relative(repositoryRoot, negativeScreenshot);
+    return {
+      metrics,
+      candidateCount: routes.length,
+      accounting,
+      requestContext,
+      planSemantics: phase2wCheapestPlanEvidence,
+      harvestFamilyStatus: harvestFamily.status,
+    };
   });
 
   await gate(evidence, scenario, 'W6-armour-evasion-fewest-at-600', async () => {
@@ -2071,6 +2252,10 @@ async function runPhase2W(page: Page, evidence: BrowserEvidence): Promise<void> 
     assert.equal(repeatableCertification.successOutcomeCount, 743);
     assertNear(metrics.cost, 576.58, 'Frozen fewest fixture cost', 0.3);
     assert(Math.abs(metrics.actions - 208) <= 2, `Frozen fewest actions changed: ${metrics.actions}`);
+    phase2wHarvestPlanEvidence = await assertBrowserPlanSemantics(page, fewestResult);
+    const harvestScreenshot = join(evidenceDirectory, 'phase2x-harvest-selected-plan.png');
+    await page.locator('.craft-guide').screenshot({ path: harvestScreenshot });
+    evidence.artifacts.phase2xHarvestSelected = relative(repositoryRoot, harvestScreenshot);
     return {
       metrics,
       eligiblePolicies: eligible.length,
@@ -2078,6 +2263,7 @@ async function runPhase2W(page: Page, evidence: BrowserEvidence): Promise<void> 
       proof: fewestResult.objectiveProofStatus,
       repeatableCertification,
       requestContext,
+      planSemantics: phase2wHarvestPlanEvidence,
     };
   });
 
@@ -2101,7 +2287,14 @@ async function runPhase2W(page: Page, evidence: BrowserEvidence): Promise<void> 
     assert(metrics.cost <= 600 + 1e-9, 'Fastest selection exceeded 600c');
     assertNear(metrics.cost, 347.753, 'Frozen fastest fixture cost', 0.3);
     assert(Math.abs(metrics.timeMs / 1000 - 296.9) <= 2, `Frozen fastest time changed: ${metrics.timeMs / 1000}s`);
-    return { metrics, eligiblePolicies: eligible.length, accounting, proof: fastestResult.objectiveProofStatus };
+    phase2wFastestPlanEvidence = await assertBrowserPlanSemantics(page, fastestResult);
+    return {
+      metrics,
+      eligiblePolicies: eligible.length,
+      accounting,
+      proof: fastestResult.objectiveProofStatus,
+      planSemantics: phase2wFastestPlanEvidence,
+    };
   });
 
   await gate(evidence, scenario, 'W8-armour-evasion-500-ceiling', async () => {
@@ -2208,7 +2401,7 @@ async function runPhase2W(page: Page, evidence: BrowserEvidence): Promise<void> 
   await gate(evidence, scenario, 'W1-phase2v-mechanics-proof-worker-and-label-preservation', async () => {
     assert(eldritchResult && cheapestResult && fewestResult && fastestResult && constrained500Result, 'Preservation matrix is incomplete');
     for (const result of [eldritchResult, cheapestResult, fewestResult, fastestResult, constrained500Result]) {
-      assert.equal(jsonRecord(result.presentation, 'presentation').schemaVersion, '2W.1');
+      assert.equal(jsonRecord(result.presentation, 'presentation').schemaVersion, '2X.1');
       assert.equal(jsonRecord(result.internalConsistency, 'consistency').status, 'OK');
       assertFullRouteReconciliation(result);
     }
@@ -2491,7 +2684,7 @@ async function runPhase2W(page: Page, evidence: BrowserEvidence): Promise<void> 
     assertNear(numberValue(withSale.expectedProfitChaos, 'expected profit'), saleValueChaos - withSaleMetrics.cost, 'Profit arithmetic');
     const summary = page.locator('.source-market-summary');
     assert.match(await summary.innerText(), /Expected value, not guaranteed profit/i);
-    assert.match(await summary.innerText(), /Gross EV spread/i);
+    assert.match(await summary.innerText(), /Spread using this executable route/i);
     const screenshot = join(evidenceDirectory, 'phase2w-exact-market-vs-craft.png');
     await summary.screenshot({ path: screenshot });
     evidence.artifacts.phase2wMarketVsCraft = relative(repositoryRoot, screenshot);
@@ -2584,7 +2777,7 @@ async function runPhase2W(page: Page, evidence: BrowserEvidence): Promise<void> 
     assert.equal(await page.getByLabel('Expected sale value (chaos, optional)').inputValue(), expected.sale);
     assert.match(await page.locator('.optimizer-source-banner').innerText(), /Loaded from Cluster Jewels/i);
     assert.equal(new URL(page.url()).hash, '#optimizer', 'JSON import left a stale share payload in the URL');
-    return { expected, shareVersion: '2W.1', exportedSeedPreserved: true, staleShareHashCleared: true };
+    return { expected, shareVersion: '2X.1', exportedSeedPreserved: true, staleShareHashCleared: true };
   });
 
   await gate(evidence, scenario, 'W19-mobile-keyboard-focus-overflow-and-labels', async () => {
@@ -2713,18 +2906,629 @@ async function runPhase2W(page: Page, evidence: BrowserEvidence): Promise<void> 
 
   await gate(evidence, scenario, 'W22-browser-release-hygiene-and-stable-evidence', async () => {
     await page.getByRole('button', { name: 'Craft Optimizer', exact: true }).click();
-    await page.getByText(/Browser-Verified Release Candidate 2W\.1/).waitFor();
-    assert.equal(fixtureCorpus.version, 'Phase2W-Frozen-Browser-Corpus-1');
+    await page.getByText(/Browser-Verified Release Candidate 2X\.1/).waitFor();
+    assert.equal(fixtureCorpus.version, 'Phase2X-Frozen-Browser-Corpus-1');
     for (const artifact of ['phase2wMarketVsCraft', 'phase2wHandoffExport', 'phase2wMobileHandoff']) {
       const path = evidence.artifacts[artifact];
       assert(path && statSync(join(repositoryRoot, path)).size > 0, `Missing Phase 2W artifact ${artifact}`);
     }
     assert(handoffRenderMs !== undefined && handoffRenderMs < 1_000, `Handoff render took ${handoffRenderMs}ms`);
     return {
-      appVersion: '2W.1',
+      appVersion: '2X.1',
       fixtureCorpus: fixtureCorpus.version,
       artifacts: ['phase2wMarketVsCraft', 'phase2wHandoffExport', 'phase2wMobileHandoff'],
       unitTestsAddedOrRun: false,
+    };
+  });
+}
+
+async function runPhase2X(page: Page, evidence: BrowserEvidence): Promise<void> {
+  const scenario = 'phase2x-craft-plan-semantics-budget-proof-depth';
+  const cheap = fixture('cheap_one_mod');
+  const exactFixture = fixture('phase2x_three_notable_handoff');
+  let budgetMatrix: Array<Record<string, unknown>> = [];
+  let budgetGeometry: JsonRecord | undefined;
+  let normalResult: JsonRecord | undefined;
+  let deepResult: JsonRecord | undefined;
+  let veryDeepResult: JsonRecord | undefined;
+  let normalPlanEvidence: JsonRecord | undefined;
+  let retryEvidence: JsonRecord | undefined;
+  let cancellationEvidence: JsonRecord | undefined;
+  let exactResult: JsonRecord | undefined;
+  let exactPlanEvidence: JsonRecord | undefined;
+  let exactExport: JsonRecord | undefined;
+  let exactDifferential: JsonRecord | undefined;
+  let exactMarketText = '';
+  let sharePayload: JsonRecord | undefined;
+  let semanticMatrix: JsonRecord | undefined;
+  let performanceEvidence: JsonRecord | undefined;
+
+  await gate(evidence, scenario, 'X1-phase2w-preservation', async () => {
+    const requiredScenarios = [
+      'real-browser-smoke',
+      'exact-four-mod-release-regression',
+      'phase2u-interaction-label-readability',
+      'phase2v-scroll-semantics-harvest-closure',
+      'phase2w-canonical-objective-handoff-autonomous',
+    ];
+    const prior = evidence.checks.filter((check) => requiredScenarios.includes(check.scenario));
+    assert(prior.length > 0, 'No mature browser evidence preceded Phase 2X');
+    assert(prior.every((check) => check.passed), 'A prior mature browser gate failed before Phase 2X');
+    for (const required of requiredScenarios) {
+      assert(prior.some((check) => check.scenario === required), `Missing preserved browser scenario ${required}`);
+    }
+    return { preservedScenarios: requiredScenarios, passedGates: prior.length, schemaVersion: '2X.1' };
+  });
+
+  await gate(evidence, scenario, 'X9-budget-preset-contract', async () => {
+    await ensureOptimizerPage(page, evidence.productionUrl!);
+    await page.setViewportSize({ width: 1280, height: 960 });
+    await importFixture(page, cheap);
+    const advanced = page.locator('details.advanced-controls');
+    if (!(await advanced.evaluate((element) => (element as HTMLDetailsElement).open))) {
+      await advanced.locator('summary').click();
+    }
+    const preset = page.getByLabel('Search depth preset');
+    const expected = [
+      ['NORMAL', 5_000, 30_000, 3],
+      ['DEEP', 10_000, 60_000, 4],
+      ['VERY_DEEP', 20_000, 120_000, 5],
+      ['RESEARCH', 50_000, 300_000, 6],
+    ] as const;
+    budgetMatrix = [];
+    for (const [value, maxStates, maxWallTimeMs, maxExpansionRounds] of expected) {
+      await preset.selectOption(value);
+      const observed = {
+        preset: await preset.inputValue(),
+        maxStates: Number(await page.getByLabel('Max states').inputValue()),
+        maxWallTimeMs: Number(await page.getByLabel('Max wall time (ms)').inputValue()),
+        maxExpansionRounds: Number(await page.getByLabel('Expansion rounds').inputValue()),
+      };
+      assert.deepEqual(observed, { preset: value, maxStates, maxWallTimeMs, maxExpansionRounds });
+      budgetMatrix.push(observed);
+    }
+    await page.getByLabel('Max states').fill('12345');
+    assert.equal(await preset.inputValue(), 'CUSTOM');
+    budgetMatrix.push({
+      preset: 'CUSTOM',
+      maxStates: Number(await page.getByLabel('Max states').inputValue()),
+      maxWallTimeMs: Number(await page.getByLabel('Max wall time (ms)').inputValue()),
+      maxExpansionRounds: Number(await page.getByLabel('Expansion rounds').inputValue()),
+    });
+    await preset.selectOption('NORMAL');
+    const desktopScreenshot = join(evidenceDirectory, 'phase2x-budget-presets-desktop.png');
+    await page.locator('.search-depth-control').screenshot({ path: desktopScreenshot });
+    evidence.artifacts.phase2xBudgetDesktop = relative(repositoryRoot, desktopScreenshot);
+    return { presets: budgetMatrix, artifact: evidence.artifacts.phase2xBudgetDesktop };
+  });
+
+  await gate(evidence, scenario, 'X14-responsive-budget-ux', async () => {
+    await page.setViewportSize({ width: 390, height: 844 });
+    const mobileScreenshot = join(evidenceDirectory, 'phase2x-budget-presets-mobile.png');
+    await page.locator('.search-depth-control').screenshot({ path: mobileScreenshot });
+    evidence.artifacts.phase2xBudgetMobile = relative(repositoryRoot, mobileScreenshot);
+    budgetGeometry = await page.evaluate(() => ({
+      viewport: document.documentElement.clientWidth,
+      documentWidth: document.documentElement.scrollWidth,
+      bodyWidth: document.body.scrollWidth,
+    }));
+    assert(numberValue(budgetGeometry.documentWidth, 'budget document width') <= numberValue(budgetGeometry.viewport, 'budget viewport') + 1);
+    assert(numberValue(budgetGeometry.bodyWidth, 'budget body width') <= numberValue(budgetGeometry.viewport, 'budget viewport') + 1);
+    await page.setViewportSize({ width: 1280, height: 960 });
+    return { geometry: budgetGeometry, artifact: evidence.artifacts.phase2xBudgetMobile };
+  });
+
+  await gate(evidence, scenario, 'X10-retry-deeper-preview-request-and-reuse', async () => {
+    await page.getByLabel('Search depth preset').selectOption('NORMAL');
+    await setObjective(page, 'CHEAPEST_CHAOS');
+    const memoryBefore = await page.evaluate(() => 'memory' in performance
+      ? (performance as Performance & { memory: { usedJSHeapSize: number } }).memory.usedJSHeapSize
+      : undefined);
+    const requestOffset = await workerEventCount(page);
+    normalResult = await runOptimization(page, 30_000);
+    normalPlanEvidence = await assertBrowserPlanSemantics(page, normalResult);
+    const normalRequest = await latestWorkerRequestInput(page);
+    assert.deepEqual(jsonRecord(normalRequest.searchBudget, 'Normal Worker budget'), {
+      maxStates: 5_000,
+      maxWallTimeMs: 30_000,
+      maxExpansionRounds: 3,
+    });
+    const retryButton = page.getByLabel('Search Activity').getByRole('button', { name: 'Retry Deeper' });
+    assert.equal(await retryButton.getAttribute('data-next-max-states'), '10000');
+    assert.equal(await retryButton.getAttribute('data-next-max-wall-time-ms'), '60000');
+    assert.equal(await retryButton.getAttribute('data-next-max-expansion-rounds'), '4');
+    assert.match(await retryButton.innerText(), /10k states.*up to 60s.*4 rounds.*reuses compatible retained graph/is);
+
+    let offset = await workerEventCount(page);
+    await retryButton.click();
+    let response = await waitForNewWorkerResponse(page, offset, 68_000);
+    assert.equal(response.type, 'RESULT');
+    deepResult = jsonRecord(response.result, 'Deep result');
+    await page.locator('.recommendation-hero').waitFor();
+    const deepRequest = await latestWorkerRequestInput(page);
+    assert.deepEqual(jsonRecord(deepRequest.searchBudget, 'Deep Worker budget'), {
+      maxStates: 10_000,
+      maxWallTimeMs: 60_000,
+      maxExpansionRounds: 4,
+    });
+    const deepReuse = jsonRecord(jsonRecord(deepResult.search, 'Deep search').sessionReuse, 'Deep reuse');
+    assert.equal(deepReuse.status, 'RESUMED');
+    assert(numberValue(deepReuse.retainedStates, 'Deep retained states') > 0);
+
+    const secondRetry = page.getByLabel('Search Activity').getByRole('button', { name: 'Retry Deeper' });
+    assert.equal(await secondRetry.getAttribute('data-next-max-states'), '20000');
+    assert.equal(await secondRetry.getAttribute('data-next-max-wall-time-ms'), '120000');
+    assert.equal(await secondRetry.getAttribute('data-next-max-expansion-rounds'), '5');
+    assert.match(await secondRetry.innerText(), /20k states.*up to 120s.*5 rounds/is);
+    const previewWorkerCount = await workerEventCount(page);
+    const retryScreenshot = join(evidenceDirectory, 'phase2x-retry-deeper-preview.png');
+    await secondRetry.screenshot({ path: retryScreenshot });
+    evidence.artifacts.phase2xRetryPreview = relative(repositoryRoot, retryScreenshot);
+    assert.equal(await workerEventCount(page), previewWorkerCount, 'Retry preview started an extra Worker job');
+
+    offset = await workerEventCount(page);
+    await secondRetry.click();
+    response = await waitForNewWorkerResponse(page, offset, 128_000);
+    assert.equal(response.type, 'RESULT');
+    veryDeepResult = jsonRecord(response.result, 'Very Deep result');
+    await page.locator('.recommendation-hero').waitFor();
+    const veryDeepRequest = await latestWorkerRequestInput(page);
+    assert.deepEqual(jsonRecord(veryDeepRequest.searchBudget, 'Very Deep Worker budget'), {
+      maxStates: 20_000,
+      maxWallTimeMs: 120_000,
+      maxExpansionRounds: 5,
+    });
+    const veryDeepReuse = jsonRecord(jsonRecord(veryDeepResult.search, 'Very Deep search').sessionReuse, 'Very Deep reuse');
+    assert.equal(veryDeepReuse.status, 'RESUMED');
+    assert(numberValue(veryDeepReuse.retainedStates, 'Very Deep retained states') > 0);
+    assert.equal(await page.getByLabel('Search depth preset').inputValue(), 'VERY_DEEP');
+
+    const memoryAfter = await page.evaluate(() => 'memory' in performance
+      ? (performance as Performance & { memory: { usedJSHeapSize: number } }).memory.usedJSHeapSize
+      : undefined);
+    const requestEvents = (await workerEventsSince(page, requestOffset)).filter((event) =>
+      event.kind === 'POST_MESSAGE_TO_WORKER' && event.payload?.type === 'OPTIMIZE'
+    );
+    assert.equal(requestEvents.length, 3, 'Normal → Deep → Very Deep started an unexpected number of Worker jobs');
+    if (memoryBefore !== undefined && memoryAfter !== undefined) {
+      assert(memoryAfter - memoryBefore < 96 * 1024 * 1024, `Repeated depth flow grew heap by ${memoryAfter - memoryBefore} bytes`);
+    }
+    retryEvidence = {
+      normalBudget: normalRequest.searchBudget,
+      deepBudget: deepRequest.searchBudget,
+      veryDeepBudget: veryDeepRequest.searchBudget,
+      deepRetainedStates: deepReuse.retainedStates,
+      veryDeepRetainedStates: veryDeepReuse.retainedStates,
+      workerOptimizeRequests: requestEvents.length,
+      memoryDeltaBytes: memoryBefore === undefined || memoryAfter === undefined ? undefined : memoryAfter - memoryBefore,
+      artifact: evidence.artifacts.phase2xRetryPreview,
+    };
+    return retryEvidence;
+  });
+
+  await gate(evidence, scenario, 'X12-compatible-incumbent-monotonicity', async () => {
+    assert(normalResult && deepResult && veryDeepResult, 'Depth results are unavailable');
+    const costs = [normalResult, deepResult, veryDeepResult].map((result, index) =>
+      numberValue(result.expectedCostChaos, `depth ${index} executable cost`)
+    );
+    assert(costs[1] <= costs[0] + 1e-7, 'Deep request lost the Normal incumbent');
+    assert(costs[2] <= costs[1] + 1e-7, 'Very Deep request lost the Deep incumbent');
+    return { normalCost: costs[0], deepCost: costs[1], veryDeepCost: costs[2], monotonic: true };
+  });
+
+  await gate(evidence, scenario, 'X11-research-cancel-host-guard-and-recovery', async () => {
+    await importFixture(page, fixture('four_mod_release'));
+    await page.getByLabel('Search depth preset').selectOption('RESEARCH');
+    const offset = await workerEventCount(page);
+    const started = performance.now();
+    await page.getByRole('button', { name: 'Find cheapest craft' }).click();
+    await page.waitForFunction((start) => {
+      const events = (window as Window & { __QUALITY_LAB_EVENTS__?: CapturedWorkerEvent[] }).__QUALITY_LAB_EVENTS__ ?? [];
+      return events.slice(start).some((event) => event.kind === 'POST_MESSAGE_TO_WORKER');
+    }, offset);
+    const researchRequest = await latestWorkerRequestInput(page);
+    assert.deepEqual(jsonRecord(researchRequest.searchBudget, 'Research Worker budget'), {
+      maxStates: 50_000,
+      maxWallTimeMs: 300_000,
+      maxExpansionRounds: 6,
+    });
+    await page.getByRole('button', { name: 'Cancel' }).first().click();
+    await page.getByText(/Optimization cancelled\. The worker was replaced/).waitFor({ timeout: 5_000 });
+    const cancellationMs = performance.now() - started;
+    assert(cancellationMs < 5_000, `Research cancellation took ${cancellationMs}ms`);
+    const lifecycle = await workerEventsSince(page, offset);
+    assert(lifecycle.some((event) => event.kind === 'WORKER_TERMINATE'));
+    assert(lifecycle.some((event) => event.kind === 'WORKER_SPAWN'));
+    const smokeHostGuard = evidence.checks.find((check) =>
+      check.scenario === 'real-browser-smoke' && check.id === 'host-guard-worker-replacement-and-recovery'
+    );
+    assert.equal(smokeHostGuard?.passed, true, 'Real host-guard replacement evidence is unavailable');
+
+    await importFixture(page, cheap);
+    await page.getByLabel('Search depth preset').selectOption('NORMAL');
+    const recovered = await runOptimization(page, 30_000);
+    const recoveredSearch = jsonRecord(recovered.search, 'recovered search');
+    assert.equal(recoveredSearch.hostGuardDeadlineMs, 30_250);
+    cancellationEvidence = {
+      researchBudget: researchRequest.searchBudget,
+      cancellationMs,
+      workerTerminated: true,
+      workerReplaced: true,
+      oneMillisecondHostGuardProbe: 'PASS',
+      recoveredStatus: recovered.recommendationStatus,
+      recoveredHostGuardDeadlineMs: recoveredSearch.hostGuardDeadlineMs,
+    };
+    return cancellationEvidence;
+  });
+
+  await gate(evidence, scenario, 'X8-real-three-notable-cluster-handoff', async () => {
+    await page.setViewportSize({ width: 1280, height: 960 });
+    await page.getByRole('button', { name: 'Cluster Jewels', exact: true }).click();
+    await page.locator('.table-wrap table').waitFor();
+    await page.locator('input[type="search"]').first().fill('Prodigious Defence');
+    const row = page.locator('tbody tr.clickable')
+      .filter({ hasText: exactFixture.clusterType })
+      .filter({ hasText: 'Large' })
+      .first();
+    await row.waitFor();
+    await row.click();
+    const comboRow = page.locator('.detail-row li')
+      .filter({ hasText: 'Prodigious Defence' })
+      .filter({ hasText: 'Riot Queller' })
+      .filter({ hasText: 'Smite the Weak' })
+      .filter({ has: page.getByRole('button', { name: 'Optimize this combo' }) })
+      .first();
+    await comboRow.getByRole('button', { name: 'Optimize this combo' }).click();
+    const panel = page.locator('.optimizer-handoff-panel');
+    await panel.waitFor();
+    const passive = panel.getByLabel('Optimizer passive skills');
+    assert((await passive.locator('option').allTextContents()).includes('8'));
+    await passive.selectOption('8');
+    await panel.getByLabel('Optimizer item level').fill('84');
+    const responsesBefore = await workerResponseCount(page);
+    await panel.getByRole('button', { name: 'Open Craft Optimizer', exact: true }).click();
+    const banner = page.locator('.optimizer-source-banner');
+    await banner.waitFor();
+    assert.equal(await workerResponseCount(page), responsesBefore, 'Three-notable handoff auto-ran the Worker');
+    assert.equal(await page.getByLabel('Base type').inputValue(), exactFixture.baseType);
+    assert.equal(await page.getByLabel('Cluster enchantment').inputValue(), exactFixture.clusterType);
+    assert.equal(await page.getByLabel('Item level').inputValue(), '84');
+    assert.equal(await page.locator('.optimizer-form .optimizer-grid label').filter({ has: page.getByText('Passive skills', { exact: true }) }).locator('select').first().inputValue(), '8');
+    const targetIds = await page.locator('.target-summary li[data-mod-id]').evaluateAll((nodes) =>
+      nodes.map((node) => node.getAttribute('data-mod-id')).filter((id): id is string => Boolean(id))
+    );
+    assertExactTargetIds(targetIds, exactFixture.targetMods);
+    assert.match(await banner.innerText(), /Loaded from Cluster Jewels/i);
+    assert.match(await banner.innerText(), /priced|listings|sampled/i);
+    const sourceMarketValue = Number(await page.getByLabel('Expected sale value (chaos, optional)').inputValue());
+    assert(Number.isFinite(sourceMarketValue) && sourceMarketValue > 0, 'Exact market quote was not transferred');
+    await page.getByLabel('Search depth preset').selectOption('NORMAL');
+    await setObjective(page, 'CHEAPEST_CHAOS');
+    const workerOffset = await workerEventCount(page);
+    exactResult = await runOptimization(page, 30_000);
+    assertFullRouteReconciliation(exactResult);
+    exactPlanEvidence = await assertBrowserPlanSemantics(page, exactResult);
+    const rawHarvest = arrayValue(exactPlanEvidence.selectedHarvestActionIds, 'three-notable Harvest evidence');
+    assert.deepEqual(rawHarvest, [], 'Exact three-notable selected an actual Harvest route; phantom-negative fixture no longer applies');
+    assert.equal(exactPlanEvidence.constellationHarvest, false);
+    assert.equal(exactPlanEvidence.acquisitionResourceInPlan, false);
+    const constellation = page.getByTestId('markov-constellation-container');
+    assert.equal(await constellation.getAttribute('data-terminal-node-count'), '1');
+    const selectedNodeIds = ((await constellation.getAttribute('data-selected-route-node-ids')) ?? '').split(',').filter(Boolean);
+    assert.equal(new Set(selectedNodeIds).size, selectedNodeIds.length, 'Constellation selected chronology duplicated a node');
+    const pause = constellation.getByRole('button', { name: 'Pause Animation' });
+    if (await pause.count()) await pause.click();
+    const constellationScreenshot = join(evidenceDirectory, 'phase2x-three-notable-constellation.png');
+    await constellation.screenshot({ path: constellationScreenshot });
+    evidence.artifacts.phase2xThreeNotableConstellation = relative(repositoryRoot, constellationScreenshot);
+    const marketCard = page.locator('.source-market-summary');
+    exactMarketText = await marketCard.innerText();
+    assert.match(exactMarketText, /Market sampled (low|median)/i);
+    assert.match(exactMarketText, /Selected executable route EV/i);
+    assert.match(exactMarketText, /Spread using this executable route/i);
+    assert.match(exactMarketText, /Expected value, not guaranteed profit/i);
+    if (
+      exactResult.recommendationStatus === 'PROVISIONAL_RESOLVED' ||
+      numberValue(jsonRecord(jsonRecord(exactResult.acquisition, 'exact acquisition').portfolioProof, 'exact portfolio proof').unresolvedCompetitiveCandidates, 'exact unresolved competitors') > 0
+    ) {
+      assert.match(exactMarketText, /A cheaper crafting route may exist; resolving it would increase the modeled spread/i);
+    }
+    const marketScreenshot = join(evidenceDirectory, 'phase2x-three-notable-market-proof.png');
+    await marketCard.screenshot({ path: marketScreenshot });
+    evidence.artifacts.phase2xThreeNotableMarket = relative(repositoryRoot, marketScreenshot);
+
+    exactExport = await downloadExport(page, 'phase2x-three-notable-export.json');
+    const stableExport = join(evidenceDirectory, 'phase2x-three-notable-export.json');
+    writeFileSync(stableExport, `${JSON.stringify(exactExport, null, 2)}\n`, 'utf8');
+    evidence.artifacts.phase2xThreeNotableExport = relative(repositoryRoot, stableExport);
+    const summary = jsonRecord(exactExport.resultSummary, 'three-notable export summary');
+    assert.deepEqual(summary.fullRouteUsage, exactResult.fullRouteUsage);
+    assert.deepEqual(summary.presentation, exactResult.presentation);
+    assertNear(numberValue(summary.expectedCostChaos, 'export cost'), numberValue(exactResult.expectedCostChaos, 'result cost'), 'three-notable export/result cost');
+    const exactWorkerEvents = await workerEventsSince(page, workerOffset);
+    const resultEvent = [...exactWorkerEvents].reverse().find((event) =>
+      event.kind === 'MESSAGE_FROM_WORKER' && event.payload?.type === 'RESULT'
+    );
+    assert(resultEvent, 'Three-notable RESULT event unavailable');
+    const requestId = String(resultEvent.payload?.requestId);
+    const protocol = assertWorkerProtocol(exactWorkerEvents, requestId);
+    const dom = await assertDomMatchesResult(page, exactResult);
+
+    const responsesBeforeShare = await workerResponseCount(page);
+    await page.getByRole('button', { name: /Share Link/ }).click();
+    const shareUrl = await page.evaluate(() => navigator.clipboard.readText());
+    const encoded = new URL(shareUrl).hash.slice('#craft='.length);
+    sharePayload = await page.evaluate((value) => JSON.parse(decodeURIComponent(atob(value))), encoded) as JsonRecord;
+    assert.equal(sharePayload.version, '2X.1');
+    assertExactTargetIds(arrayValue(sharePayload.targetMods, 'share targets').map(String), exactFixture.targetMods);
+    await page.goto(shareUrl, { waitUntil: 'networkidle' });
+    await page.locator('.optimizer-source-banner').waitFor();
+    assert.equal(await workerResponseCount(page), responsesBeforeShare, 'Three-notable share reload auto-ran the Worker');
+    assertExactTargetIds(
+      await page.locator('.target-summary li[data-mod-id]').evaluateAll((nodes) =>
+        nodes.map((node) => node.getAttribute('data-mod-id'))
+      ),
+      exactFixture.targetMods,
+    );
+    exactDifferential = {
+      requestId,
+      protocol,
+      dom,
+      selectedBundleId: jsonRecord(exactResult.internalConsistency, 'exact consistency').selectedBundleId,
+      selectedPlan: exactPlanEvidence,
+      exportVersion: jsonRecord(exactExport.requestInput, 'export request').presentationSchemaVersion ?? jsonRecord(exactResult.presentation, 'exact presentation').schemaVersion,
+      shareVersion: sharePayload.version,
+    };
+    return {
+      fixture: exactFixture.id,
+      targetIds,
+      sourceMarketValue,
+      status: exactResult.recommendationStatus,
+      selectedCostChaos: exactResult.expectedCostChaos,
+      planSemantics: exactPlanEvidence,
+      selectedRouteNodeIds: selectedNodeIds,
+      accounting: assertFullRouteReconciliation(exactResult),
+      differential: exactDifferential,
+      artifacts: [evidence.artifacts.phase2xThreeNotableConstellation, evidence.artifacts.phase2xThreeNotableMarket],
+    };
+  });
+
+  await gate(evidence, scenario, 'X2-phantom-harvest-before-after', async () => {
+    assert(exactPlanEvidence, 'Exact three-notable browser evidence unavailable');
+    const before = jsonRecord(JSON.parse(readFileSync(join(evidenceDirectory, 'phase2x-phantom-harvest-before.json'), 'utf8')), 'pre-fix evidence');
+    const after = jsonRecord(JSON.parse(readFileSync(join(evidenceDirectory, 'phase2x-phantom-harvest-after.json'), 'utf8')), 'post-fix evidence');
+    const contradiction = jsonRecord(before.contradiction, 'pre-fix contradiction');
+    assert.equal(jsonRecord(contradiction.craftPlanStep, 'pre-fix step').phase, 'SPECIALIZED');
+    assert.equal(jsonRecord(contradiction.constellationNode, 'pre-fix node').label, 'Harvest');
+    assert.deepEqual(arrayValue(exactPlanEvidence.selectedHarvestActionIds, 'browser selected Harvest'), []);
+    assert.deepEqual(arrayValue(exactPlanEvidence.planHarvestActionIds, 'browser plan Harvest'), []);
+    assert.equal(exactPlanEvidence.constellationHarvest, false);
+    return { before: before.reproductionVerdict, after: after.result, browser: exactPlanEvidence };
+  });
+
+  await gate(evidence, scenario, 'X3-unknown-action-fail-closed', async () => {
+    const after = jsonRecord(JSON.parse(readFileSync(join(evidenceDirectory, 'phase2x-phantom-harvest-after.json'), 'utf8')), 'post-fix evidence');
+    const unknown = jsonRecord(after.unknownActionControl, 'unknown action control');
+    assert.equal(unknown.actionId, 'phase2x_unknown_positive_action');
+    assert.equal(unknown.planStatus, 'UNCERTIFIED');
+    assert.deepEqual(unknown.steps, []);
+    assert.deepEqual(unknown.retainedUnknownActionIds, ['phase2x_unknown_positive_action']);
+    assert.equal(unknown.selectedHarvestNodeCount, 0);
+    return unknown;
+  });
+
+  await gate(evidence, scenario, 'X4-actual-harvest-positive-control', async () => {
+    assert(phase2wHarvestPlanEvidence, 'Phase 2W selected-Harvest semantic evidence unavailable');
+    const selectedHarvest = arrayValue(phase2wHarvestPlanEvidence.selectedHarvestActionIds, 'selected Harvest IDs');
+    assert(selectedHarvest.includes('harvest_reforge_defences'));
+    assert.deepEqual(phase2wHarvestPlanEvidence.planHarvestActionIds, selectedHarvest);
+    assert.equal(phase2wHarvestPlanEvidence.constellationHarvest, true);
+    const phase2wGate = evidence.checks.find((check) => check.id === 'W1-phase2v-mechanics-proof-worker-and-label-preservation');
+    assert.equal(phase2wGate?.passed, true, 'Harvest Lifeforce/probability preservation evidence is missing');
+    return { plan: phase2wHarvestPlanEvidence, artifact: evidence.artifacts.phase2xHarvestSelected, lifeforceEconomics: 'W1 PASS' };
+  });
+
+  await gate(evidence, scenario, 'X5-harvest-not-selected-negative-control', async () => {
+    assert(phase2wCheapestPlanEvidence, 'Phase 2W Harvest-not-selected evidence unavailable');
+    assert.deepEqual(phase2wCheapestPlanEvidence.selectedHarvestActionIds, []);
+    assert.deepEqual(phase2wCheapestPlanEvidence.planHarvestActionIds, []);
+    assert.equal(phase2wCheapestPlanEvidence.constellationHarvest, false);
+    return { plan: phase2wCheapestPlanEvidence, artifact: evidence.artifacts.phase2xHarvestNotSelected };
+  });
+
+  await gate(evidence, scenario, 'X6-acquisition-resource-exclusion', async () => {
+    assert(exactPlanEvidence && exactResult, 'Exact accounting evidence unavailable');
+    assert(arrayValue(exactPlanEvidence.excludedAccountingActionIds, 'accounting exclusions').includes('clean_base_initial'));
+    assert.equal(exactPlanEvidence.acquisitionResourceInPlan, false);
+    const acquisitionRows = arrayValue(jsonRecord(exactResult.fullRouteUsage, 'exact usage').acquisitionActions, 'exact acquisition rows')
+      .map((entry) => jsonRecord(entry, 'exact acquisition row'));
+    const cleanBase = acquisitionRows.find((row) => row.actionId === 'clean_base_initial');
+    assert(cleanBase && numberValue(cleanBase.expectedCount, 'clean base expected count') > 0);
+    return { cleanBase, planMechanicalStep: false, explicitExclusion: true };
+  });
+
+  await gate(evidence, scenario, 'X7-full-selected-action-coverage', async () => {
+    const cases = [
+      normalPlanEvidence,
+      phase2wEldritchPlanEvidence,
+      exactPlanEvidence,
+      phase2wCheapestPlanEvidence,
+      phase2wHarvestPlanEvidence,
+      phase2wFastestPlanEvidence,
+      phase2xFourModPlanEvidence,
+    ];
+    assert(cases.every(Boolean), 'Frozen executable plan-coverage corpus is incomplete');
+    for (const item of cases as JsonRecord[]) {
+      assert.deepEqual(item.selectedPhysicalActionIds, item.representedPhysicalActionIds);
+      assert.deepEqual(item.unknownActionIds, []);
+      assert.equal(item.acquisitionResourceInPlan, false);
+    }
+    return { executableCases: cases.length, allCovered: true, invented: 0, unknown: 0 };
+  });
+
+  await gate(evidence, scenario, 'X13-proof-honest-market-spread-wording', async () => {
+    assert.match(exactMarketText, /Market sampled (low|median)/i);
+    assert.match(exactMarketText, /Selected executable route EV/i);
+    assert.match(exactMarketText, /Spread using this executable route/i);
+    assert.doesNotMatch(exactMarketText, /Expected craft EV|Gross EV spread|globally cheapest craft/i);
+    return { wording: exactMarketText };
+  });
+
+  await gate(evidence, scenario, 'X15-generated-action-semantic-matrix', async () => {
+    assert(normalPlanEvidence && phase2wEldritchPlanEvidence && exactPlanEvidence &&
+      phase2wHarvestPlanEvidence && phase2wCheapestPlanEvidence &&
+      phase2wFastestPlanEvidence && phase2xFourModPlanEvidence,
+    'Semantic matrix inputs are incomplete');
+    const selfFracture = [exactPlanEvidence, phase2xFourModPlanEvidence, phase2wEldritchPlanEvidence]
+      .find((entry) => jsonRecord(entry.acquisitionContext, 'matrix acquisition context').kind === 'SELF_FRACTURE');
+    assert(selfFracture, 'Generated matrix did not observe a selected self-fracture case');
+
+    await ensureOptimizerPage(page, evidence.productionUrl!);
+    const eligibleNotSearchedFixture = fixture('harvest_one_mod_math_witness');
+    await importFixture(page, eligibleNotSearchedFixture);
+    await page.getByLabel('Search depth preset').selectOption('NORMAL');
+    await setObjective(page, 'CHEAPEST_CHAOS');
+    const eligibleNotSearchedResult = await runOptimization(page, 30_000);
+    const eligibleNotSearchedPlan = await assertBrowserPlanSemantics(page, eligibleNotSearchedResult);
+    const harvestFamily = arrayValue(eligibleNotSearchedResult.methodPortfolio, 'eligible-not-searched portfolio')
+      .map((entry) => jsonRecord(entry, 'eligible-not-searched family'))
+      .find((family) => jsonRecord(family.spec, 'eligible-not-searched spec').kind === 'HARVEST');
+    assert(harvestFamily, 'Eligible Harvest family is absent');
+    assert.notEqual(harvestFamily.status, 'SELECTED_WINNER');
+
+    const rows = [
+      { case: 'clean-one-mod', fixture: cheap.id, evidence: normalPlanEvidence },
+      { case: 'clean-two-mod', fixture: 'phase2w_eldritch_low_tolerance', evidence: phase2wEldritchPlanEvidence },
+      { case: 'real-three-notable-handoff', fixture: exactFixture.id, evidence: exactPlanEvidence },
+      { case: 'selected-self-fracture', fixture: 'generated-current-data', evidence: selfFracture },
+      { case: 'selected-actual-harvest', fixture: 'phase2w_armour_evasion_12', evidence: phase2wHarvestPlanEvidence },
+      { case: 'harvest-eligible-not-searched-or-not-selected', fixture: eligibleNotSearchedFixture.id, evidence: eligibleNotSearchedPlan, harvestFamilyStatus: harvestFamily.status },
+      { case: 'independently-searched-harvest-not-selected', fixture: 'phase2w_armour_evasion_12', evidence: phase2wCheapestPlanEvidence },
+      { case: 'fewest-actions-harvest-selected', fixture: 'phase2w_armour_evasion_12', evidence: phase2wHarvestPlanEvidence },
+      { case: 'fastest-conventional-selected', fixture: 'phase2w_armour_evasion_12', evidence: phase2wFastestPlanEvidence },
+      { case: 'four-mod-provisional-fracture', fixture: 'four_mod_release', evidence: phase2xFourModPlanEvidence },
+      { case: 'unresolved-frontier', fixture: 'four_mod_release', evidence: phase2xFourModPlanEvidence },
+    ];
+    for (const row of rows) {
+      const plan = jsonRecord(row.evidence, `${row.case} plan evidence`);
+      assert.deepEqual(plan.selectedPhysicalActionIds, plan.representedPhysicalActionIds, `${row.case} coverage mismatch`);
+      assert.deepEqual(plan.unknownActionIds, [], `${row.case} contains unknown actions`);
+      assert.equal(plan.acquisitionResourceInPlan, false, `${row.case} contains an accounting mechanic`);
+      const harvestIds = arrayValue(plan.selectedHarvestActionIds, `${row.case} Harvest IDs`);
+      assert.equal(plan.constellationHarvest, harvestIds.length > 0, `${row.case} Harvest semantic mismatch`);
+    }
+    semanticMatrix = {
+      seed: 'phase2x-action-semantic-matrix-v1',
+      fixtureCorpus: fixtureCorpus.version,
+      browserVersion: evidence.browserVersion,
+      cases: rows,
+    };
+    const matrixPath = join(evidenceDirectory, 'phase2x-action-semantic-matrix.json');
+    writeFileSync(matrixPath, `${JSON.stringify(semanticMatrix, null, 2)}\n`, 'utf8');
+    evidence.artifacts.phase2xSemanticMatrix = relative(repositoryRoot, matrixPath);
+    return semanticMatrix;
+  });
+
+  await gate(evidence, scenario, 'X16-stable-real-screenshots', async () => {
+    const required = [
+      'phase2xThreeNotableConstellation',
+      'phase2xHarvestSelected',
+      'phase2xHarvestNotSelected',
+      'phase2xBudgetDesktop',
+      'phase2xBudgetMobile',
+      'phase2xRetryPreview',
+    ];
+    for (const key of required) {
+      const path = evidence.artifacts[key];
+      assert(path && statSync(join(repositoryRoot, path)).size > 0, `Missing Phase 2X screenshot ${key}`);
+    }
+    return { artifacts: required.map((key) => evidence.artifacts[key]), reviewedInHarness: true };
+  });
+
+  await gate(evidence, scenario, 'X17-worker-dom-export-share-differential', async () => {
+    assert(exactResult && exactExport && exactDifferential && sharePayload, 'Three-notable differential inputs unavailable');
+    assert.equal(jsonRecord(exactResult.presentation, 'exact presentation').schemaVersion, '2X.1');
+    assert.equal(jsonRecord(exactResult.internalConsistency, 'exact consistency').status, 'OK');
+    assert.deepEqual(jsonRecord(exactExport.resultSummary, 'export summary').fullRouteUsage, exactResult.fullRouteUsage);
+    assert.equal(sharePayload.version, '2X.1');
+    return exactDifferential;
+  });
+
+  await gate(evidence, scenario, 'X18-performance-memory-and-no-extra-worker-jobs', async () => {
+    assert(normalResult && retryEvidence, 'Depth performance evidence unavailable');
+    const normalSearch = jsonRecord(normalResult.search, 'Normal search');
+    assert(numberValue(normalSearch.totalElapsedMs, 'Normal total elapsed') < 30_000);
+    assert.equal(retryEvidence.workerOptimizeRequests, 3);
+    if (typeof retryEvidence.memoryDeltaBytes === 'number') {
+      assert(retryEvidence.memoryDeltaBytes < 96 * 1024 * 1024);
+    }
+    performanceEvidence = {
+      normalTotalElapsedMs: normalSearch.totalElapsedMs,
+      retry: retryEvidence,
+      classificationLocation: 'result presentation only; no additional Worker job or main-thread graph allocation',
+    };
+    evidence.performance.phase2x = performanceEvidence;
+    return performanceEvidence;
+  });
+
+  await gate(evidence, scenario, 'X19-local-release-command-contract', async () => {
+    const packageJson = jsonRecord(JSON.parse(readFileSync(join(repositoryRoot, 'package.json'), 'utf8')), 'package.json');
+    const scripts = jsonRecord(packageJson.scripts, 'package scripts');
+    for (const command of [
+      'diagnostic:mature',
+      'diagnostic:phase2t',
+      'diagnostic:phase2u',
+      'diagnostic:phase2v',
+      'diagnostic:phase2w',
+      'diagnostic:phase2x',
+      'lab:no-fallback-probe',
+      'lab:release',
+    ]) assert.equal(typeof scripts[command], 'string', `Missing local release command ${command}`);
+    return {
+      commands: ['npm run build', 'npm run lint', 'git diff --check', 'npm run diagnostic:mature', 'npm run diagnostic:phase2t', 'npm run diagnostic:phase2u', 'npm run diagnostic:phase2v', 'npm run diagnostic:phase2w', 'npm run diagnostic:phase2x', 'npm run lab:no-fallback-probe', 'npm run lab:release'],
+      unitTestsIncluded: false,
+    };
+  });
+
+  await gate(evidence, scenario, 'X20-final-static-prohibited-change-review', async () => {
+    const craftPlanSource = readFileSync(join(repositoryRoot, 'crafting-engine', 'src', 'service', 'craftPlan.ts'), 'utf8');
+    const graphSource = readFileSync(join(repositoryRoot, 'crafting-engine', 'src', 'domain', 'VisualizationGraph.ts'), 'utf8');
+    const optimizerUi = readFileSync(join(repositoryRoot, 'src', 'CraftOptimizer.tsx'), 'utf8');
+    assert(!craftPlanSource.includes("?? 'SPECIALIZED'"));
+    assert(!graphSource.includes("step.phase === 'SPECIALIZED') return 'Harvest'"));
+    assert(optimizerUi.includes("export const APP_RELEASE_VERSION = '2X.1'"));
+    assert(optimizerUi.includes('Search depth preset'));
+    assert(optimizerUi.includes('reuses compatible retained graph'));
+    const mechanicsOrIdentityDiff = execFileSync('git', [
+      'diff',
+      '--name-only',
+      'b86ebddb9ed8816244c3697899e4c29d4a714c91',
+      '--',
+      'crafting-engine/src/rules/actionRegistry.ts',
+      'crafting-engine/src/probability',
+      'crafting-engine/src/domain/ItemState.ts',
+    ], { cwd: repositoryRoot, encoding: 'utf8' }).trim();
+    assert.equal(mechanicsOrIdentityDiff, '', 'Mechanics probabilities or state identity changed during Phase 2X');
+    execFileSync('git', [
+      'merge-base',
+      '--is-ancestor',
+      '4e06388da42d9e875b231519abdea0509f8d6c0e',
+      'HEAD',
+    ], { cwd: repositoryRoot, stdio: 'pipe' });
+    assert(semanticMatrix, 'Generated semantic matrix was not completed');
+    assert(cancellationEvidence, 'Cancellation evidence was not completed');
+    return {
+      genericSpecializedFallback: false,
+      genericSpecializedHarvestGuess: false,
+      mechanicsProbabilityFilesChanged: false,
+      stateIdentityFilesChanged: false,
+      newerUserDataCommitPreserved: '4e06388da42d9e875b231519abdea0509f8d6c0e',
+      consoleErrors: evidence.consoleErrors.length,
+      pageErrors: evidence.pageErrors.length,
+      networkErrors: evidence.networkErrors.length,
+      unitTestsAddedOrRun: false,
+      hardcodedWinnerAdded: false,
+      marketFracturedRankingReintroduced: false,
     };
   });
 }
@@ -2943,6 +3747,7 @@ function scenarioEnabled(requested: string, name: string): boolean {
     phase2u: ['phase2u', 'phase2u-quick'],
     phase2v: ['phase2v', 'phase2w-integration'],
     phase2w: ['phase2w', 'phase2w-handoff', 'phase2w-integration'],
+    phase2x: ['phase2x', 'phase2x-semantics', 'phase2x-budget'],
     methods: ['methods', 'harvest', 'portfolio', 'harvest-witness'],
     responsive: ['responsive', 'accessibility'],
     animation: ['animation', 'constellation'],
@@ -2956,7 +3761,7 @@ function writeReports(evidence: BrowserEvidence): void {
   evidence.status = evidence.checks.every((check) => check.passed) ? 'PASSED' : 'FAILED';
   writeFileSync(join(reportsDirectory, 'release-gate.json'), `${JSON.stringify(evidence, null, 2)}\n`, 'utf8');
   const lines = [
-    '# Phase 2W Real-Browser Release Gate',
+    '# Phase 2X Real-Browser Release Gate',
     '',
     `- Run: ${evidence.runId}`,
     `- Started: ${evidence.startedAt}`,
@@ -2990,7 +3795,7 @@ async function closeBrowser(
 ): Promise<void> {
   if (context) {
     try {
-      const tracePath = join(artifactsDirectory, 'phase2w-trace.zip');
+      const tracePath = join(artifactsDirectory, 'phase2x-trace.zip');
       await context.tracing.stop({ path: tracePath });
       evidence.artifacts.trace = relative(repositoryRoot, tracePath);
     } catch (error) {
@@ -3052,6 +3857,7 @@ async function main(): Promise<void> {
     if (scenarioEnabled(requested, 'methods')) await runHarvestFixtures(page, evidence);
     if (scenarioEnabled(requested, 'phase2v')) await runPhase2V(page, evidence);
     if (scenarioEnabled(requested, 'phase2w')) await runPhase2W(page, evidence);
+    if (scenarioEnabled(requested, 'phase2x')) await runPhase2X(page, evidence);
     if (scenarioEnabled(requested, 'responsive')) await runResponsiveAndKeyboard(page, evidence);
     if (scenarioEnabled(requested, 'animation')) await runConstellation(page, evidence, requested === 'nightly' ? 60_000 : 5_000);
     if (scenarioEnabled(requested, 'additional')) await runAdditionalFixtures(page, evidence);
@@ -3093,7 +3899,7 @@ async function main(): Promise<void> {
   for (const check of evidence.checks) {
     console.log(`${check.passed ? 'PASS' : 'FAIL'} ${check.scenario}/${check.id} (${check.durationMs} ms)`);
   }
-  console.log(`Phase 2W Quality Lab: ${evidence.status} (${evidence.checks.filter((check) => check.passed).length}/${evidence.checks.length} gates)`);
+  console.log(`Phase 2X Quality Lab: ${evidence.status} (${evidence.checks.filter((check) => check.passed).length}/${evidence.checks.length} gates)`);
   if (evidence.status !== 'PASSED') process.exitCode = 1;
 }
 

@@ -1,0 +1,30 @@
+PHASE 2X — CRAFT-PLAN SEMANTICS, BUDGET UX, AND PROOF-DEPTH DIAGNOSTIC
+
+X2/X5/X6/X7 — exact 3-notable semantic correction
+status=PROVISIONAL_RESOLVED; route=Start self-fracture: Prodigious Defence; bundle=bundle:family_fracture_Prodigious Defence; elapsed=24685ms
+selected physical mechanics=fracturing_orb,alteration_orb,exalted_orb,scouring_orb,regal_orb,augmentation_orb,restart_reacquire,transmutation_orb
+selected Harvest mechanics=NONE
+plan Harvest mechanics=NONE
+accounting exclusions=clean_base_initial; virtual exclusions=method:family_fracture_Prodigious Defence
+coverage=uncovered:NONE; invented:NONE; unknown:NONE
+Constellation selected Harvest nodes=NONE
+Initial clean base accounting=1.000 @ 4.000c; chronological mechanic=NO
+
+X3 — unknown positive action fails closed
+unknown=phase2x_unknown_positive_action; classification=UNKNOWN; phase=NONE; plan=UNCERTIFIED; steps=0; exact diagnostic retained=YES; Harvest node=NO
+
+X4 — positive mechanics metadata control
+harvest_reforge_defences=CRAFT_MECHANIC/SPECIALIZED; clean_base_initial=ACQUISITION_RESOURCE; acquire_*/method:*=VIRTUAL_SERVICE
+
+X9/X10/X13/X20 — static safety audit
+preset table=Normal 5k/30s/3 | Deep 10k/60s/4 | Very Deep 20k/120s/5 | Research 50k/300s/6 | Custom raw
+Retry formula=states×2, requested wall×2, rounds+1; compatible retained graph declared; requested-runtime host guard unchanged
+generic SPECIALIZED fallback=ABSENT; generic SPECIALIZED→Harvest label=ABSENT; proof-honest selected-route spread wording=PRESENT
+
+=== ALL PHASE 2X LOCAL DIAGNOSTIC GATES PASS ===
+Release label/schema: 2X.1
+Unit tests added/run: NO
+Mechanics probabilities changed: NO
+State identity weakened: NO
+Harvest forced or route winner hardcoded: NO
+Pre-fractured market ranking reintroduced: NO

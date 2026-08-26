@@ -1,0 +1,161 @@
+{
+  "phase": "2X",
+  "capture": "POST_FIX",
+  "fixture": {
+    "baseType": "Large Cluster Jewel",
+    "clusterType": "12% increased Attack Damage while holding a Shield",
+    "itemLevel": 84,
+    "passiveCount": 8,
+    "target": {
+      "requiredMods": [
+        {
+          "modId": "Prodigious Defence"
+        },
+        {
+          "modId": "Riot Queller"
+        },
+        {
+          "modId": "Smite the Weak"
+        }
+      ],
+      "requiredRarity": "rare"
+    },
+    "prices": {
+      "currencyRates": {
+        "chaos": 1,
+        "divine": 193.9,
+        "fracturing": 355.8,
+        "annul": 8.67,
+        "exalt": 1.63,
+        "scour": 0.3711,
+        "alteration": 0.1405,
+        "transmutation": 0.01102,
+        "augmentation": 0.06493,
+        "regal": 0.119,
+        "wildLifeforce": 0.01838,
+        "vividLifeforce": 0.06815,
+        "primalLifeforce": 0.03697
+      },
+      "cleanBaseCostChaos": 4,
+      "cleanBasePriceSource": "manual",
+      "cleanBasePriceProvenance": "Phase 2X frozen exact 3-notable diagnostic price book"
+    },
+    "objective": {
+      "kind": "CHEAPEST_CHAOS"
+    },
+    "searchBudget": {
+      "maxStates": 5000,
+      "maxWallTimeMs": 30000,
+      "maxExpansionRounds": 3
+    },
+    "searchIntent": "RECOMMEND",
+    "allowResearchFallbackPrices": true
+  },
+  "result": {
+    "recommendationStatus": "PROVISIONAL_RESOLVED",
+    "route": "Start self-fracture: Prodigious Defence",
+    "bundleId": "bundle:family_fracture_Prodigious Defence",
+    "expectedCostChaos": 3057.898222184281,
+    "selectedPhysicalActionIds": [
+      "fracturing_orb",
+      "alteration_orb",
+      "exalted_orb",
+      "scouring_orb",
+      "regal_orb",
+      "augmentation_orb",
+      "restart_reacquire",
+      "transmutation_orb"
+    ],
+    "selectedHarvestActionIds": [],
+    "planHarvestActionIds": [],
+    "planSteps": [
+      {
+        "id": "acquire",
+        "phase": "ACQUIRE",
+        "actionIds": [
+          "fracturing_orb",
+          "alteration_orb",
+          "exalted_orb",
+          "augmentation_orb",
+          "regal_orb",
+          "transmutation_orb"
+        ]
+      },
+      {
+        "id": "initialize",
+        "phase": "INITIALIZE",
+        "actionIds": [
+          "transmutation_orb"
+        ]
+      },
+      {
+        "id": "roll",
+        "phase": "ROLL",
+        "actionIds": [
+          "alteration_orb"
+        ]
+      },
+      {
+        "id": "fill",
+        "phase": "FILL",
+        "actionIds": [
+          "augmentation_orb"
+        ]
+      },
+      {
+        "id": "promote",
+        "phase": "PROMOTE",
+        "actionIds": [
+          "regal_orb"
+        ]
+      },
+      {
+        "id": "finish",
+        "phase": "FINISH",
+        "actionIds": [
+          "exalted_orb"
+        ]
+      },
+      {
+        "id": "recover",
+        "phase": "RECOVER",
+        "actionIds": [
+          "restart_reacquire",
+          "scouring_orb"
+        ]
+      },
+      {
+        "id": "success",
+        "phase": "SUCCESS",
+        "actionIds": []
+      }
+    ],
+    "constellationSelectedHarvestNodes": [],
+    "accountingResource": {
+      "actionId": "clean_base_initial",
+      "actionName": "Initial clean cluster jewel base",
+      "expectedCount": 1,
+      "expectedCostChaos": 4,
+      "scope": "ACQUISITION",
+      "additive": true
+    },
+    "excludedAccountingActionIds": [
+      "clean_base_initial"
+    ],
+    "excludedVirtualActionIds": [
+      "method:family_fracture_Prodigious Defence"
+    ],
+    "uncoveredActionIds": [],
+    "inventedActionIds": [],
+    "unknownActionIds": []
+  },
+  "unknownActionControl": {
+    "actionId": "phase2x_unknown_positive_action",
+    "planStatus": "UNCERTIFIED",
+    "steps": [],
+    "retainedUnknownActionIds": [
+      "phase2x_unknown_positive_action"
+    ],
+    "selectedHarvestNodeCount": 0
+  }
+}

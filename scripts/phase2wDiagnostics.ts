@@ -181,7 +181,7 @@ const market = record(details(report, 'W17-exact-sale-value-provenance-and-profi
 assert.equal(market.mechanicsUnaffected, true);
 assert(number(market.saleValueChaos, 'sale value') > 0);
 const roundtrip = record(details(report, 'W18-handoff-export-share-import-round-trip'), 'W18');
-assert.equal(roundtrip.shareVersion, '2W.1');
+assert.equal(roundtrip.shareVersion, '2X.1');
 assert.equal(roundtrip.exportedSeedPreserved, true);
 const responsive = record(details(report, 'W19-mobile-keyboard-focus-overflow-and-labels'), 'W19');
 assert.equal(responsive.keyboard, true);
@@ -220,15 +220,15 @@ assert(genericSearch.includes('immediateObjectiveCost'));
 assert(workerProtocol.includes('selectedPolicySource') && workerProtocol.includes('selectedBundleId'));
 assert(seedApi.includes('export interface OptimizerSeed'));
 assert(clusterUi.includes('Open in Optimizer') && clusterUi.includes('Optimize this combo'));
-assert(optimizerUi.includes("export const APP_RELEASE_VERSION = '2W.1'"));
+assert(optimizerUi.includes("export const APP_RELEASE_VERSION = '2X.1'"));
 assert(optimizerUi.includes('optimizer-source-banner'));
-assert(shareBundle.includes("'2W.1'"));
+assert(shareBundle.includes("'2X.1'"));
 assert(runner.includes('Target-order cost metamorphic'));
 assert(!/Eldritch Inspiration|Low Tolerance|AfflictionJewelSmallPassivesGrantArmour3_|AfflictionJewelSmallPassivesGrantEvasion3/.test(optimizerService));
 
 const deploy = readFileSync(join(repositoryRoot, '.github', 'workflows', 'deploy.yml'), 'utf8');
 const nightly = readFileSync(join(repositoryRoot, '.github', 'workflows', 'nightly-quality.yml'), 'utf8');
-for (const command of ['npm run build', 'npm run lint', 'git diff --check', 'npm run diagnostic:phase2w:committed']) {
+for (const command of ['npm run build', 'npm run lint', 'git diff --check', 'npm run diagnostic:phase2x:committed']) {
   assert(deploy.includes(command), `Deploy audit lacks ${command}`);
 }
 for (const heavy of ['npm run diagnostic:mature', 'npm run lab:no-fallback-probe', 'npm run lab:release']) {
@@ -238,15 +238,16 @@ assert(!/npm (?:run )?test|vitest/.test(deploy));
 assert(!/npm (?:run )?test|vitest/.test(nightly));
 assert(!nightly.includes('schedule:'), 'Heavy remote workflow regained a schedule');
 assert(nightly.includes('npm run diagnostic:phase2w'));
+assert(nightly.includes('npm run diagnostic:phase2x'));
 for (const key of ['phase2wMarketVsCraft', 'phase2wHandoffExport', 'phase2wMobileHandoff']) {
   const relativePath = report.artifacts[key];
   assert(relativePath && statSync(artifactPath(relativePath)).size > 0, `Missing Phase 2W artifact ${key}`);
 }
-lines.push('PASS: schema 2W.1, atomic policy binding, objective propagation, Worker completion identity, typed handoff, share/export context, target-generic solver source, lean deploy, manual-only heavy matrix, and stable artifacts are audited.');
+lines.push('PASS: schema 2X.1, atomic policy binding, objective propagation, Worker completion identity, typed handoff, share/export context, target-generic solver source, lean deploy, manual-only heavy matrix, and stable artifacts are audited.');
 
 lines.push('\n=== ALL PHASE 2W DIAGNOSTIC GATES PASS ===');
 lines.push(`Real browser: ${report.browser} ${report.browserVersion}; run=${report.runId}; scenario=${report.requestedScenario}`);
-lines.push('Release label/schema: 2W.1');
+lines.push('Release label/schema: 2X.1');
 lines.push('Unit tests added/run: NO');
 lines.push('Mechanics probabilities changed: NO');
 lines.push('State identity weakened: NO');

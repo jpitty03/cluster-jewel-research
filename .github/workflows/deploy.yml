@@ -29,7 +29,7 @@ jobs:
       - run: npm run lint
       - run: git diff --check
       - name: Audit committed local release evidence
-        run: npm run diagnostic:phase2w:committed
+        run: npm run diagnostic:phase2x:committed
       - uses: actions/upload-pages-artifact@v5
         with:
           path: dist

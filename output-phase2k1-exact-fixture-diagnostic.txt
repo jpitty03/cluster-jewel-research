@@ -4,19 +4,19 @@ K1 EXACT FROZEN RWE FIXTURE
   base=Large Cluster Jewel; enchant=10% increased Attack Damage; ilvl=84; passives=12; rarity=rare; extraAffixes=ALLOWED
   targets=["AfflictionJewelSmallPassivesHaveIncreasedEffect2","AfflictionJewelSmallPassivesGrantInt3","AfflictionJewelSmallPassivesGrantES3","AfflictionJewelSmallPassivesGrantAttributes3"]
   frozenRates={"chaos":1,"divine":200,"fracturing":359,"annul":9,"exalt":1.2,"scour":0.5,"alteration":0.11,"transmutation":0.03,"augmentation":0.03,"regal":0.2,"wildLifeforce":0.07692307692307693,"vividLifeforce":0.038461538461538464,"primalLifeforce":0.020833333333333332,"crystallisedRancour":10}; cleanBase=10.000000c; marketFracturedPurchase=DISABLED
-  cold runtime=25187.584ms; status=PROVISIONAL_RESOLVED; selected=Start self-fracture: Glowing (T1); U=4793.659159c
+  cold runtime=24683.262ms; status=PROVISIONAL_RESOLVED; selected=Start self-fracture: Glowing (T1); U=4793.659159c
   health: proper=true; absorption=0.999999999995; Bellman=true; occupancy=true; reconciled=true; reconciliationDiff=1.819e-12; unresolvedOnPolicy=0.000e+0
-  acquisition safety=false; incumbentU=4793.659159c; unresolvedL=10.230843c; potentialGap=4783.428316c; proof={"selectedPolicyStatus":"FULLY RESOLVED / PROPER / ABSORBING / COST-RECONCILED","proofLevel":"BEST FULLY RESOLVED POLICY FOUND","globalOptimality":"NOT YET PROVEN","modeledActionOptimalityProven":false,"unresolvedCompetitiveCandidates":495,"unresolvedCompetitorsMayBeCheaper":true}
+  acquisition safety=false; incumbentU=4793.659159c; unresolvedL=10.230843c; potentialGap=4783.428316c; proof={"selectedPolicyStatus":"FULLY RESOLVED / PROPER / ABSORBING / COST-RECONCILED","proofLevel":"BEST FULLY RESOLVED POLICY FOUND","globalOptimality":"NOT YET PROVEN","modeledActionOptimalityProven":false,"unresolvedCompetitiveCandidates":496,"unresolvedCompetitorsMayBeCheaper":true}
   candidate table:
   Clean Base: L=10.230843c acquisitionU=NONE downstreamU=213856.185599c fullRouteU=213866.185599c status=COMPETITIVE_UNRESOLVED selected=false proof=N/A
   of the Meteor (T1): L=369.000000c acquisitionU=10.000000c downstreamU=NONE fullRouteU=NONE status=COMPETITIVE_UNRESOLVED selected=false proof=false
   Glowing (T1): L=369.000000c acquisitionU=1496.542933c downstreamU=3297.116225c fullRouteU=4793.659159c status=SELECTED selected=true proof=false
   of the Prodigy (T1): L=369.000000c acquisitionU=10.000000c downstreamU=NONE fullRouteU=NONE status=COMPETITIVE_UNRESOLVED selected=false proof=false
-  Powerful (T1): L=369.000000c acquisitionU=1496.542933c downstreamU=3449.880560c fullRouteU=4946.423493c status=COMPETITIVE_UNRESOLVED selected=false proof=false
+  Powerful (T1): L=369.000000c acquisitionU=10.000000c downstreamU=NONE fullRouteU=NONE status=COMPETITIVE_UNRESOLVED selected=false proof=false
 
 K2 COLD / SAME-WORKER RESUMED / INVALIDATION
-  cold progress=COLD -> COMPLETE; snapshots=25; selected=Start self-fracture: Glowing (T1); U=4793.659159c
-  resumed progress=RESUMED -> COMPLETE; resultReuse=RESUMED; retainedStates=2610; retainedTransitions=8270; snapshots=10; runtime=24670.055ms; selected=Start self-fracture: Glowing (T1); U=4793.659159c
+  cold progress=COLD -> COMPLETE; snapshots=22; selected=Start self-fracture: Glowing (T1); U=4793.659159c
+  resumed progress=RESUMED -> COMPLETE; resultReuse=RESUMED; retainedStates=2610; retainedTransitions=8270; snapshots=10; runtime=23963.334ms; selected=Start self-fracture: Glowing (T1); U=4793.659159c
   selected acquisition U cold/resumed=1496.542933c / 1496.542933c; equivalentOrImproved=true
   economic identity change: progress=INVALIDATED; retained=0; identity=phase2j-d44edafe
   mechanics identity change: progress=INVALIDATED; retained=0; identity=phase2j-002ead8e
@@ -29,18 +29,18 @@ K4 TERMINAL TELEMETRY
 
 K5 TELEMETRY ON/OFF EQUIVALENCE AND OVERHEAD
   repetitions=7 after warmup; eventsPerOnRun=6
-  OFF samples ms=806.300, 798.406, 783.516, 766.054, 751.051, 765.219, 737.113
-  ON samples ms=808.726, 801.034, 819.350, 821.716, 759.155, 732.808, 771.086
-  OFF median=766.054ms; ON median=801.034ms; overhead=4.566%; target<=5%=PASS
+  OFF samples ms=824.363, 835.596, 815.757, 796.723, 787.919, 854.158, 889.897
+  ON samples ms=841.025, 819.720, 797.018, 824.166, 772.769, 910.195, 759.465
+  OFF median=824.363ms; ON median=819.720ms; overhead=-0.563%; target<=5%=PASS
   equality=PASS: acquisition/action, expected cost, health, proof, candidate ranking, policy decisions, and graph/search decision semantics
 
 K6 CURRENT-DEPTH CLEAN U VERSUS MATURE CLEAN-ONLY U
   matched action set: Harvest=true; tags=["attribute","defences","energy_shield"]; allowResearchFallbackPrices=true
   portfolio current-depth Clean U=213866.185599c; clean probe states=3334; elapsed=4002ms
   mature certified clean-only U=213866.185599c; source=clean-only seed; states=3334; rounds=2; policy=FULLY RESOLVED / PROPER / ABSORBING / COST-RECONCILED; proper=true; absorption=1.000000000000; Bellman=true; occupancy=true; reconciled=true
-  clean-only seed: U=213866.185599c; retained states=3334; stop=FIRST_USEFUL_RETURNED; runtime=3447.021ms
-  exploratory DEEPEN: U=123.320130c; certified=false; states=7501; rounds=1; stop=NO_EXECUTABLE_POLICY; runtime=31164.931ms; an uncertified incumbent is not reported as executable
-  final DEEPEN: U=140.542980c; certified=false; states=14001; rounds=1; stop=NO_EXECUTABLE_POLICY; runtime=71655.677ms
+  clean-only seed: U=213866.185599c; retained states=3334; stop=FIRST_USEFUL_RETURNED; runtime=4699.286ms
+  exploratory DEEPEN: U=123.320130c; certified=false; states=7501; rounds=1; stop=NO_EXECUTABLE_POLICY; runtime=34519.804ms; an uncertified incumbent is not reported as executable
+  final DEEPEN: U=140.542980c; certified=false; states=14001; rounds=1; stop=NO_EXECUTABLE_POLICY; runtime=81312.944ms
   portfolio selected U=4793.659159c; scheduler evidence=the generic complex-target clean allocation was bounded before fracture evaluation, then remaining budget evaluated 4/4 acquisition candidates and resolved a fracture route below current-depth Clean U
   interpretation=Clean is an executable upper bound at allocated portfolio depth, not a mature clean-policy estimate; the mature comparison uses the same action set.
 

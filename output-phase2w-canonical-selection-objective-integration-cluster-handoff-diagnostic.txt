@@ -14,14 +14,14 @@ W14–W20 — Cluster Jewels handoff, provenance, roundtrip, and generated QA
 PASS: group plus 3 notable handoffs, explicit 4–5 passive choice, exact sale provenance, share/import identity, mobile accessibility, and reproducible generated/metamorphic QA passed.
 
 W21 — Objective transition reuse and performance
-PASS: Cheapest=5339ms, Fewest=20101ms, Fastest=20618ms, A→B→A Cheapest=5518ms with 5000 states/17231 transitions retained; handoff=108.9ms.
+PASS: Cheapest=6965ms, Fewest=20457ms, Fastest=20209ms, A→B→A Cheapest=8454ms with 5000 states/17231 transitions retained; handoff=199.7ms.
 
 W22 — Static contract, release hygiene, and prohibited-change audit
-PASS: schema 2W.1, atomic policy binding, objective propagation, Worker completion identity, typed handoff, share/export context, target-generic solver source, lean deploy, manual-only heavy matrix, and stable artifacts are audited.
+PASS: schema 2X.1, atomic policy binding, objective propagation, Worker completion identity, typed handoff, share/export context, target-generic solver source, lean deploy, manual-only heavy matrix, and stable artifacts are audited.
 
 === ALL PHASE 2W DIAGNOSTIC GATES PASS ===
-Real browser: Playwright Chromium 151.0.7922.34; run=2026-08-26T12-07-53-467Z; scenario=release
-Release label/schema: 2W.1
+Real browser: Playwright Chromium 151.0.7922.34; run=2026-08-26T17-32-13-469Z; scenario=release
+Release label/schema: 2X.1
 Unit tests added/run: NO
 Mechanics probabilities changed: NO
 State identity weakened: NO

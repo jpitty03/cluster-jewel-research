@@ -32,6 +32,7 @@
     "lab:phase2v": "tsx quality-lab/src/runner.ts --scenario phase2v",
     "lab:phase2w": "tsx quality-lab/src/runner.ts --scenario phase2w",
     "lab:phase2w:handoff": "tsx quality-lab/src/runner.ts --scenario phase2w-handoff",
+    "lab:phase2x": "tsx quality-lab/src/runner.ts --scenario release",
     "diagnostic:mature": "tsx scripts/matureDiagnostics.ts",
     "diagnostic:phase2t": "tsx scripts/phase2tDiagnostics.ts",
     "diagnostic:phase2u": "tsx scripts/phase2uDiagnostics.ts",
@@ -40,6 +41,8 @@
     "diagnostic:phase2v:committed": "tsx scripts/phase2vDiagnostics.ts --committed-evidence",
     "diagnostic:phase2w": "tsx scripts/phase2wDiagnostics.ts",
     "diagnostic:phase2w:committed": "tsx scripts/phase2wDiagnostics.ts --committed-evidence",
+    "diagnostic:phase2x": "tsx scripts/phase2xDiagnostics.ts",
+    "diagnostic:phase2x:committed": "tsx scripts/phase2xDiagnostics.ts --committed-evidence",
     "browser:smoke": "tsx scripts/browserPhase2sSmoke.ts",
     "publish": "npm run scrape && npm run price && node scripts/publish.mjs"
   },

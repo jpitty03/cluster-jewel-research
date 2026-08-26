@@ -1,4 +1,7 @@
-import type { CraftPlanSummary } from '../service/craftPlan.ts';
+import {
+  classifyCraftPlanAction,
+  type CraftPlanSummary,
+} from '../service/craftPlan.ts';
 import type { MethodFamilyResult } from './MethodFamily.ts';
 import type { RouteSummary } from '../service/optimizerService.ts';
 import {
@@ -119,29 +122,14 @@ export interface GraphBuildOptions {
   acquisitionContext?: VisualizationAcquisitionContext;
 }
 
-const ACTION_SHORT_LABELS: Readonly<Record<string, string>> = {
-  fracturing_orb: 'Fracture',
-  transmutation_orb: 'Transmute',
-  alteration_orb: 'Alter',
-  augmentation_orb: 'Augment',
-  regal_orb: 'Regal',
-  exalted_orb: 'Exalt',
-  annulment_orb: 'Annul',
-  divine_orb: 'Divine',
-  scouring_orb: 'Recover',
-  restart_reacquire: 'Recover',
-};
-
 function compactStepLabel(step: CraftPlanSummary['steps'][number]): string {
   if (step.phase === 'ACQUIRE') return 'Acquire';
   if (step.phase === 'RECOVER') return 'Recover';
   if (step.phase === 'SUCCESS') return 'Complete';
-  if (step.phase === 'SPECIALIZED') return 'Harvest';
   if (step.phase === 'FINISH') return 'Finish';
   for (const actionId of step.actionIds) {
-    if (actionId.startsWith('harvest_reforge')) return 'Harvest';
-    const actionLabel = ACTION_SHORT_LABELS[actionId];
-    if (actionLabel) return actionLabel;
+    const classification = classifyCraftPlanAction(actionId);
+    if (classification.kind === 'CRAFT_MECHANIC') return classification.compactLabel;
   }
   const phaseLabels: Record<string, string> = {
     INITIALIZE: 'Make Magic',
@@ -302,11 +290,16 @@ export function buildVisualizationGraph(
     const targetTexts = targetDescriptors.map((descriptor) => descriptor.compactText);
     const fullTitle = playerText(step.title, 'primary');
 
+    const hasHarvestMechanic = step.actionIds.some((actionId) => {
+      const classification = classifyCraftPlanAction(actionId);
+      return classification.kind === 'CRAFT_MECHANIC' &&
+        classification.actionType === 'HARVEST_REFORGE';
+    });
     const stepKind: MacroStateKind = step.phase === 'INITIALIZE' || step.phase === 'ROLL'
         ? (routeStepNumber === 1 ? 'MAGIC_1_MOD' : 'MAGIC_2_MOD')
         : step.phase === 'PROMOTE'
           ? 'RARE_2_MOD'
-          : step.phase === 'SPECIALIZED'
+        : hasHarvestMechanic
             ? 'HARVEST_REFORGE'
             : step.phase === 'RECOVER'
               ? 'RECOVERY_RESET'

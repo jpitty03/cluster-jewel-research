@@ -106,6 +106,10 @@ export interface CraftPlanSummary {
   representedActionIds: string[];
   uncoveredActionIds: string[];
   inventedActionIds: string[];
+  excludedAccountingActionIds: string[];
+  excludedVirtualActionIds: string[];
+  unknownActionIds: string[];
+  withheldReason?: string;
   expectedPhysicalActions?: number;
   estimatedManualTimeMs?: number;
   optimalityNote?: string;
@@ -136,21 +140,26 @@ const PHASE_ORDER: CraftPlanPhase[] = [
   'SUCCESS',
 ];
 
-const HARVEST_ACTION_TYPES = new Map(
-  Object.values(HARVEST_CRAFT_DEFINITIONS).map((definition) => [
-    definition.craftId,
-    'HARVEST_REFORGE' as const,
-  ])
+export type CraftPlanActionClassification =
+  | {
+      kind: 'CRAFT_MECHANIC';
+      phase: CraftPlanPhase;
+      mechanicId: string;
+      actionType: DiscoveredActionType;
+      mechanicName: string;
+      compactLabel: string;
+    }
+  | { kind: 'ACQUISITION_RESOURCE' }
+  | { kind: 'VIRTUAL_SERVICE' }
+  | { kind: 'UNKNOWN' };
+
+const MECHANIC_BY_ID = new Map(CRAFT_MECHANICS.map((mechanic) => [mechanic.id, mechanic]));
+const HARVEST_BY_ID = new Map(
+  Object.values(HARVEST_CRAFT_DEFINITIONS).map((definition) => [definition.craftId, definition])
 );
+const ACQUISITION_RESOURCE_ACTION_IDS = new Set(['clean_base_initial']);
 
-function actionType(actionId: string): DiscoveredActionType | undefined {
-  if (actionId === 'restart_reacquire') return 'RESTART_REACQUIRE';
-  return CRAFT_MECHANICS.find((mechanic) => mechanic.id === actionId)?.actionType ??
-    HARVEST_ACTION_TYPES.get(actionId);
-}
-
-export function craftPlanPhaseForAction(actionId: string): CraftPlanPhase | undefined {
-  const type = actionType(actionId);
+function phaseForActionType(type: DiscoveredActionType): CraftPlanPhase | undefined {
   switch (type) {
     case 'TRANSFORMATION_ORB': return 'INITIALIZE';
     case 'ALTERATION_ORB':
@@ -167,6 +176,91 @@ export function craftPlanPhaseForAction(actionId: string): CraftPlanPhase | unde
     case 'TERMINAL': return 'SUCCESS';
     default: return undefined;
   }
+}
+
+function compactLabelForActionType(type: DiscoveredActionType, mechanicName: string): string {
+  switch (type) {
+    case 'TRANSFORMATION_ORB': return 'Transmute';
+    case 'ALTERATION_ORB': return 'Alter';
+    case 'AUGMENTATION_ORB': return 'Augment';
+    case 'REGAL_ORB': return 'Regal';
+    case 'SCOURING_ORB':
+    case 'RESTART_REACQUIRE': return 'Recover';
+    case 'CHAOS_ORB': return 'Chaos';
+    case 'EXALTED_ORB': return 'Exalt';
+    case 'ANNULMENT_ORB': return 'Annul';
+    case 'DIVINE_ORB': return 'Divine';
+    case 'FRACTURING_ORB': return 'Fracture';
+    case 'HARVEST_REFORGE': return 'Harvest';
+    case 'TERMINAL': return 'Complete';
+    default: return mechanicName;
+  }
+}
+
+/**
+ * Authoritative presentation taxonomy for positive selected-policy entries.
+ * IDs are classified from mechanics metadata or explicit service/accounting ID
+ * contracts; player-facing names are never used to guess semantics.
+ */
+export function classifyCraftPlanAction(actionId: string): CraftPlanActionClassification {
+  if (ACQUISITION_RESOURCE_ACTION_IDS.has(actionId)) {
+    return { kind: 'ACQUISITION_RESOURCE' };
+  }
+
+  const mechanic = MECHANIC_BY_ID.get(actionId);
+  if (mechanic) {
+    const phase = phaseForActionType(mechanic.actionType);
+    if (phase === undefined || mechanic.actionType === 'TERMINAL') {
+      return { kind: 'VIRTUAL_SERVICE' };
+    }
+    return {
+      kind: 'CRAFT_MECHANIC',
+      phase,
+      mechanicId: mechanic.id,
+      actionType: mechanic.actionType,
+      mechanicName: mechanic.name,
+      compactLabel: compactLabelForActionType(mechanic.actionType, mechanic.name),
+    };
+  }
+
+  const harvest = HARVEST_BY_ID.get(actionId);
+  if (harvest) {
+    return {
+      kind: 'CRAFT_MECHANIC',
+      phase: 'SPECIALIZED',
+      mechanicId: harvest.craftId,
+      actionType: 'HARVEST_REFORGE',
+      mechanicName: harvest.name,
+      compactLabel: 'Harvest',
+    };
+  }
+
+  if (actionId === 'restart_reacquire') {
+    return {
+      kind: 'CRAFT_MECHANIC',
+      phase: 'RECOVER',
+      mechanicId: actionId,
+      actionType: 'RESTART_REACQUIRE',
+      mechanicName: 'Abandon + Reacquire',
+      compactLabel: 'Recover',
+    };
+  }
+
+  if (
+    actionId.startsWith('acquire_') ||
+    actionId.startsWith('method:') ||
+    actionId.startsWith('bundle:') ||
+    actionId.startsWith('candidate:')
+  ) {
+    return { kind: 'VIRTUAL_SERVICE' };
+  }
+
+  return { kind: 'UNKNOWN' };
+}
+
+export function craftPlanPhaseForAction(actionId: string): CraftPlanPhase | undefined {
+  const classification = classifyCraftPlanAction(actionId);
+  return classification.kind === 'CRAFT_MECHANIC' ? classification.phase : undefined;
 }
 
 function targetRequirementIds(target: TargetDefinition): string[] {
@@ -342,13 +436,16 @@ function coarseContextKey(context: PolicyExplanationRule['context']): string {
   });
 }
 
-function decisionGroups(rules: PolicyExplanationRule[]): Array<{
+function decisionGroups(
+  rules: PolicyExplanationRule[],
+  selectedPhysicalActionIds: ReadonlySet<string>,
+): Array<{
   group: CraftPlanDecisionGroup;
   phase: CraftPlanPhase;
 }> {
   const contexts = new Map<string, number[]>();
   for (const [index, rule] of rules.entries()) {
-    if (rule.context.acquisitionMenu) continue;
+    if (rule.context.acquisitionMenu || !selectedPhysicalActionIds.has(rule.actionId)) continue;
     const key = coarseContextKey(rule.context);
     const indices = contexts.get(key) ?? [];
     indices.push(index);
@@ -387,7 +484,8 @@ function decisionGroups(rules: PolicyExplanationRule[]): Array<{
     const phases = [...byAction.keys()]
       .map(craftPlanPhaseForAction)
       .filter((phase): phase is CraftPlanPhase => phase !== undefined);
-    const phase = phasePriority.find((candidate) => phases.includes(candidate)) ?? 'SPECIALIZED';
+    const phase = phasePriority.find((candidate) => phases.includes(candidate));
+    if (phase === undefined) continue;
     const first = rules[indices[0]];
     groups.push({
       phase,
@@ -405,21 +503,6 @@ function decisionGroups(rules: PolicyExplanationRule[]): Array<{
     });
   }
   return groups;
-}
-
-function selectedPolicyPhase(
-  actionId: string,
-  source: CraftPlanSource,
-): CraftPlanPhase | undefined {
-  if (
-    actionId === source.recommended?.actionId &&
-    source.policyExplanation.some((rule) =>
-      !rule.context.acquisitionMenu && rule.actionId === actionId && rule.expectedVisits > 0
-    )
-  ) {
-    return 'RECOVER';
-  }
-  return craftPlanPhaseForAction(actionId);
 }
 
 function unique<T>(values: T[]): T[] {
@@ -479,7 +562,7 @@ function stepCopy(
       };
     case 'SPECIALIZED':
       return {
-        title: 'Use the selected specialized craft',
+        title: `Use ${actions}`,
         instruction: `Use ${actions} in the exact states assigned to it by the selected policy.`,
       };
     case 'RECOVER':
@@ -514,6 +597,9 @@ export function buildCraftPlan(source: CraftPlanSource): CraftPlanSummary {
       representedActionIds: [],
       uncoveredActionIds: [],
       inventedActionIds: [],
+      excludedAccountingActionIds: [],
+      excludedVirtualActionIds: [],
+      unknownActionIds: [],
       provenance:
         'No chronological plan is produced without a certified selected acquisition and policy.',
     };
@@ -537,7 +623,7 @@ export function buildCraftPlan(source: CraftPlanSource): CraftPlanSummary {
     actionNames.set(recovery.actionId, recovery.actionName);
   }
 
-  const selectedPolicyActionIds = unique([
+  const selectedSourceActionIds = unique([
     source.recommended.actionId,
     ...source.expectedActionUsage.filter((usage) => usage.expectedCount > 0).map((usage) => usage.actionId),
     ...source.policyExplanation.filter((rule) => rule.expectedVisits > 0).map((rule) => rule.actionId),
@@ -548,23 +634,47 @@ export function buildCraftPlan(source: CraftPlanSource): CraftPlanSummary {
       .filter((recovery) => recovery.expectedVisits > 0)
       .map((recovery) => recovery.actionId),
   ]);
-  const allowedActionIds = new Set(selectedPolicyActionIds);
-  const policyActionIds = unique([
+  const classifications = new Map(
+    selectedSourceActionIds.map((actionId) => [actionId, classifyCraftPlanAction(actionId)])
+  );
+  const selectedPhysicalActionIds = selectedSourceActionIds.filter(
+    (actionId) => classifications.get(actionId)?.kind === 'CRAFT_MECHANIC'
+  );
+  const selectedPhysicalActionIdSet = new Set(selectedPhysicalActionIds);
+  const excludedAccountingActionIds = selectedSourceActionIds.filter(
+    (actionId) => classifications.get(actionId)?.kind === 'ACQUISITION_RESOURCE'
+  );
+  const excludedVirtualActionIds = selectedSourceActionIds.filter(
+    (actionId) => classifications.get(actionId)?.kind === 'VIRTUAL_SERVICE'
+  );
+  const unknownActionIds = selectedSourceActionIds.filter(
+    (actionId) => classifications.get(actionId)?.kind === 'UNKNOWN'
+  );
+  const downstreamPolicyActionIds = unique([
     ...source.policyExplanation
       .filter((rule) => !rule.context.acquisitionMenu && rule.expectedVisits > 0)
       .map((rule) => rule.actionId),
     ...source.expectedActionUsage
       .filter((usage) => usage.expectedCount > 0 && usage.actionId !== source.recommended?.actionId)
       .map((usage) => usage.actionId),
-  ]);
+  ]).filter((actionId) => selectedPhysicalActionIdSet.has(actionId));
+  const synthesisPhysicalActionIds = unique([
+    ...(selectedSynthesis?.expectedActionUsage ?? [])
+      .filter((usage) => usage.expectedCount > 0)
+      .map((usage) => usage.actionId),
+    ...(selectedSynthesis?.wrongFractureRecovery?.recoveryActions ?? [])
+      .filter((recovery) => recovery.expectedVisits > 0)
+      .map((recovery) => recovery.actionId),
+  ]).filter((actionId) => selectedPhysicalActionIdSet.has(actionId));
   const byPhase = new Map<CraftPlanPhase, string[]>();
-  for (const actionId of policyActionIds) {
-    const phase = selectedPolicyPhase(actionId, source) ?? 'SPECIALIZED';
+  for (const actionId of downstreamPolicyActionIds) {
+    const phase = craftPlanPhaseForAction(actionId);
+    if (phase === undefined) continue;
     const entries = byPhase.get(phase) ?? [];
     entries.push(actionId);
     byPhase.set(phase, unique(entries));
   }
-  const conflicts = decisionGroups(source.policyExplanation);
+  const conflicts = decisionGroups(source.policyExplanation, selectedPhysicalActionIdSet);
   const detailsByPhase = new Map<CraftPlanPhase, CraftPlanDecisionGroup[]>();
   for (const { group, phase } of conflicts) {
     const entries = detailsByPhase.get(phase) ?? [];
@@ -573,11 +683,10 @@ export function buildCraftPlan(source: CraftPlanSource): CraftPlanSummary {
   }
 
   const acquisitionActionIds = unique([
-    source.recommended.actionId,
     ...(byPhase.get('ACQUIRE') ?? []),
-    ...(selectedSynthesis?.expectedActionUsage ?? [])
-      .filter((usage) => usage.expectedCount > 0)
-      .map((usage) => usage.actionId),
+    ...synthesisPhysicalActionIds.filter((actionId) =>
+      craftPlanPhaseForAction(actionId) !== 'RECOVER'
+    ),
   ]);
   const acquisitionInstruction = selectedSynthesis
     ? `Follow the selected executable self-fracture synthesis for ${selectedCandidate?.label ?? 'the starting base'}. ` +
@@ -597,6 +706,31 @@ export function buildCraftPlan(source: CraftPlanSource): CraftPlanSummary {
     targetProgressAfter: 0,
     decisionDetails: [],
   }];
+
+  if (unknownActionIds.length > 0) {
+    return {
+      status: 'UNCERTIFIED',
+      startingPoint: selectedCandidate?.label ?? selectedMethod?.label ?? source.recommended.name,
+      steps: [],
+      targetOrderPreference,
+      detailedDecisionCount: 0,
+      exactPolicyBranchCount,
+      exactPolicyBranchesHiddenByDefault: exactPolicyBranchCount,
+      selectedActionIds: selectedPhysicalActionIds,
+      representedActionIds: [],
+      uncoveredActionIds: selectedPhysicalActionIds,
+      inventedActionIds: [],
+      excludedAccountingActionIds,
+      excludedVirtualActionIds,
+      unknownActionIds,
+      withheldReason:
+        'The optimizer found an executable policy, but the player instruction plan was withheld because one or more selected actions lack presentation metadata.',
+      expectedPhysicalActions: source.recommended?.metrics?.expectedPhysicalActions,
+      estimatedManualTimeMs: source.recommended?.metrics?.estimatedManualTimeMs,
+      provenance:
+        'Fail-closed presentation audit retained exact unknown action IDs; no unknown action was assigned a craft phase.',
+    };
+  }
 
   for (const phase of PHASE_ORDER) {
     if (phase === 'ACQUIRE' || phase === 'RECOVER' || phase === 'SUCCESS') continue;
@@ -622,9 +756,9 @@ export function buildCraftPlan(source: CraftPlanSource): CraftPlanSummary {
     });
   }
 
-  const synthesisRecoveryIds = (selectedSynthesis?.wrongFractureRecovery?.recoveryActions ?? [])
-    .filter((recovery) => recovery.expectedVisits > 0)
-    .map((recovery) => recovery.actionId);
+  const synthesisRecoveryIds = synthesisPhysicalActionIds.filter(
+    (actionId) => craftPlanPhaseForAction(actionId) === 'RECOVER'
+  );
   const recoveryIds = unique([...(byPhase.get('RECOVER') ?? []), ...synthesisRecoveryIds]);
   let recovery: CraftPlanRecovery | undefined;
   if (recoveryIds.length > 0) {
@@ -666,24 +800,35 @@ export function buildCraftPlan(source: CraftPlanSource): CraftPlanSummary {
     ...step.actionIds,
     ...step.decisionDetails.flatMap((group) => group.options.map((option) => option.actionId)),
   ]));
-  const uncoveredActionIds = selectedPolicyActionIds.filter(
+  const uncoveredActionIds = selectedPhysicalActionIds.filter(
     (actionId) => !representedActionIds.includes(actionId)
   );
-  const inventedActionIds = representedActionIds.filter((actionId) => !allowedActionIds.has(actionId));
+  const inventedActionIds = representedActionIds.filter(
+    (actionId) => !selectedPhysicalActionIdSet.has(actionId)
+  );
+  const status = uncoveredActionIds.length === 0 && inventedActionIds.length === 0
+    ? 'CERTIFIED' as const
+    : 'UNCERTIFIED' as const;
 
   return {
-    status: 'CERTIFIED',
+    status,
     startingPoint: selectedCandidate?.label ?? selectedMethod?.label ?? source.recommended.name,
-    steps,
+    steps: status === 'CERTIFIED' ? steps : [],
     recovery,
     targetOrderPreference,
     detailedDecisionCount: conflicts.length,
     exactPolicyBranchCount,
     exactPolicyBranchesHiddenByDefault: exactPolicyBranchCount,
-    selectedActionIds: selectedPolicyActionIds,
+    selectedActionIds: selectedPhysicalActionIds,
     representedActionIds,
     uncoveredActionIds,
     inventedActionIds,
+    excludedAccountingActionIds,
+    excludedVirtualActionIds,
+    unknownActionIds,
+    withheldReason: status === 'UNCERTIFIED'
+      ? 'The optimizer found an executable policy, but the player instruction plan was withheld because selected mechanic coverage did not reconcile.'
+      : undefined,
     expectedPhysicalActions: source.recommended?.metrics?.expectedPhysicalActions,
     estimatedManualTimeMs: source.recommended?.metrics?.estimatedManualTimeMs,
     optimalityNote: source.proof.globalOptimality === 'NOT YET PROVEN'
