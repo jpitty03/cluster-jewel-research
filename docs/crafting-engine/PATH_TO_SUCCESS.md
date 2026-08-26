@@ -4,19 +4,19 @@
 
 Baseline reviewed: `4b75cfe52f441114fca63aaa7bd4b9868cd30350` on `main`.
 
-> **Phase 2U superseding status (2026-08-25):** Phase 2S public-beta certification remains reopened. The current product status is **Browser-Verified Release Candidate 2U.1**. Phase 2T solver, accounting, method-family, Worker, and real-browser release behavior remains authoritative and is now joined by the real interaction, rendered-label geometry, player-vocabulary, and exact-identity disclosure gates defined by `POST_PHASE2T_REVIEW_AND_PHASE2U_CONSTELLATION_INTERACTION_READABILITY_AND_PLAYER_LABELS_PLAN.md`.
+> **Phase 2V superseding status (2026-08-25):** Phase 2S public-beta certification remains reopened. The current product status is **Browser-Verified Release Candidate 2V.1**. Phase 2T solver, accounting, method-family, Worker, and real-browser truthfulness plus Phase 2U interaction, readability, player-vocabulary, and exact-identity behavior remain authoritative. Phase 2V adds document-scroll ownership, truthful clean/self-fracture Constellation chronology, one-terminal presentation, and generic certified repeatable-reroll closure for the eligible T1 Armour + T1 Evasion Harvest family, as defined by `POST_PHASE2U_FIELD_VALIDATION_AND_PHASE2V_SCROLL_SEMANTICS_HARVEST_CLOSURE_PLAN.md`.
 
-> **Validation execution policy (2026-08-25):** Fresh mature diagnostics and the full Playwright release matrix are required local completion gates. Automatic Pages CI is intentionally limited to build, lint, diff hygiene, and auditing the committed local evidence contract; the extended hosted matrix is unscheduled and opt-in. This user-approved execution-policy exception supersedes the automatic hosted execution described in Phase 2T T14 and Phase 2U U16, without changing any browser assertion or solver behavior.
+> **Validation execution policy (2026-08-25):** Fresh mature diagnostics and the full Playwright release matrix are required local completion gates. Automatic Pages CI is intentionally limited to build, lint, diff hygiene, and auditing the committed Phase 2V local-evidence contract; the extended hosted matrix is unscheduled and opt-in. This user-approved execution-policy exception supersedes the automatic hosted execution described in Phase 2T T14 and Phase 2U U16, without changing any browser assertion or solver behavior.
 
 This document is the high-level roadmap for taking the current research-grade optimizer to a trustworthy, efficient, polished application that ordinary players can use. Detailed phase documents remain the source of truth for their individual implementations; this file defines the final product, the order of work, the quality strategy, and the release gates.
 
 The immediate detailed implementation plan is:
 
 ```text
-docs/crafting-engine/POST_PHASE2L_REVIEW_AND_PHASE2M_COST_CONSTRAINED_MULTI_OBJECTIVE_HARVEST_PLAN.md
+docs/crafting-engine/POST_PHASE2U_FIELD_VALIDATION_AND_PHASE2V_SCROLL_SEMANTICS_HARVEST_CLOSURE_PLAN.md
 ```
 
-Phase 2L is closed. It added proof-honest acquisition/downstream/full-route bounds, retained candidate proof sessions, incumbent-directed deepening, improved Search Activity telemetry, and modifier-selector hardening. The exact four-mod benchmark still has a large proof gap under interactive budgets, but its selected executable policies remain proper, absorbing, converged, and cost-reconciled. That is a proof-efficiency limitation, not a reason to hide or hardcode a result.
+Phase 2V is closed. Replay now moves only its horizontal route rail, clean and self-fracture graphs present physically truthful acquisition chronology with one terminal Goal, and eligible repeatable Harvest full rerolls can close through an audited family-scoped quotient without changing mechanics probabilities or global state identity. The exact four-mod benchmark still has a proof gap under interactive budgets, but its selected executable policy remains proper, absorbing, converged, and cost-reconciled. That is a proof-efficiency limitation, not a reason to hide or hardcode a result.
 
 No new unit tests should be added or run unless the user explicitly lifts the current project constraint. The primary validation strategy remains deterministic diagnostics, analytical/Monte Carlo parity, actual Worker/browser integration tests, and the external adaptive browser quality harness proposed below.
 
