@@ -194,18 +194,8 @@ export class SolverCraftActionAdapter {
       this.transitionCache.set(cacheKey, distribution);
       return { distribution, reused: false };
     }
-    if (this.mechanic.actionType === 'HARVEST_REFORGE') {
-      // A Harvest reforge removes every non-fractured explicit before rolling.
-      // Cache by that post-removal physical input so a full-pool graph does not
-      // regenerate the same large analytical distribution for every rare miss.
-      const resetState = cloneItemState(state);
-      resetState.rarity = 'rare';
-      resetState.prefixes = resetState.prefixes.filter((mod) => isFracturedMod(state, mod));
-      resetState.suffixes = resetState.suffixes.filter((mod) => isFracturedMod(state, mod));
-      resetState.fracturedModIds = [...resetState.prefixes, ...resetState.suffixes]
-        .filter((mod) => mod.isFractured)
-        .map((mod) => mod.modId);
-      const cacheKey = getCanonicalStateKey(resetState, this.target);
+    if (this.mechanic.repeatableFullReroll) {
+      const cacheKey = this.mechanic.repeatableFullReroll.getKernelIdentity(state);
       const cached = this.transitionCache.get(cacheKey);
       if (cached) return { distribution: cached, reused: true };
       const distribution = this.mechanic.getTransitions(state, this.target, this.context, control);
@@ -220,6 +210,15 @@ export class SolverCraftActionAdapter {
 
   getTransitions(state: ItemState, deadlineMs?: number): TransitionDistribution | undefined {
     return this.getTransitionsWithCacheInfo(state, deadlineMs).distribution;
+  }
+
+  primeRepeatableFullRerollTransition(
+    kernelIdentity: string,
+    distribution: TransitionDistribution,
+  ): void {
+    if (this.mechanic.repeatableFullReroll) {
+      this.transitionCache.set(kernelIdentity, distribution);
+    }
   }
 
   sampleTransition(state: ItemState, rng: RandomSource): ItemState {
@@ -637,6 +636,11 @@ export interface GenericSearchOptions {
    * Normal product search uses the full canonical identity.
    */
   canonicalStateKey?: (state: ItemState, target: TargetDefinition) => string;
+  /** Internal, already-certified distributions reused by a specialized quotient solve. */
+  precomputedRepeatableRerollTransitions?: ReadonlyMap<string, {
+    kernelIdentity: string;
+    distribution: TransitionDistribution;
+  }>;
   /** Optional telemetry observer. Observational only; never modifies search semantics or outcomes. */
   onProgress?: (event: SearchProgressEvent) => void;
 }
@@ -1166,14 +1170,24 @@ export class GenericSearchEngine {
     return required.some((actionId) => observed.has(actionId));
   }
 
-  private withMethodFamilyActionEvidence(state: ItemState, actionId: string): ItemState {
+  private withMethodFamilyActionEvidence(
+    state: ItemState,
+    actionId: string,
+    priorState?: ItemState,
+  ): ItemState {
     const required = this.defaultOptions.requiredAnyActionIds;
-    if (!required?.includes(actionId)) return state;
+    const priorEvidence = priorState?.flags?.methodFamilyActionEvidence ?? [];
+    const actionEvidence = required?.includes(actionId) ? [actionId] : [];
+    if (priorEvidence.length === 0 && actionEvidence.length === 0) return state;
     const next = cloneItemState(state);
     next.flags = {
       ...next.flags,
       methodFamilyActionEvidence: [
-        ...new Set([...(next.flags?.methodFamilyActionEvidence ?? []), actionId]),
+        ...new Set([
+          ...(next.flags?.methodFamilyActionEvidence ?? []),
+          ...priorEvidence,
+          ...actionEvidence,
+        ]),
       ].sort(),
     };
     return next;
@@ -1214,7 +1228,17 @@ export class GenericSearchEngine {
         }
       }
       return true;
-    }).map((m) => new SolverCraftActionAdapter(m, context, target));
+    }).map((m) => {
+      const adapter = new SolverCraftActionAdapter(m, context, target);
+      const precomputed = options.precomputedRepeatableRerollTransitions?.get(m.id);
+      if (precomputed) {
+        adapter.primeRepeatableFullRerollTransition(
+          precomputed.kernelIdentity,
+          precomputed.distribution,
+        );
+      }
+      return adapter;
+    });
   }
 
   private expansionPriority(
@@ -1439,7 +1463,7 @@ export class GenericSearchEngine {
         // Zero-mass analytical entries are not graph edges. Keeping one
         // can poison continuation arithmetic through 0 * Infinity = NaN.
         if (!Number.isFinite(out.probability) || out.probability <= 0) continue;
-        const nextState = this.withMethodFamilyActionEvidence(out.state, adapter.id);
+        const nextState = this.withMethodFamilyActionEvidence(out.state, adapter.id, curr);
         const outKey = this.stateKey(nextState);
         actionLocalSuccessorKeys.get(adapter.id)?.add(outKey);
         const existing = aggMap.get(outKey);

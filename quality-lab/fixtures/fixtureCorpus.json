@@ -14,6 +14,18 @@
       "searchBudget": { "maxStates": 1200, "maxWallTimeMs": 10000, "maxExpansionRounds": 2 }
     },
     {
+      "id": "phase2v_one_mod_clean_graph",
+      "name": "Phase 2V clean one-mod increased Effect chronology",
+      "baseType": "Large Cluster Jewel",
+      "clusterType": "10% increased Attack Damage",
+      "itemLevel": 84,
+      "passiveCount": 12,
+      "finalRarity": "any",
+      "extraAffixes": "allow-extra",
+      "targetMods": ["AfflictionJewelSmallPassivesHaveIncreasedEffect2"],
+      "searchBudget": { "maxStates": 1200, "maxWallTimeMs": 10000, "maxExpansionRounds": 2 }
+    },
+    {
       "id": "harvest_one_mod_math_witness",
       "name": "Armour resolved Harvest economics witness",
       "baseType": "Large Cluster Jewel",

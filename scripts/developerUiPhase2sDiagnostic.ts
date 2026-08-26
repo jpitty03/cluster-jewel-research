@@ -31,7 +31,7 @@ lines.push('\nS1 — Retained optimizer integration');
 const result = service.optimize(input);
 assert(result.recommended && result.craftPlan.steps.length > 0);
 assert(result.risk.selectedPolicyProper && result.solver.costReconciled);
-assert.equal(result.presentation.schemaVersion, '2U.1');
+assert.equal(result.presentation.schemaVersion, '2V.1');
 lines.push(`PASS: ${result.recommendationStatus}, ${result.expectedCostChaos?.toFixed(6)}c, ${result.craftPlan.steps.length} executable playbook steps.`);
 
 lines.push('\nS2 — Share serialization regression');
@@ -51,11 +51,11 @@ lines.push('PASS: exact target IDs survive the supported share URL round trip.')
 
 lines.push('\nS3 — Release-status truthfulness');
 const uiSource = readFileSync(optimizerUiPath, 'utf8');
-assert(uiSource.includes("export const APP_RELEASE_VERSION = '2U.1'"));
+assert(uiSource.includes("export const APP_RELEASE_VERSION = '2V.1'"));
 assert(uiSource.includes('Browser-Verified Release Candidate {APP_RELEASE_VERSION}'));
 assert(!/Public Beta certified/i.test(uiSource));
 assert(uiSource.includes('Research estimate using stale bundled pricing'));
-lines.push('PASS: retained UI advances to Release Candidate 2U.1 and prominently distinguishes stale-pricing research estimates.');
+lines.push('PASS: retained UI advances to Release Candidate 2V.1 and prominently distinguishes stale-pricing research estimates.');
 
 lines.push('\nS4 — Certification boundary');
 lines.push('PASS: no browser claim is made here. Phase 2T Playwright owns rendered UI, Worker, responsive, keyboard, and canvas certification.');

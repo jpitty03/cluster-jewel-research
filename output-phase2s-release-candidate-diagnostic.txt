@@ -7,7 +7,7 @@ S2 — Share serialization regression
 PASS: exact target IDs survive the supported share URL round trip.
 
 S3 — Release-status truthfulness
-PASS: retained UI advances to Release Candidate 2U.1 and prominently distinguishes stale-pricing research estimates.
+PASS: retained UI advances to Release Candidate 2V.1 and prominently distinguishes stale-pricing research estimates.
 
 S4 — Certification boundary
 PASS: no browser claim is made here. Phase 2T Playwright owns rendered UI, Worker, responsive, keyboard, and canvas certification.

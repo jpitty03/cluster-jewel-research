@@ -90,6 +90,7 @@ export interface VisualizationGraph {
   events: VisualizationEvent[];
   seed: string;
   layoutVersion: string;
+  acquisitionContext: VisualizationAcquisitionContext;
   selectedRouteNodeIds: string[];
   selectedRouteEdgeIds: string[];
   bounds: {
@@ -102,12 +103,20 @@ export interface VisualizationGraph {
   };
 }
 
+export interface VisualizationAcquisitionContext {
+  kind: 'CLEAN' | 'SELF_FRACTURE' | 'OTHER';
+  candidateId?: string;
+  methodId?: string;
+  targetModId?: string;
+}
+
 export interface GraphBuildOptions {
   seed?: string;
   width?: number;
   height?: number;
   includeAlternatives?: boolean;
   modifierDescriptors?: ModifierDisplayDescriptor[];
+  acquisitionContext?: VisualizationAcquisitionContext;
 }
 
 const ACTION_SHORT_LABELS: Readonly<Record<string, string>> = {
@@ -124,7 +133,7 @@ const ACTION_SHORT_LABELS: Readonly<Record<string, string>> = {
 };
 
 function compactStepLabel(step: CraftPlanSummary['steps'][number]): string {
-  if (step.phase === 'ACQUIRE') return 'Fracture';
+  if (step.phase === 'ACQUIRE') return 'Acquire';
   if (step.phase === 'RECOVER') return 'Recover';
   if (step.phase === 'SUCCESS') return 'Complete';
   if (step.phase === 'SPECIALIZED') return 'Harvest';
@@ -157,8 +166,12 @@ export function buildVisualizationGraph(
   const descriptorById = new Map(descriptors.map((descriptor) => [descriptor.modId, descriptor]));
   const playerText = (text: string, form: 'primary' | 'compact' = 'compact') =>
     playerizeModifierText(text, descriptors, form);
-  const steps = craftPlan.steps || [];
-  const routeNodeCount = steps.length + 2;
+  const allSteps = craftPlan.steps || [];
+  const acquisitionContext = options.acquisitionContext ?? { kind: 'OTHER' };
+  const acquisitionStep = allSteps.find((step) => step.phase === 'ACQUIRE');
+  const steps = allSteps.filter((step) => step.phase !== 'ACQUIRE' && step.phase !== 'SUCCESS');
+  const includeAcquisitionNode = acquisitionContext.kind !== 'CLEAN' && acquisitionStep !== undefined;
+  const routeNodeCount = steps.length + (includeAcquisitionNode ? 1 : 0) + 2;
   const routeSpacing = 190;
   const width = Math.max(options.width ?? 1000, 180 + (routeNodeCount - 1) * routeSpacing);
   const alternativeFamilies = methodPortfolio.filter((family) =>
@@ -178,15 +191,15 @@ export function buildVisualizationGraph(
   const centerY = Math.min(240, height * 0.36);
   const isCertified = craftPlan.status === 'CERTIFIED';
 
-  // 1. Starting State Node
-  const isFractureStart = Boolean(recommendedRoute?.actionId?.includes('candidate_') && !recommendedRoute?.actionId?.includes('candidate_clean'));
+  // 1. Starting state is explicit acquisition context, never an action-id substring inference.
+  const startsClean = acquisitionContext.kind === 'CLEAN' || acquisitionContext.kind === 'SELF_FRACTURE';
   const startNodeId = 'node_start';
   const startNode: VisualizationNode = {
     id: startNodeId,
-    label: isFractureStart ? 'Fractured Base' : 'Clean Base',
-    sublabel: isFractureStart ? 'Fracture start' : 'Normal start',
-    fullLabel: playerText(recommendedRoute?.name ?? (isFractureStart ? 'Fractured Base' : 'Clean Base')),
-    kind: isFractureStart ? 'FRACTURE_FAMILY' : 'CLEAN_BASE',
+    label: startsClean ? 'Clean Base' : 'Starting Base',
+    sublabel: startsClean ? 'Normal start' : 'Selected acquisition',
+    fullLabel: startsClean ? 'Clean base' : 'Selected starting base',
+    kind: 'CLEAN_BASE',
     x: 90,
     y: centerY,
     radius: 20,
@@ -196,7 +209,7 @@ export function buildVisualizationGraph(
     isUnresolved: false,
     occupancyWeight: 1.0,
     details: {
-      title: playerText(recommendedRoute?.name ?? (isFractureStart ? 'Fractured Base' : 'Clean Base')),
+      title: startsClean ? 'Clean base' : 'Selected starting base',
       phase: 'ACQUIRE',
       actions: [],
       targetTexts: [],
@@ -214,24 +227,83 @@ export function buildVisualizationGraph(
     activeNodeId: startNodeId,
   });
 
-  // 2. Build Plan Steps Dynamically
+  // 2. Build the acquisition event and normal plan actions dynamically.
   let prevNodeId = startNodeId;
-  const totalSteps = steps.length;
+  let routeStepNumber = 0;
+  const totalSteps = steps.length + (includeAcquisitionNode ? 1 : 0);
+
+  if (includeAcquisitionNode && acquisitionStep) {
+    routeStepNumber++;
+    const targetDescriptor = acquisitionContext.targetModId
+      ? descriptorById.get(acquisitionContext.targetModId)
+      : undefined;
+    const targetLabel = targetDescriptor?.compactText ?? 'selected target';
+    const isSelfFracture = acquisitionContext.kind === 'SELF_FRACTURE';
+    const acquisitionLabel = isSelfFracture
+      ? `Create Fractured ${targetLabel}`
+      : 'Acquire Starting Base';
+    const acquisitionNodeId = 'node_acquisition';
+    const acquisitionNode: VisualizationNode = {
+      id: acquisitionNodeId,
+      label: acquisitionLabel,
+      sublabel: isSelfFracture ? targetLabel : 'Selected method',
+      fullLabel: acquisitionLabel,
+      stepNumber: routeStepNumber,
+      kind: isSelfFracture ? 'FRACTURE_FAMILY' : 'CLEAN_BASE',
+      x: 90 + routeStepNumber * routeSpacing,
+      y: centerY - 48,
+      radius: 18,
+      glowIntensity: 0.78,
+      isSelectedRoute: true,
+      isDominated: false,
+      isUnresolved: false,
+      occupancyWeight: 0.95,
+      details: {
+        title: acquisitionLabel,
+        phase: 'ACQUIRE',
+        instruction: playerText(acquisitionStep.instruction, 'primary'),
+        actions: acquisitionStep.actionNames.map((action) => playerText(action, 'primary')),
+        targetTexts: targetDescriptor ? [targetDescriptor.primaryText] : [],
+        expectedPhysicalActions: acquisitionStep.expectedPhysicalActions,
+        estimatedManualTimeMs: acquisitionStep.estimatedManualTimeMs,
+        routeStatus: isSelfFracture
+          ? 'Selected self-fracture acquisition event'
+          : 'Selected acquisition event',
+        technicalModifiers: targetDescriptor ? [targetDescriptor] : [],
+      },
+    };
+    nodes.push(acquisitionNode);
+    selectedRouteNodeIds.push(acquisitionNodeId);
+    const acquisitionEdgeId = `edge_${startNodeId}_to_${acquisitionNodeId}`;
+    edges.push({
+      id: acquisitionEdgeId,
+      source: startNodeId,
+      target: acquisitionNodeId,
+      actionLabel: isSelfFracture ? `Create fractured ${targetLabel}` : 'Acquire starting base',
+      probability: 1,
+      expectedVisits: 1,
+      isSelectedRoute: true,
+      isDominated: false,
+      isUnresolved: false,
+      curvature: -0.12,
+    });
+    selectedRouteEdgeIds.push(acquisitionEdgeId);
+    prevNodeId = acquisitionNodeId;
+  }
 
   steps.forEach((step, idx) => {
+    routeStepNumber++;
     const stepNodeId = `node_step_${step.id || idx + 1}`;
-    const stepX = 90 + (idx + 1) * routeSpacing;
-    const verticalOffset = idx % 2 === 0 ? -48 : 48;
+    const stepX = 90 + routeStepNumber * routeSpacing;
+    const verticalOffset = routeStepNumber % 2 === 1 ? -48 : 48;
     const stepY = centerY + verticalOffset;
     const targetDescriptors = (step.preferredTargetModIds ?? [])
       .flatMap((modId) => descriptorById.get(modId) ?? []);
     const targetTexts = targetDescriptors.map((descriptor) => descriptor.compactText);
     const fullTitle = playerText(step.title, 'primary');
 
-    const stepKind: MacroStateKind = step.phase === 'ACQUIRE'
-      ? 'FRACTURE_FAMILY'
-      : step.phase === 'INITIALIZE' || step.phase === 'ROLL'
-        ? (idx === 0 ? 'MAGIC_1_MOD' : 'MAGIC_2_MOD')
+    const stepKind: MacroStateKind = step.phase === 'INITIALIZE' || step.phase === 'ROLL'
+        ? (routeStepNumber === 1 ? 'MAGIC_1_MOD' : 'MAGIC_2_MOD')
         : step.phase === 'PROMOTE'
           ? 'RARE_2_MOD'
           : step.phase === 'SPECIALIZED'
@@ -245,7 +317,7 @@ export function buildVisualizationGraph(
       label: compactStepLabel(step),
       sublabel: targetTexts[0],
       fullLabel: fullTitle,
-      stepNumber: idx + 1,
+      stepNumber: routeStepNumber,
       kind: stepKind,
       x: stepX,
       y: stepY,
@@ -254,7 +326,7 @@ export function buildVisualizationGraph(
       isSelectedRoute: true,
       isDominated: false,
       isUnresolved: false,
-      occupancyWeight: Math.max(0.3, 1.0 - (idx * 0.15)),
+      occupancyWeight: Math.max(0.3, 1.0 - ((routeStepNumber - 1) * 0.15)),
       details: {
         title: fullTitle,
         phase: step.phase,
@@ -278,12 +350,12 @@ export function buildVisualizationGraph(
       source: prevNodeId,
       target: stepNodeId,
       actionLabel: playerText(step.actionNames?.[0] ?? step.title),
-      probability: 1.0 / (idx + 1),
+      probability: 1.0 / routeStepNumber,
       expectedVisits: step.expectedPhysicalActions ? Math.max(1, step.expectedPhysicalActions / (totalSteps || 1)) : 1,
       isSelectedRoute: true,
       isDominated: false,
       isUnresolved: false,
-      curvature: (idx % 2 === 0 ? -0.15 : 0.15),
+      curvature: (routeStepNumber % 2 === 1 ? -0.15 : 0.15),
     };
     edges.push(edge);
     selectedRouteEdgeIds.push(edgeId);
@@ -312,8 +384,8 @@ export function buildVisualizationGraph(
   const terminalNodeId = 'node_terminal_target';
   const terminalNode: VisualizationNode = {
     id: terminalNodeId,
-    label: isCertified ? 'Target Certified' : 'Unresolved Target',
-    sublabel: isCertified ? 'Complete' : 'Proof limit',
+    label: isCertified ? 'Goal' : 'Unresolved Target',
+    sublabel: isCertified ? 'Target certified' : 'Proof limit',
     fullLabel: isCertified ? 'Target complete' : 'Unresolved target',
     kind: isCertified ? 'TERMINAL_SUCCESS' : 'UNRESOLVED_FRONTIER',
     x: 90 + (routeNodeCount - 1) * routeSpacing,
@@ -468,7 +540,8 @@ export function buildVisualizationGraph(
     edges,
     events,
     seed,
-    layoutVersion: '2U.1',
+    layoutVersion: '2V.1',
+    acquisitionContext,
     selectedRouteNodeIds,
     selectedRouteEdgeIds,
     bounds: {

@@ -1,4 +1,4 @@
-name: Manual Phase 2U Quality Matrix
+name: Manual Phase 2V Quality Matrix
 
 on:
   workflow_dispatch:
@@ -28,11 +28,12 @@ jobs:
         run: npm run lab:nightly
       - run: npm run diagnostic:phase2t
       - run: npm run diagnostic:phase2u
+      - run: npm run diagnostic:phase2v
       - name: Upload nightly traces, video, screenshots, frames, and reports
         if: always()
         uses: actions/upload-artifact@v6
         with:
-          name: phase2u-nightly-quality-lab
+          name: phase2v-nightly-quality-lab
           path: |
             quality-lab/artifacts/
             quality-lab/reports/

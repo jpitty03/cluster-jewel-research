@@ -105,7 +105,7 @@ lines.push('\nT1 — Release-claim audit');
 const publicSourceFiles = filesUnder(join(repositoryRoot, 'src'), new Set(['.ts', '.tsx', '.css']));
 const publicSource = sourceText(publicSourceFiles);
 assert(!/public[ -]beta certified/i.test(publicSource));
-assert(/export const APP_RELEASE_VERSION = '2U\.1'/.test(publicSource));
+assert(/export const APP_RELEASE_VERSION = '2V\.1'/.test(publicSource));
 assert(/Browser-Verified Release Candidate \{APP_RELEASE_VERSION\}/.test(publicSource));
 assert(/Research estimate using stale bundled pricing/.test(publicSource));
 lines.push('PASS: public UI is a browser-verified release candidate, not a public-beta certification, and stale pricing is prominent.');
@@ -245,7 +245,7 @@ assert(!/Strictly optimal|Optimal trade-off frontier/i.test(proofSurface));
 lines.push('PASS: forbidden unscoped proof phrases are absent; resolved-set and explicit proof labels are used.');
 
 lines.push('\nT11 — Scope-label audit');
-assert.equal(witness.presentation.schemaVersion, '2U.1');
+assert.equal(witness.presentation.schemaVersion, '2V.1');
 assert(witness.presentation.routeScopes && witness.presentation.timingScopes && witness.presentation.workScopes);
 assert(witness.search.workScopes.portfolioTotalStatesExpanded >= witness.search.workScopes.selectedPolicyGraphStates);
 if (!witness.acquisition.selectionSafe) assert.equal(witness.search.timeToFirstAcquisitionSafeRecommendationMs, undefined);
@@ -270,7 +270,7 @@ lines.push(`PASS: actual canvas frame, node focus, route focus/zoom/pause/speed/
 lines.push('\nT14 — Hosted deploy and local release policy audit');
 const deployWorkflow = readFileSync(join(repositoryRoot, '.github', 'workflows', 'deploy.yml'), 'utf8');
 const nightlyWorkflow = readFileSync(join(repositoryRoot, '.github', 'workflows', 'nightly-quality.yml'), 'utf8');
-for (const required of ['npm run build', 'npm run lint', 'git diff --check', 'npm run diagnostic:phase2u:committed']) {
+for (const required of ['npm run build', 'npm run lint', 'git diff --check', 'npm run diagnostic:phase2v:committed']) {
   assert(deployWorkflow.includes(required), `Deploy validation lacks ${required}`);
 }
 for (const localOnlyCommand of ['npm run diagnostic:mature', 'npm run lab:no-fallback-probe', 'npm run lab:release', 'npm run diagnostic:phase2t']) {

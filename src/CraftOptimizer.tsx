@@ -470,7 +470,7 @@ export function SearchActivityVisualizer({
   );
 }
 
-export const APP_RELEASE_VERSION = '2U.1';
+export const APP_RELEASE_VERSION = '2V.1';
 
 export function CraftOptimizer() {
   const baseTypes = useMemo(() => browserCraftingCatalog.getBaseTypes(), []);
@@ -1004,7 +1004,10 @@ export function CraftOptimizer() {
       result.craftPlan,
       result.methodPortfolio ?? [],
       result.recommended ?? undefined,
-      { modifierDescriptors: targetDescriptors },
+      {
+        modifierDescriptors: targetDescriptors,
+        acquisitionContext: result.presentation.acquisitionContext,
+      },
     );
   }, [result, targetDescriptors]);
 
@@ -1525,6 +1528,15 @@ export function CraftOptimizer() {
                     <span className="stat-label">Expected Harvest Applications</span>
                     <strong className="stat-value">{count(result.harvestComparison.expectedHarvestApplications ?? 0)}</strong>
                   </div>
+                  {result.harvestComparison.certifiedSuccessProbabilityPerApplication !== undefined && (
+                    <div className="harvest-stat-box">
+                      <span className="stat-label">Success per Application</span>
+                      <strong className="stat-value">
+                        {(result.harvestComparison.certifiedSuccessProbabilityPerApplication * 100).toFixed(4)}%
+                      </strong>
+                      <small>Certified from the authoritative transition distribution</small>
+                    </div>
+                  )}
                   <div className="harvest-stat-box">
                     <span className="stat-label">Expected Lifeforce</span>
                     <strong className="stat-value">
@@ -1669,6 +1681,10 @@ export function CraftOptimizer() {
                         {method.policyHealth && <>
                           <div><dt>Independent policy proof</dt><dd>{method.policyHealth.selectedPolicyStatus}</dd></div>
                           <div><dt>Policy health</dt><dd>{method.policyHealth.proper ? 'proper' : 'not proper'} · absorption {(method.policyHealth.terminalAbsorptionProbability * 100).toFixed(6)}% · reconciliation {method.policyHealth.costReconciled ? 'yes' : 'no'}</dd></div>
+                        </>}
+                        {method.repeatableRerollCertification && <>
+                          <div><dt>Repeatable reroll proof</dt><dd>{method.repeatableRerollCertification.status} · p {(method.repeatableRerollCertification.successProbabilityPerApplication * 100).toFixed(6)}% · E[N] {method.repeatableRerollCertification.expectedApplications.toFixed(3)}</dd></div>
+                          <div><dt>Transition quotient</dt><dd>{method.repeatableRerollCertification.transitionOutcomeCount.toLocaleString()} exact outcomes · {method.repeatableRerollCertification.missOutcomeCount.toLocaleString()} equivalent legal misses</dd></div>
                         </>}
                       </dl>
                       {method.whyNotSelectedExplanation && (

@@ -1,5 +1,6 @@
 import type { CraftPlanSummary } from '../service/craftPlan.ts';
 import type { ExpectedActionUsage, RouteSummary } from '../service/optimizerService.ts';
+import type { RepeatableRerollCertificationEvidence } from '../solver/repeatableRerollCertification.ts';
 
 export type MethodFamilyKind =
   | 'OPEN'
@@ -83,6 +84,7 @@ export interface MethodFamilyResult {
     costReconciled: boolean;
     reconciliationDifferenceChaos?: number;
   };
+  repeatableRerollCertification?: RepeatableRerollCertificationEvidence;
   sessionIdentity?: string;
   retainedStates: number;
   transitionDistributionsGenerated: number;

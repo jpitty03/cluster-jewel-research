@@ -18,6 +18,7 @@ import type {
 } from '../rules/actionRegistry.ts';
 import {
   CRAFT_MECHANICS,
+  TransitionGenerationDeadlineExceeded,
   createHarvestReforgeMechanics,
   createRestartReacquireMechanic,
 } from '../rules/actionRegistry.ts';
@@ -71,6 +72,10 @@ import {
   HARVEST_CRAFT_DEFINITIONS,
   type LifeforceType,
 } from '../rules/harvestCrafts.ts';
+import {
+  certifyRepeatableReroll,
+  type CertifiedRepeatableReroll,
+} from '../solver/repeatableRerollCertification.ts';
 
 export type {
   ActionCostVector,
@@ -209,6 +214,7 @@ export interface HarvestComparisonSummary {
   lifeforceType?: LifeforceType;
   lifeforcePerApplication?: number;
   expectedHarvestApplications?: number;
+  certifiedSuccessProbabilityPerApplication?: number;
   expectedLifeforce?: number;
   harvestNonLifeforceCostChaos?: number;
   harvestTotalAtCurrentPriceChaos?: number;
@@ -759,13 +765,19 @@ export interface OptimizeCraftResult {
 }
 
 export interface CanonicalResultPresentation {
-  schemaVersion: '2U.1';
+  schemaVersion: '2V.1';
   releaseStatus: 'RELEASE_CANDIDATE_BROWSER_VERIFIED';
   selectedRouteName?: string;
   selectedRouteStatus: RecommendationStatus;
   proofLabel: string;
   pricingLabel: 'CURRENT_PRICING' | 'RESEARCH_ESTIMATE_STALE_PRICING';
   harvestLifecycle: HarvestLifecycleStatus;
+  acquisitionContext: {
+    kind: 'CLEAN' | 'SELF_FRACTURE' | 'OTHER';
+    candidateId?: string;
+    methodId?: string;
+    targetModId?: string;
+  };
   fullRouteCostChaos?: number;
   routeScopes: {
     acquisitionU?: number;
@@ -1196,6 +1208,45 @@ function buildMethodPortfolio(context: MethodPortfolioBuildContext): MethodFamil
       session.methodFamilies.set(spec.id, continuation);
     }
     const started = Date.now();
+    const enabledIdSet = new Set(enabledActionIds);
+    const enabledMechanics = [
+      ...CRAFT_MECHANICS,
+      ...(includeHarvest ? createHarvestReforgeMechanics({ pool, priceBook }, harvestTags) : []),
+    ].filter((mechanic) => enabledIdSet.has(mechanic.id));
+    const requiredRepeatableMechanic = spec.kind === 'HARVEST' && requiredActionIds.length === 1
+      ? enabledMechanics.find((mechanic) =>
+          mechanic.id === requiredActionIds[0] && mechanic.repeatableFullReroll !== undefined
+        )
+      : undefined;
+    let repeatableCertification: CertifiedRepeatableReroll | undefined;
+    if (requiredRepeatableMechanic) {
+      try {
+        repeatableCertification = certifyRepeatableReroll({
+          mechanic: requiredRepeatableMechanic,
+          enabledMechanics,
+          seedState: startState,
+          target: input.target,
+          context: { pool, priceBook },
+          requiredActionIds,
+          deadlineMs: Math.min(deadlineMs, started + allocatedWallTimeMs),
+        });
+      } catch (error) {
+        if (!(error instanceof TransitionGenerationDeadlineExceeded)) throw error;
+      }
+    }
+    const remainingSearchWallTimeMs = Math.max(
+      1,
+      allocatedWallTimeMs - (Date.now() - started),
+    );
+    const precomputedRepeatableRerollTransitions = repeatableCertification
+      ? new Map([[
+          requiredRepeatableMechanic!.id,
+          {
+            kernelIdentity: repeatableCertification.evidence.kernelIdentity,
+            distribution: repeatableCertification.distribution,
+          },
+        ]])
+      : undefined;
     const familyResult = new GenericSearchEngine(
       { pool, priceBook },
       input.target,
@@ -1207,13 +1258,15 @@ function buildMethodPortfolio(context: MethodPortfolioBuildContext): MethodFamil
         prioritizeTargetProgress: true,
         allowResearchFallbackPrices: input.allowResearchFallbackPrices ?? true,
         maxStates,
-        maxWallTimeMs: allocatedWallTimeMs,
+        maxWallTimeMs: remainingSearchWallTimeMs,
         maxExpansionRounds: input.searchBudget?.maxExpansionRounds ?? 3,
         searchIntent: 'DEEPEN',
         objective: input.objective,
         effortProfile: input.effortProfile,
         persistentExpansion: true,
         continuationSession: continuation,
+        canonicalStateKey: repeatableCertification?.stateKey,
+        precomputedRepeatableRerollTransitions,
         recommendationRefinementRounds: 1,
         skipAcquisitionFeasibility: startState.flags?.acquisitionMenu === true,
       }
@@ -1290,9 +1343,12 @@ function buildMethodPortfolio(context: MethodPortfolioBuildContext): MethodFamil
       onPolicyActionIds,
       expectedActionUsage: usage,
       policyHealth: methodPolicyHealth(familyResult),
+      repeatableRerollCertification: repeatableCertification?.evidence,
       sessionIdentity: `${searchIdentityHash}:${spec.id}`,
       retainedStates: continuation.expansion.nodes.size,
-      transitionDistributionsGenerated: continuation.expansion.transitionDistributionsGeneratedTotal,
+      transitionDistributionsGenerated:
+        continuation.expansion.transitionDistributionsGeneratedTotal +
+        (repeatableCertification ? 1 : 0),
       budget: {
         maxStates,
         maxWallTimeMs: allocatedWallTimeMs,
@@ -1304,7 +1360,11 @@ function buildMethodPortfolio(context: MethodPortfolioBuildContext): MethodFamil
         : route
           ? comparison.status === 'SELECTED_WINNER'
             ? 'Independent constrained solve reproduces the selected policy at the current objective.'
-            : `${spec.name} independently resolved at ${route.expectedTotalCostChaos?.toFixed(1)}c.`
+            : `${spec.name} independently resolved at ${route.expectedTotalCostChaos?.toFixed(1)}c.` +
+              (repeatableCertification
+                ? ` A certified repeatable full-reroll quotient used the authoritative ` +
+                  `${repeatableCertification.evidence.transitionOutcomeCount.toLocaleString()}-outcome distribution.`
+                : '')
           : `Independent constrained search remained unresolved after ${continuation.expansion.nodes.size.toLocaleString()} retained states.`,
     };
   };
@@ -1724,6 +1784,8 @@ function buildHarvestComparisonSummary(options: {
     lifeforceType: definition.lifeforceType,
     lifeforcePerApplication: definition.lifeforceAmount,
     expectedHarvestApplications,
+    certifiedSuccessProbabilityPerApplication:
+      resolvedHarvest.repeatableRerollCertification?.successProbabilityPerApplication,
     expectedLifeforce,
     harvestNonLifeforceCostChaos: nonLifeforceCost,
     harvestTotalAtCurrentPriceChaos: harvestTotal,
@@ -4589,8 +4651,28 @@ export class OptimizerService {
       NOT_SEARCHED: 0,
     };
     for (const family of methodPortfolio) methodFamilyCounts[family.status]++;
+    const selectedAcquisitionEvidence = outputWithoutCraftPlan.acquisition.portfolioProof.candidateEvidence
+      .find((candidate) =>
+        candidate.candidateId === outputWithoutCraftPlan.acquisition.selectedCandidateId
+      );
+    const selectedStartIndex = starts.findIndex((_, index) =>
+      `candidate_${index}` === outputWithoutCraftPlan.acquisition.selectedCandidateId
+    );
+    const selectedStart = selectedStartIndex >= 0 ? starts[selectedStartIndex] : undefined;
+    const acquisitionContext: CanonicalResultPresentation['acquisitionContext'] = {
+      kind: selectedAcquisitionEvidence?.kind === 'clean'
+        ? 'CLEAN'
+        : selectedAcquisitionEvidence?.kind === 'self-fracture'
+          ? 'SELF_FRACTURE'
+          : 'OTHER',
+      candidateId: outputWithoutCraftPlan.acquisition.selectedCandidateId,
+      methodId: outputWithoutCraftPlan.acquisition.selectedMethodId,
+      targetModId: selectedAcquisitionEvidence?.kind === 'self-fracture'
+        ? selectedStart?.fracturedRequirement?.modId
+        : undefined,
+    };
     const presentation: CanonicalResultPresentation = {
-      schemaVersion: '2U.1',
+      schemaVersion: '2V.1',
       releaseStatus: 'RELEASE_CANDIDATE_BROWSER_VERIFIED',
       selectedRouteName: canonicalRecommended?.name,
       selectedRouteStatus: recommendationStatus,
@@ -4603,6 +4685,7 @@ export class OptimizerService {
         ? 'RESEARCH_ESTIMATE_STALE_PRICING'
         : 'CURRENT_PRICING',
       harvestLifecycle: harvestComparison.status,
+      acquisitionContext,
       fullRouteCostChaos: canonicalCost ?? undefined,
       routeScopes: {
         acquisitionU: canonicalRecommended ? fullRouteUsage.acquisitionCostChaos : undefined,

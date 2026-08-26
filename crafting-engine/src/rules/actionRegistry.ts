@@ -59,6 +59,20 @@ export interface TransitionGenerationControl {
   deadlineMs?: number;
 }
 
+/**
+ * An authoritative action-level contract for a full reroll whose transition
+ * distribution depends only on persistent item components. Specialized solvers
+ * may quotient states only after auditing this contract and every enabled action.
+ */
+export interface RepeatableFullRerollContract {
+  kind: 'FULL_REPLACE_NONPERSISTENT';
+  preservedComponents: 'FRACTURED_AFFIXES';
+  replacesNonPersistentAffixes: true;
+  transitionDistributionDependsOnlyOnKernel: true;
+  getKernelState(state: ItemState): ItemState;
+  getKernelIdentity(state: ItemState): string;
+}
+
 export class TransitionGenerationDeadlineExceeded extends Error {
   constructor() {
     super('Search wall-time budget expired during transition generation');
@@ -83,6 +97,7 @@ export interface CraftMechanic {
   parameters?: Record<string, any>;
   mechanicsConfidence?: MechanicsConfidence;
   mechanicsProvenance?: string;
+  repeatableFullReroll?: RepeatableFullRerollContract;
   /** Authoritative capability declaration used by generic mandatory-cost proofs. */
   createsState?: readonly MechanicStateCreation[];
   getTransitions?(
@@ -160,6 +175,39 @@ function getHarvestCanonicalAggregationKey(state: ItemState, target: TargetDefin
   return `${state.rarity}|P:${state.prefixes.map(formatMod).sort().join('|')}|S:${state.suffixes.map(formatMod).sort().join('|')}`;
 }
 
+function getHarvestRerollKernelState(state: ItemState): ItemState {
+  const kernel = cloneItemState(state);
+  kernel.prefixes = kernel.prefixes.filter((mod) => isFracturedMod(kernel, mod));
+  kernel.suffixes = kernel.suffixes.filter((mod) => isFracturedMod(kernel, mod));
+  kernel.fracturedModIds = getAllAffixes(kernel)
+    .filter((mod) => mod.isFractured)
+    .map((mod) => mod.modId);
+  kernel.rarity = 'rare';
+  if (kernel.flags?.methodFamilyActionEvidence) {
+    kernel.flags = {
+      ...kernel.flags,
+      methodFamilyActionEvidence: undefined,
+    };
+    if (!kernel.flags.influenced && !kernel.flags.synthesised && !kernel.flags.acquisitionMenu) {
+      kernel.flags = undefined;
+    }
+  }
+  return kernel;
+}
+
+function getHarvestRerollKernelIdentity(state: ItemState): string {
+  return getPhysicalStateSignature(getHarvestRerollKernelState(state));
+}
+
+const HARVEST_REPEATABLE_FULL_REROLL: RepeatableFullRerollContract = {
+  kind: 'FULL_REPLACE_NONPERSISTENT',
+  preservedComponents: 'FRACTURED_AFFIXES',
+  replacesNonPersistentAffixes: true,
+  transitionDistributionDependsOnlyOnKernel: true,
+  getKernelState: getHarvestRerollKernelState,
+  getKernelIdentity: getHarvestRerollKernelIdentity,
+};
+
 function checkTransitionDeadline(control?: TransitionGenerationControl): void {
   if (control?.deadlineMs !== undefined && Date.now() >= control.deadlineMs) {
     throw new TransitionGenerationDeadlineExceeded();
@@ -175,11 +223,7 @@ function generateHarvestTransitions(
   control?: TransitionGenerationControl
 ): TransitionDistribution {
   checkTransitionDeadline(control);
-  const baseState = cloneItemState(state);
-  baseState.prefixes = baseState.prefixes.filter((mod) => isFracturedMod(baseState, mod));
-  baseState.suffixes = baseState.suffixes.filter((mod) => isFracturedMod(baseState, mod));
-  baseState.fracturedModIds = getAllAffixes(baseState).filter((mod) => mod.isFractured).map((mod) => mod.modId);
-  baseState.rarity = 'rare';
+  const baseState = getHarvestRerollKernelState(state);
 
   const allMods = context.pool.getAllMods();
   const eligible = getEligibleMods(baseState, allMods, { filterBySlotCapacity: false });
@@ -258,11 +302,7 @@ function sampleHarvestTransition(
   context: SolverContext,
   rng: RandomSource
 ): ItemState {
-  let nextState = cloneItemState(state);
-  nextState.prefixes = nextState.prefixes.filter((mod) => isFracturedMod(nextState, mod));
-  nextState.suffixes = nextState.suffixes.filter((mod) => isFracturedMod(nextState, mod));
-  nextState.fracturedModIds = getAllAffixes(nextState).filter((mod) => mod.isFractured).map((mod) => mod.modId);
-  nextState.rarity = 'rare';
+  let nextState = getHarvestRerollKernelState(state);
   const allMods = context.pool.getAllMods();
   const tagged = getEligibleMods(nextState, allMods, { filterBySlotCapacity: false }).filter((mod) =>
     mod.craftTags.some((candidate) => candidate.toLowerCase() === tag) ||
@@ -977,6 +1017,7 @@ export function createHarvestReforgeMechanics(
         },
         mechanicsConfidence: 'APPROXIMATE / EXTERNALLY CLOSE',
         mechanicsProvenance: 'Current engine approximation: preserve fractures, guarantee one tagged mod, then roll to 3 or 4 total explicit affixes with 50% probability each',
+        repeatableFullReroll: HARVEST_REPEATABLE_FULL_REROLL,
         parameters: { harvestTag: tag, lifeforceType: def.lifeforceType, lifeforceAmount: def.lifeforceAmount },
         getTransitions: (state, target, ctx, control) => {
           const cost = getHarvestCraftCost(tag, ctx.priceBook);

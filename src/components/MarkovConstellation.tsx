@@ -271,6 +271,7 @@ export const MarkovConstellation: React.FC<MarkovConstellationProps> = ({
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const containerRef = useRef<HTMLDivElement | null>(null);
   const viewportRef = useRef<HTMLDivElement | null>(null);
+  const routeRailRef = useRef<HTMLDivElement | null>(null);
   const routeButtonRefs = useRef(new Map<string, HTMLButtonElement>());
   const pointerGestureRef = useRef<PointerGesture | null>(null);
   const controlsTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -379,13 +380,16 @@ export const MarkovConstellation: React.FC<MarkovConstellationProps> = ({
   }, [graph.selectedRouteNodeIds.length, isPlaying, mode, reducedMotion, speedMultiplier]);
 
   useEffect(() => {
+    const rail = routeRailRef.current;
     const activeButton = activeReplayNodeId
       ? routeButtonRefs.current.get(activeReplayNodeId)
       : undefined;
-    activeButton?.scrollIntoView({
+    if (!rail || !activeButton) return;
+    const maximumLeft = Math.max(0, rail.scrollWidth - rail.clientWidth);
+    const centeredLeft = activeButton.offsetLeft + activeButton.offsetWidth / 2 - rail.clientWidth / 2;
+    rail.scrollTo({
+      left: clamp(centeredLeft, 0, maximumLeft),
       behavior: reducedMotion ? 'auto' : 'smooth',
-      block: 'nearest',
-      inline: 'center',
     });
   }, [activeReplayNodeId, reducedMotion]);
 
@@ -837,6 +841,15 @@ export const MarkovConstellation: React.FC<MarkovConstellationProps> = ({
       data-camera-min-zoom={ZOOM_MIN}
       data-camera-max-zoom={ZOOM_MAX}
       data-graph-identity={graphIdentity}
+      data-selected-route-node-ids={graph.selectedRouteNodeIds.join(',')}
+      data-selected-route-edge-ids={graph.selectedRouteEdgeIds.join(',')}
+      data-terminal-node-count={graph.nodes.filter((node) =>
+        node.kind === 'TERMINAL_SUCCESS' || node.kind === 'UNRESOLVED_FRONTIER'
+      ).length}
+      data-acquisition-kind={graph.acquisitionContext.kind}
+      data-acquisition-candidate-id={graph.acquisitionContext.candidateId}
+      data-acquisition-method-id={graph.acquisitionContext.methodId}
+      data-acquisition-target-mod-id={graph.acquisitionContext.targetModId}
     >
       <div className={`constellation-toolbar ${controlsVisible ? '' : 'is-hidden'}`} aria-hidden={!controlsVisible}>
         <div className="toolbar-left">
@@ -992,11 +1005,24 @@ export const MarkovConstellation: React.FC<MarkovConstellationProps> = ({
       </div>
 
       {mode !== 'SCREENSAVER' && (
-        <div className="constellation-node-access-list constellation-route-rail" aria-label="Selected route steps">
+        <div
+          ref={routeRailRef}
+          className="constellation-node-access-list constellation-route-rail"
+          aria-label="Selected route steps"
+          data-testid="constellation-route-rail"
+        >
           {graph.selectedRouteNodeIds.map((nodeId, index) => {
             const node = graph.nodes.find((candidate) => candidate.id === nodeId);
             if (!node) return null;
-            const railLabel = node.stepNumber ? `${node.stepNumber} ${node.label}` : index === 0 ? 'Start' : 'Complete';
+            const compactLabel = node.details.phase === 'ACQUIRE'
+              && graph.acquisitionContext.kind === 'SELF_FRACTURE'
+              ? 'Fracture'
+              : node.label;
+            const railLabel = node.stepNumber
+              ? `${node.stepNumber} ${compactLabel}`
+              : index === 0
+                ? 'Start'
+                : compactLabel;
             return (
               <button
                 type="button"
