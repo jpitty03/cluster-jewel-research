@@ -331,6 +331,11 @@ async function runCrawl(league: string, force: boolean): Promise<void> {
   const pending = chars.filter((c) => !store[`${c.account}/${c.name}`])
   let errors = 0
 
+  console.log(
+    `[crawl] ${pending.length} new/missing characters to fetch ` +
+      `(${chars.length - pending.length}/${chars.length} already in local store, ~${Math.round(START_INTERVAL_MS / 1000)}s per request)`,
+  )
+
   // Adaptive pace: steady interval between requests, backed off further on 429.
   let intervalMs = START_INTERVAL_MS
 
@@ -383,6 +388,7 @@ async function runCrawl(league: string, force: boolean): Promise<void> {
 
       if (!res.ok) {
         errors++
+        console.warn(`[crawl] [${progress.done + 1}/${chars.length}] ${c.name}: HTTP ${res.status}`)
         break
       }
 
@@ -393,6 +399,9 @@ async function runCrawl(league: string, force: boolean): Promise<void> {
         if (it?.typeLine?.includes('Cluster Jewel')) jewels.push(parseClusterJewel(it, c))
       }
       store[`${c.account}/${c.name}`] = { fetchedAt: new Date().toISOString(), jewels }
+      console.log(
+        `[crawl] [${progress.done + 1}/${chars.length}] ${c.name} (${c.class}): ${jewels.length} cluster jewels`,
+      )
       break
     }
 

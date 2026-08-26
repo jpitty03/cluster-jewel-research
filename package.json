@@ -12,6 +12,7 @@
     "lint": "oxlint",
     "preview": "vite preview",
     "scrape": "tsx scripts/scrape.ts",
+    "scrape:full": "tsx scripts/scrape.ts --full",
     "scrape:poedb": "node scripts/scrape-poedb.mjs",
     "build:trade-stats": "node scripts/build-trade-stats.mjs",
     "price": "tsx scripts/price.ts",
