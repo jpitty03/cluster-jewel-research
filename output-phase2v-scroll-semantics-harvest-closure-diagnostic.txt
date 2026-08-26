@@ -20,11 +20,11 @@ V15–V16 — Compact performance, Worker isolation, memory, and screenshots
 PASS: compression ratio=318.4×, Worker messages added=0, and all five stable screenshots exist.
 
 V17 — Local-heavy / hosted-lean validation policy
-PASS: full diagnostics/browser work remains local; automatic deploy runs build/lint/diff plus committed Phase 2V evidence audit, and the heavy remote workflow is manual only.
+PASS: full diagnostics/browser work remains local; automatic deploy runs build/lint/diff plus committed Phase 2W evidence audit, and the heavy remote workflow is manual only.
 
 === ALL PHASE 2V DIAGNOSTIC GATES PASS ===
-Real browser: Playwright Chromium 151.0.7922.34; run=2026-08-26T02-43-47-841Z; scenario=release
-Release label/schema: 2V.1
+Real browser: Playwright Chromium 151.0.7922.34; run=2026-08-26T12-07-53-467Z; scenario=release
+Release label/schema: 2W.1 (Phase 2V behavior retained)
 Unit tests added/run: NO
 Mechanics probabilities changed: NO
 State identity weakened: NO — quotient is family-scoped and enabled-action audited
