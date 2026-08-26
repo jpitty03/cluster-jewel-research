@@ -57,6 +57,10 @@ function parsedDetails(check: BrowserCheck): Record<string, unknown> {
   return value as Record<string, unknown>;
 }
 
+function resolveRepositoryArtifact(relativePath: string): string {
+  return join(repositoryRoot, ...relativePath.split(/[\\/]+/));
+}
+
 assert(existsSync(reportPath), 'Real-browser report is missing; run npm run lab:release first');
 const report = JSON.parse(readFileSync(reportPath, 'utf8')) as BrowserReport;
 assert.equal(report.status, 'PASSED', 'Latest real-browser report did not pass');
@@ -170,7 +174,7 @@ for (const artifact of [
   'phase2vArmourEvasionComparison',
 ]) {
   const relativePath = report.artifacts[artifact];
-  assert(relativePath && statSync(join(repositoryRoot, relativePath)).size > 0, `Missing screenshot ${artifact}`);
+  assert(relativePath && statSync(resolveRepositoryArtifact(relativePath)).size > 0, `Missing screenshot ${artifact}`);
 }
 lines.push(`PASS: compression ratio=${Number(phasePerformance.compressionRatio).toFixed(1)}×, Worker messages added=0, and all five stable screenshots exist.`);
 
