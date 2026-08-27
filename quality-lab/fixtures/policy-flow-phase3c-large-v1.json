@@ -1,0 +1,76 @@
+{
+  "fixtureId": "policy-flow-phase3c-large-v1",
+  "fixtureVersion": 1,
+  "sourceAppCommit": "Phase 3C worktree based on c8f3fb0",
+  "normalizedRequest": {
+    "baseType": "Large Cluster Jewel",
+    "clusterType": "Minions deal 10% increased Damage",
+    "itemLevel": 84,
+    "passiveCount": 8,
+    "target": {
+      "requiredMods": [
+        {
+          "modId": "Primordial Bond"
+        },
+        {
+          "modId": "Renewal"
+        },
+        {
+          "modId": "Rotten Claws"
+        }
+      ],
+      "requiredRarity": "rare"
+    },
+    "prices": {
+      "currencyRates": {
+        "chaos": 1,
+        "divine": 213.5,
+        "fracturing": 298.6,
+        "annul": 11.66,
+        "exalt": 1.17,
+        "scour": 0.5391,
+        "alteration": 0.1336,
+        "transmutation": 0.005012,
+        "augmentation": 0.03941,
+        "regal": 0.03638,
+        "wildLifeforce": 0.02377,
+        "vividLifeforce": 0.08208,
+        "primalLifeforce": 0.04085
+      },
+      "cleanBaseCostChaos": 40,
+      "cleanBasePriceSource": "manual",
+      "cleanBasePriceProvenance": "Phase 3C frozen Primordial Bond + Renewal + Rotten Claws field fixture"
+    },
+    "expectedSaleValueChaos": 1708,
+    "objective": {
+      "kind": "CHEAPEST_CHAOS"
+    },
+    "searchBudget": {
+      "preset": "NORMAL",
+      "maxStates": 5000,
+      "maxWallTimeMs": 30000,
+      "maxExpansionRounds": 3
+    },
+    "searchIntent": "RECOMMEND",
+    "allowResearchFallbackPrices": true,
+    "compareMethodFamilies": true
+  },
+  "selectedBundleId": "phase3c-targeted-conventional-field-stress",
+  "selectedPolicyFingerprint": "phase3c-stress-d4ba003ae5f0",
+  "policyFlowVersion": "SELECTED_POLICY_FLOW_V1",
+  "topologyFingerprint": "topology-3c852336",
+  "serializedSummary": {
+    "path": "quality-lab/fixtures/policy-flow-phase3c-large-v1-artifact.json",
+    "selector": "policyFlow",
+    "artifactSha256": "087d4a09a064182f3a588f8c6dc5c2eb7be3acab7b1e5b108513b65beee83b28",
+    "normalizedSummarySha256": "b42ddde03712a3d1b2633c6018d6a94f7c75fad04ad1f9ff38053cf0ef81a672",
+    "nodeCount": 43,
+    "edgeCount": 191
+  },
+  "certificationScope": "Phase 3C exact frozen field PolicyFlow topology rendered by the production semantic large-SCC layout.",
+  "limitations": [
+    "The frozen renderer wrapper is harness-only.",
+    "The real Worker differential remains authoritative for solver output.",
+    "Geometry is asserted by semantic invariants rather than pixel-perfect coordinates."
+  ]
+}

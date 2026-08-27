@@ -138,6 +138,7 @@ export interface FixtureRecord {
   targetMods: string[];
   priceContext?: Record<string, unknown>;
   marketContext?: Record<string, unknown>;
+  expectedSaleValueChaos?: number;
   searchBudget: {
     maxStates: number;
     maxWallTimeMs: number;

@@ -138,8 +138,10 @@ function sha256(value: string | Buffer): string {
   return createHash('sha256').update(value).digest('hex');
 }
 
-function loadFrozenPolicyFlow(): { metadata: FrozenPolicyFlowFixture; flow: JsonRecord } {
-  const metadataPath = join(qualityDirectory, 'fixtures', 'policy-flow-clean-v1.json');
+function loadFrozenPolicyFlow(
+  metadataFile = 'policy-flow-clean-v1.json',
+): { metadata: FrozenPolicyFlowFixture; flow: JsonRecord } {
+  const metadataPath = join(qualityDirectory, 'fixtures', metadataFile);
   const metadata = JSON.parse(readFileSync(metadataPath, 'utf8')) as FrozenPolicyFlowFixture;
   const artifactPath = join(repositoryRoot, metadata.serializedSummary.path);
   const artifact = readFileSync(artifactPath);
@@ -307,6 +309,7 @@ async function importFixture(page: Page, input: FixtureRecord): Promise<void> {
       maxUnmatchedAffixes: input.extraAffixes === 'no-unwanted' ? 0 : undefined,
       prices: input.priceContext,
       marketContext: input.marketContext,
+      expectedSaleValueChaos: input.expectedSaleValueChaos,
     })),
   });
   await page.waitForFunction((expectedIds) => {
@@ -372,6 +375,18 @@ async function optimizedFixture(
   await setBudget(page, input.searchBudget);
   if (objective === 'FEWEST_600') await setFewestObjective(page, 600);
   return runOptimization(page, input.searchBudget.maxWallTimeMs);
+}
+
+async function compareMethodsIndependently(
+  page: Page,
+  maxWallTimeMs: number,
+): Promise<JsonRecord> {
+  const offset = await workerEventCount(page);
+  const compare = page.getByRole('button', { name: 'Compare Methods Independently' });
+  await compare.waitFor({ state: 'visible' });
+  assert(await compare.isEnabled(), 'Independent method comparison is disabled');
+  await compare.click();
+  return waitForWorkerResult(page, offset, maxWallTimeMs + 8_000);
 }
 
 function selectedPolicyFlow(result: JsonRecord, label: string): JsonRecord {
@@ -746,6 +761,178 @@ async function runGateOperation(ctx: GateWorkerContext): Promise<unknown> {
         };
       });
 
+    case 'policy-family-admissibility':
+      return withPage(ctx, async (page) => {
+        const input = fixture('phase3c_primordial_renewal_rotten_claws');
+        await optimizedFixture(page, ctx.appUrl, input);
+        const result = await compareMethodsIndependently(
+          page,
+          input.searchBudget.maxWallTimeMs,
+        );
+        assertTarget(result, input);
+        const families = arrayValue(result.methodPortfolio, 'Phase 3C method portfolio')
+          .map((entry) => jsonRecord(entry, 'Phase 3C method family'));
+        const open = families.find((family) =>
+          jsonRecord(family.spec, 'Open spec').kind === 'OPEN'
+        );
+        const conventional = families.find((family) =>
+          jsonRecord(family.spec, 'Conventional spec').kind === 'CONVENTIONAL'
+        );
+        assert(open, 'Real Worker omitted Open family');
+        assert(conventional, 'Real Worker omitted Conventional family');
+        const openU = numberValue(open.fullRouteU, 'Open executable U');
+        const conventionalU = numberValue(
+          conventional.fullRouteU,
+          'Conventional executable U',
+        );
+        const audit = jsonRecord(
+          conventional.knownPolicyAdmissibility,
+          'Conventional known-policy audit',
+        );
+        assert.equal(audit.admissible, true, `Conventional rejected Open policy: ${
+          JSON.stringify(audit.failures)
+        }`);
+        const knownU = numberValue(
+          conventional.revalidatedKnownPolicyCostChaos,
+          'revalidated known executable U',
+        );
+        assert(conventionalU <= knownU + 0.05,
+          `Conventional ${conventionalU}c regressed above known ${knownU}c`);
+        const selectedOpenAudit = jsonRecord(
+          conventional.selectedOpenPolicyAdmissibility,
+          'selected Open policy audit',
+        );
+        const selectedOpenU = numberValue(
+          conventional.selectedOpenPolicyCostChaos,
+          'selected Open policy U',
+        );
+        if (selectedOpenAudit.admissible === true) {
+          assert(conventionalU <= selectedOpenU + 0.05,
+            `Conventional ${conventionalU}c regressed above admissible selected Open ${selectedOpenU}c`);
+        } else {
+          const failures = arrayValue(
+            selectedOpenAudit.failures,
+            'selected Open rejection failures',
+          ).map((failure) => jsonRecord(failure, 'selected Open rejection'));
+          assert(failures.length > 0, 'Selected Open rejection has no exact reason');
+          assert(failures.some((failure) =>
+            failure.code === 'ACQUISITION_KIND_MISMATCH' ||
+            failure.code === 'ACQUISITION_IDENTITY_MISMATCH' ||
+            failure.code === 'ACTION_NOT_ALLOWED' ||
+            failure.code === 'ACTION_FORBIDDEN'
+          ), `Selected Open rejection is not constraint-specific: ${JSON.stringify(failures)}`);
+        }
+        assert(
+          conventional.incumbentSource === 'ADMISSIBLE_KNOWN_POLICY' ||
+            conventional.incumbentSource === 'IMPROVED_FROM_KNOWN_POLICY',
+          'Known incumbent provenance is absent',
+        );
+        assert.equal(conventional.familySearchStatus, 'BEST_FOUND_UNPROVEN');
+        const parity = jsonRecord(audit.sourceParity, 'fixed-policy source parity');
+        assert(numberValue(parity.costDifferenceChaos, 'cost parity') <= 0.05);
+        assert(numberValue(parity.actionDifference, 'action parity') <= 1e-5);
+        assert(numberValue(parity.timeDifferenceMs, 'time parity') <= 1e-3);
+        const evaluation = jsonRecord(audit.evaluation, 'fixed-policy evaluation');
+        assert.equal(evaluation.proper, true);
+        assert.equal(evaluation.costReconciled, true);
+        assertNear(numberValue(evaluation.terminalAbsorptionProbability, 'absorption'), 1,
+          'fixed-policy absorption', 1e-6);
+        const conventionalCard = page.locator(
+          '[data-method-family-id="family_conventional"]',
+        );
+        await conventionalCard.waitFor();
+        assert.equal(await conventionalCard.getAttribute('data-known-policy-admissible'), 'true');
+        assert.equal(
+          await conventionalCard.getAttribute('data-selected-open-policy-admissible'),
+          String(selectedOpenAudit.admissible),
+        );
+        assert.match(
+          String(await conventionalCard.getAttribute('data-incumbent-source')),
+          /ADMISSIBLE_KNOWN_POLICY|IMPROVED_FROM_KNOWN_POLICY/,
+        );
+        assert.equal(
+          await conventionalCard.getAttribute('data-family-search-status'),
+          'BEST_FOUND_UNPROVEN',
+        );
+        const cardText = await conventionalCard.innerText();
+        assert.match(cardText, /Policy execution status/i);
+        assert.match(cardText, /Family search status/i);
+        assert.match(cardText, /family optimum not proven/i);
+        assert.match(cardText, /Selected Open policy in this family/);
+        const sameFingerprint = open.policyEquivalenceFingerprint ===
+          conventional.policyEquivalenceFingerprint;
+        if (sameFingerprint && conventional.equivalentToSelectedPolicy === true) {
+          assert.equal(conventional.status, 'SAME_AS_SELECTED');
+          assert.match(cardText, /Same selected policy/i);
+        }
+        const harvestControls = families.filter((family) =>
+          jsonRecord(family.spec, 'family spec').kind === 'HARVEST'
+        );
+        assert(harvestControls.length > 0);
+        assert(harvestControls.every((family) =>
+          jsonRecord(
+            family.selectedOpenPolicyAdmissibility ?? family.knownPolicyAdmissibility,
+            'Harvest audit',
+          ).admissible === false
+        ));
+        const fractureControls = families.filter((family) =>
+          jsonRecord(family.spec, 'fracture spec').kind === 'SELF_FRACTURE'
+        );
+        assert(fractureControls.length > 0);
+        assert(fractureControls.every((family) =>
+          jsonRecord(family.knownPolicyAdmissibility, 'fracture audit').admissible === false
+        ));
+        mkdirSync(stableEvidenceDirectory, { recursive: true });
+        const artifactPath = join(
+          stableEvidenceDirectory,
+          'phase3c-policy-family-browser.json',
+        );
+        writeFileSync(artifactPath, `${JSON.stringify({
+          input,
+          selected: result.recommended,
+          open,
+          conventional,
+          familyMatrix: families.map((family) => ({
+            id: jsonRecord(family.spec, 'matrix spec').id,
+            kind: jsonRecord(family.spec, 'matrix spec').kind,
+            admissible: family.selectedOpenPolicyAdmissibility
+              ? jsonRecord(family.selectedOpenPolicyAdmissibility, 'matrix audit').admissible
+              : undefined,
+            incumbentSource: family.incumbentSource,
+            familySearchStatus: family.familySearchStatus,
+            fullRouteU: family.fullRouteU,
+          })),
+        }, null, 2)}\n`, 'utf8');
+        const screenshotPath = join(
+          stableEvidenceDirectory,
+          'phase3c-policy-family-desktop.png',
+        );
+        await page.screenshot({ path: screenshotPath, fullPage: true });
+        ctx.artifacts.phase3cPolicyFamilyBrowser = relative(repositoryRoot, artifactPath);
+        ctx.artifacts.phase3cPolicyFamilyScreenshot = relative(
+          repositoryRoot,
+          screenshotPath,
+        );
+        return {
+          openU,
+          selectedOpenU,
+          selectedOpenAdmissible: selectedOpenAudit.admissible,
+          selectedOpenFailures: selectedOpenAudit.failures,
+          conventionalU,
+          knownU,
+          admissible: audit.admissible,
+          transitionsRegenerated: audit.transitionsRegenerated,
+          transitionOutcomesCompared: audit.transitionOutcomesCompared,
+          incumbentSource: conventional.incumbentSource,
+          familySearchStatus: conventional.familySearchStatus,
+          sameFingerprint,
+          equivalentToSelectedPolicy: conventional.equivalentToSelectedPolicy,
+          accounting: assertCanonicalAccounting(result),
+          artifact: ctx.artifacts.phase3cPolicyFamilyBrowser,
+          screenshot: ctx.artifacts.phase3cPolicyFamilyScreenshot,
+        };
+      }, { viewport: { width: 1440, height: 900 } });
+
     case 'cluster-handoff':
       return withPage(ctx, async (page) => {
         await page.goto(ctx.appUrl, { waitUntil: 'networkidle' });
@@ -835,6 +1022,144 @@ async function runGateOperation(ctx: GateWorkerContext): Promise<unknown> {
         ctx.artifacts.phase3aResponsiveMobile = relative(repositoryRoot, screenshotPath);
         return { geometry, keyboardNodeFocus: true, screenshot: ctx.artifacts.phase3aResponsiveMobile };
       });
+
+    case 'constellation-large-scc-layout': {
+      const frozen = loadFrozenPolicyFlow('policy-flow-phase3c-large-v1.json');
+      return withPage(ctx, async (page) => {
+        const input = fixture('cheap_one_mod');
+        await optimizedFixture(page, ctx.appUrl, input);
+        const container = page.getByTestId('markov-constellation-container');
+        await container.waitFor();
+        assert.equal(
+          await container.getAttribute('data-topology-fingerprint'),
+          frozen.metadata.topologyFingerprint,
+        );
+        assert.equal(
+          Number(await container.getAttribute('data-node-count')),
+          frozen.metadata.serializedSummary.nodeCount,
+        );
+        assert.equal(
+          Number(await container.getAttribute('data-edge-count')),
+          frozen.metadata.serializedSummary.edgeCount,
+        );
+        assert.equal(await container.getAttribute('data-layout-mode'), 'SCC_HYBRID_SEMANTIC_V2');
+        assert(Number(await container.getAttribute('data-large-scc-count')) > 0);
+        assert(Number(await container.getAttribute('data-large-scc-node-count')) >= 40);
+        assert(Number(await container.getAttribute('data-semantic-band-count')) >= 3);
+        assert(Number(await container.getAttribute('data-layout-horizontal-span')) >= 560);
+        assert(Number(await container.getAttribute('data-layout-vertical-span')) >= 500);
+        assert(Number(await container.getAttribute('data-minimum-node-distance')) > 40);
+        assert.equal(
+          await container.getAttribute('data-default-chronological-ordinals'),
+          'false',
+        );
+        const recoveryCorridors = container.locator(
+          '[data-edge-anchor][data-edge-routing="RECOVERY_CORRIDOR"]',
+        );
+        assert.equal(
+          await recoveryCorridors.count(),
+          Number(await container.getAttribute('data-recovery-corridor-edge-count')),
+        );
+        assert(await recoveryCorridors.count() > 0);
+        assert.equal(await container.locator('.node-label-step').count(), 0,
+          'Default labels expose misleading traversal ordinals');
+        const bands = await container.locator('[data-node-anchor]').evaluateAll((nodes) =>
+          [...new Set(nodes.map((node) => node.getAttribute('data-semantic-band')))]
+        );
+        assert(bands.includes('MAGIC_ROLLING'));
+        assert(bands.includes('RARE_FINISHING'));
+        assert(bands.includes('RECOVERY'));
+        assert(bands.includes('GOAL'));
+        const goalSeparation = await container.locator('[data-node-anchor]').evaluateAll((nodes) => {
+          const values = nodes.map((node) => ({
+            band: node.getAttribute('data-semantic-band'),
+            x: Number(node.getAttribute('data-node-x')),
+          }));
+          return {
+            goalMin: Math.min(...values.filter((entry) => entry.band === 'GOAL').map((entry) => entry.x)),
+            normalMin: Math.min(...values.filter((entry) => entry.band !== 'GOAL').map((entry) => entry.x)),
+          };
+        });
+        assert(goalSeparation.goalMin > goalSeparation.normalMin);
+        const collisionCount = await container.locator('.constellation-node-label')
+          .evaluateAll((labels) => {
+            const rectangles = labels.map((label) => label.getBoundingClientRect())
+              .filter((rect) => rect.width > 0 && rect.height > 0);
+            let count = 0;
+            for (let left = 0; left < rectangles.length; left++) {
+              for (let right = left + 1; right < rectangles.length; right++) {
+                if (rectangles[left].left < rectangles[right].right &&
+                  rectangles[left].right > rectangles[right].left &&
+                  rectangles[left].top < rectangles[right].bottom &&
+                  rectangles[left].bottom > rectangles[right].top) count++;
+              }
+            }
+            return count;
+          });
+        assert.equal(collisionCount, 0, 'Default Constellation labels overlap');
+        const viewportHeight = await container.locator('.constellation-viewport')
+          .evaluate((element) => element.getBoundingClientRect().height);
+        assert(viewportHeight >= 690, `Desktop Constellation viewport is only ${viewportHeight}px`);
+        const firstNode = container.locator('[data-node-anchor]').first();
+        await firstNode.focus();
+        await page.keyboard.press('Enter');
+        await page.getByLabel('Selected constellation node details').waitFor();
+        await page.getByRole('button', { name: 'Close selected node details' }).click();
+        const firstRecovery = recoveryCorridors.first();
+        await firstRecovery.focus();
+        await page.keyboard.press('Enter');
+        await page.getByLabel('Selected constellation edge details').waitFor();
+        await page.getByRole('button', { name: 'Close selected edge details' }).click();
+        await page.getByRole('button', { name: 'Fit All' }).click();
+        assert.equal(await container.getAttribute('data-camera-fit-mode'), 'ALL');
+        await page.getByRole('button', { name: 'Reset View' }).click();
+        await page.getByRole('button', { name: 'Route Focus' }).click();
+        assert.equal(await container.getAttribute('data-camera-fit-mode'), 'SELECTED_ROUTE');
+        mkdirSync(stableEvidenceDirectory, { recursive: true });
+        const desktopPath = join(stableEvidenceDirectory, 'phase3c-constellation-1440x900.png');
+        await page.screenshot({ path: desktopPath, fullPage: true });
+        await page.setViewportSize({ width: 1920, height: 1080 });
+        const widePath = join(stableEvidenceDirectory, 'phase3c-constellation-1920x1080.png');
+        await page.screenshot({ path: widePath, fullPage: true });
+        await page.setViewportSize({ width: 390, height: 844 });
+        const mobileGeometry = await page.evaluate(() => ({
+          viewport: document.documentElement.clientWidth,
+          documentWidth: document.documentElement.scrollWidth,
+          bodyWidth: document.body.scrollWidth,
+        }));
+        assert(mobileGeometry.documentWidth <= mobileGeometry.viewport + 1);
+        assert(mobileGeometry.bodyWidth <= mobileGeometry.viewport + 1);
+        const mobilePath = join(stableEvidenceDirectory, 'phase3c-constellation-mobile.png');
+        await page.screenshot({ path: mobilePath, fullPage: true });
+        ctx.artifacts.phase3cConstellationDesktop = relative(repositoryRoot, desktopPath);
+        ctx.artifacts.phase3cConstellationWide = relative(repositoryRoot, widePath);
+        ctx.artifacts.phase3cConstellationMobile = relative(repositoryRoot, mobilePath);
+        return {
+          topologyFingerprint: frozen.metadata.topologyFingerprint,
+          nodeCount: frozen.metadata.serializedSummary.nodeCount,
+          edgeCount: frozen.metadata.serializedSummary.edgeCount,
+          layoutMode: await container.getAttribute('data-layout-mode'),
+          semanticBands: bands,
+          horizontalSpan: Number(await container.getAttribute('data-layout-horizontal-span')),
+          verticalSpan: Number(await container.getAttribute('data-layout-vertical-span')),
+          minimumNodeDistance: Number(await container.getAttribute('data-minimum-node-distance')),
+          recoveryCorridors: await recoveryCorridors.count(),
+          collisionCount,
+          viewportHeight,
+          goalSeparation,
+          mobileGeometry,
+          interactions: { node: true, edge: true, fitAll: true, reset: true, routeFocus: true },
+          screenshots: {
+            desktop: ctx.artifacts.phase3cConstellationDesktop,
+            wide: ctx.artifacts.phase3cConstellationWide,
+            mobile: ctx.artifacts.phase3cConstellationMobile,
+          },
+        };
+      }, {
+        frozenFlow: frozen.flow,
+        viewport: { width: 1440, height: 900 },
+      });
+    }
 
     case 'real-policy-flow-differential':
       return withPage(ctx, async (page) => {

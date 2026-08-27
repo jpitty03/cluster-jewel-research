@@ -1,0 +1,248 @@
+{
+  "schemaVersion": "PHASE3A_QUALITY_REPORT_V1",
+  "runId": "2026-08-27T19-22-33-688Z",
+  "suite": "TARGETED",
+  "requestedGateIds": [
+    "C-policy-family-admissibility",
+    "D-constellation-large-scc-layout"
+  ],
+  "selectedGateIds": [
+    "C-policy-family-admissibility",
+    "D-constellation-large-scc-layout"
+  ],
+  "startedAt": "2026-08-27T19:22:33.689Z",
+  "finishedAt": "2026-08-27T19:23:30.635Z",
+  "status": "PASSED",
+  "identity": {
+    "applicationSourceBuildHash": "app-3caf9ff2f53e5897de86",
+    "fixtureCorpusVersion": "Phase3C-Frozen-Browser-Corpus-1",
+    "fixtureCorpusHash": "corpus-b9aedc966f617dd79f9d",
+    "priceSnapshotIdentity": "prices-086bbb3ef86a6b63",
+    "browserVersion": "151.0.7922.34",
+    "harnessVersion": "PHASE3A_QUALITY_LAB_V1",
+    "compatibilityHash": "compatible-393dc1903861b9aaf8d1e711"
+  },
+  "scheduling": {
+    "processLevelShards": [
+      "C",
+      "D"
+    ],
+    "browserLightParallelism": 2,
+    "solverHeavyConcurrency": 1,
+    "longSoakAutomatic": false,
+    "shardPlan": [
+      {
+        "shard": "C",
+        "gateIds": [
+          "C-policy-family-admissibility"
+        ],
+        "mode": "SERIAL_SOLVER_HEAVY"
+      },
+      {
+        "shard": "D",
+        "gateIds": [
+          "D-constellation-large-scc-layout"
+        ],
+        "mode": "PARALLEL_BROWSER_LIGHT"
+      }
+    ]
+  },
+  "counts": {
+    "passed": 2,
+    "failed": 0,
+    "resumed": 0,
+    "skipped": 0,
+    "total": 2
+  },
+  "results": [
+    {
+      "id": "C-policy-family-admissibility",
+      "title": "Real field Worker revalidates known Open policy inside constrained families",
+      "phase": "3C",
+      "shard": "C",
+      "tags": [
+        "phase3c",
+        "worker",
+        "solver",
+        "proof",
+        "method-family"
+      ],
+      "costClass": "SOLVER_HEAVY",
+      "status": "PASS",
+      "passed": true,
+      "startedAt": "2026-08-27T19:22:40.313Z",
+      "finishedAt": "2026-08-27T19:23:30.530Z",
+      "durationMs": 50217,
+      "details": {
+        "openU": 1440.1876751182278,
+        "selectedOpenU": 1440.1876751182172,
+        "selectedOpenAdmissible": false,
+        "selectedOpenFailures": [
+          {
+            "code": "ACQUISITION_KIND_MISMATCH",
+            "message": "Family requires CLEAN, source policy uses SELF_FRACTURE.",
+            "expected": "CLEAN",
+            "actual": "SELF_FRACTURE"
+          },
+          {
+            "code": "ACQUISITION_IDENTITY_MISMATCH",
+            "message": "The physical acquisition state does not match the family start state.",
+            "expected": "Large Cluster Jewel|Minions deal 10% increased Damage|84|8|normal|influenced=false|synthesised=false|acquisitionMenu=false|methodFamilyActionEvidence=",
+            "actual": "Large Cluster Jewel|Minions deal 10% increased Damage|84|8|magic|influenced=false|synthesised=false|acquisitionMenu=false|methodFamilyActionEvidence=|Suffix:Primordial Bond:1:F:"
+          },
+          {
+            "code": "ACQUISITION_COST_MISMATCH",
+            "message": "The family-context acquisition cost differs from the source policy.",
+            "expected": 40,
+            "actual": 1406.2963152858167
+          }
+        ],
+        "conventionalU": 1440.1876751182278,
+        "knownU": 1440.1876755701896,
+        "admissible": true,
+        "transitionsRegenerated": 1577,
+        "transitionOutcomesCompared": 45452,
+        "incumbentSource": "ADMISSIBLE_KNOWN_POLICY",
+        "familySearchStatus": "BEST_FOUND_UNPROVEN",
+        "sameFingerprint": true,
+        "equivalentToSelectedPolicy": true,
+        "accounting": {
+          "selectedBundleId": "core:clean-open-policy",
+          "maximumDifferenceChaos": 1.0686562745831907e-11,
+          "acquisitionCostChaos": 40,
+          "downstreamCostChaos": 1400.1876751182278,
+          "fullRouteCostChaos": 1440.1876751182278
+        },
+        "artifact": "quality-lab\\reports\\evidence\\phase3c-policy-family-browser.json",
+        "screenshot": "quality-lab\\reports\\evidence\\phase3c-policy-family-desktop.png"
+      },
+      "executionIdentity": {
+        "applicationSourceBuildHash": "app-3caf9ff2f53e5897de86",
+        "gateIdVersion": "C-policy-family-admissibility@1",
+        "fixtureCorpusVersion": "Phase3C-Frozen-Browser-Corpus-1",
+        "fixtureInputHash": "fixture-c0956dc4af1bc5d29323",
+        "priceSnapshotIdentity": "prices-086bbb3ef86a6b63",
+        "browserVersion": "151.0.7922.34",
+        "harnessVersion": "PHASE3A_QUALITY_LAB_V1",
+        "compatibilityHash": "compatible-393dc1903861b9aaf8d1e711"
+      }
+    },
+    {
+      "id": "D-constellation-large-scc-layout",
+      "title": "Frozen real field-class cyclic policy uses readable semantic SCC layout",
+      "phase": "3C",
+      "shard": "D",
+      "tags": [
+        "phase3c",
+        "constellation",
+        "visual",
+        "responsive",
+        "accessibility"
+      ],
+      "costClass": "FAST",
+      "status": "PASS",
+      "passed": true,
+      "startedAt": "2026-08-27T19:22:34.507Z",
+      "finishedAt": "2026-08-27T19:22:39.379Z",
+      "durationMs": 4872,
+      "details": {
+        "topologyFingerprint": "topology-3c852336",
+        "nodeCount": 43,
+        "edgeCount": 191,
+        "layoutMode": "SCC_HYBRID_SEMANTIC_V2",
+        "semanticBands": [
+          "ACQUISITION_NORMAL",
+          "MAGIC_ROLLING",
+          "PROMOTION",
+          "RECOVERY",
+          "RARE_FINISHING",
+          "GOAL"
+        ],
+        "horizontalSpan": 1120,
+        "verticalSpan": 1456,
+        "minimumNodeDistance": 112,
+        "recoveryCorridors": 34,
+        "collisionCount": 0,
+        "viewportHeight": 700,
+        "goalSeparation": {
+          "goalMin": 1530,
+          "normalMin": 130
+        },
+        "mobileGeometry": {
+          "viewport": 390,
+          "documentWidth": 390,
+          "bodyWidth": 390
+        },
+        "interactions": {
+          "node": true,
+          "edge": true,
+          "fitAll": true,
+          "reset": true,
+          "routeFocus": true
+        },
+        "screenshots": {
+          "desktop": "quality-lab\\reports\\evidence\\phase3c-constellation-1440x900.png",
+          "wide": "quality-lab\\reports\\evidence\\phase3c-constellation-1920x1080.png",
+          "mobile": "quality-lab\\reports\\evidence\\phase3c-constellation-mobile.png"
+        }
+      },
+      "executionIdentity": {
+        "applicationSourceBuildHash": "app-3caf9ff2f53e5897de86",
+        "gateIdVersion": "D-constellation-large-scc-layout@1",
+        "fixtureCorpusVersion": "Phase3C-Frozen-Browser-Corpus-1",
+        "fixtureInputHash": "fixture-89dab0a1ee7217729555",
+        "priceSnapshotIdentity": "prices-086bbb3ef86a6b63",
+        "browserVersion": "151.0.7922.34",
+        "harnessVersion": "PHASE3A_QUALITY_LAB_V1",
+        "compatibilityHash": "compatible-393dc1903861b9aaf8d1e711"
+      }
+    }
+  ],
+  "runtime": {
+    "totalWallMs": 56945,
+    "summedGateMs": 55089,
+    "appStartupMs": 683,
+    "browserStartupMs": 139,
+    "solverHeavyMs": 50217,
+    "visualInteractionMs": 4872,
+    "harnessOverheadMs": 939,
+    "categoryTotalsMs": {
+      "phase3c": 55089,
+      "worker": 50217,
+      "solver": 50217,
+      "proof": 50217,
+      "method-family": 50217,
+      "constellation": 4872,
+      "visual": 4872,
+      "responsive": 4872,
+      "accessibility": 4872
+    },
+    "slowestGates": [
+      {
+        "id": "C-policy-family-admissibility",
+        "durationMs": 50217,
+        "status": "PASS"
+      },
+      {
+        "id": "D-constellation-large-scc-layout",
+        "durationMs": 4872,
+        "status": "PASS"
+      }
+    ]
+  },
+  "runtimeErrors": {
+    "console": [],
+    "page": [],
+    "network": []
+  },
+  "artifacts": {
+    "phase3cConstellationDesktop": "quality-lab\\reports\\evidence\\phase3c-constellation-1440x900.png",
+    "phase3cConstellationWide": "quality-lab\\reports\\evidence\\phase3c-constellation-1920x1080.png",
+    "phase3cConstellationMobile": "quality-lab\\reports\\evidence\\phase3c-constellation-mobile.png",
+    "phase3cPolicyFamilyBrowser": "quality-lab\\reports\\evidence\\phase3c-policy-family-browser.json",
+    "phase3cPolicyFamilyScreenshot": "quality-lab\\reports\\evidence\\phase3c-policy-family-desktop.png",
+    "runReport": "quality-lab\\artifacts\\phase3a-2026-08-27T19-22-33-688Z\\report.json",
+    "stableReport": "quality-lab\\reports\\phase3a-targeted-gate.json",
+    "summary": "quality-lab\\reports\\phase3a-targeted-summary.md"
+  }
+}

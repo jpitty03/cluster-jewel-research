@@ -1,6 +1,39 @@
 {
-  "version": "Phase3B-Frozen-Browser-Corpus-1",
+  "version": "Phase3C-Frozen-Browser-Corpus-1",
   "fixtures": [
+    {
+      "id": "phase3c_primordial_renewal_rotten_claws",
+      "name": "Phase 3C Primordial Bond plus Renewal plus Rotten Claws field consistency",
+      "baseType": "Large Cluster Jewel",
+      "clusterType": "Minions deal 10% increased Damage",
+      "itemLevel": 84,
+      "passiveCount": 8,
+      "finalRarity": "rare",
+      "extraAffixes": "allow-extra",
+      "targetMods": ["Primordial Bond", "Renewal", "Rotten Claws"],
+      "expectedSaleValueChaos": 1708,
+      "priceContext": {
+        "currencyRates": {
+          "chaos": 1,
+          "divine": 213.5,
+          "fracturing": 298.6,
+          "annul": 11.66,
+          "exalt": 1.17,
+          "scour": 0.5391,
+          "alteration": 0.1336,
+          "transmutation": 0.005012,
+          "augmentation": 0.03941,
+          "regal": 0.03638,
+          "wildLifeforce": 0.02377,
+          "vividLifeforce": 0.08208,
+          "primalLifeforce": 0.04085
+        },
+        "cleanBaseCostChaos": 40,
+        "cleanBasePriceSource": "manual",
+        "cleanBasePriceProvenance": "Phase 3C frozen Primordial Bond + Renewal + Rotten Claws field fixture"
+      },
+      "searchBudget": { "maxStates": 5000, "maxWallTimeMs": 30000, "maxExpansionRounds": 3 }
+    },
     {
       "id": "cheap_one_mod",
       "name": "Cheap one-mod T1 Energy Shield",

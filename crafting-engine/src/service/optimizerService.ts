@@ -85,6 +85,11 @@ import {
   certifyRepeatableReroll,
   type CertifiedRepeatableReroll,
 } from '../solver/repeatableRerollCertification.ts';
+import {
+  auditPolicyAdmissibility,
+  comparePolicySearchDivergence,
+  type PolicyAcquisitionKind,
+} from './policyAdmissibility.ts';
 
 export type {
   ActionCostVector,
@@ -1199,6 +1204,21 @@ interface ResolvedMethodPolicySource {
   actionEvidence: string[];
 }
 
+interface KnownMethodPolicyCandidate {
+  solverResult: GenericSearchResult;
+  route: RouteSummary;
+  acquisitionCandidateId: string;
+  acquisitionMethodId: string;
+  acquisitionStart: StartingStateCandidate;
+  acquisitionKind: PolicyAcquisitionKind;
+  acquisitionCostChaos: number;
+  downstreamStartState: ItemState;
+  downstreamCostChaos: number;
+  downstreamPhysicalActions: number;
+  downstreamManualTimeMs: number;
+  actionEvidence: string[];
+}
+
 interface MethodPortfolioBuildOutput {
   families: MethodFamilyResult[];
   resolvedPolicies: ResolvedMethodPolicySource[];
@@ -1354,6 +1374,12 @@ function buildMethodPortfolio(context: MethodPortfolioBuildContext): MethodPortf
     },
     status: recommended ? 'SELECTED_WINNER' : 'UNRESOLVED_AT_BUDGET',
     evaluationSource: 'INDEPENDENT_SOLVE',
+    incumbentSource: 'INDEPENDENT_DISCOVERY',
+    familySearchStatus: openResult.optimalityProof.modeledActionOptimalityProven
+      ? 'OPTIMAL_PROVEN'
+      : recommended
+        ? 'BEST_FOUND_UNPROVEN'
+        : 'UNRESOLVED',
     route: recommended ?? undefined,
     craftPlan,
     whyNotSelectedExplanation: recommended
@@ -1385,6 +1411,102 @@ function buildMethodPortfolio(context: MethodPortfolioBuildContext): MethodPortf
     },
   });
 
+  const selectedKnownOpenPolicy = (() => {
+    const startKey = getCanonicalStateKey(openResult.startingState, input.target);
+    const startsAtAcquisitionMenu = openResult.startingState.flags?.acquisitionMenu === true;
+    const startDecision = openResult.policyMap.get(startKey);
+    const acquisitionActionId = startsAtAcquisitionMenu
+      ? startDecision?.bestActionId
+      : recommended?.actionId;
+    const parts = portfolioActionParts(acquisitionActionId ?? '');
+    const candidateIndex = parts.candidateId === undefined
+      ? -1
+      : Number(/^candidate_(\d+)$/.exec(parts.candidateId)?.[1]);
+    const acquisitionStart = starts[candidateIndex];
+    if (
+      !recommended || !parts.candidateId || !parts.methodId ||
+      !Number.isFinite(candidateIndex) || !acquisitionStart
+    ) return undefined;
+    let acquisitionCostChaos: number;
+    let downstreamStartState: ItemState;
+    let acquisitionPhysicalActions = 0;
+    let acquisitionManualTimeMs = 0;
+    if (startsAtAcquisitionMenu) {
+      const action = openResult.graphBuild.nodes.get(startKey)?.actions.get(acquisitionActionId!);
+      const destination = action?.transitions.find((transition) =>
+        getPhysicalStateSignature(transition.nextState) ===
+          getPhysicalStateSignature(acquisitionStart.state)
+      ) ?? action?.transitions[0];
+      if (!action || !destination) return undefined;
+      acquisitionCostChaos = action.immediateCostChaos;
+      acquisitionPhysicalActions = action.costVector.physicalActionCount;
+      acquisitionManualTimeMs = action.costVector.estimatedManualTimeMs;
+      downstreamStartState = destination.nextState;
+    } else {
+      const synthesis = synthesisSummaries.get(candidateIndex);
+      acquisitionCostChaos = acquisitionStart.fracturedRequirement === undefined
+        ? cleanEvidence.costChaos
+        : synthesis?.expectedCostChaos ?? Infinity;
+      downstreamStartState = openResult.startingState;
+    }
+    if (!Number.isFinite(acquisitionCostChaos)) return undefined;
+    const actionEvidence = [...new Set(openResult.expectedActionUsage
+      .filter((usage) => !usage.actionId.startsWith('acquire_'))
+      .filter((usage) => usage.expectedCount > 1e-9)
+      .map((usage) => usage.actionId))].sort();
+    const downstreamCostChaos = startsAtAcquisitionMenu
+      ? openResult.totalExpectedCostChaos - acquisitionCostChaos
+      : openResult.totalExpectedCostChaos;
+    return {
+      solverResult: openResult,
+      route: recommended,
+      acquisitionCandidateId: parts.candidateId,
+      acquisitionMethodId: parts.methodId,
+      acquisitionStart,
+      acquisitionKind: acquisitionStart.fracturedRequirement === undefined
+        ? 'CLEAN' as const
+        : 'SELF_FRACTURE' as const,
+      acquisitionCostChaos,
+      downstreamStartState,
+      downstreamCostChaos,
+      downstreamPhysicalActions: Math.max(
+        0,
+        (openResult.metrics?.expectedPhysicalActions ?? 0) - acquisitionPhysicalActions,
+      ),
+      downstreamManualTimeMs: Math.max(
+        0,
+        (openResult.metrics?.estimatedManualTimeMs ?? 0) - acquisitionManualTimeMs,
+      ),
+      actionEvidence,
+    } satisfies KnownMethodPolicyCandidate;
+  })();
+  const cleanKnownOpenPolicy: KnownMethodPolicyCandidate | undefined =
+    selectedKnownOpenPolicy?.acquisitionKind === 'CLEAN'
+      ? selectedKnownOpenPolicy
+      : fastCleanResult && fastCleanRoute
+        ? {
+            solverResult: fastCleanResult,
+            route: fastCleanRoute,
+            acquisitionCandidateId: `candidate_${starts.indexOf(cleanStart)}`,
+            acquisitionMethodId:
+              `clean-base_${cleanStart.acquisitions.findIndex((method) =>
+                method.type === 'clean-base'
+              )}`,
+            acquisitionStart: cleanStart,
+            acquisitionKind: 'CLEAN',
+            acquisitionCostChaos: cleanEvidence.costChaos,
+            downstreamStartState: fastCleanResult.startingState,
+            downstreamCostChaos: fastCleanResult.totalExpectedCostChaos,
+            downstreamPhysicalActions:
+              fastCleanResult.metrics?.expectedPhysicalActions ?? 0,
+            downstreamManualTimeMs:
+              fastCleanResult.metrics?.estimatedManualTimeMs ?? 0,
+            actionEvidence: [...new Set(fastCleanResult.expectedActionUsage
+              .filter((usage) => usage.expectedCount > 1e-9)
+              .map((usage) => usage.actionId))].sort(),
+          }
+        : undefined;
+
   const independentlyRunnableHarvestCount = enabledHarvestCrafts.filter((craft) => {
     const definition = HARVEST_CRAFT_DEFINITIONS[craft.tag];
     return definition !== undefined &&
@@ -1412,7 +1534,9 @@ function buildMethodPortfolio(context: MethodPortfolioBuildContext): MethodPortf
     enabledActionIds: string[],
     requiredActionIds: string[],
     includeHarvest: boolean,
-    harvestTags: string[]
+    harvestTags: string[],
+    knownPolicy?: KnownMethodPolicyCandidate,
+    selectedOpenPolicy?: KnownMethodPolicyCandidate,
   ): MethodFamilyResult => {
     const remainingMs = Math.max(1, deadlineMs - Date.now());
     const fairShareWallTimeMs = Math.floor(remainingMs / remainingConstrainedFamilies);
@@ -1434,6 +1558,47 @@ function buildMethodPortfolio(context: MethodPortfolioBuildContext): MethodPortf
       ...CRAFT_MECHANICS,
       ...(includeHarvest ? createHarvestReforgeMechanics({ pool, priceBook }, harvestTags) : []),
     ].filter((mechanic) => enabledIdSet.has(mechanic.id));
+    const auditCandidate = (
+      candidate: KnownMethodPolicyCandidate,
+    ) => auditPolicyAdmissibility({
+          family: spec,
+          context: { pool, priceBook },
+          target: input.target,
+          sourceResult: candidate.solverResult,
+          sourceDownstreamStartState: candidate.downstreamStartState,
+          sourceAcquisitionKind: candidate.acquisitionKind,
+          sourceAcquisitionIdentity: getPhysicalStateSignature(
+            candidate.downstreamStartState,
+          ),
+          expectedAcquisitionIdentity: getPhysicalStateSignature(startState),
+          sourceAcquisitionCostChaos: candidate.acquisitionCostChaos,
+          familyAcquisitionCostChaos: acquisitionCostChaos,
+          sourceMechanicsSessionIdentity: searchIdentityHash,
+          familyMechanicsSessionIdentity: searchIdentityHash,
+          includeHarvest,
+          harvestTags,
+          expectedDownstreamCostChaos: candidate.downstreamCostChaos,
+          expectedDownstreamPhysicalActions: candidate.downstreamPhysicalActions,
+          expectedDownstreamManualTimeMs: candidate.downstreamManualTimeMs,
+          effortProfile: input.effortProfile,
+          sourcePolicyFingerprint: `selected-${hashIdentity(JSON.stringify(
+            candidate.solverResult.onPolicyRules
+              .filter((rule) => rule.state.flags?.acquisitionMenu !== true)
+              .map((rule) => [
+                getPhysicalStateSignature(rule.state),
+                rule.selectedActionId,
+              ])
+              .sort(),
+          )).replace('phase2j-', '')}`,
+        });
+    const knownPolicyAdmissibility = knownPolicy
+      ? auditCandidate(knownPolicy)
+      : undefined;
+    const selectedOpenPolicyAdmissibility = selectedOpenPolicy === knownPolicy
+      ? knownPolicyAdmissibility
+      : selectedOpenPolicy
+        ? auditCandidate(selectedOpenPolicy)
+        : undefined;
     const requiredRepeatableMechanic = (
       spec.kind === 'HARVEST' || spec.kind === 'SELF_FRACTURE_HARVEST'
     ) && requiredActionIds.length === 1
@@ -1530,7 +1695,7 @@ function buildMethodPortfolio(context: MethodPortfolioBuildContext): MethodPortf
     const fullRouteUpper = downstreamUpper === undefined
       ? undefined
       : acquisitionCostChaos + downstreamUpper;
-    const route: RouteSummary | undefined = fullRouteUpper === undefined ? undefined : {
+    const independentRoute: RouteSummary | undefined = fullRouteUpper === undefined ? undefined : {
       actionId: `method:${spec.id}`,
       name: recommended && Math.abs((recommended.expectedTotalCostChaos ?? Infinity) - fullRouteUpper) <= 0.05
         ? recommended.name
@@ -1559,54 +1724,163 @@ function buildMethodPortfolio(context: MethodPortfolioBuildContext): MethodPortf
         expectedChaosCost: downstreamUpper ?? familyResult.totalExpectedCostChaos,
       } : undefined,
     };
+    const independentlyResolvedFullRouteU = independentRoute?.expectedTotalCostChaos ?? undefined;
+    const revalidatedKnownPolicyCostChaos = knownPolicyAdmissibility?.admissible &&
+      knownPolicyAdmissibility.evaluation && knownPolicy
+      ? knownPolicy.acquisitionCostChaos +
+        knownPolicyAdmissibility.evaluation.totalExpectedCostChaos
+      : undefined;
+    const knownRoute: RouteSummary | undefined = revalidatedKnownPolicyCostChaos === undefined ||
+      !knownPolicy
+      ? undefined
+      : {
+          ...knownPolicy.route,
+          actionId: `method:${spec.id}:known-policy`,
+          name: spec.name,
+          expectedTotalCostChaos: revalidatedKnownPolicyCostChaos,
+          incumbentUpperBoundChaos: revalidatedKnownPolicyCostChaos,
+          lowerBoundChaos: Math.min(
+            revalidatedKnownPolicyCostChaos,
+            independentRoute?.lowerBoundChaos ?? acquisitionLowerBoundChaos,
+          ),
+          optimalityGapChaos: Math.max(
+            0,
+            revalidatedKnownPolicyCostChaos -
+              Math.min(
+                revalidatedKnownPolicyCostChaos,
+                independentRoute?.lowerBoundChaos ?? acquisitionLowerBoundChaos,
+              ),
+          ),
+          status: 'RESOLVED',
+          metrics: knownPolicy.route.metrics ? {
+            ...knownPolicy.route.metrics,
+            expectedChaosCost: revalidatedKnownPolicyCostChaos,
+          } : undefined,
+          acquisitionMetrics: knownPolicy.route.acquisitionMetrics ? {
+            ...knownPolicy.route.acquisitionMetrics,
+            expectedChaosCost: knownPolicy.acquisitionCostChaos,
+          } : undefined,
+          downstreamMetrics: knownPolicy.route.downstreamMetrics ? {
+            ...knownPolicy.route.downstreamMetrics,
+            expectedChaosCost: revalidatedKnownPolicyCostChaos -
+              knownPolicy.acquisitionCostChaos,
+          } : undefined,
+        };
+    const knownImprovedByIndependent = independentRoute?.expectedTotalCostChaos !== null &&
+      independentRoute?.expectedTotalCostChaos !== undefined &&
+      knownRoute?.expectedTotalCostChaos !== null &&
+      knownRoute?.expectedTotalCostChaos !== undefined &&
+      independentRoute.expectedTotalCostChaos <
+        knownRoute.expectedTotalCostChaos - CANONICAL_RECONCILIATION_TOLERANCE_CHAOS;
+    const route = knownImprovedByIndependent || !knownRoute
+      ? independentRoute
+      : knownRoute;
+    const incumbentSource = knownImprovedByIndependent
+      ? 'IMPROVED_FROM_KNOWN_POLICY' as const
+      : knownRoute
+        ? 'ADMISSIBLE_KNOWN_POLICY' as const
+        : independentRoute
+          ? 'INDEPENDENT_DISCOVERY' as const
+          : undefined;
     const comparison = methodFamilyStatus(route, recommended);
-    if (route) {
-      const familySource: ResolvedPolicySourceKind = spec.kind === 'CONVENTIONAL'
-        ? 'CONVENTIONAL'
-        : spec.kind === 'HARVEST'
-          ? 'HARVEST'
-          : spec.kind === 'SELF_FRACTURE_HARVEST'
-            ? 'SELF_FRACTURE_HARVEST'
-            : 'OTHER';
-      const targetFractureIndex = spec.targetFractureModId === undefined
-        ? -1
-        : starts.findIndex((start) => start.fracturedRequirement?.modId === spec.targetFractureModId);
+    const familySource: ResolvedPolicySourceKind = spec.kind === 'CONVENTIONAL'
+      ? 'CONVENTIONAL'
+      : spec.kind === 'HARVEST'
+        ? 'HARVEST'
+        : spec.kind === 'SELF_FRACTURE_HARVEST'
+          ? 'SELF_FRACTURE_HARVEST'
+          : 'OTHER';
+    const targetFractureIndex = spec.targetFractureModId === undefined
+      ? -1
+      : starts.findIndex((start) => start.fracturedRequirement?.modId === spec.targetFractureModId);
+    const independentAcquisitionCandidateId = targetFractureIndex >= 0
+      ? `candidate_${targetFractureIndex}`
+      : `candidate_${starts.indexOf(cleanStart)}`;
+    const independentAcquisitionMethodId = targetFractureIndex >= 0
+      ? 'self-fracture_executable'
+      : `clean-base_${cleanStart.acquisitions.findIndex((method) => method.type === 'clean-base')}`;
+    if (independentRoute) {
       resolvedPolicies.push({
-        id: `bundle:${spec.id}`,
+        id: `bundle:${spec.id}:independent`,
         familyId: spec.id,
         source: familySource,
-        route,
+        route: independentRoute,
         solverResult: familyResult,
-        acquisitionCandidateId: targetFractureIndex >= 0
-          ? `candidate_${targetFractureIndex}`
-          : `candidate_${starts.indexOf(cleanStart)}`,
-        acquisitionMethodId: targetFractureIndex >= 0
-          ? 'self-fracture_executable'
-          : `clean-base_${cleanStart.acquisitions.findIndex((method) => method.type === 'clean-base')}`,
+        acquisitionCandidateId: independentAcquisitionCandidateId,
+        acquisitionMethodId: independentAcquisitionMethodId,
         acquisitionSynthesis: targetFractureIndex >= 0
           ? synthesisSummaries.get(targetFractureIndex)
           : undefined,
         actionEvidence: onPolicyActionIds,
       });
     }
+    if (knownRoute && knownPolicy) {
+      resolvedPolicies.push({
+        id: `bundle:${spec.id}:known-policy`,
+        familyId: spec.id,
+        source: familySource,
+        route: knownRoute,
+        solverResult: knownPolicy.solverResult,
+        acquisitionCandidateId: knownPolicy.acquisitionCandidateId,
+        acquisitionMethodId: knownPolicy.acquisitionMethodId,
+        actionEvidence: knownPolicy.actionEvidence,
+      });
+    }
+    const knownPolicyWon = knownRoute !== undefined && route === knownRoute &&
+      knownPolicy !== undefined;
+    const winnerResult = knownPolicyWon
+      ? knownPolicy.solverResult
+      : familyResult;
+    const winnerUsage = knownPolicyWon
+      ? knownPolicy.solverResult.expectedActionUsage
+          .filter((entry) => !entry.actionId.startsWith('acquire_'))
+          .map((entry) => ({ ...entry }))
+      : usage;
+    const winnerActionIds = knownPolicyWon
+      ? knownPolicy.actionEvidence
+      : onPolicyActionIds;
+    const winnerDownstreamUpper = knownPolicyWon && knownPolicyAdmissibility?.evaluation
+      ? knownPolicyAdmissibility.evaluation.totalExpectedCostChaos
+      : downstreamUpper;
+    const winnerFullRouteUpper = route?.expectedTotalCostChaos ?? undefined;
     return {
       spec,
       ...comparison,
       evaluationSource: 'INDEPENDENT_SOLVE',
+      incumbentSource,
+      familySearchStatus: !route
+        ? 'UNRESOLVED'
+        : route === independentRoute && familyResult.optimalityProof.modeledActionOptimalityProven
+          ? 'OPTIMAL_PROVEN'
+          : 'BEST_FOUND_UNPROVEN',
+      independentFullRouteU: independentlyResolvedFullRouteU,
+      knownPolicyCostChaos: knownPolicy?.route.expectedTotalCostChaos ?? undefined,
+      revalidatedKnownPolicyCostChaos,
+      selectedOpenPolicyCostChaos:
+        selectedOpenPolicy?.route.expectedTotalCostChaos ?? undefined,
+      selectedOpenPolicyAdmissibility,
+      knownPolicyAdmissibility,
+      searchDivergence: knownPolicy &&
+        knownPolicy.acquisitionKind === (startState.fracturedModIds.length > 0
+          ? 'SELF_FRACTURE'
+          : 'CLEAN')
+        ? comparePolicySearchDivergence(knownPolicy.solverResult, familyResult)
+        : undefined,
       route,
       acquisitionStatus: 'RESOLVED',
       acquisitionL: acquisitionLowerBoundChaos,
       acquisitionU: acquisitionCostChaos,
-      downstreamStatus: stageStatus(downstreamUpper, downstreamLower),
+      downstreamStatus: stageStatus(winnerDownstreamUpper, downstreamLower),
       downstreamL: downstreamLower,
-      downstreamU: downstreamUpper,
-      fullRouteStatus: stageStatus(fullRouteUpper, fullRouteLower),
+      downstreamU: winnerDownstreamUpper,
+      fullRouteStatus: stageStatus(winnerFullRouteUpper, fullRouteLower),
       fullRouteL: fullRouteLower,
-      fullRouteU: fullRouteUpper,
-      requiredActionObservedOnPolicy,
-      onPolicyActionIds,
-      expectedActionUsage: usage,
-      policyHealth: methodPolicyHealth(familyResult),
+      fullRouteU: winnerFullRouteUpper,
+      requiredActionObservedOnPolicy: requiredActionIds.length === 0 ||
+        requiredActionIds.some((actionId) => winnerActionIds.includes(actionId)),
+      onPolicyActionIds: winnerActionIds,
+      expectedActionUsage: winnerUsage,
+      policyHealth: methodPolicyHealth(winnerResult),
       repeatableRerollCertification: repeatableCertification?.evidence,
       sessionIdentity: `${searchIdentityHash}:${spec.id}`,
       retainedStates: continuation.expansion.nodes.size,
@@ -1623,6 +1897,11 @@ function buildMethodPortfolio(context: MethodPortfolioBuildContext): MethodPortf
         ? `The constrained policy did not contain a required ${spec.badge} action on-policy, so the family is unresolved.`
         : !requiredRepeatableKernelCertified
           ? `The required repeatable ${spec.badge} kernel was not certified within this request budget, so the family is unresolved.`
+        : knownPolicyWon && knownRoute
+          ? `A known executable policy was revalidated state-by-state inside ${spec.name} at ` +
+            `${knownRoute.expectedTotalCostChaos?.toFixed(1)}c; the independent family search ` +
+            `${independentRoute ? `found ${independentRoute.expectedTotalCostChaos?.toFixed(1)}c` : 'remained unresolved'} ` +
+            'but did not prove a better family optimum.'
         : route
           ? comparison.status === 'SELECTED_WINNER'
             ? 'Independent constrained solve reproduces the selected policy at the current objective.'
@@ -1793,7 +2072,9 @@ function buildMethodPortfolio(context: MethodPortfolioBuildContext): MethodPortf
       conventionalSpec.allowedActionIds ?? [],
       [],
       false,
-      []
+      [],
+      cleanKnownOpenPolicy,
+      selectedKnownOpenPolicy,
     ));
   } else {
     const comparison = methodFamilyStatus(fastCleanRoute, recommended);
@@ -1869,7 +2150,9 @@ function buildMethodPortfolio(context: MethodPortfolioBuildContext): MethodPortf
         spec.allowedActionIds ?? [],
         [craft.actionId],
         true,
-        [craft.tag]
+        [craft.tag],
+        cleanKnownOpenPolicy,
+        selectedKnownOpenPolicy,
       ));
     } else {
       results.push({
@@ -1920,6 +2203,51 @@ function buildMethodPortfolio(context: MethodPortfolioBuildContext): MethodPortf
       : evidence?.acquisitionUpperBoundChaos;
     const fullU = evidence?.fullRouteUpperBoundChaos;
     const fullL = evidence?.fullRouteLowerBoundChaos ?? 0;
+    const fractureSpec: MethodFamilySpec = {
+      id: `family_fracture_${requirement.modId}`,
+      kind: 'SELF_FRACTURE',
+      name: `Self-Fracture ${modName}`,
+      description: `Independently synthesize a fractured ${modName} base, then solve its downstream policy.`,
+      badge: `Fracture: ${modName}`,
+      allowedActionIds: [...DEFAULT_ACQUISITION_SYNTHESIS_ACTION_IDS],
+      requiredActionIds: ['fracturing_orb'],
+      forcedAcquisitionType: 'SELF_FRACTURE',
+      targetFractureModId: requirement.modId,
+      targetFractureModName: modName,
+    };
+    const auditFractureCandidate = (
+      candidate: KnownMethodPolicyCandidate,
+    ) => auditPolicyAdmissibility({
+          family: fractureSpec,
+          context: { pool, priceBook },
+          target: input.target,
+          sourceResult: candidate.solverResult,
+          sourceDownstreamStartState: candidate.downstreamStartState,
+          sourceAcquisitionKind: candidate.acquisitionKind,
+          sourceAcquisitionIdentity: getPhysicalStateSignature(
+            candidate.downstreamStartState,
+          ),
+          expectedAcquisitionIdentity: getPhysicalStateSignature(start.state),
+          sourceAcquisitionCostChaos: candidate.acquisitionCostChaos,
+          familyAcquisitionCostChaos: acquisitionU,
+          sourceMechanicsSessionIdentity: searchIdentityHash,
+          familyMechanicsSessionIdentity: searchIdentityHash,
+          includeHarvest: false,
+          harvestTags: [],
+          expectedDownstreamCostChaos: candidate.downstreamCostChaos,
+          expectedDownstreamPhysicalActions: candidate.downstreamPhysicalActions,
+          expectedDownstreamManualTimeMs: candidate.downstreamManualTimeMs,
+          effortProfile: input.effortProfile,
+        });
+    const knownPolicyAdmissibility = cleanKnownOpenPolicy
+      ? auditFractureCandidate(cleanKnownOpenPolicy)
+      : undefined;
+    const selectedOpenPolicyAdmissibility =
+      selectedKnownOpenPolicy === cleanKnownOpenPolicy
+        ? knownPolicyAdmissibility
+        : selectedKnownOpenPolicy
+          ? auditFractureCandidate(selectedKnownOpenPolicy)
+          : undefined;
     const route: RouteSummary | undefined = fullU === undefined || !synthesisCertified ? undefined : {
       actionId: `method:family_fracture_${requirement.modId}`,
       name: recommended?.acquisitionCandidateId === `candidate_${index}`
@@ -1964,23 +2292,24 @@ function buildMethodPortfolio(context: MethodPortfolioBuildContext): MethodPortf
       });
     }
     results.push({
-      spec: {
-        id: `family_fracture_${requirement.modId}`,
-        kind: 'SELF_FRACTURE',
-        name: `Self-Fracture ${modName}`,
-        description: `Independently synthesize a fractured ${modName} base, then solve its downstream policy.`,
-        badge: `Fracture: ${modName}`,
-        allowedActionIds: [...DEFAULT_ACQUISITION_SYNTHESIS_ACTION_IDS],
-        requiredActionIds: ['fracturing_orb'],
-        forcedAcquisitionType: 'SELF_FRACTURE',
-        targetFractureModId: requirement.modId,
-        targetFractureModName: modName,
-      },
+      spec: fractureSpec,
       ...comparison,
       status: dominated ? 'DOMINATED' : route ? comparison.status : 'UNRESOLVED_AT_BUDGET',
       evaluationSource: synthesis || evidence?.retainedAcquisitionStates || evidence?.retainedDownstreamStates
         ? 'INDEPENDENT_SOLVE'
         : 'NOT_SEARCHED',
+      incumbentSource: route ? 'INDEPENDENT_DISCOVERY' : undefined,
+      familySearchStatus: route && proofRecord?.downstream?.optimalityProof.modeledActionOptimalityProven &&
+        certifiedSynthesis?.proof?.modeledActionOptimalityProven
+        ? 'OPTIMAL_PROVEN'
+        : route
+          ? 'BEST_FOUND_UNPROVEN'
+          : 'UNRESOLVED',
+      knownPolicyCostChaos: cleanKnownOpenPolicy?.route.expectedTotalCostChaos ?? undefined,
+      selectedOpenPolicyCostChaos:
+        selectedKnownOpenPolicy?.route.expectedTotalCostChaos ?? undefined,
+      selectedOpenPolicyAdmissibility,
+      knownPolicyAdmissibility,
       route,
       acquisitionStatus: stageStatus(acquisitionU, acquisitionL, dominated && acquisitionU === undefined),
       acquisitionL,
@@ -2031,7 +2360,9 @@ function buildMethodPortfolio(context: MethodPortfolioBuildContext): MethodPortf
           spec.allowedActionIds ?? [],
           [craft.actionId],
           true,
-          [craft.tag]
+          [craft.tag],
+          selectedKnownOpenPolicy,
+          selectedKnownOpenPolicy,
         ));
       } else {
         const acquisitionWasIndependentlyAttempted = compare && synthesis !== undefined;
@@ -6552,10 +6883,16 @@ export class OptimizerService {
           ? undefined
           : difference / canonicalCost * 100,
         whyNotSelectedExplanation: selected
-          ? 'This exact independently resolved policy is selected by the requested objective.'
+          ? family.incumbentSource === 'ADMISSIBLE_KNOWN_POLICY'
+            ? 'This exact executable policy was independently revalidated inside the family ' +
+              'and is selected by the requested objective; family optimality remains unproven.'
+            : 'This exact independently resolved policy is selected by the requested objective.'
           : equivalentToSelectedPolicy
-            ? 'Same selected policy: this independently searched method family found the same ' +
-              'physical acquisition, normalized state-to-action policy, recovery/terminal ' +
+            ? `Same selected policy: this ${
+                family.incumbentSource === 'ADMISSIBLE_KNOWN_POLICY'
+                  ? 'family-context revalidation confirms the same'
+                  : 'independently searched method family found the same'
+              } physical acquisition, normalized state-to-action policy, recovery/terminal ` +
               'semantics, and full-route usage within the declared tolerance.'
           : overCostCeiling
             ? `Its resolved ${familyBundle.metrics.expectedChaosCost.toFixed(3)}c cost exceeds the ${costCeilingChaos!.toFixed(3)}c objective ceiling.`

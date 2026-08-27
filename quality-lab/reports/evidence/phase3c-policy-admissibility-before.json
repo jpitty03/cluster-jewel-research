@@ -1,0 +1,2741 @@
+{
+  "phase": "3C",
+  "kind": "PRE_REPAIR_REPRODUCTION",
+  "generatedAt": "2026-08-27T18:19:23.691Z",
+  "exactRequestRuns": [
+    {
+      "elapsedMs": 28213,
+      "request": {
+        "baseType": "Large Cluster Jewel",
+        "clusterType": "Minions deal 10% increased Damage",
+        "itemLevel": 84,
+        "passiveCount": 8,
+        "target": {
+          "requiredMods": [
+            {
+              "modId": "Primordial Bond"
+            },
+            {
+              "modId": "Renewal"
+            },
+            {
+              "modId": "Rotten Claws"
+            }
+          ],
+          "requiredRarity": "rare"
+        },
+        "prices": {
+          "currencyRates": {
+            "chaos": 1,
+            "divine": 213.5,
+            "fracturing": 298.6,
+            "annul": 11.66,
+            "exalt": 1.17,
+            "scour": 0.5391,
+            "alteration": 0.1336,
+            "transmutation": 0.005012,
+            "augmentation": 0.03941,
+            "regal": 0.03638,
+            "wildLifeforce": 0.02377,
+            "vividLifeforce": 0.08208,
+            "primalLifeforce": 0.04085
+          },
+          "cleanBaseCostChaos": 40,
+          "cleanBasePriceSource": "manual",
+          "cleanBasePriceProvenance": "Phase 3C frozen Primordial Bond + Renewal + Rotten Claws field fixture"
+        },
+        "expectedSaleValueChaos": 1708,
+        "objective": {
+          "kind": "CHEAPEST_CHAOS"
+        },
+        "searchBudget": {
+          "preset": "NORMAL",
+          "maxStates": 5000,
+          "maxWallTimeMs": 30000,
+          "maxExpansionRounds": 3
+        },
+        "searchIntent": "RECOMMEND",
+        "allowResearchFallbackPrices": true,
+        "compareMethodFamilies": true
+      },
+      "mechanicsSessionIdentity": "phase2j-4ae46f61:family_open",
+      "selectedRoute": {
+        "actionId": "method:family_fracture_Primordial Bond",
+        "name": "Self-fracture Primordial Bond",
+        "acquisitionCandidateId": "candidate_1",
+        "acquisitionMethodId": "self-fracture_executable",
+        "expectedTotalCostChaos": 1459.7923662160777,
+        "lowerBoundChaos": 340.41913,
+        "incumbentUpperBoundChaos": 1459.7923662160777,
+        "optimalityGapChaos": 1119.3732362160783,
+        "status": "RESOLVED",
+        "couldBeatResolvedIncumbent": true,
+        "metrics": {
+          "expectedChaosCost": 1459.7923662160777,
+          "expectedPhysicalActions": 740.8471930308776,
+          "estimatedManualTimeMs": 314538.8772123303,
+          "objectiveScore": 1459.7923662160777,
+          "effortConfidence": "DEFAULT_APPROXIMATE"
+        }
+      },
+      "selectedCostChaos": 1459.7923662160777,
+      "selectedPolicyRules": 572,
+      "selectedPolicyFingerprint": "policy-9e41c4f9",
+      "recommendationStatus": "PROVISIONAL_RESOLVED",
+      "proof": {
+        "selectedPolicyStatus": "FULLY RESOLVED / PROPER / ABSORBING / COST-RECONCILED",
+        "proofLevel": "BEST FULLY RESOLVED POLICY FOUND",
+        "globalOptimality": "NOT YET PROVEN",
+        "modeledActionOptimalityProven": false,
+        "unresolvedCompetitiveCandidates": 1406,
+        "unresolvedCompetitorsMayBeCheaper": true
+      },
+      "risk": {
+        "onPolicyReachableStates": 588,
+        "onPolicyTerminalStates": 16,
+        "terminalAbsorptionProbability": 0.9999999990014549,
+        "selectedPolicyProper": true,
+        "unresolvedOnPolicyProbability": 0
+      },
+      "solver": {
+        "bellmanIterations": 1005,
+        "bellmanConverged": true,
+        "occupancyIterations": 4,
+        "occupancyConverged": true,
+        "reconciliationDifferenceChaos": 6.821210263296962e-13,
+        "costReconciled": true
+      },
+      "search": {
+        "intent": "RECOMMEND",
+        "statesExpanded": 1336,
+        "cumulativeExpansionWork": 1336,
+        "elapsedMs": 2390,
+        "expansionRounds": 2,
+        "maxStates": 5000,
+        "maxWallTimeMs": 30000,
+        "maxExpansionRounds": 3,
+        "prioritizedCompetitiveStateKeys": 5260,
+        "stateBudgetExhausted": false,
+        "wallTimeBudgetExhausted": false,
+        "roundBudgetExhausted": false,
+        "budgetExhausted": false,
+        "returnedAtBudget": false,
+        "timeToFirstCompletedRoundMs": 1342,
+        "timeToFirstCertifiedPolicyMs": 1343,
+        "timeToFirstUsefulRecommendationMs": 1343,
+        "expansionMode": "PERSISTENT_EXTENDED",
+        "repeatedStatesExpanded": 0,
+        "seedStatesExpanded": 1,
+        "newStatesByRound": [
+          1335,
+          0
+        ],
+        "retainedStatesReusedByRound": [
+          1,
+          1336
+        ],
+        "transitionDistributionsGenerated": 4247,
+        "transitionDistributionsGeneratedByRound": [
+          4247,
+          0
+        ],
+        "transitionDistributionsReused": 12,
+        "transitionDistributionsReusedByRound": [
+          12,
+          0
+        ],
+        "previouslyExpandedNodesRevisited": 1,
+        "previouslyExpandedNodesRevisitedByRound": [
+          1,
+          0
+        ],
+        "acquisitionFeasibilityStatesExpanded": 0,
+        "interruptedStatesExpanded": 0,
+        "optimisticLowerBoundIterations": 19,
+        "optimisticLowerBoundConverged": true,
+        "optimisticLowerBoundMethod": "KNOWN_PARTIAL_GRAPH_WITH_ZERO_COST_UNKNOWN_SUCCESSORS",
+        "minimumFeasibleRarity": {
+          "rarity": "rare",
+          "requiredPrefixes": 2,
+          "requiredSuffixes": 1,
+          "complete": true,
+          "reason": "2 Prefix target(s) + 1 Suffix target(s) fit rare capacity (2P/2S)."
+        },
+        "acquisitionFeasibility": {
+          "attemptedCandidates": 0,
+          "certifiedCandidates": 0,
+          "distinctPhysicalStates": 0,
+          "fairStateBudgetPerCandidate": 0,
+          "attempts": []
+        },
+        "deepenProgress": {
+          "before": {
+            "canonicalStates": 1336,
+            "acquisitionFeasibleUpperBounds": 0,
+            "unresolvedAcquisitionCandidates": 0,
+            "candidatesDominatedByBound": 0
+          },
+          "after": {
+            "canonicalStates": 1336,
+            "acquisitionFeasibleUpperBounds": 0,
+            "unresolvedAcquisitionCandidates": 0,
+            "candidatesDominatedByBound": 0
+          },
+          "newCanonicalStates": 0,
+          "newAcquisitionFeasibleUpperBounds": 0,
+          "newlyDominatedByBound": 0,
+          "meaningfulProgress": false,
+          "stoppedEarlyNoMeaningfulProgress": false
+        },
+        "incumbentHistory": [
+          {
+            "round": 1,
+            "upperBoundChaos": 53.49605093026165,
+            "statesExpanded": 1336,
+            "elapsedMs": 1343,
+            "phase": "FIRST_CERTIFIED"
+          },
+          {
+            "round": 2,
+            "upperBoundChaos": 53.49605093026165,
+            "statesExpanded": 1336,
+            "elapsedMs": 2390,
+            "phase": "REFINEMENT"
+          }
+        ],
+        "refinementStopReason": "FIRST_USEFUL_RETURNED",
+        "resumedFromPriorRequest": false,
+        "retainedStatesFromPriorRequest": 0,
+        "retainedTransitionDistributionsFromPriorRequest": 0,
+        "requestedWallTimeMs": 30000,
+        "engineDeadlineMs": 29000,
+        "hostGuardDeadlineMs": 30250,
+        "shutdownReserveMs": 1000,
+        "hostGuardTriggered": false,
+        "timeToFirstUsefulExecutableRecommendationMs": 1343,
+        "stageTimingMs": {
+          "seedResultMs": 1,
+          "transitionGenerationMs": 8,
+          "graphAggregationAndSetupMs": 117,
+          "bellmanMs": 2174,
+          "candidateClassificationAndTrustMs": 71,
+          "absorptionMs": 7,
+          "occupancyMs": 1,
+          "competitiveFrontierCollectionMs": 4,
+          "resultAssemblyMs": 3,
+          "repeatedRoundWorkMs": 1341,
+          "unattributedOrInterruptedMs": 4,
+          "serializationMs": 8
+        },
+        "sessionReuse": {
+          "status": "COLD",
+          "identityHash": "phase2j-4ae46f61",
+          "retainedStates": 0,
+          "retainedTransitionDistributions": 0,
+          "scope": "FRACTURE_DOWNSTREAM"
+        },
+        "totalElapsedMs": 28202,
+        "workScopes": {
+          "portfolioTotalStatesExpanded": 18336,
+          "portfolioRetainedStates": 11339,
+          "selectedPolicyGraphStates": 1336,
+          "acquisitionSynthesisStates": 1667,
+          "methodFamilyStates": 4195,
+          "proofBoundStates": 0
+        },
+        "harvestActionScope": {
+          "mode": "TARGET_INFERRED",
+          "tags": [
+            "attack",
+            "damage",
+            "life",
+            "minion",
+            "physical"
+          ],
+          "rawInferredTags": [
+            "attack",
+            "damage",
+            "life",
+            "minion",
+            "physical"
+          ],
+          "enabledCrafts": [
+            {
+              "actionId": "harvest_reforge_life",
+              "actionName": "Harvest Reforge Life",
+              "tag": "life"
+            },
+            {
+              "actionId": "harvest_reforge_attack",
+              "actionName": "Harvest Reforge Attack",
+              "tag": "attack"
+            },
+            {
+              "actionId": "harvest_reforge_physical",
+              "actionName": "Harvest Reforge Physical",
+              "tag": "physical"
+            }
+          ]
+        },
+        "requestStopReason": "WALL_TIME",
+        "secondaryStopReasons": [
+          "STATE_CAP",
+          "NO_PRODUCTIVE_PROOF_WORK"
+        ],
+        "requestBudget": {
+          "semantics": "UP_TO_CAPS",
+          "requested": {
+            "preset": "NORMAL",
+            "maxStates": 5000,
+            "maxWallTimeMs": 30000,
+            "maxExpansionRounds": 3
+          },
+          "used": {
+            "statesExpanded": 3334,
+            "retainedStates": 15534,
+            "elapsedMs": 28202,
+            "expansionRounds": 2,
+            "transitionsGenerated": 99306,
+            "transitionsReused": 6748
+          },
+          "stop": {
+            "primary": "WALL_TIME",
+            "secondary": [
+              "STATE_CAP",
+              "NO_PRODUCTIVE_PROOF_WORK"
+            ],
+            "evidence": [
+              "requested up to 5,000 states / 30000ms / 3 rounds",
+              "used 3,334 expanded; 15,534 retained; 28202ms elapsed",
+              "selected graph limits: state=false; wall=false; round=false",
+              "Expanded states is the request high-water distinct-state graph; retained totals and stage allocations include independent reusable scopes and are intentionally non-additive.",
+              "3 acquisition candidate(s) and 0 objective family/families retain proof debt."
+            ]
+          },
+          "allocations": {
+            "cleanRoute": {
+              "statesExpanded": 3334,
+              "retainedStates": 3334,
+              "wallTimeMs": 4002,
+              "transitionsGenerated": 17250,
+              "transitionsReused": 232,
+              "transitionGenerationMs": 45,
+              "bellmanMs": 2063,
+              "occupancyMs": 2
+            },
+            "fractureAcquisition": {
+              "statesExpanded": 1669,
+              "retainedStates": 1669,
+              "wallTimeMs": 3853,
+              "transitionsGenerated": 20073,
+              "transitionsReused": 657,
+              "transitionGenerationMs": 28,
+              "bellmanMs": 1007,
+              "occupancyMs": 1
+            },
+            "fractureDownstream": {
+              "statesExpanded": 4670,
+              "retainedStates": 4670,
+              "wallTimeMs": 6392,
+              "transitionsGenerated": 21497,
+              "transitionsReused": 244,
+              "transitionGenerationMs": 53,
+              "bellmanMs": 4237,
+              "occupancyMs": 3
+            },
+            "lowerBoundProbes": {
+              "statesExpanded": 1667,
+              "retainedStates": 1667,
+              "wallTimeMs": 2114,
+              "transitionsGenerated": 5758,
+              "transitionsReused": 5369,
+              "transitionGenerationMs": 14,
+              "bellmanMs": 126,
+              "occupancyMs": 1
+            },
+            "bellmanAndOccupancy": {
+              "bellmanMs": 7544,
+              "occupancyMs": 6
+            },
+            "methodFamilyComparison": {
+              "statesExpanded": 17528,
+              "retainedStates": 7528,
+              "wallTimeMs": 14194,
+              "transitionsGenerated": 47731,
+              "transitionsReused": 466,
+              "transitionGenerationMs": 166,
+              "bellmanMs": 0,
+              "occupancyMs": 0
+            },
+            "serializationAndPresentationReserve": {
+              "usedMs": 8,
+              "reservedMs": 1000
+            }
+          }
+        }
+      },
+      "open": {
+        "id": "family_open",
+        "kind": "OPEN",
+        "spec": {
+          "id": "family_open",
+          "kind": "OPEN",
+          "name": "Open Policy (All Modeled Mechanics)",
+          "description": "Unconstrained search across every legal and enabled modeled mechanic.",
+          "badge": "Open search",
+          "forcedAcquisitionType": "OPEN"
+        },
+        "status": "MORE_EXPENSIVE",
+        "evaluationSource": "INDEPENDENT_SOLVE",
+        "route": {
+          "actionId": "acquire_candidate_0_clean-base_0",
+          "name": "Start clean base",
+          "acquisitionCandidateId": "candidate_0",
+          "acquisitionMethodId": "clean-base_0",
+          "expectedTotalCostChaos": 4767.731263962971,
+          "lowerBoundChaos": 40.14397503191489,
+          "incumbentUpperBoundChaos": 4767.731263962971,
+          "optimalityGapChaos": 4727.587288931056,
+          "status": "RESOLVED",
+          "couldBeatResolvedIncumbent": false,
+          "metrics": {
+            "expectedChaosCost": 4767.731263962971,
+            "expectedPhysicalActions": 35645.51554742855,
+            "estimatedManualTimeMs": 14258206.21897142,
+            "objectiveScore": 4767.731263962971,
+            "effortConfidence": "DEFAULT_APPROXIMATE"
+          },
+          "acquisitionMetrics": {
+            "expectedChaosCost": 40,
+            "expectedPhysicalActions": 0,
+            "estimatedManualTimeMs": 0,
+            "objectiveScore": 40,
+            "effortConfidence": "DEFAULT_APPROXIMATE"
+          },
+          "downstreamMetrics": {
+            "expectedChaosCost": 4727.731263962971,
+            "expectedPhysicalActions": 35645.51554742855,
+            "estimatedManualTimeMs": 14258206.21897142,
+            "objectiveScore": 4727.731263438594,
+            "effortConfidence": "DEFAULT_APPROXIMATE"
+          }
+        },
+        "fullRouteL": 40.14397503191489,
+        "fullRouteU": 4767.731263962971,
+        "proof": {
+          "selectedPolicyStatus": "FULLY RESOLVED / PROPER / ABSORBING / COST-RECONCILED",
+          "proofLevel": "BEST FULLY RESOLVED POLICY FOUND",
+          "onPolicyReachableStates": 415,
+          "onPolicyTerminalStates": 15,
+          "onPolicyUnresolvedTransitions": 0,
+          "terminalAbsorptionProbability": 0.9999999980241998,
+          "proper": true,
+          "fullyResolved": true,
+          "bellmanConverged": true,
+          "occupancyConverged": true,
+          "costReconciled": true,
+          "reconciliationDifferenceChaos": 5.243555278866552e-7
+        },
+        "onPolicyActionIds": [
+          "alteration_orb",
+          "augmentation_orb",
+          "clean_base_initial",
+          "exalted_orb",
+          "regal_orb",
+          "scouring_orb",
+          "transmutation_orb"
+        ],
+        "expectedActionUsage": [
+          {
+            "actionId": "alteration_orb",
+            "actionName": "Orb of Alteration",
+            "expectedCount": 35043.578236178895,
+            "expectedCostChaos": 4681.822052353502
+          },
+          {
+            "actionId": "clean_base_initial",
+            "actionName": "Initial clean cluster jewel base",
+            "expectedCount": 1,
+            "expectedCostChaos": 40
+          },
+          {
+            "actionId": "augmentation_orb",
+            "actionName": "Orb of Augmentation",
+            "expectedCount": 529.4267566801163,
+            "expectedCostChaos": 20.864708480763387
+          },
+          {
+            "actionId": "exalted_orb",
+            "actionName": "Exalted Orb Slam",
+            "expectedCount": 11.632847748846748,
+            "expectedCostChaos": 13.610431866150691
+          },
+          {
+            "actionId": "scouring_orb",
+            "actionName": "Orb of Scouring",
+            "expectedCount": 19.625902273506394,
+            "expectedCostChaos": 10.580323915647316
+          },
+          {
+            "actionId": "regal_orb",
+            "actionName": "Regal Orb",
+            "expectedCount": 20.625902273557184,
+            "expectedCostChaos": 0.7503703247120104
+          },
+          {
+            "actionId": "transmutation_orb",
+            "actionName": "Orb of Transmutation",
+            "expectedCount": 20.62590227350724,
+            "expectedCostChaos": 0.10337702219481829
+          }
+        ],
+        "retainedStates": 1336,
+        "transitionDistributionsGenerated": 4247,
+        "budget": {
+          "maxStates": 5000,
+          "maxWallTimeMs": 6507,
+          "maxExpansionRounds": 3,
+          "elapsedMs": 2390
+        },
+        "policyEquivalenceFingerprint": "policy-9e41c4f9",
+        "policyEquivalenceEvidence": {
+          "version": "CANONICAL_POLICY_EQUIVALENCE_V1",
+          "physicalAcquisitionIdentity": "{\"state\":\"Large Cluster Jewel|Minions deal 10% increased Damage|84|8|normal|influenced=false|synthesised=false|acquisitionMenu=false|methodFamilyActionEvidence=\",\"kind\":\"CLEAN\",\"method\":\"clean-base\",\"synthesisTerminalSemantics\":\"CLEAN_BASE\"}",
+          "normalizedPolicyDecisionCount": 400,
+          "requiredActionEvidence": [
+            "alteration_orb",
+            "augmentation_orb",
+            "clean_base_initial",
+            "exalted_orb",
+            "regal_orb",
+            "scouring_orb",
+            "transmutation_orb"
+          ],
+          "recoveryDecisionCount": 152,
+          "terminalStateCount": 0,
+          "usageTolerance": 0.000001
+        },
+        "explanation": "This resolved eligible policy is dominated by the selected policy for the requested objective and its tie-breakers."
+      },
+      "conventional": {
+        "id": "family_conventional",
+        "kind": "CONVENTIONAL",
+        "spec": {
+          "id": "family_conventional",
+          "kind": "CONVENTIONAL",
+          "name": "Conventional Alt / Aug / Regal",
+          "description": "Clean-base rolling constrained to currency preparation, cleanup, promotion, and slams; Harvest and self-fracture are forbidden.",
+          "badge": "Alt + Regal",
+          "allowedActionIds": [
+            "transmutation_orb",
+            "alteration_orb",
+            "augmentation_orb",
+            "regal_orb",
+            "scouring_orb",
+            "annulment_orb",
+            "exalted_orb"
+          ],
+          "forbiddenActionIds": [
+            "fracturing_orb",
+            "harvest_reforge_life",
+            "harvest_reforge_attack",
+            "harvest_reforge_physical"
+          ],
+          "forcedAcquisitionType": "CLEAN"
+        },
+        "status": "MORE_EXPENSIVE",
+        "evaluationSource": "INDEPENDENT_SOLVE",
+        "route": {
+          "actionId": "method:family_conventional",
+          "name": "Start clean base",
+          "expectedTotalCostChaos": 2276.6407665828724,
+          "lowerBoundChaos": 40.14397503191489,
+          "incumbentUpperBoundChaos": 2276.6407665828724,
+          "optimalityGapChaos": 2236.4967915509574,
+          "status": "RESOLVED",
+          "couldBeatResolvedIncumbent": true,
+          "metrics": {
+            "expectedChaosCost": 2276.6407665828724,
+            "expectedPhysicalActions": 16142.004545840233,
+            "estimatedManualTimeMs": 6456801.81833598,
+            "objectiveScore": 2276.6407665828724,
+            "effortConfidence": "DEFAULT_APPROXIMATE"
+          },
+          "acquisitionMetrics": {
+            "expectedChaosCost": 40,
+            "expectedPhysicalActions": 0,
+            "estimatedManualTimeMs": 0,
+            "objectiveScore": 40,
+            "effortConfidence": "DEFAULT_APPROXIMATE"
+          },
+          "downstreamMetrics": {
+            "expectedChaosCost": 2236.6407665828724,
+            "expectedPhysicalActions": 16142.004545840233,
+            "estimatedManualTimeMs": 6456801.81833598,
+            "objectiveScore": 2236.640766559536,
+            "effortConfidence": "DEFAULT_APPROXIMATE"
+          },
+          "acquisitionCandidateId": "candidate_0",
+          "acquisitionMethodId": "clean-base_0"
+        },
+        "fullRouteL": 40.14397503191489,
+        "fullRouteU": 2276.6407665828724,
+        "proof": {
+          "selectedPolicyStatus": "FULLY RESOLVED / PROPER / ABSORBING / COST-RECONCILED",
+          "proofLevel": "BEST FULLY RESOLVED POLICY FOUND",
+          "onPolicyReachableStates": 1214,
+          "onPolicyTerminalStates": 15,
+          "onPolicyUnresolvedTransitions": 0,
+          "terminalAbsorptionProbability": 0.9999999999929781,
+          "proper": true,
+          "fullyResolved": true,
+          "bellmanConverged": true,
+          "occupancyConverged": true,
+          "costReconciled": true,
+          "reconciliationDifferenceChaos": 2.3367647372651845e-8
+        },
+        "onPolicyActionIds": [
+          "alteration_orb",
+          "annulment_orb",
+          "augmentation_orb",
+          "clean_base_initial",
+          "exalted_orb",
+          "regal_orb",
+          "scouring_orb",
+          "transmutation_orb"
+        ],
+        "expectedActionUsage": [
+          {
+            "actionId": "alteration_orb",
+            "actionName": "Orb of Alteration",
+            "expectedCount": 15635.418582148759,
+            "expectedCostChaos": 2088.8919225750574
+          },
+          {
+            "actionId": "annulment_orb",
+            "actionName": "Orb of Annulment",
+            "expectedCount": 8.46436680829586,
+            "expectedCostChaos": 98.6945169847297
+          },
+          {
+            "actionId": "clean_base_initial",
+            "actionName": "Initial clean cluster jewel base",
+            "expectedCount": 1,
+            "expectedCostChaos": 40
+          },
+          {
+            "actionId": "exalted_orb",
+            "actionName": "Exalted Orb Slam",
+            "expectedCount": 18.93696349868904,
+            "expectedCostChaos": 22.15624729346626
+          },
+          {
+            "actionId": "augmentation_orb",
+            "actionName": "Orb of Augmentation",
+            "expectedCount": 424.93607307920865,
+            "expectedCostChaos": 16.746730640051613
+          },
+          {
+            "actionId": "scouring_orb",
+            "actionName": "Orb of Scouring",
+            "expectedCount": 17.416186768408636,
+            "expectedCostChaos": 9.389066286849006
+          },
+          {
+            "actionId": "regal_orb",
+            "actionName": "Regal Orb",
+            "expectedCount": 18.416186768433217,
+            "expectedCostChaos": 0.6699808746356005
+          },
+          {
+            "actionId": "transmutation_orb",
+            "actionName": "Orb of Transmutation",
+            "expectedCount": 18.41618676840729,
+            "expectedCostChaos": 0.09230192808325734
+          }
+        ],
+        "retainedStates": 3334,
+        "transitionDistributionsGenerated": 7005,
+        "budget": {
+          "maxStates": 5000,
+          "maxWallTimeMs": 1781,
+          "maxExpansionRounds": 3,
+          "elapsedMs": 1698
+        },
+        "policyEquivalenceFingerprint": "policy-4aa41222",
+        "policyEquivalenceEvidence": {
+          "version": "CANONICAL_POLICY_EQUIVALENCE_V1",
+          "physicalAcquisitionIdentity": "{\"state\":\"Large Cluster Jewel|Minions deal 10% increased Damage|84|8|normal|influenced=false|synthesised=false|acquisitionMenu=false|methodFamilyActionEvidence=\",\"kind\":\"CLEAN\",\"method\":\"clean-base\",\"synthesisTerminalSemantics\":\"CLEAN_BASE\"}",
+          "normalizedPolicyDecisionCount": 1199,
+          "requiredActionEvidence": [
+            "alteration_orb",
+            "annulment_orb",
+            "augmentation_orb",
+            "clean_base_initial",
+            "exalted_orb",
+            "regal_orb",
+            "scouring_orb",
+            "transmutation_orb"
+          ],
+          "recoveryDecisionCount": 794,
+          "terminalStateCount": 0,
+          "usageTolerance": 0.000001
+        },
+        "explanation": "This resolved eligible policy is dominated by the selected policy for the requested objective and its tie-breakers."
+      },
+      "differenceChaos": -2491.0904973800984
+    },
+    {
+      "elapsedMs": 28200,
+      "request": {
+        "baseType": "Large Cluster Jewel",
+        "clusterType": "Minions deal 10% increased Damage",
+        "itemLevel": 84,
+        "passiveCount": 8,
+        "target": {
+          "requiredMods": [
+            {
+              "modId": "Primordial Bond"
+            },
+            {
+              "modId": "Renewal"
+            },
+            {
+              "modId": "Rotten Claws"
+            }
+          ],
+          "requiredRarity": "rare"
+        },
+        "prices": {
+          "currencyRates": {
+            "chaos": 1,
+            "divine": 213.5,
+            "fracturing": 298.6,
+            "annul": 11.66,
+            "exalt": 1.17,
+            "scour": 0.5391,
+            "alteration": 0.1336,
+            "transmutation": 0.005012,
+            "augmentation": 0.03941,
+            "regal": 0.03638,
+            "wildLifeforce": 0.02377,
+            "vividLifeforce": 0.08208,
+            "primalLifeforce": 0.04085
+          },
+          "cleanBaseCostChaos": 40,
+          "cleanBasePriceSource": "manual",
+          "cleanBasePriceProvenance": "Phase 3C frozen Primordial Bond + Renewal + Rotten Claws field fixture"
+        },
+        "expectedSaleValueChaos": 1708,
+        "objective": {
+          "kind": "CHEAPEST_CHAOS"
+        },
+        "searchBudget": {
+          "preset": "NORMAL",
+          "maxStates": 5000,
+          "maxWallTimeMs": 30000,
+          "maxExpansionRounds": 3
+        },
+        "searchIntent": "RECOMMEND",
+        "allowResearchFallbackPrices": true,
+        "compareMethodFamilies": true
+      },
+      "mechanicsSessionIdentity": "phase2j-4ae46f61:family_open",
+      "selectedRoute": {
+        "actionId": "method:family_fracture_Primordial Bond",
+        "name": "Self-fracture Primordial Bond",
+        "acquisitionCandidateId": "candidate_1",
+        "acquisitionMethodId": "self-fracture_executable",
+        "expectedTotalCostChaos": 1459.7923662160777,
+        "lowerBoundChaos": 340.41913,
+        "incumbentUpperBoundChaos": 1459.7923662160777,
+        "optimalityGapChaos": 1119.3732362160783,
+        "status": "RESOLVED",
+        "couldBeatResolvedIncumbent": true,
+        "metrics": {
+          "expectedChaosCost": 1459.7923662160777,
+          "expectedPhysicalActions": 740.8471930308776,
+          "estimatedManualTimeMs": 314538.8772123303,
+          "objectiveScore": 1459.7923662160777,
+          "effortConfidence": "DEFAULT_APPROXIMATE"
+        }
+      },
+      "selectedCostChaos": 1459.7923662160777,
+      "selectedPolicyRules": 572,
+      "selectedPolicyFingerprint": "policy-9e41c4f9",
+      "recommendationStatus": "PROVISIONAL_RESOLVED",
+      "proof": {
+        "selectedPolicyStatus": "FULLY RESOLVED / PROPER / ABSORBING / COST-RECONCILED",
+        "proofLevel": "BEST FULLY RESOLVED POLICY FOUND",
+        "globalOptimality": "NOT YET PROVEN",
+        "modeledActionOptimalityProven": false,
+        "unresolvedCompetitiveCandidates": 1406,
+        "unresolvedCompetitorsMayBeCheaper": true
+      },
+      "risk": {
+        "onPolicyReachableStates": 588,
+        "onPolicyTerminalStates": 16,
+        "terminalAbsorptionProbability": 0.9999999990014549,
+        "selectedPolicyProper": true,
+        "unresolvedOnPolicyProbability": 0
+      },
+      "solver": {
+        "bellmanIterations": 1005,
+        "bellmanConverged": true,
+        "occupancyIterations": 4,
+        "occupancyConverged": true,
+        "reconciliationDifferenceChaos": 6.821210263296962e-13,
+        "costReconciled": true
+      },
+      "search": {
+        "intent": "RECOMMEND",
+        "statesExpanded": 1336,
+        "cumulativeExpansionWork": 1336,
+        "elapsedMs": 2390,
+        "expansionRounds": 2,
+        "maxStates": 5000,
+        "maxWallTimeMs": 30000,
+        "maxExpansionRounds": 3,
+        "prioritizedCompetitiveStateKeys": 5260,
+        "stateBudgetExhausted": false,
+        "wallTimeBudgetExhausted": false,
+        "roundBudgetExhausted": false,
+        "budgetExhausted": false,
+        "returnedAtBudget": false,
+        "timeToFirstCompletedRoundMs": 1342,
+        "timeToFirstCertifiedPolicyMs": 1343,
+        "timeToFirstUsefulRecommendationMs": 1343,
+        "expansionMode": "PERSISTENT_EXTENDED",
+        "repeatedStatesExpanded": 0,
+        "seedStatesExpanded": 1,
+        "newStatesByRound": [
+          1335,
+          0
+        ],
+        "retainedStatesReusedByRound": [
+          1,
+          1336
+        ],
+        "transitionDistributionsGenerated": 4247,
+        "transitionDistributionsGeneratedByRound": [
+          4247,
+          0
+        ],
+        "transitionDistributionsReused": 12,
+        "transitionDistributionsReusedByRound": [
+          12,
+          0
+        ],
+        "previouslyExpandedNodesRevisited": 1,
+        "previouslyExpandedNodesRevisitedByRound": [
+          1,
+          0
+        ],
+        "acquisitionFeasibilityStatesExpanded": 0,
+        "interruptedStatesExpanded": 0,
+        "optimisticLowerBoundIterations": 19,
+        "optimisticLowerBoundConverged": true,
+        "optimisticLowerBoundMethod": "KNOWN_PARTIAL_GRAPH_WITH_ZERO_COST_UNKNOWN_SUCCESSORS",
+        "minimumFeasibleRarity": {
+          "rarity": "rare",
+          "requiredPrefixes": 2,
+          "requiredSuffixes": 1,
+          "complete": true,
+          "reason": "2 Prefix target(s) + 1 Suffix target(s) fit rare capacity (2P/2S)."
+        },
+        "acquisitionFeasibility": {
+          "attemptedCandidates": 0,
+          "certifiedCandidates": 0,
+          "distinctPhysicalStates": 0,
+          "fairStateBudgetPerCandidate": 0,
+          "attempts": []
+        },
+        "deepenProgress": {
+          "before": {
+            "canonicalStates": 1336,
+            "acquisitionFeasibleUpperBounds": 0,
+            "unresolvedAcquisitionCandidates": 0,
+            "candidatesDominatedByBound": 0
+          },
+          "after": {
+            "canonicalStates": 1336,
+            "acquisitionFeasibleUpperBounds": 0,
+            "unresolvedAcquisitionCandidates": 0,
+            "candidatesDominatedByBound": 0
+          },
+          "newCanonicalStates": 0,
+          "newAcquisitionFeasibleUpperBounds": 0,
+          "newlyDominatedByBound": 0,
+          "meaningfulProgress": false,
+          "stoppedEarlyNoMeaningfulProgress": false
+        },
+        "incumbentHistory": [
+          {
+            "round": 1,
+            "upperBoundChaos": 53.49605093026165,
+            "statesExpanded": 1336,
+            "elapsedMs": 1343,
+            "phase": "FIRST_CERTIFIED"
+          },
+          {
+            "round": 2,
+            "upperBoundChaos": 53.49605093026165,
+            "statesExpanded": 1336,
+            "elapsedMs": 2390,
+            "phase": "REFINEMENT"
+          }
+        ],
+        "refinementStopReason": "FIRST_USEFUL_RETURNED",
+        "resumedFromPriorRequest": false,
+        "retainedStatesFromPriorRequest": 0,
+        "retainedTransitionDistributionsFromPriorRequest": 0,
+        "requestedWallTimeMs": 30000,
+        "engineDeadlineMs": 29000,
+        "hostGuardDeadlineMs": 30250,
+        "shutdownReserveMs": 1000,
+        "hostGuardTriggered": false,
+        "timeToFirstUsefulExecutableRecommendationMs": 1343,
+        "stageTimingMs": {
+          "seedResultMs": 1,
+          "transitionGenerationMs": 8,
+          "graphAggregationAndSetupMs": 117,
+          "bellmanMs": 2174,
+          "candidateClassificationAndTrustMs": 71,
+          "absorptionMs": 7,
+          "occupancyMs": 1,
+          "competitiveFrontierCollectionMs": 4,
+          "resultAssemblyMs": 3,
+          "repeatedRoundWorkMs": 1341,
+          "unattributedOrInterruptedMs": 4,
+          "serializationMs": 7
+        },
+        "sessionReuse": {
+          "status": "RESUMED",
+          "identityHash": "phase2j-4ae46f61",
+          "retainedStates": 1336,
+          "retainedTransitionDistributions": 4247,
+          "scope": "FRACTURE_DOWNSTREAM"
+        },
+        "totalElapsedMs": 28193,
+        "workScopes": {
+          "portfolioTotalStatesExpanded": 15001,
+          "portfolioRetainedStates": 16339,
+          "selectedPolicyGraphStates": 1336,
+          "acquisitionSynthesisStates": 1667,
+          "methodFamilyStates": 4195,
+          "proofBoundStates": 0
+        },
+        "harvestActionScope": {
+          "mode": "TARGET_INFERRED",
+          "tags": [
+            "attack",
+            "damage",
+            "life",
+            "minion",
+            "physical"
+          ],
+          "rawInferredTags": [
+            "attack",
+            "damage",
+            "life",
+            "minion",
+            "physical"
+          ],
+          "enabledCrafts": [
+            {
+              "actionId": "harvest_reforge_life",
+              "actionName": "Harvest Reforge Life",
+              "tag": "life"
+            },
+            {
+              "actionId": "harvest_reforge_attack",
+              "actionName": "Harvest Reforge Attack",
+              "tag": "attack"
+            },
+            {
+              "actionId": "harvest_reforge_physical",
+              "actionName": "Harvest Reforge Physical",
+              "tag": "physical"
+            }
+          ]
+        },
+        "requestStopReason": "WALL_TIME",
+        "secondaryStopReasons": [
+          "STATE_CAP",
+          "NO_PRODUCTIVE_PROOF_WORK"
+        ],
+        "requestBudget": {
+          "semantics": "UP_TO_CAPS",
+          "requested": {
+            "preset": "NORMAL",
+            "maxStates": 5000,
+            "maxWallTimeMs": 30000,
+            "maxExpansionRounds": 3
+          },
+          "used": {
+            "statesExpanded": 3334,
+            "retainedStates": 20534,
+            "elapsedMs": 28193,
+            "expansionRounds": 2,
+            "transitionsGenerated": 46690,
+            "transitionsReused": 230
+          },
+          "stop": {
+            "primary": "WALL_TIME",
+            "secondary": [
+              "STATE_CAP",
+              "NO_PRODUCTIVE_PROOF_WORK"
+            ],
+            "evidence": [
+              "requested up to 5,000 states / 30000ms / 3 rounds",
+              "used 3,334 expanded; 20,534 retained; 28193ms elapsed",
+              "selected graph limits: state=false; wall=false; round=false",
+              "Expanded states is the request high-water distinct-state graph; retained totals and stage allocations include independent reusable scopes and are intentionally non-additive.",
+              "3 acquisition candidate(s) and 0 objective family/families retain proof debt."
+            ]
+          },
+          "allocations": {
+            "cleanRoute": {
+              "statesExpanded": 0,
+              "retainedStates": 3334,
+              "wallTimeMs": 4004,
+              "transitionsGenerated": 6664,
+              "transitionsReused": 0,
+              "transitionGenerationMs": 0,
+              "bellmanMs": 2744,
+              "occupancyMs": 1
+            },
+            "fractureAcquisition": {
+              "statesExpanded": 1667,
+              "retainedStates": 6669,
+              "wallTimeMs": 5861,
+              "transitionsGenerated": 15030,
+              "transitionsReused": 201,
+              "transitionGenerationMs": 19,
+              "bellmanMs": 4551,
+              "occupancyMs": 1
+            },
+            "fractureDownstream": {
+              "statesExpanded": 1667,
+              "retainedStates": 6337,
+              "wallTimeMs": 7483,
+              "transitionsGenerated": 12419,
+              "transitionsReused": 17,
+              "transitionGenerationMs": 11,
+              "bellmanMs": 4896,
+              "occupancyMs": 2
+            },
+            "lowerBoundProbes": {
+              "statesExpanded": 0,
+              "retainedStates": 0,
+              "wallTimeMs": 0,
+              "transitionsGenerated": 0,
+              "transitionsReused": 0,
+              "transitionGenerationMs": 0,
+              "bellmanMs": 0,
+              "occupancyMs": 0
+            },
+            "bellmanAndOccupancy": {
+              "bellmanMs": 11621,
+              "occupancyMs": 4
+            },
+            "methodFamilyComparison": {
+              "statesExpanded": 4998,
+              "retainedStates": 5861,
+              "wallTimeMs": 14211,
+              "transitionsGenerated": 14994,
+              "transitionsReused": 0,
+              "transitionGenerationMs": 31,
+              "bellmanMs": 0,
+              "occupancyMs": 0
+            },
+            "serializationAndPresentationReserve": {
+              "usedMs": 7,
+              "reservedMs": 1000
+            }
+          }
+        }
+      },
+      "open": {
+        "id": "family_open",
+        "kind": "OPEN",
+        "spec": {
+          "id": "family_open",
+          "kind": "OPEN",
+          "name": "Open Policy (All Modeled Mechanics)",
+          "description": "Unconstrained search across every legal and enabled modeled mechanic.",
+          "badge": "Open search",
+          "forcedAcquisitionType": "OPEN"
+        },
+        "status": "MORE_EXPENSIVE",
+        "evaluationSource": "INDEPENDENT_SOLVE",
+        "route": {
+          "actionId": "acquire_candidate_0_clean-base_0",
+          "name": "Start clean base",
+          "acquisitionCandidateId": "candidate_0",
+          "acquisitionMethodId": "clean-base_0",
+          "expectedTotalCostChaos": 4767.731263962971,
+          "lowerBoundChaos": 40.14397503191489,
+          "incumbentUpperBoundChaos": 4767.731263962971,
+          "optimalityGapChaos": 4727.587288931056,
+          "status": "RESOLVED",
+          "couldBeatResolvedIncumbent": false,
+          "metrics": {
+            "expectedChaosCost": 4767.731263962971,
+            "expectedPhysicalActions": 35645.51554742855,
+            "estimatedManualTimeMs": 14258206.21897142,
+            "objectiveScore": 4767.731263962971,
+            "effortConfidence": "DEFAULT_APPROXIMATE"
+          },
+          "acquisitionMetrics": {
+            "expectedChaosCost": 40,
+            "expectedPhysicalActions": 0,
+            "estimatedManualTimeMs": 0,
+            "objectiveScore": 40,
+            "effortConfidence": "DEFAULT_APPROXIMATE"
+          },
+          "downstreamMetrics": {
+            "expectedChaosCost": 4727.731263962971,
+            "expectedPhysicalActions": 35645.51554742855,
+            "estimatedManualTimeMs": 14258206.21897142,
+            "objectiveScore": 4727.731263438594,
+            "effortConfidence": "DEFAULT_APPROXIMATE"
+          }
+        },
+        "fullRouteL": 40.14397503191489,
+        "fullRouteU": 4767.731263962971,
+        "proof": {
+          "selectedPolicyStatus": "FULLY RESOLVED / PROPER / ABSORBING / COST-RECONCILED",
+          "proofLevel": "BEST FULLY RESOLVED POLICY FOUND",
+          "onPolicyReachableStates": 415,
+          "onPolicyTerminalStates": 15,
+          "onPolicyUnresolvedTransitions": 0,
+          "terminalAbsorptionProbability": 0.9999999980241998,
+          "proper": true,
+          "fullyResolved": true,
+          "bellmanConverged": true,
+          "occupancyConverged": true,
+          "costReconciled": true,
+          "reconciliationDifferenceChaos": 5.243555278866552e-7
+        },
+        "onPolicyActionIds": [
+          "alteration_orb",
+          "augmentation_orb",
+          "clean_base_initial",
+          "exalted_orb",
+          "regal_orb",
+          "scouring_orb",
+          "transmutation_orb"
+        ],
+        "expectedActionUsage": [
+          {
+            "actionId": "alteration_orb",
+            "actionName": "Orb of Alteration",
+            "expectedCount": 35043.578236178895,
+            "expectedCostChaos": 4681.822052353502
+          },
+          {
+            "actionId": "clean_base_initial",
+            "actionName": "Initial clean cluster jewel base",
+            "expectedCount": 1,
+            "expectedCostChaos": 40
+          },
+          {
+            "actionId": "augmentation_orb",
+            "actionName": "Orb of Augmentation",
+            "expectedCount": 529.4267566801163,
+            "expectedCostChaos": 20.864708480763387
+          },
+          {
+            "actionId": "exalted_orb",
+            "actionName": "Exalted Orb Slam",
+            "expectedCount": 11.632847748846748,
+            "expectedCostChaos": 13.610431866150691
+          },
+          {
+            "actionId": "scouring_orb",
+            "actionName": "Orb of Scouring",
+            "expectedCount": 19.625902273506394,
+            "expectedCostChaos": 10.580323915647316
+          },
+          {
+            "actionId": "regal_orb",
+            "actionName": "Regal Orb",
+            "expectedCount": 20.625902273557184,
+            "expectedCostChaos": 0.7503703247120104
+          },
+          {
+            "actionId": "transmutation_orb",
+            "actionName": "Orb of Transmutation",
+            "expectedCount": 20.62590227350724,
+            "expectedCostChaos": 0.10337702219481829
+          }
+        ],
+        "retainedStates": 1336,
+        "transitionDistributionsGenerated": 4247,
+        "budget": {
+          "maxStates": 5000,
+          "maxWallTimeMs": 6507,
+          "maxExpansionRounds": 3,
+          "elapsedMs": 2390
+        },
+        "policyEquivalenceFingerprint": "policy-9e41c4f9",
+        "policyEquivalenceEvidence": {
+          "version": "CANONICAL_POLICY_EQUIVALENCE_V1",
+          "physicalAcquisitionIdentity": "{\"state\":\"Large Cluster Jewel|Minions deal 10% increased Damage|84|8|normal|influenced=false|synthesised=false|acquisitionMenu=false|methodFamilyActionEvidence=\",\"kind\":\"CLEAN\",\"method\":\"clean-base\",\"synthesisTerminalSemantics\":\"CLEAN_BASE\"}",
+          "normalizedPolicyDecisionCount": 400,
+          "requiredActionEvidence": [
+            "alteration_orb",
+            "augmentation_orb",
+            "clean_base_initial",
+            "exalted_orb",
+            "regal_orb",
+            "scouring_orb",
+            "transmutation_orb"
+          ],
+          "recoveryDecisionCount": 152,
+          "terminalStateCount": 0,
+          "usageTolerance": 0.000001
+        },
+        "explanation": "This resolved eligible policy is dominated by the selected policy for the requested objective and its tie-breakers."
+      },
+      "conventional": {
+        "id": "family_conventional",
+        "kind": "CONVENTIONAL",
+        "spec": {
+          "id": "family_conventional",
+          "kind": "CONVENTIONAL",
+          "name": "Conventional Alt / Aug / Regal",
+          "description": "Clean-base rolling constrained to currency preparation, cleanup, promotion, and slams; Harvest and self-fracture are forbidden.",
+          "badge": "Alt + Regal",
+          "allowedActionIds": [
+            "transmutation_orb",
+            "alteration_orb",
+            "augmentation_orb",
+            "regal_orb",
+            "scouring_orb",
+            "annulment_orb",
+            "exalted_orb"
+          ],
+          "forbiddenActionIds": [
+            "fracturing_orb",
+            "harvest_reforge_life",
+            "harvest_reforge_attack",
+            "harvest_reforge_physical"
+          ],
+          "forcedAcquisitionType": "CLEAN"
+        },
+        "status": "MORE_EXPENSIVE",
+        "evaluationSource": "INDEPENDENT_SOLVE",
+        "route": {
+          "actionId": "method:family_conventional",
+          "name": "Start clean base",
+          "expectedTotalCostChaos": 2276.6407665828724,
+          "lowerBoundChaos": 40.14397503191489,
+          "incumbentUpperBoundChaos": 2276.6407665828724,
+          "optimalityGapChaos": 2236.4967915509574,
+          "status": "RESOLVED",
+          "couldBeatResolvedIncumbent": true,
+          "metrics": {
+            "expectedChaosCost": 2276.6407665828724,
+            "expectedPhysicalActions": 16142.004545840233,
+            "estimatedManualTimeMs": 6456801.81833598,
+            "objectiveScore": 2276.6407665828724,
+            "effortConfidence": "DEFAULT_APPROXIMATE"
+          },
+          "acquisitionMetrics": {
+            "expectedChaosCost": 40,
+            "expectedPhysicalActions": 0,
+            "estimatedManualTimeMs": 0,
+            "objectiveScore": 40,
+            "effortConfidence": "DEFAULT_APPROXIMATE"
+          },
+          "downstreamMetrics": {
+            "expectedChaosCost": 2236.6407665828724,
+            "expectedPhysicalActions": 16142.004545840233,
+            "estimatedManualTimeMs": 6456801.81833598,
+            "objectiveScore": 2236.640766559536,
+            "effortConfidence": "DEFAULT_APPROXIMATE"
+          },
+          "acquisitionCandidateId": "candidate_0",
+          "acquisitionMethodId": "clean-base_0"
+        },
+        "fullRouteL": 40.14397503191489,
+        "fullRouteU": 2276.6407665828724,
+        "proof": {
+          "selectedPolicyStatus": "FULLY RESOLVED / PROPER / ABSORBING / COST-RECONCILED",
+          "proofLevel": "BEST FULLY RESOLVED POLICY FOUND",
+          "onPolicyReachableStates": 1214,
+          "onPolicyTerminalStates": 15,
+          "onPolicyUnresolvedTransitions": 0,
+          "terminalAbsorptionProbability": 0.9999999999929781,
+          "proper": true,
+          "fullyResolved": true,
+          "bellmanConverged": true,
+          "occupancyConverged": true,
+          "costReconciled": true,
+          "reconciliationDifferenceChaos": 2.3367647372651845e-8
+        },
+        "onPolicyActionIds": [
+          "alteration_orb",
+          "annulment_orb",
+          "augmentation_orb",
+          "clean_base_initial",
+          "exalted_orb",
+          "regal_orb",
+          "scouring_orb",
+          "transmutation_orb"
+        ],
+        "expectedActionUsage": [
+          {
+            "actionId": "alteration_orb",
+            "actionName": "Orb of Alteration",
+            "expectedCount": 15635.418582148759,
+            "expectedCostChaos": 2088.8919225750574
+          },
+          {
+            "actionId": "annulment_orb",
+            "actionName": "Orb of Annulment",
+            "expectedCount": 8.46436680829586,
+            "expectedCostChaos": 98.6945169847297
+          },
+          {
+            "actionId": "clean_base_initial",
+            "actionName": "Initial clean cluster jewel base",
+            "expectedCount": 1,
+            "expectedCostChaos": 40
+          },
+          {
+            "actionId": "exalted_orb",
+            "actionName": "Exalted Orb Slam",
+            "expectedCount": 18.93696349868904,
+            "expectedCostChaos": 22.15624729346626
+          },
+          {
+            "actionId": "augmentation_orb",
+            "actionName": "Orb of Augmentation",
+            "expectedCount": 424.93607307920865,
+            "expectedCostChaos": 16.746730640051613
+          },
+          {
+            "actionId": "scouring_orb",
+            "actionName": "Orb of Scouring",
+            "expectedCount": 17.416186768408636,
+            "expectedCostChaos": 9.389066286849006
+          },
+          {
+            "actionId": "regal_orb",
+            "actionName": "Regal Orb",
+            "expectedCount": 18.416186768433217,
+            "expectedCostChaos": 0.6699808746356005
+          },
+          {
+            "actionId": "transmutation_orb",
+            "actionName": "Orb of Transmutation",
+            "expectedCount": 18.41618676840729,
+            "expectedCostChaos": 0.09230192808325734
+          }
+        ],
+        "retainedStates": 3334,
+        "transitionDistributionsGenerated": 7005,
+        "budget": {
+          "maxStates": 5000,
+          "maxWallTimeMs": 920,
+          "maxExpansionRounds": 3,
+          "elapsedMs": 1786
+        },
+        "policyEquivalenceFingerprint": "policy-4aa41222",
+        "policyEquivalenceEvidence": {
+          "version": "CANONICAL_POLICY_EQUIVALENCE_V1",
+          "physicalAcquisitionIdentity": "{\"state\":\"Large Cluster Jewel|Minions deal 10% increased Damage|84|8|normal|influenced=false|synthesised=false|acquisitionMenu=false|methodFamilyActionEvidence=\",\"kind\":\"CLEAN\",\"method\":\"clean-base\",\"synthesisTerminalSemantics\":\"CLEAN_BASE\"}",
+          "normalizedPolicyDecisionCount": 1199,
+          "requiredActionEvidence": [
+            "alteration_orb",
+            "annulment_orb",
+            "augmentation_orb",
+            "clean_base_initial",
+            "exalted_orb",
+            "regal_orb",
+            "scouring_orb",
+            "transmutation_orb"
+          ],
+          "recoveryDecisionCount": 794,
+          "terminalStateCount": 0,
+          "usageTolerance": 0.000001
+        },
+        "explanation": "This resolved eligible policy is dominated by the selected policy for the requested objective and its tie-breakers."
+      },
+      "differenceChaos": -2491.0904973800984
+    },
+    {
+      "elapsedMs": 28189,
+      "request": {
+        "baseType": "Large Cluster Jewel",
+        "clusterType": "Minions deal 10% increased Damage",
+        "itemLevel": 84,
+        "passiveCount": 8,
+        "target": {
+          "requiredMods": [
+            {
+              "modId": "Primordial Bond"
+            },
+            {
+              "modId": "Renewal"
+            },
+            {
+              "modId": "Rotten Claws"
+            }
+          ],
+          "requiredRarity": "rare"
+        },
+        "prices": {
+          "currencyRates": {
+            "chaos": 1,
+            "divine": 213.5,
+            "fracturing": 298.6,
+            "annul": 11.66,
+            "exalt": 1.17,
+            "scour": 0.5391,
+            "alteration": 0.1336,
+            "transmutation": 0.005012,
+            "augmentation": 0.03941,
+            "regal": 0.03638,
+            "wildLifeforce": 0.02377,
+            "vividLifeforce": 0.08208,
+            "primalLifeforce": 0.04085
+          },
+          "cleanBaseCostChaos": 40,
+          "cleanBasePriceSource": "manual",
+          "cleanBasePriceProvenance": "Phase 3C frozen Primordial Bond + Renewal + Rotten Claws field fixture"
+        },
+        "expectedSaleValueChaos": 1708,
+        "objective": {
+          "kind": "CHEAPEST_CHAOS"
+        },
+        "searchBudget": {
+          "preset": "NORMAL",
+          "maxStates": 5000,
+          "maxWallTimeMs": 30000,
+          "maxExpansionRounds": 3
+        },
+        "searchIntent": "RECOMMEND",
+        "allowResearchFallbackPrices": true,
+        "compareMethodFamilies": true
+      },
+      "mechanicsSessionIdentity": "phase2j-4ae46f61:family_open",
+      "selectedRoute": {
+        "actionId": "method:family_fracture_Primordial Bond",
+        "name": "Self-fracture Primordial Bond",
+        "acquisitionCandidateId": "candidate_1",
+        "acquisitionMethodId": "self-fracture_executable",
+        "expectedTotalCostChaos": 1459.7923662160777,
+        "lowerBoundChaos": 340.41913,
+        "incumbentUpperBoundChaos": 1459.7923662160777,
+        "optimalityGapChaos": 1119.3732362160783,
+        "status": "RESOLVED",
+        "couldBeatResolvedIncumbent": true,
+        "metrics": {
+          "expectedChaosCost": 1459.7923662160777,
+          "expectedPhysicalActions": 740.8471930308776,
+          "estimatedManualTimeMs": 314538.8772123303,
+          "objectiveScore": 1459.7923662160777,
+          "effortConfidence": "DEFAULT_APPROXIMATE"
+        }
+      },
+      "selectedCostChaos": 1459.7923662160777,
+      "selectedPolicyRules": 572,
+      "selectedPolicyFingerprint": "policy-9e41c4f9",
+      "recommendationStatus": "PROVISIONAL_RESOLVED",
+      "proof": {
+        "selectedPolicyStatus": "FULLY RESOLVED / PROPER / ABSORBING / COST-RECONCILED",
+        "proofLevel": "BEST FULLY RESOLVED POLICY FOUND",
+        "globalOptimality": "NOT YET PROVEN",
+        "modeledActionOptimalityProven": false,
+        "unresolvedCompetitiveCandidates": 1406,
+        "unresolvedCompetitorsMayBeCheaper": true
+      },
+      "risk": {
+        "onPolicyReachableStates": 588,
+        "onPolicyTerminalStates": 16,
+        "terminalAbsorptionProbability": 0.9999999990014549,
+        "selectedPolicyProper": true,
+        "unresolvedOnPolicyProbability": 0
+      },
+      "solver": {
+        "bellmanIterations": 1005,
+        "bellmanConverged": true,
+        "occupancyIterations": 4,
+        "occupancyConverged": true,
+        "reconciliationDifferenceChaos": 6.821210263296962e-13,
+        "costReconciled": true
+      },
+      "search": {
+        "intent": "RECOMMEND",
+        "statesExpanded": 1336,
+        "cumulativeExpansionWork": 0,
+        "elapsedMs": 2213,
+        "expansionRounds": 1,
+        "maxStates": 5000,
+        "maxWallTimeMs": 30000,
+        "maxExpansionRounds": 3,
+        "prioritizedCompetitiveStateKeys": 5260,
+        "stateBudgetExhausted": false,
+        "wallTimeBudgetExhausted": false,
+        "roundBudgetExhausted": true,
+        "budgetExhausted": true,
+        "returnedAtBudget": false,
+        "timeToFirstCompletedRoundMs": 2213,
+        "timeToFirstCertifiedPolicyMs": 2213,
+        "timeToFirstUsefulRecommendationMs": 2213,
+        "expansionMode": "PERSISTENT_EXTENDED",
+        "repeatedStatesExpanded": 0,
+        "seedStatesExpanded": 0,
+        "newStatesByRound": [
+          0
+        ],
+        "retainedStatesReusedByRound": [
+          1336
+        ],
+        "transitionDistributionsGenerated": 0,
+        "transitionDistributionsGeneratedByRound": [
+          0
+        ],
+        "transitionDistributionsReused": 0,
+        "transitionDistributionsReusedByRound": [
+          0
+        ],
+        "previouslyExpandedNodesRevisited": 0,
+        "previouslyExpandedNodesRevisitedByRound": [
+          0
+        ],
+        "acquisitionFeasibilityStatesExpanded": 0,
+        "interruptedStatesExpanded": 0,
+        "optimisticLowerBoundIterations": 19,
+        "optimisticLowerBoundConverged": true,
+        "optimisticLowerBoundMethod": "KNOWN_PARTIAL_GRAPH_WITH_ZERO_COST_UNKNOWN_SUCCESSORS",
+        "minimumFeasibleRarity": {
+          "rarity": "rare",
+          "requiredPrefixes": 2,
+          "requiredSuffixes": 1,
+          "complete": true,
+          "reason": "2 Prefix target(s) + 1 Suffix target(s) fit rare capacity (2P/2S)."
+        },
+        "acquisitionFeasibility": {
+          "attemptedCandidates": 0,
+          "certifiedCandidates": 0,
+          "distinctPhysicalStates": 0,
+          "fairStateBudgetPerCandidate": 0,
+          "attempts": []
+        },
+        "deepenProgress": {
+          "before": {
+            "canonicalStates": 1336,
+            "acquisitionFeasibleUpperBounds": 0,
+            "unresolvedAcquisitionCandidates": 0,
+            "candidatesDominatedByBound": 0
+          },
+          "after": {
+            "canonicalStates": 1336,
+            "acquisitionFeasibleUpperBounds": 0,
+            "unresolvedAcquisitionCandidates": 0,
+            "candidatesDominatedByBound": 0
+          },
+          "newCanonicalStates": 0,
+          "newAcquisitionFeasibleUpperBounds": 0,
+          "newlyDominatedByBound": 0,
+          "meaningfulProgress": false,
+          "stoppedEarlyNoMeaningfulProgress": false
+        },
+        "incumbentHistory": [
+          {
+            "round": 1,
+            "upperBoundChaos": 53.49605093026165,
+            "statesExpanded": 1336,
+            "elapsedMs": 1343,
+            "phase": "FIRST_CERTIFIED"
+          },
+          {
+            "round": 2,
+            "upperBoundChaos": 53.49605093026165,
+            "statesExpanded": 1336,
+            "elapsedMs": 2390,
+            "phase": "REFINEMENT"
+          },
+          {
+            "round": 3,
+            "upperBoundChaos": 53.49605093026165,
+            "statesExpanded": 1336,
+            "elapsedMs": 2213,
+            "phase": "REFINEMENT"
+          }
+        ],
+        "refinementStopReason": "ROUND_BUDGET",
+        "resumedFromPriorRequest": true,
+        "retainedStatesFromPriorRequest": 1336,
+        "retainedTransitionDistributionsFromPriorRequest": 4247,
+        "requestedWallTimeMs": 30000,
+        "engineDeadlineMs": 29000,
+        "hostGuardDeadlineMs": 30250,
+        "shutdownReserveMs": 1000,
+        "hostGuardTriggered": false,
+        "timeToFirstUsefulExecutableRecommendationMs": 2213,
+        "stageTimingMs": {
+          "seedResultMs": 1099,
+          "transitionGenerationMs": 0,
+          "graphAggregationAndSetupMs": 13,
+          "bellmanMs": 2089,
+          "candidateClassificationAndTrustMs": 100,
+          "absorptionMs": 5,
+          "occupancyMs": 1,
+          "competitiveFrontierCollectionMs": 0,
+          "resultAssemblyMs": 2,
+          "repeatedRoundWorkMs": 0,
+          "unattributedOrInterruptedMs": 0,
+          "serializationMs": 6
+        },
+        "sessionReuse": {
+          "status": "RESUMED",
+          "identityHash": "phase2j-4ae46f61",
+          "retainedStates": 1336,
+          "retainedTransitionDistributions": 4247,
+          "scope": "FRACTURE_DOWNSTREAM"
+        },
+        "totalElapsedMs": 28182,
+        "workScopes": {
+          "portfolioTotalStatesExpanded": 12055,
+          "portfolioRetainedStates": 16725,
+          "selectedPolicyGraphStates": 1336,
+          "acquisitionSynthesisStates": 1667,
+          "methodFamilyStates": 4195,
+          "proofBoundStates": 0
+        },
+        "harvestActionScope": {
+          "mode": "TARGET_INFERRED",
+          "tags": [
+            "attack",
+            "damage",
+            "life",
+            "minion",
+            "physical"
+          ],
+          "rawInferredTags": [
+            "attack",
+            "damage",
+            "life",
+            "minion",
+            "physical"
+          ],
+          "enabledCrafts": [
+            {
+              "actionId": "harvest_reforge_life",
+              "actionName": "Harvest Reforge Life",
+              "tag": "life"
+            },
+            {
+              "actionId": "harvest_reforge_attack",
+              "actionName": "Harvest Reforge Attack",
+              "tag": "attack"
+            },
+            {
+              "actionId": "harvest_reforge_physical",
+              "actionName": "Harvest Reforge Physical",
+              "tag": "physical"
+            }
+          ]
+        },
+        "requestStopReason": "WALL_TIME",
+        "secondaryStopReasons": [
+          "STATE_CAP",
+          "ROUND_CAP",
+          "NO_PRODUCTIVE_PROOF_WORK"
+        ],
+        "requestBudget": {
+          "semantics": "UP_TO_CAPS",
+          "requested": {
+            "preset": "NORMAL",
+            "maxStates": 5000,
+            "maxWallTimeMs": 30000,
+            "maxExpansionRounds": 3
+          },
+          "used": {
+            "statesExpanded": 3720,
+            "retainedStates": 20920,
+            "elapsedMs": 28182,
+            "expansionRounds": 1,
+            "transitionsGenerated": 12732,
+            "transitionsReused": 3
+          },
+          "stop": {
+            "primary": "WALL_TIME",
+            "secondary": [
+              "STATE_CAP",
+              "ROUND_CAP",
+              "NO_PRODUCTIVE_PROOF_WORK"
+            ],
+            "evidence": [
+              "requested up to 5,000 states / 30000ms / 3 rounds",
+              "used 3,720 expanded; 20,920 retained; 28182ms elapsed",
+              "selected graph limits: state=false; wall=false; round=true",
+              "Expanded states is the request high-water distinct-state graph; retained totals and stage allocations include independent reusable scopes and are intentionally non-additive.",
+              "3 acquisition candidate(s) and 0 objective family/families retain proof debt."
+            ]
+          },
+          "allocations": {
+            "cleanRoute": {
+              "statesExpanded": 0,
+              "retainedStates": 3334,
+              "wallTimeMs": 4000,
+              "transitionsGenerated": 6573,
+              "transitionsReused": 3,
+              "transitionGenerationMs": 0,
+              "bellmanMs": 2318,
+              "occupancyMs": 1
+            },
+            "fractureAcquisition": {
+              "statesExpanded": 0,
+              "retainedStates": 8335,
+              "wallTimeMs": 6674,
+              "transitionsGenerated": 5001,
+              "transitionsReused": 0,
+              "transitionGenerationMs": 0,
+              "bellmanMs": 5600,
+              "occupancyMs": 0
+            },
+            "fractureDownstream": {
+              "statesExpanded": 0,
+              "retainedStates": 6337,
+              "wallTimeMs": 6531,
+              "transitionsGenerated": 6573,
+              "transitionsReused": 3,
+              "transitionGenerationMs": 0,
+              "bellmanMs": 4651,
+              "occupancyMs": 1
+            },
+            "lowerBoundProbes": {
+              "statesExpanded": 0,
+              "retainedStates": 0,
+              "wallTimeMs": 0,
+              "transitionsGenerated": 0,
+              "transitionsReused": 0,
+              "transitionGenerationMs": 0,
+              "bellmanMs": 0,
+              "occupancyMs": 0
+            },
+            "bellmanAndOccupancy": {
+              "bellmanMs": 12340,
+              "occupancyMs": 2
+            },
+            "methodFamilyComparison": {
+              "statesExpanded": 386,
+              "retainedStates": 4581,
+              "wallTimeMs": 14208,
+              "transitionsGenerated": 1158,
+              "transitionsReused": 0,
+              "transitionGenerationMs": 11,
+              "bellmanMs": 0,
+              "occupancyMs": 0
+            },
+            "serializationAndPresentationReserve": {
+              "usedMs": 6,
+              "reservedMs": 1000
+            }
+          }
+        }
+      },
+      "open": {
+        "id": "family_open",
+        "kind": "OPEN",
+        "spec": {
+          "id": "family_open",
+          "kind": "OPEN",
+          "name": "Open Policy (All Modeled Mechanics)",
+          "description": "Unconstrained search across every legal and enabled modeled mechanic.",
+          "badge": "Open search",
+          "forcedAcquisitionType": "OPEN"
+        },
+        "status": "MORE_EXPENSIVE",
+        "evaluationSource": "INDEPENDENT_SOLVE",
+        "route": {
+          "actionId": "acquire_candidate_0_clean-base_0",
+          "name": "Start clean base",
+          "acquisitionCandidateId": "candidate_0",
+          "acquisitionMethodId": "clean-base_0",
+          "expectedTotalCostChaos": 4767.731263962971,
+          "lowerBoundChaos": 40.14397503191489,
+          "incumbentUpperBoundChaos": 4767.731263962971,
+          "optimalityGapChaos": 4727.587288931056,
+          "status": "RESOLVED",
+          "couldBeatResolvedIncumbent": false,
+          "metrics": {
+            "expectedChaosCost": 4767.731263962971,
+            "expectedPhysicalActions": 35645.51554742855,
+            "estimatedManualTimeMs": 14258206.21897142,
+            "objectiveScore": 4767.731263962971,
+            "effortConfidence": "DEFAULT_APPROXIMATE"
+          },
+          "acquisitionMetrics": {
+            "expectedChaosCost": 40,
+            "expectedPhysicalActions": 0,
+            "estimatedManualTimeMs": 0,
+            "objectiveScore": 40,
+            "effortConfidence": "DEFAULT_APPROXIMATE"
+          },
+          "downstreamMetrics": {
+            "expectedChaosCost": 4727.731263962971,
+            "expectedPhysicalActions": 35645.51554742855,
+            "estimatedManualTimeMs": 14258206.21897142,
+            "objectiveScore": 4727.731263438594,
+            "effortConfidence": "DEFAULT_APPROXIMATE"
+          }
+        },
+        "fullRouteL": 40.14397503191489,
+        "fullRouteU": 4767.731263962971,
+        "proof": {
+          "selectedPolicyStatus": "FULLY RESOLVED / PROPER / ABSORBING / COST-RECONCILED",
+          "proofLevel": "BEST FULLY RESOLVED POLICY FOUND",
+          "onPolicyReachableStates": 415,
+          "onPolicyTerminalStates": 15,
+          "onPolicyUnresolvedTransitions": 0,
+          "terminalAbsorptionProbability": 0.9999999980241998,
+          "proper": true,
+          "fullyResolved": true,
+          "bellmanConverged": true,
+          "occupancyConverged": true,
+          "costReconciled": true,
+          "reconciliationDifferenceChaos": 5.243555278866552e-7
+        },
+        "onPolicyActionIds": [
+          "alteration_orb",
+          "augmentation_orb",
+          "clean_base_initial",
+          "exalted_orb",
+          "regal_orb",
+          "scouring_orb",
+          "transmutation_orb"
+        ],
+        "expectedActionUsage": [
+          {
+            "actionId": "alteration_orb",
+            "actionName": "Orb of Alteration",
+            "expectedCount": 35043.578236178895,
+            "expectedCostChaos": 4681.822052353502
+          },
+          {
+            "actionId": "clean_base_initial",
+            "actionName": "Initial clean cluster jewel base",
+            "expectedCount": 1,
+            "expectedCostChaos": 40
+          },
+          {
+            "actionId": "augmentation_orb",
+            "actionName": "Orb of Augmentation",
+            "expectedCount": 529.4267566801163,
+            "expectedCostChaos": 20.864708480763387
+          },
+          {
+            "actionId": "exalted_orb",
+            "actionName": "Exalted Orb Slam",
+            "expectedCount": 11.632847748846748,
+            "expectedCostChaos": 13.610431866150691
+          },
+          {
+            "actionId": "scouring_orb",
+            "actionName": "Orb of Scouring",
+            "expectedCount": 19.625902273506394,
+            "expectedCostChaos": 10.580323915647316
+          },
+          {
+            "actionId": "regal_orb",
+            "actionName": "Regal Orb",
+            "expectedCount": 20.625902273557184,
+            "expectedCostChaos": 0.7503703247120104
+          },
+          {
+            "actionId": "transmutation_orb",
+            "actionName": "Orb of Transmutation",
+            "expectedCount": 20.62590227350724,
+            "expectedCostChaos": 0.10337702219481829
+          }
+        ],
+        "retainedStates": 1336,
+        "transitionDistributionsGenerated": 0,
+        "budget": {
+          "maxStates": 5000,
+          "maxWallTimeMs": 6520,
+          "maxExpansionRounds": 3,
+          "elapsedMs": 2213
+        },
+        "policyEquivalenceFingerprint": "policy-9e41c4f9",
+        "policyEquivalenceEvidence": {
+          "version": "CANONICAL_POLICY_EQUIVALENCE_V1",
+          "physicalAcquisitionIdentity": "{\"state\":\"Large Cluster Jewel|Minions deal 10% increased Damage|84|8|normal|influenced=false|synthesised=false|acquisitionMenu=false|methodFamilyActionEvidence=\",\"kind\":\"CLEAN\",\"method\":\"clean-base\",\"synthesisTerminalSemantics\":\"CLEAN_BASE\"}",
+          "normalizedPolicyDecisionCount": 400,
+          "requiredActionEvidence": [
+            "alteration_orb",
+            "augmentation_orb",
+            "clean_base_initial",
+            "exalted_orb",
+            "regal_orb",
+            "scouring_orb",
+            "transmutation_orb"
+          ],
+          "recoveryDecisionCount": 152,
+          "terminalStateCount": 0,
+          "usageTolerance": 0.000001
+        },
+        "explanation": "This resolved eligible policy is dominated by the selected policy for the requested objective and its tie-breakers."
+      },
+      "conventional": {
+        "id": "family_conventional",
+        "kind": "CONVENTIONAL",
+        "spec": {
+          "id": "family_conventional",
+          "kind": "CONVENTIONAL",
+          "name": "Conventional Alt / Aug / Regal",
+          "description": "Clean-base rolling constrained to currency preparation, cleanup, promotion, and slams; Harvest and self-fracture are forbidden.",
+          "badge": "Alt + Regal",
+          "allowedActionIds": [
+            "transmutation_orb",
+            "alteration_orb",
+            "augmentation_orb",
+            "regal_orb",
+            "scouring_orb",
+            "annulment_orb",
+            "exalted_orb"
+          ],
+          "forbiddenActionIds": [
+            "fracturing_orb",
+            "harvest_reforge_life",
+            "harvest_reforge_attack",
+            "harvest_reforge_physical"
+          ],
+          "forcedAcquisitionType": "CLEAN"
+        },
+        "status": "MORE_EXPENSIVE",
+        "evaluationSource": "INDEPENDENT_SOLVE",
+        "route": {
+          "actionId": "method:family_conventional",
+          "name": "Start clean base",
+          "expectedTotalCostChaos": 2276.6407665828724,
+          "lowerBoundChaos": 40.14397503191489,
+          "incumbentUpperBoundChaos": 2276.6407665828724,
+          "optimalityGapChaos": 2236.4967915509574,
+          "status": "RESOLVED",
+          "couldBeatResolvedIncumbent": true,
+          "metrics": {
+            "expectedChaosCost": 2276.6407665828724,
+            "expectedPhysicalActions": 16142.004545840233,
+            "estimatedManualTimeMs": 6456801.81833598,
+            "objectiveScore": 2276.6407665828724,
+            "effortConfidence": "DEFAULT_APPROXIMATE"
+          },
+          "acquisitionMetrics": {
+            "expectedChaosCost": 40,
+            "expectedPhysicalActions": 0,
+            "estimatedManualTimeMs": 0,
+            "objectiveScore": 40,
+            "effortConfidence": "DEFAULT_APPROXIMATE"
+          },
+          "downstreamMetrics": {
+            "expectedChaosCost": 2236.6407665828724,
+            "expectedPhysicalActions": 16142.004545840233,
+            "estimatedManualTimeMs": 6456801.81833598,
+            "objectiveScore": 2236.640766559536,
+            "effortConfidence": "DEFAULT_APPROXIMATE"
+          },
+          "acquisitionCandidateId": "candidate_0",
+          "acquisitionMethodId": "clean-base_0"
+        },
+        "fullRouteL": 40.14397503191489,
+        "fullRouteU": 2276.6407665828724,
+        "proof": {
+          "selectedPolicyStatus": "FULLY RESOLVED / PROPER / ABSORBING / COST-RECONCILED",
+          "proofLevel": "BEST FULLY RESOLVED POLICY FOUND",
+          "onPolicyReachableStates": 1214,
+          "onPolicyTerminalStates": 15,
+          "onPolicyUnresolvedTransitions": 0,
+          "terminalAbsorptionProbability": 0.9999999999929781,
+          "proper": true,
+          "fullyResolved": true,
+          "bellmanConverged": true,
+          "occupancyConverged": true,
+          "costReconciled": true,
+          "reconciliationDifferenceChaos": 2.3367647372651845e-8
+        },
+        "onPolicyActionIds": [
+          "alteration_orb",
+          "annulment_orb",
+          "augmentation_orb",
+          "clean_base_initial",
+          "exalted_orb",
+          "regal_orb",
+          "scouring_orb",
+          "transmutation_orb"
+        ],
+        "expectedActionUsage": [
+          {
+            "actionId": "alteration_orb",
+            "actionName": "Orb of Alteration",
+            "expectedCount": 15635.418582148759,
+            "expectedCostChaos": 2088.8919225750574
+          },
+          {
+            "actionId": "annulment_orb",
+            "actionName": "Orb of Annulment",
+            "expectedCount": 8.46436680829586,
+            "expectedCostChaos": 98.6945169847297
+          },
+          {
+            "actionId": "clean_base_initial",
+            "actionName": "Initial clean cluster jewel base",
+            "expectedCount": 1,
+            "expectedCostChaos": 40
+          },
+          {
+            "actionId": "exalted_orb",
+            "actionName": "Exalted Orb Slam",
+            "expectedCount": 18.93696349868904,
+            "expectedCostChaos": 22.15624729346626
+          },
+          {
+            "actionId": "augmentation_orb",
+            "actionName": "Orb of Augmentation",
+            "expectedCount": 424.93607307920865,
+            "expectedCostChaos": 16.746730640051613
+          },
+          {
+            "actionId": "scouring_orb",
+            "actionName": "Orb of Scouring",
+            "expectedCount": 17.416186768408636,
+            "expectedCostChaos": 9.389066286849006
+          },
+          {
+            "actionId": "regal_orb",
+            "actionName": "Regal Orb",
+            "expectedCount": 18.416186768433217,
+            "expectedCostChaos": 0.6699808746356005
+          },
+          {
+            "actionId": "transmutation_orb",
+            "actionName": "Orb of Transmutation",
+            "expectedCount": 18.41618676840729,
+            "expectedCostChaos": 0.09230192808325734
+          }
+        ],
+        "retainedStates": 3334,
+        "transitionDistributionsGenerated": 7005,
+        "budget": {
+          "maxStates": 5000,
+          "maxWallTimeMs": 1020,
+          "maxExpansionRounds": 3,
+          "elapsedMs": 1544
+        },
+        "policyEquivalenceFingerprint": "policy-4aa41222",
+        "policyEquivalenceEvidence": {
+          "version": "CANONICAL_POLICY_EQUIVALENCE_V1",
+          "physicalAcquisitionIdentity": "{\"state\":\"Large Cluster Jewel|Minions deal 10% increased Damage|84|8|normal|influenced=false|synthesised=false|acquisitionMenu=false|methodFamilyActionEvidence=\",\"kind\":\"CLEAN\",\"method\":\"clean-base\",\"synthesisTerminalSemantics\":\"CLEAN_BASE\"}",
+          "normalizedPolicyDecisionCount": 1199,
+          "requiredActionEvidence": [
+            "alteration_orb",
+            "annulment_orb",
+            "augmentation_orb",
+            "clean_base_initial",
+            "exalted_orb",
+            "regal_orb",
+            "scouring_orb",
+            "transmutation_orb"
+          ],
+          "recoveryDecisionCount": 794,
+          "terminalStateCount": 0,
+          "usageTolerance": 0.000001
+        },
+        "explanation": "This resolved eligible policy is dominated by the selected policy for the requested objective and its tie-breakers."
+      },
+      "differenceChaos": -2491.0904973800984
+    }
+  ],
+  "elapsedMs": 28189,
+  "request": {
+    "baseType": "Large Cluster Jewel",
+    "clusterType": "Minions deal 10% increased Damage",
+    "itemLevel": 84,
+    "passiveCount": 8,
+    "target": {
+      "requiredMods": [
+        {
+          "modId": "Primordial Bond"
+        },
+        {
+          "modId": "Renewal"
+        },
+        {
+          "modId": "Rotten Claws"
+        }
+      ],
+      "requiredRarity": "rare"
+    },
+    "prices": {
+      "currencyRates": {
+        "chaos": 1,
+        "divine": 213.5,
+        "fracturing": 298.6,
+        "annul": 11.66,
+        "exalt": 1.17,
+        "scour": 0.5391,
+        "alteration": 0.1336,
+        "transmutation": 0.005012,
+        "augmentation": 0.03941,
+        "regal": 0.03638,
+        "wildLifeforce": 0.02377,
+        "vividLifeforce": 0.08208,
+        "primalLifeforce": 0.04085
+      },
+      "cleanBaseCostChaos": 40,
+      "cleanBasePriceSource": "manual",
+      "cleanBasePriceProvenance": "Phase 3C frozen Primordial Bond + Renewal + Rotten Claws field fixture"
+    },
+    "expectedSaleValueChaos": 1708,
+    "objective": {
+      "kind": "CHEAPEST_CHAOS"
+    },
+    "searchBudget": {
+      "preset": "NORMAL",
+      "maxStates": 5000,
+      "maxWallTimeMs": 30000,
+      "maxExpansionRounds": 3
+    },
+    "searchIntent": "RECOMMEND",
+    "allowResearchFallbackPrices": true,
+    "compareMethodFamilies": true
+  },
+  "mechanicsSessionIdentity": "phase2j-4ae46f61:family_open",
+  "selectedRoute": {
+    "actionId": "method:family_fracture_Primordial Bond",
+    "name": "Self-fracture Primordial Bond",
+    "acquisitionCandidateId": "candidate_1",
+    "acquisitionMethodId": "self-fracture_executable",
+    "expectedTotalCostChaos": 1459.7923662160777,
+    "lowerBoundChaos": 340.41913,
+    "incumbentUpperBoundChaos": 1459.7923662160777,
+    "optimalityGapChaos": 1119.3732362160783,
+    "status": "RESOLVED",
+    "couldBeatResolvedIncumbent": true,
+    "metrics": {
+      "expectedChaosCost": 1459.7923662160777,
+      "expectedPhysicalActions": 740.8471930308776,
+      "estimatedManualTimeMs": 314538.8772123303,
+      "objectiveScore": 1459.7923662160777,
+      "effortConfidence": "DEFAULT_APPROXIMATE"
+    }
+  },
+  "selectedCostChaos": 1459.7923662160777,
+  "selectedPolicyRules": 572,
+  "selectedPolicyFingerprint": "policy-9e41c4f9",
+  "recommendationStatus": "PROVISIONAL_RESOLVED",
+  "proof": {
+    "selectedPolicyStatus": "FULLY RESOLVED / PROPER / ABSORBING / COST-RECONCILED",
+    "proofLevel": "BEST FULLY RESOLVED POLICY FOUND",
+    "globalOptimality": "NOT YET PROVEN",
+    "modeledActionOptimalityProven": false,
+    "unresolvedCompetitiveCandidates": 1406,
+    "unresolvedCompetitorsMayBeCheaper": true
+  },
+  "risk": {
+    "onPolicyReachableStates": 588,
+    "onPolicyTerminalStates": 16,
+    "terminalAbsorptionProbability": 0.9999999990014549,
+    "selectedPolicyProper": true,
+    "unresolvedOnPolicyProbability": 0
+  },
+  "solver": {
+    "bellmanIterations": 1005,
+    "bellmanConverged": true,
+    "occupancyIterations": 4,
+    "occupancyConverged": true,
+    "reconciliationDifferenceChaos": 6.821210263296962e-13,
+    "costReconciled": true
+  },
+  "search": {
+    "intent": "RECOMMEND",
+    "statesExpanded": 1336,
+    "cumulativeExpansionWork": 0,
+    "elapsedMs": 2213,
+    "expansionRounds": 1,
+    "maxStates": 5000,
+    "maxWallTimeMs": 30000,
+    "maxExpansionRounds": 3,
+    "prioritizedCompetitiveStateKeys": 5260,
+    "stateBudgetExhausted": false,
+    "wallTimeBudgetExhausted": false,
+    "roundBudgetExhausted": true,
+    "budgetExhausted": true,
+    "returnedAtBudget": false,
+    "timeToFirstCompletedRoundMs": 2213,
+    "timeToFirstCertifiedPolicyMs": 2213,
+    "timeToFirstUsefulRecommendationMs": 2213,
+    "expansionMode": "PERSISTENT_EXTENDED",
+    "repeatedStatesExpanded": 0,
+    "seedStatesExpanded": 0,
+    "newStatesByRound": [
+      0
+    ],
+    "retainedStatesReusedByRound": [
+      1336
+    ],
+    "transitionDistributionsGenerated": 0,
+    "transitionDistributionsGeneratedByRound": [
+      0
+    ],
+    "transitionDistributionsReused": 0,
+    "transitionDistributionsReusedByRound": [
+      0
+    ],
+    "previouslyExpandedNodesRevisited": 0,
+    "previouslyExpandedNodesRevisitedByRound": [
+      0
+    ],
+    "acquisitionFeasibilityStatesExpanded": 0,
+    "interruptedStatesExpanded": 0,
+    "optimisticLowerBoundIterations": 19,
+    "optimisticLowerBoundConverged": true,
+    "optimisticLowerBoundMethod": "KNOWN_PARTIAL_GRAPH_WITH_ZERO_COST_UNKNOWN_SUCCESSORS",
+    "minimumFeasibleRarity": {
+      "rarity": "rare",
+      "requiredPrefixes": 2,
+      "requiredSuffixes": 1,
+      "complete": true,
+      "reason": "2 Prefix target(s) + 1 Suffix target(s) fit rare capacity (2P/2S)."
+    },
+    "acquisitionFeasibility": {
+      "attemptedCandidates": 0,
+      "certifiedCandidates": 0,
+      "distinctPhysicalStates": 0,
+      "fairStateBudgetPerCandidate": 0,
+      "attempts": []
+    },
+    "deepenProgress": {
+      "before": {
+        "canonicalStates": 1336,
+        "acquisitionFeasibleUpperBounds": 0,
+        "unresolvedAcquisitionCandidates": 0,
+        "candidatesDominatedByBound": 0
+      },
+      "after": {
+        "canonicalStates": 1336,
+        "acquisitionFeasibleUpperBounds": 0,
+        "unresolvedAcquisitionCandidates": 0,
+        "candidatesDominatedByBound": 0
+      },
+      "newCanonicalStates": 0,
+      "newAcquisitionFeasibleUpperBounds": 0,
+      "newlyDominatedByBound": 0,
+      "meaningfulProgress": false,
+      "stoppedEarlyNoMeaningfulProgress": false
+    },
+    "incumbentHistory": [
+      {
+        "round": 1,
+        "upperBoundChaos": 53.49605093026165,
+        "statesExpanded": 1336,
+        "elapsedMs": 1343,
+        "phase": "FIRST_CERTIFIED"
+      },
+      {
+        "round": 2,
+        "upperBoundChaos": 53.49605093026165,
+        "statesExpanded": 1336,
+        "elapsedMs": 2390,
+        "phase": "REFINEMENT"
+      },
+      {
+        "round": 3,
+        "upperBoundChaos": 53.49605093026165,
+        "statesExpanded": 1336,
+        "elapsedMs": 2213,
+        "phase": "REFINEMENT"
+      }
+    ],
+    "refinementStopReason": "ROUND_BUDGET",
+    "resumedFromPriorRequest": true,
+    "retainedStatesFromPriorRequest": 1336,
+    "retainedTransitionDistributionsFromPriorRequest": 4247,
+    "requestedWallTimeMs": 30000,
+    "engineDeadlineMs": 29000,
+    "hostGuardDeadlineMs": 30250,
+    "shutdownReserveMs": 1000,
+    "hostGuardTriggered": false,
+    "timeToFirstUsefulExecutableRecommendationMs": 2213,
+    "stageTimingMs": {
+      "seedResultMs": 1099,
+      "transitionGenerationMs": 0,
+      "graphAggregationAndSetupMs": 13,
+      "bellmanMs": 2089,
+      "candidateClassificationAndTrustMs": 100,
+      "absorptionMs": 5,
+      "occupancyMs": 1,
+      "competitiveFrontierCollectionMs": 0,
+      "resultAssemblyMs": 2,
+      "repeatedRoundWorkMs": 0,
+      "unattributedOrInterruptedMs": 0,
+      "serializationMs": 6
+    },
+    "sessionReuse": {
+      "status": "RESUMED",
+      "identityHash": "phase2j-4ae46f61",
+      "retainedStates": 1336,
+      "retainedTransitionDistributions": 4247,
+      "scope": "FRACTURE_DOWNSTREAM"
+    },
+    "totalElapsedMs": 28182,
+    "workScopes": {
+      "portfolioTotalStatesExpanded": 12055,
+      "portfolioRetainedStates": 16725,
+      "selectedPolicyGraphStates": 1336,
+      "acquisitionSynthesisStates": 1667,
+      "methodFamilyStates": 4195,
+      "proofBoundStates": 0
+    },
+    "harvestActionScope": {
+      "mode": "TARGET_INFERRED",
+      "tags": [
+        "attack",
+        "damage",
+        "life",
+        "minion",
+        "physical"
+      ],
+      "rawInferredTags": [
+        "attack",
+        "damage",
+        "life",
+        "minion",
+        "physical"
+      ],
+      "enabledCrafts": [
+        {
+          "actionId": "harvest_reforge_life",
+          "actionName": "Harvest Reforge Life",
+          "tag": "life"
+        },
+        {
+          "actionId": "harvest_reforge_attack",
+          "actionName": "Harvest Reforge Attack",
+          "tag": "attack"
+        },
+        {
+          "actionId": "harvest_reforge_physical",
+          "actionName": "Harvest Reforge Physical",
+          "tag": "physical"
+        }
+      ]
+    },
+    "requestStopReason": "WALL_TIME",
+    "secondaryStopReasons": [
+      "STATE_CAP",
+      "ROUND_CAP",
+      "NO_PRODUCTIVE_PROOF_WORK"
+    ],
+    "requestBudget": {
+      "semantics": "UP_TO_CAPS",
+      "requested": {
+        "preset": "NORMAL",
+        "maxStates": 5000,
+        "maxWallTimeMs": 30000,
+        "maxExpansionRounds": 3
+      },
+      "used": {
+        "statesExpanded": 3720,
+        "retainedStates": 20920,
+        "elapsedMs": 28182,
+        "expansionRounds": 1,
+        "transitionsGenerated": 12732,
+        "transitionsReused": 3
+      },
+      "stop": {
+        "primary": "WALL_TIME",
+        "secondary": [
+          "STATE_CAP",
+          "ROUND_CAP",
+          "NO_PRODUCTIVE_PROOF_WORK"
+        ],
+        "evidence": [
+          "requested up to 5,000 states / 30000ms / 3 rounds",
+          "used 3,720 expanded; 20,920 retained; 28182ms elapsed",
+          "selected graph limits: state=false; wall=false; round=true",
+          "Expanded states is the request high-water distinct-state graph; retained totals and stage allocations include independent reusable scopes and are intentionally non-additive.",
+          "3 acquisition candidate(s) and 0 objective family/families retain proof debt."
+        ]
+      },
+      "allocations": {
+        "cleanRoute": {
+          "statesExpanded": 0,
+          "retainedStates": 3334,
+          "wallTimeMs": 4000,
+          "transitionsGenerated": 6573,
+          "transitionsReused": 3,
+          "transitionGenerationMs": 0,
+          "bellmanMs": 2318,
+          "occupancyMs": 1
+        },
+        "fractureAcquisition": {
+          "statesExpanded": 0,
+          "retainedStates": 8335,
+          "wallTimeMs": 6674,
+          "transitionsGenerated": 5001,
+          "transitionsReused": 0,
+          "transitionGenerationMs": 0,
+          "bellmanMs": 5600,
+          "occupancyMs": 0
+        },
+        "fractureDownstream": {
+          "statesExpanded": 0,
+          "retainedStates": 6337,
+          "wallTimeMs": 6531,
+          "transitionsGenerated": 6573,
+          "transitionsReused": 3,
+          "transitionGenerationMs": 0,
+          "bellmanMs": 4651,
+          "occupancyMs": 1
+        },
+        "lowerBoundProbes": {
+          "statesExpanded": 0,
+          "retainedStates": 0,
+          "wallTimeMs": 0,
+          "transitionsGenerated": 0,
+          "transitionsReused": 0,
+          "transitionGenerationMs": 0,
+          "bellmanMs": 0,
+          "occupancyMs": 0
+        },
+        "bellmanAndOccupancy": {
+          "bellmanMs": 12340,
+          "occupancyMs": 2
+        },
+        "methodFamilyComparison": {
+          "statesExpanded": 386,
+          "retainedStates": 4581,
+          "wallTimeMs": 14208,
+          "transitionsGenerated": 1158,
+          "transitionsReused": 0,
+          "transitionGenerationMs": 11,
+          "bellmanMs": 0,
+          "occupancyMs": 0
+        },
+        "serializationAndPresentationReserve": {
+          "usedMs": 6,
+          "reservedMs": 1000
+        }
+      }
+    }
+  },
+  "open": {
+    "id": "family_open",
+    "kind": "OPEN",
+    "spec": {
+      "id": "family_open",
+      "kind": "OPEN",
+      "name": "Open Policy (All Modeled Mechanics)",
+      "description": "Unconstrained search across every legal and enabled modeled mechanic.",
+      "badge": "Open search",
+      "forcedAcquisitionType": "OPEN"
+    },
+    "status": "MORE_EXPENSIVE",
+    "evaluationSource": "INDEPENDENT_SOLVE",
+    "route": {
+      "actionId": "acquire_candidate_0_clean-base_0",
+      "name": "Start clean base",
+      "acquisitionCandidateId": "candidate_0",
+      "acquisitionMethodId": "clean-base_0",
+      "expectedTotalCostChaos": 4767.731263962971,
+      "lowerBoundChaos": 40.14397503191489,
+      "incumbentUpperBoundChaos": 4767.731263962971,
+      "optimalityGapChaos": 4727.587288931056,
+      "status": "RESOLVED",
+      "couldBeatResolvedIncumbent": false,
+      "metrics": {
+        "expectedChaosCost": 4767.731263962971,
+        "expectedPhysicalActions": 35645.51554742855,
+        "estimatedManualTimeMs": 14258206.21897142,
+        "objectiveScore": 4767.731263962971,
+        "effortConfidence": "DEFAULT_APPROXIMATE"
+      },
+      "acquisitionMetrics": {
+        "expectedChaosCost": 40,
+        "expectedPhysicalActions": 0,
+        "estimatedManualTimeMs": 0,
+        "objectiveScore": 40,
+        "effortConfidence": "DEFAULT_APPROXIMATE"
+      },
+      "downstreamMetrics": {
+        "expectedChaosCost": 4727.731263962971,
+        "expectedPhysicalActions": 35645.51554742855,
+        "estimatedManualTimeMs": 14258206.21897142,
+        "objectiveScore": 4727.731263438594,
+        "effortConfidence": "DEFAULT_APPROXIMATE"
+      }
+    },
+    "fullRouteL": 40.14397503191489,
+    "fullRouteU": 4767.731263962971,
+    "proof": {
+      "selectedPolicyStatus": "FULLY RESOLVED / PROPER / ABSORBING / COST-RECONCILED",
+      "proofLevel": "BEST FULLY RESOLVED POLICY FOUND",
+      "onPolicyReachableStates": 415,
+      "onPolicyTerminalStates": 15,
+      "onPolicyUnresolvedTransitions": 0,
+      "terminalAbsorptionProbability": 0.9999999980241998,
+      "proper": true,
+      "fullyResolved": true,
+      "bellmanConverged": true,
+      "occupancyConverged": true,
+      "costReconciled": true,
+      "reconciliationDifferenceChaos": 5.243555278866552e-7
+    },
+    "onPolicyActionIds": [
+      "alteration_orb",
+      "augmentation_orb",
+      "clean_base_initial",
+      "exalted_orb",
+      "regal_orb",
+      "scouring_orb",
+      "transmutation_orb"
+    ],
+    "expectedActionUsage": [
+      {
+        "actionId": "alteration_orb",
+        "actionName": "Orb of Alteration",
+        "expectedCount": 35043.578236178895,
+        "expectedCostChaos": 4681.822052353502
+      },
+      {
+        "actionId": "clean_base_initial",
+        "actionName": "Initial clean cluster jewel base",
+        "expectedCount": 1,
+        "expectedCostChaos": 40
+      },
+      {
+        "actionId": "augmentation_orb",
+        "actionName": "Orb of Augmentation",
+        "expectedCount": 529.4267566801163,
+        "expectedCostChaos": 20.864708480763387
+      },
+      {
+        "actionId": "exalted_orb",
+        "actionName": "Exalted Orb Slam",
+        "expectedCount": 11.632847748846748,
+        "expectedCostChaos": 13.610431866150691
+      },
+      {
+        "actionId": "scouring_orb",
+        "actionName": "Orb of Scouring",
+        "expectedCount": 19.625902273506394,
+        "expectedCostChaos": 10.580323915647316
+      },
+      {
+        "actionId": "regal_orb",
+        "actionName": "Regal Orb",
+        "expectedCount": 20.625902273557184,
+        "expectedCostChaos": 0.7503703247120104
+      },
+      {
+        "actionId": "transmutation_orb",
+        "actionName": "Orb of Transmutation",
+        "expectedCount": 20.62590227350724,
+        "expectedCostChaos": 0.10337702219481829
+      }
+    ],
+    "retainedStates": 1336,
+    "transitionDistributionsGenerated": 0,
+    "budget": {
+      "maxStates": 5000,
+      "maxWallTimeMs": 6520,
+      "maxExpansionRounds": 3,
+      "elapsedMs": 2213
+    },
+    "policyEquivalenceFingerprint": "policy-9e41c4f9",
+    "policyEquivalenceEvidence": {
+      "version": "CANONICAL_POLICY_EQUIVALENCE_V1",
+      "physicalAcquisitionIdentity": "{\"state\":\"Large Cluster Jewel|Minions deal 10% increased Damage|84|8|normal|influenced=false|synthesised=false|acquisitionMenu=false|methodFamilyActionEvidence=\",\"kind\":\"CLEAN\",\"method\":\"clean-base\",\"synthesisTerminalSemantics\":\"CLEAN_BASE\"}",
+      "normalizedPolicyDecisionCount": 400,
+      "requiredActionEvidence": [
+        "alteration_orb",
+        "augmentation_orb",
+        "clean_base_initial",
+        "exalted_orb",
+        "regal_orb",
+        "scouring_orb",
+        "transmutation_orb"
+      ],
+      "recoveryDecisionCount": 152,
+      "terminalStateCount": 0,
+      "usageTolerance": 0.000001
+    },
+    "explanation": "This resolved eligible policy is dominated by the selected policy for the requested objective and its tie-breakers."
+  },
+  "conventional": {
+    "id": "family_conventional",
+    "kind": "CONVENTIONAL",
+    "spec": {
+      "id": "family_conventional",
+      "kind": "CONVENTIONAL",
+      "name": "Conventional Alt / Aug / Regal",
+      "description": "Clean-base rolling constrained to currency preparation, cleanup, promotion, and slams; Harvest and self-fracture are forbidden.",
+      "badge": "Alt + Regal",
+      "allowedActionIds": [
+        "transmutation_orb",
+        "alteration_orb",
+        "augmentation_orb",
+        "regal_orb",
+        "scouring_orb",
+        "annulment_orb",
+        "exalted_orb"
+      ],
+      "forbiddenActionIds": [
+        "fracturing_orb",
+        "harvest_reforge_life",
+        "harvest_reforge_attack",
+        "harvest_reforge_physical"
+      ],
+      "forcedAcquisitionType": "CLEAN"
+    },
+    "status": "MORE_EXPENSIVE",
+    "evaluationSource": "INDEPENDENT_SOLVE",
+    "route": {
+      "actionId": "method:family_conventional",
+      "name": "Start clean base",
+      "expectedTotalCostChaos": 2276.6407665828724,
+      "lowerBoundChaos": 40.14397503191489,
+      "incumbentUpperBoundChaos": 2276.6407665828724,
+      "optimalityGapChaos": 2236.4967915509574,
+      "status": "RESOLVED",
+      "couldBeatResolvedIncumbent": true,
+      "metrics": {
+        "expectedChaosCost": 2276.6407665828724,
+        "expectedPhysicalActions": 16142.004545840233,
+        "estimatedManualTimeMs": 6456801.81833598,
+        "objectiveScore": 2276.6407665828724,
+        "effortConfidence": "DEFAULT_APPROXIMATE"
+      },
+      "acquisitionMetrics": {
+        "expectedChaosCost": 40,
+        "expectedPhysicalActions": 0,
+        "estimatedManualTimeMs": 0,
+        "objectiveScore": 40,
+        "effortConfidence": "DEFAULT_APPROXIMATE"
+      },
+      "downstreamMetrics": {
+        "expectedChaosCost": 2236.6407665828724,
+        "expectedPhysicalActions": 16142.004545840233,
+        "estimatedManualTimeMs": 6456801.81833598,
+        "objectiveScore": 2236.640766559536,
+        "effortConfidence": "DEFAULT_APPROXIMATE"
+      },
+      "acquisitionCandidateId": "candidate_0",
+      "acquisitionMethodId": "clean-base_0"
+    },
+    "fullRouteL": 40.14397503191489,
+    "fullRouteU": 2276.6407665828724,
+    "proof": {
+      "selectedPolicyStatus": "FULLY RESOLVED / PROPER / ABSORBING / COST-RECONCILED",
+      "proofLevel": "BEST FULLY RESOLVED POLICY FOUND",
+      "onPolicyReachableStates": 1214,
+      "onPolicyTerminalStates": 15,
+      "onPolicyUnresolvedTransitions": 0,
+      "terminalAbsorptionProbability": 0.9999999999929781,
+      "proper": true,
+      "fullyResolved": true,
+      "bellmanConverged": true,
+      "occupancyConverged": true,
+      "costReconciled": true,
+      "reconciliationDifferenceChaos": 2.3367647372651845e-8
+    },
+    "onPolicyActionIds": [
+      "alteration_orb",
+      "annulment_orb",
+      "augmentation_orb",
+      "clean_base_initial",
+      "exalted_orb",
+      "regal_orb",
+      "scouring_orb",
+      "transmutation_orb"
+    ],
+    "expectedActionUsage": [
+      {
+        "actionId": "alteration_orb",
+        "actionName": "Orb of Alteration",
+        "expectedCount": 15635.418582148759,
+        "expectedCostChaos": 2088.8919225750574
+      },
+      {
+        "actionId": "annulment_orb",
+        "actionName": "Orb of Annulment",
+        "expectedCount": 8.46436680829586,
+        "expectedCostChaos": 98.6945169847297
+      },
+      {
+        "actionId": "clean_base_initial",
+        "actionName": "Initial clean cluster jewel base",
+        "expectedCount": 1,
+        "expectedCostChaos": 40
+      },
+      {
+        "actionId": "exalted_orb",
+        "actionName": "Exalted Orb Slam",
+        "expectedCount": 18.93696349868904,
+        "expectedCostChaos": 22.15624729346626
+      },
+      {
+        "actionId": "augmentation_orb",
+        "actionName": "Orb of Augmentation",
+        "expectedCount": 424.93607307920865,
+        "expectedCostChaos": 16.746730640051613
+      },
+      {
+        "actionId": "scouring_orb",
+        "actionName": "Orb of Scouring",
+        "expectedCount": 17.416186768408636,
+        "expectedCostChaos": 9.389066286849006
+      },
+      {
+        "actionId": "regal_orb",
+        "actionName": "Regal Orb",
+        "expectedCount": 18.416186768433217,
+        "expectedCostChaos": 0.6699808746356005
+      },
+      {
+        "actionId": "transmutation_orb",
+        "actionName": "Orb of Transmutation",
+        "expectedCount": 18.41618676840729,
+        "expectedCostChaos": 0.09230192808325734
+      }
+    ],
+    "retainedStates": 3334,
+    "transitionDistributionsGenerated": 7005,
+    "budget": {
+      "maxStates": 5000,
+      "maxWallTimeMs": 1020,
+      "maxExpansionRounds": 3,
+      "elapsedMs": 1544
+    },
+    "policyEquivalenceFingerprint": "policy-4aa41222",
+    "policyEquivalenceEvidence": {
+      "version": "CANONICAL_POLICY_EQUIVALENCE_V1",
+      "physicalAcquisitionIdentity": "{\"state\":\"Large Cluster Jewel|Minions deal 10% increased Damage|84|8|normal|influenced=false|synthesised=false|acquisitionMenu=false|methodFamilyActionEvidence=\",\"kind\":\"CLEAN\",\"method\":\"clean-base\",\"synthesisTerminalSemantics\":\"CLEAN_BASE\"}",
+      "normalizedPolicyDecisionCount": 1199,
+      "requiredActionEvidence": [
+        "alteration_orb",
+        "annulment_orb",
+        "augmentation_orb",
+        "clean_base_initial",
+        "exalted_orb",
+        "regal_orb",
+        "scouring_orb",
+        "transmutation_orb"
+      ],
+      "recoveryDecisionCount": 794,
+      "terminalStateCount": 0,
+      "usageTolerance": 0.000001
+    },
+    "explanation": "This resolved eligible policy is dominated by the selected policy for the requested objective and its tie-breakers."
+  },
+  "differenceChaos": -2491.0904973800984
+}

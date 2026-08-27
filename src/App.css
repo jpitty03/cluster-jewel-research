@@ -3204,6 +3204,7 @@ td a {
 
 .method-route-name,
 .method-evaluation-source,
+.method-incumbent-source,
 .method-objective-eligibility {
   margin: 0;
   font-size: 11.5px;
@@ -3215,6 +3216,7 @@ td a {
 
 .method-route-name strong,
 .method-evaluation-source strong,
+.method-incumbent-source strong,
 .method-objective-eligibility strong {
   color: var(--text-h);
 }
@@ -3575,8 +3577,8 @@ td a {
 .constellation-viewport {
   position: relative;
   width: 100%;
-  height: 520px;
-  min-height: 360px;
+  height: clamp(700px, 72vh, 950px);
+  min-height: 700px;
   overflow: hidden;
   touch-action: none;
   user-select: none;
@@ -3709,6 +3711,24 @@ td a {
   overflow-wrap: anywhere;
   -webkit-box-orient: vertical;
   -webkit-line-clamp: 2;
+}
+
+.node-label-copy {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  gap: 0.18rem;
+}
+
+.node-label-sublabel {
+  display: block;
+  overflow: hidden;
+  color: #a5b4c7;
+  font-size: 10.5px;
+  font-weight: 500;
+  line-height: 1.15;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .constellation-edge-label {

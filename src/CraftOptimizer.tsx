@@ -1267,6 +1267,14 @@ export function CraftOptimizer({ seed = null, onBackToClusterJewels }: CraftOpti
           id: family.spec.id,
           status: family.status,
           evaluationSource: family.evaluationSource,
+          incumbentSource: family.incumbentSource,
+          familySearchStatus: family.familySearchStatus,
+          independentFullRouteU: family.independentFullRouteU,
+          knownPolicyCostChaos: family.knownPolicyCostChaos,
+          revalidatedKnownPolicyCostChaos: family.revalidatedKnownPolicyCostChaos,
+          selectedOpenPolicyCostChaos: family.selectedOpenPolicyCostChaos,
+          selectedOpenPolicyAdmissibility: family.selectedOpenPolicyAdmissibility,
+          knownPolicyAdmissibility: family.knownPolicyAdmissibility,
           acquisitionStatus: family.acquisitionStatus,
           downstreamStatus: family.downstreamStatus,
           fullRouteStatus: family.fullRouteStatus,
@@ -2162,6 +2170,10 @@ export function CraftOptimizer({ seed = null, onBackToClusterJewels }: CraftOpti
                       className={`method-family-card ${isWinner ? 'winner' : ''} ${isSameSelectedPolicy ? 'same-selected-policy' : ''} status-${method.status.toLowerCase()}`}
                       data-method-family-id={method.spec.id}
                       data-evaluation-source={method.evaluationSource}
+                      data-incumbent-source={method.incumbentSource}
+                      data-family-search-status={method.familySearchStatus}
+                      data-known-policy-admissible={method.knownPolicyAdmissibility?.admissible}
+                      data-selected-open-policy-admissible={method.selectedOpenPolicyAdmissibility?.admissible}
                       data-objective-eligibility={method.objectiveEligibility}
                       data-required-action-observed={method.requiredActionObservedOnPolicy}
                       data-duplicate-of={method.duplicateOfMethodFamilyId}
@@ -2203,8 +2215,27 @@ export function CraftOptimizer({ seed = null, onBackToClusterJewels }: CraftOpti
                       )}
                       <p className="method-evaluation-source">
                         <strong>Evidence:</strong> {method.evaluationSource.replace(/_/g, ' ')}
-                        {method.duplicateOfMethodFamilyId ? ` · same independently evaluated policy as ${method.duplicateOfMethodFamilyId}` : ''}
+                        {method.duplicateOfMethodFamilyId ? ` · canonically equivalent to ${method.duplicateOfMethodFamilyId}` : ''}
                       </p>
+                      {method.incumbentSource && (
+                        <p className="method-incumbent-source">
+                          <strong>Executable incumbent:</strong>{' '}
+                          {method.incumbentSource.replace(/_/g, ' ').toLowerCase()}
+                          {method.revalidatedKnownPolicyCostChaos !== undefined
+                            ? ` · revalidated U ${chaos(method.revalidatedKnownPolicyCostChaos)}`
+                            : ''}
+                        </p>
+                      )}
+                      {method.selectedOpenPolicyAdmissibility && (
+                        <p className="method-incumbent-source">
+                          <strong>Selected Open policy in this family:</strong>{' '}
+                          {method.selectedOpenPolicyAdmissibility.admissible
+                            ? 'admissible'
+                            : `inadmissible · ${method.selectedOpenPolicyAdmissibility.failures
+                                .map((failure) => failure.code.replace(/_/g, ' ').toLowerCase())
+                                .join(', ')}`}
+                        </p>
+                      )}
                       {method.policyEquivalenceEvidence && (
                         <details className="method-equivalence-evidence">
                           <summary>Policy equivalence evidence</summary>
@@ -2250,7 +2281,12 @@ export function CraftOptimizer({ seed = null, onBackToClusterJewels }: CraftOpti
                             : `not observed (${method.spec.requiredActionIds.join(', ')})`
                           : 'not required'}</dd></div>
                         {method.policyHealth && <>
-                          <div><dt>Independent policy proof</dt><dd>{method.policyHealth.selectedPolicyStatus}</dd></div>
+                          <div><dt>Policy execution status</dt><dd>{method.policyHealth.selectedPolicyStatus}</dd></div>
+                          <div><dt>Family search status</dt><dd>{method.familySearchStatus === 'OPTIMAL_PROVEN'
+                            ? 'Family optimum proven'
+                            : method.familySearchStatus === 'BEST_FOUND_UNPROVEN'
+                              ? 'Known executable U; family optimum not proven'
+                              : 'Family optimum unresolved'}</dd></div>
                           <div><dt>Policy health</dt><dd>{method.policyHealth.proper ? 'proper' : 'not proper'} · absorption {(method.policyHealth.terminalAbsorptionProbability * 100).toFixed(6)}% · reconciliation {method.policyHealth.costReconciled ? 'yes' : 'no'}</dd></div>
                         </>}
                         {method.repeatableRerollCertification && <>
@@ -2260,7 +2296,7 @@ export function CraftOptimizer({ seed = null, onBackToClusterJewels }: CraftOpti
                       </dl>
                       {method.whyNotSelectedExplanation && (
                         <div className={`method-explanation ${isWinner ? 'winner' : 'not-selected'}`}>
-                          <strong>{isWinner ? 'Why selected:' : 'Why not selected:'}</strong>
+                          <strong>{isWinner ? 'Why selected:' : 'Policy note:'}</strong>
                           <span>{publicModifierText(method.whyNotSelectedExplanation, targetDescriptors, 'primary')}</span>
                         </div>
                       )}

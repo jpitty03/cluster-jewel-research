@@ -35,6 +35,8 @@ export interface VisualizationNode {
   isDominated: boolean;
   isUnresolved: boolean;
   occupancyWeight: number;
+  semanticBand: VisualizationSemanticBand;
+  recoveryLane: boolean;
   details: {
     title: string;
     phase?: string;
@@ -78,6 +80,7 @@ export interface VisualizationEdge {
   width: number;
   opacity: number;
   flowImportance: number;
+  routing: 'PROGRESS' | 'BACK_EDGE' | 'RECOVERY_CORRIDOR' | 'SELF_LOOP';
 }
 
 export interface VisualizationWisp {
@@ -119,6 +122,7 @@ export interface VisualizationGraph {
     layoutMs: number;
     particleBudget: number;
   };
+  layoutEvidence: VisualizationLayoutEvidence;
   bounds: {
     minX: number;
     minY: number;
@@ -127,6 +131,27 @@ export interface VisualizationGraph {
     width: number;
     height: number;
   };
+}
+
+export type VisualizationSemanticBand =
+  | 'ACQUISITION_NORMAL'
+  | 'MAGIC_ROLLING'
+  | 'PROMOTION'
+  | 'RARE_FINISHING'
+  | 'RECOVERY'
+  | 'GOAL';
+
+export interface VisualizationLayoutEvidence {
+  mode: 'SCC_HYBRID_SEMANTIC_V2';
+  largeSccThreshold: number;
+  largeSccCount: number;
+  largeSccNodeCount: number;
+  semanticBandCount: number;
+  horizontalSpan: number;
+  verticalSpan: number;
+  minimumNodeCenterDistance: number;
+  recoveryCorridorEdgeCount: number;
+  defaultChronologicalOrdinals: false;
 }
 
 export interface VisualizationAcquisitionContext {
@@ -151,6 +176,51 @@ interface PositionedComponent {
   centerX: number;
   centerY: number;
   cyclic: boolean;
+  layoutMode: 'SINGLE' | 'RING' | 'SEMANTIC_LAYERED';
+}
+
+const LARGE_SCC_THRESHOLD = 8;
+const SEMANTIC_COLUMN_SPACING = 280;
+const SEMANTIC_ROW_SPACING = 112;
+
+function semanticBand(
+  node: PolicyFlowSummary['nodes'][number],
+): { index: number; name: VisualizationSemanticBand } {
+  if (node.terminal) return { index: 5, name: 'GOAL' };
+  // Scope says which exact solver component supplied the state, not where that
+  // state belongs visually. Acquisition synthesis contains its own Magic/Rare
+  // rolling loop, so classify those nodes by craft semantics as well. Recovery
+  // must win over scope/rarity so every reset uses the separate corridor band.
+  if (node.recoveryLike) return { index: 4, name: 'RECOVERY' };
+  if (
+    node.acquisitionMenu || node.rarity === 'normal' ||
+    (node.scope === 'ACQUISITION' && node.rarity === undefined)
+  ) {
+    return { index: 0, name: 'ACQUISITION_NORMAL' };
+  }
+  if (node.rarity === 'magic') {
+    return node.selectedActionId === 'regal_orb'
+      ? { index: 2, name: 'PROMOTION' }
+      : { index: 1, name: 'MAGIC_ROLLING' };
+  }
+  if (node.rarity === 'rare') return { index: 3, name: 'RARE_FINISHING' };
+  return { index: 3, name: 'RARE_FINISHING' };
+}
+
+function minimumNodeDistance(
+  positions: ReadonlyMap<string, { x: number; y: number }>,
+): number {
+  const entries = [...positions.values()];
+  let minimum = Infinity;
+  for (let left = 0; left < entries.length; left += 1) {
+    for (let right = left + 1; right < entries.length; right += 1) {
+      minimum = Math.min(
+        minimum,
+        Math.hypot(entries[left].x - entries[right].x, entries[left].y - entries[right].y),
+      );
+    }
+  }
+  return Number.isFinite(minimum) ? minimum : 0;
 }
 
 function now(): number {
@@ -205,7 +275,10 @@ function componentLayout(flow: PolicyFlowSummary, width: number, height: number)
   positionByNodeId: Map<string, { x: number; y: number }>;
   width: number;
   height: number;
+  evidence: Omit<VisualizationLayoutEvidence,
+    'mode' | 'recoveryCorridorEdgeCount' | 'defaultChronologicalOrdinals'>;
 } {
+  const nodeById = new Map(flow.nodes.map((node) => [node.id, node]));
   const componentNodes = tarjan(flow.nodes.map((node) => node.id), flow.edges);
   const componentByNode = new Map<string, number>();
   componentNodes.forEach((nodes, componentId) => {
@@ -257,8 +330,6 @@ function componentLayout(flow: PolicyFlowSummary, width: number, height: number)
     }
   }
   const maximumRank = Math.max(0, ...ranks.values());
-  const columns = maximumRank + 1;
-  const computedWidth = Math.max(width, 260 + Math.max(0, columns - 1) * 260);
   const componentsByRank = new Map<number, number[]>();
   componentNodes.forEach((_, componentId) => {
     const rank = ranks.get(componentId) ?? 0;
@@ -266,45 +337,211 @@ function componentLayout(flow: PolicyFlowSummary, width: number, height: number)
     row.push(componentId);
     componentsByRank.set(rank, row);
   });
-  const busiestRank = Math.max(1, ...[...componentsByRank.values()].map((row) => row.length));
-  const computedHeight = Math.max(height, 240 + Math.max(0, busiestRank - 1) * 220);
   const selfLoops = new Set(flow.edges
     .filter((edge) => edge.sourceNodeId === edge.targetNodeId)
     .map((edge) => edge.sourceNodeId));
+  const componentSpan = new Map<number, number>();
+  const componentHeight = new Map<number, number>();
+  const largeComponents = new Set<number>();
+  componentNodes.forEach((nodeIds, componentId) => {
+    if (nodeIds.length > LARGE_SCC_THRESHOLD) {
+      largeComponents.add(componentId);
+      const bands = nodeIds.map((nodeId) => semanticBand(nodeById.get(nodeId)!).index);
+      const bandGroups = new Map<number, number>();
+      for (const band of bands) bandGroups.set(band, (bandGroups.get(band) ?? 0) + 1);
+      const span = Math.max(...bands) - Math.min(...bands) + 1;
+      const largestBand = Math.max(1, ...bandGroups.values());
+      componentSpan.set(componentId, span);
+      componentHeight.set(componentId, 176 + Math.max(0, largestBand - 1) * SEMANTIC_ROW_SPACING);
+    } else if (nodeIds.length > 1) {
+      const ringRadius = Math.max(72, Math.min(125, 46 + nodeIds.length * 12));
+      componentSpan.set(componentId, 1);
+      componentHeight.set(componentId, ringRadius * 2 + 130);
+    } else {
+      componentSpan.set(componentId, 1);
+      componentHeight.set(componentId, 180);
+    }
+  });
+
+  const rankStartColumn = new Map<number, number>();
+  let nextColumn = 0;
+  for (let rank = 0; rank <= maximumRank; rank += 1) {
+    rankStartColumn.set(rank, nextColumn);
+    const span = Math.max(
+      1,
+      ...(componentsByRank.get(rank) ?? []).map((componentId) =>
+        componentSpan.get(componentId) ?? 1
+      ),
+    );
+    nextColumn += span;
+  }
+  const computedWidth = Math.max(
+    width,
+    260 + Math.max(0, nextColumn - 1) * SEMANTIC_COLUMN_SPACING,
+  );
+  const rankContentHeights = new Map<number, number>();
+  for (const [rank, componentIds] of componentsByRank) {
+    rankContentHeights.set(
+      rank,
+      componentIds.reduce(
+        (sum, componentId) => sum + (componentHeight.get(componentId) ?? 180),
+        0,
+      ) + Math.max(0, componentIds.length - 1) * 64,
+    );
+  }
+  const computedHeight = Math.max(height, 120 + Math.max(0, ...rankContentHeights.values()));
   const positions = new Map<string, { x: number; y: number }>();
   const positionedComponents: PositionedComponent[] = [];
   for (const [rank, componentIds] of [...componentsByRank.entries()].sort((a, b) => a[0] - b[0])) {
     componentIds.sort((left, right) => {
       const leftVisits = componentNodes[left].reduce((sum, nodeId) =>
-        sum + (flow.nodes.find((node) => node.id === nodeId)?.expectedVisits ?? 0), 0);
+        sum + (nodeById.get(nodeId)?.expectedVisits ?? 0), 0);
       const rightVisits = componentNodes[right].reduce((sum, nodeId) =>
-        sum + (flow.nodes.find((node) => node.id === nodeId)?.expectedVisits ?? 0), 0);
+        sum + (nodeById.get(nodeId)?.expectedVisits ?? 0), 0);
       return rightVisits - leftVisits || componentNodes[left][0].localeCompare(componentNodes[right][0]);
     });
-    const rowHeight = computedHeight / (componentIds.length + 1);
-    componentIds.forEach((componentId, rowIndex) => {
+    const contentHeight = rankContentHeights.get(rank) ?? 0;
+    let cursorY = (computedHeight - contentHeight) / 2;
+    componentIds.forEach((componentId) => {
       const nodeIds = componentNodes[componentId];
-      const centerX = columns === 1
-        ? computedWidth / 2
-        : 130 + rank * ((computedWidth - 260) / Math.max(1, columns - 1));
-      const centerY = rowHeight * (rowIndex + 1);
+      const requiredHeight = componentHeight.get(componentId) ?? 180;
+      const span = componentSpan.get(componentId) ?? 1;
+      const startColumn = rankStartColumn.get(rank) ?? rank;
+      const centerX = 130 + (startColumn + (span - 1) / 2) * SEMANTIC_COLUMN_SPACING;
+      const centerY = cursorY + requiredHeight / 2;
       const cyclic = nodeIds.length > 1 || selfLoops.has(nodeIds[0]);
-      positionedComponents.push({ id: componentId, nodeIds, rank, centerX, centerY, cyclic });
+      const layoutMode = largeComponents.has(componentId)
+        ? 'SEMANTIC_LAYERED' as const
+        : nodeIds.length > 1
+          ? 'RING' as const
+          : 'SINGLE' as const;
+      positionedComponents.push({
+        id: componentId,
+        nodeIds,
+        rank,
+        centerX,
+        centerY,
+        cyclic,
+        layoutMode,
+      });
       if (nodeIds.length === 1) {
         positions.set(nodeIds[0], { x: centerX, y: centerY });
-        return;
-      }
-      const ringRadius = Math.max(72, Math.min(125, 46 + nodeIds.length * 12));
-      nodeIds.forEach((nodeId, nodeIndex) => {
-        const angle = -Math.PI / 2 + nodeIndex * Math.PI * 2 / nodeIds.length;
-        positions.set(nodeId, {
-          x: centerX + Math.cos(angle) * ringRadius,
-          y: centerY + Math.sin(angle) * ringRadius,
+      } else if (layoutMode === 'RING') {
+        const ringRadius = Math.max(72, Math.min(125, 46 + nodeIds.length * 12));
+        nodeIds.forEach((nodeId, nodeIndex) => {
+          const angle = -Math.PI / 2 + nodeIndex * Math.PI * 2 / nodeIds.length;
+          positions.set(nodeId, {
+            x: centerX + Math.cos(angle) * ringRadius,
+            y: centerY + Math.sin(angle) * ringRadius,
+          });
         });
-      });
+      } else {
+        const bandGroups = new Map<number, string[]>();
+        for (const nodeId of nodeIds) {
+          const band = semanticBand(nodeById.get(nodeId)!).index;
+          const group = bandGroups.get(band) ?? [];
+          group.push(nodeId);
+          bandGroups.set(band, group);
+        }
+        const baseCompare = (leftId: string, rightId: string): number => {
+          const left = nodeById.get(leftId)!;
+          const right = nodeById.get(rightId)!;
+          const leftAffixes = (left.prefixCount ?? 0) + (left.suffixCount ?? 0);
+          const rightAffixes = (right.prefixCount ?? 0) + (right.suffixCount ?? 0);
+          return right.matchedTargetModIds.length - left.matchedTargetModIds.length ||
+            leftAffixes - rightAffixes ||
+            (left.selectedActionId ?? '').localeCompare(right.selectedActionId ?? '') ||
+            right.expectedVisits - left.expectedVisits ||
+            leftId.localeCompare(rightId);
+        };
+        for (const group of bandGroups.values()) group.sort(baseCompare);
+        const internalEdges = flow.edges.filter((edge) =>
+          nodeIds.includes(edge.sourceNodeId) && nodeIds.includes(edge.targetNodeId) &&
+          edge.sourceNodeId !== edge.targetNodeId &&
+          edge.outcomeKind !== 'RECOVERY' && edge.outcomeKind !== 'REACQUIRE'
+        );
+        for (let sweep = 0; sweep < 4; sweep += 1) {
+          const order = new Map<string, number>();
+          for (const group of bandGroups.values()) {
+            group.forEach((nodeId, index) => order.set(nodeId, index));
+          }
+          for (const [band, group] of [...bandGroups.entries()].sort((a, b) =>
+            sweep % 2 === 0 ? a[0] - b[0] : b[0] - a[0]
+          )) {
+            const barycenter = new Map<string, number>();
+            for (const nodeId of group) {
+              const neighbors = internalEdges.flatMap((edge) => {
+                if (edge.sourceNodeId === nodeId && semanticBand(nodeById.get(edge.targetNodeId)!).index !== band) {
+                  return [edge.targetNodeId];
+                }
+                if (edge.targetNodeId === nodeId && semanticBand(nodeById.get(edge.sourceNodeId)!).index !== band) {
+                  return [edge.sourceNodeId];
+                }
+                return [];
+              });
+              if (neighbors.length > 0) {
+                barycenter.set(
+                  nodeId,
+                  neighbors.reduce((sum, neighbor) => sum + (order.get(neighbor) ?? 0), 0) /
+                    neighbors.length,
+                );
+              }
+            }
+            group.sort((left, right) => {
+              const leftNode = nodeById.get(left)!;
+              const rightNode = nodeById.get(right)!;
+              return rightNode.matchedTargetModIds.length - leftNode.matchedTargetModIds.length ||
+                (barycenter.get(left) ?? Infinity) - (barycenter.get(right) ?? Infinity) ||
+                baseCompare(left, right);
+            });
+          }
+        }
+        const minimumBand = Math.min(...bandGroups.keys());
+        for (const [band, group] of bandGroups) {
+          const groupSpan = Math.max(0, group.length - 1) * SEMANTIC_ROW_SPACING;
+          const startY = centerY - groupSpan / 2;
+          group.forEach((nodeId, rowIndex) => {
+            positions.set(nodeId, {
+              x: 130 + (startColumn + band - minimumBand) * SEMANTIC_COLUMN_SPACING,
+              y: startY + rowIndex * SEMANTIC_ROW_SPACING,
+            });
+          });
+        }
+      }
+      cursorY += requiredHeight + 64;
     });
   }
-  return { components: positionedComponents, positionByNodeId: positions, width: computedWidth, height: computedHeight };
+  const largeNodeIds = [...largeComponents].flatMap((componentId) =>
+    componentNodes[componentId]
+  );
+  const largePositions = largeNodeIds.flatMap((nodeId) => {
+    const position = positions.get(nodeId);
+    return position ? [position] : [];
+  });
+  const semanticBands = new Set(largeNodeIds.map((nodeId) =>
+    semanticBand(nodeById.get(nodeId)!).name
+  ));
+  return {
+    components: positionedComponents,
+    positionByNodeId: positions,
+    width: computedWidth,
+    height: computedHeight,
+    evidence: {
+      largeSccThreshold: LARGE_SCC_THRESHOLD,
+      largeSccCount: largeComponents.size,
+      largeSccNodeCount: largeNodeIds.length,
+      semanticBandCount: semanticBands.size,
+      horizontalSpan: largePositions.length > 0
+        ? Math.max(...largePositions.map((position) => position.x)) -
+          Math.min(...largePositions.map((position) => position.x))
+        : 0,
+      verticalSpan: largePositions.length > 0
+        ? Math.max(...largePositions.map((position) => position.y)) -
+          Math.min(...largePositions.map((position) => position.y))
+        : 0,
+      minimumNodeCenterDistance: minimumNodeDistance(positions),
+    },
+  };
 }
 
 function macroKind(node: PolicyFlowSummary['nodes'][number]): MacroStateKind {
@@ -361,7 +598,7 @@ export function buildVisualizationGraph(
   const layoutStarted = now();
   const seed = options.seed ?? `${flow.sourceBundleId}:${flow.sourcePolicyFingerprint ?? 'policy'}`;
   const acquisitionContext = options.acquisitionContext ?? { kind: 'OTHER' };
-  const layout = componentLayout(flow, options.width ?? 1000, options.height ?? 620);
+  const layout = componentLayout(flow, options.width ?? 1000, options.height ?? 760);
   const descriptorById = new Map((options.modifierDescriptors ?? []).map((descriptor) => [descriptor.modId, descriptor]));
   const maximumVisits = Math.max(1e-12, ...flow.nodes.map((node) => node.expectedVisits));
   const visitScale = Math.log1p(maximumVisits);
@@ -375,7 +612,7 @@ export function buildVisualizationGraph(
     return {
       id: node.id,
       label: node.label,
-      sublabel: node.stateSummary,
+      sublabel: `${node.stateSummary}${node.recoveryLike ? ' · recovery' : ''}`,
       fullLabel: node.terminal ? 'Goal: selected target satisfied' : `${node.label} — ${node.stateSummary}`,
       stepNumber: stepById.get(node.id),
       kind: macroKind(node),
@@ -387,6 +624,8 @@ export function buildVisualizationGraph(
       isDominated: false,
       isUnresolved: flow.status !== 'CERTIFIED',
       occupancyWeight: node.occupancyShare,
+      semanticBand: semanticBand(node).name,
+      recoveryLane: node.recoveryLike,
       details: {
         title: node.terminal ? 'Target complete' : node.stateSummary,
         phase: node.scope,
@@ -415,6 +654,8 @@ export function buildVisualizationGraph(
   const maximumFlow = Math.max(1e-12, ...flow.edges.map((edge) => edge.expectedFlow));
   const flowScale = Math.log1p(maximumFlow);
   const outgoingIndex = new Map<string, number>();
+  const recoveryEdgeIds = new Set(flow.recoveryEdges);
+  let recoveryCorridorIndex = 0;
   const edges: VisualizationEdge[] = flow.edges.map((edge) => {
     const source = nodes.find((node) => node.id === edge.sourceNodeId);
     const target = nodes.find((node) => node.id === edge.targetNodeId);
@@ -423,7 +664,15 @@ export function buildVisualizationGraph(
     outgoingIndex.set(edge.sourceNodeId, branchIndex + 1);
     const flowImportance = flowScale > 0 ? Math.log1p(edge.expectedFlow) / flowScale : 0;
     const backwards = Boolean(source && target && target.x <= source.x);
-    const recovery = edge.outcomeKind === 'RECOVERY' || edge.outcomeKind === 'REACQUIRE';
+    const recovery = recoveryEdgeIds.has(edge.id) ||
+      edge.outcomeKind === 'RECOVERY' || edge.outcomeKind === 'REACQUIRE';
+    const routing: VisualizationEdge['routing'] = sameNode
+      ? 'SELF_LOOP'
+      : recovery
+        ? 'RECOVERY_CORRIDOR'
+        : backwards
+          ? 'BACK_EDGE'
+          : 'PROGRESS';
     const curvature = sameNode
       ? (branchIndex % 2 === 0 ? 0.72 : -0.72)
       : recovery || backwards
@@ -438,8 +687,18 @@ export function buildVisualizationGraph(
     const dx = targetX - sourceX;
     const dy = targetY - sourceY;
     const distance = Math.hypot(dx, dy);
-    const controlX = sameNode ? sourceX + (branchIndex % 2 === 0 ? 86 : -86) : midX + (-dy / (distance || 1)) * distance * curvature;
-    const controlY = sameNode ? sourceY - 104 : midY + (dx / (distance || 1)) * distance * curvature;
+    const recoveryLane = recovery ? recoveryCorridorIndex++ % 5 : 0;
+    const recoveryCorridorY = layout.height - 68 - recoveryLane * 30;
+    const controlX = sameNode
+      ? sourceX + (branchIndex % 2 === 0 ? 86 : -86)
+      : recovery
+        ? midX
+        : midX + (-dy / (distance || 1)) * distance * curvature;
+    const controlY = sameNode
+      ? sourceY - 104
+      : recovery
+        ? recoveryCorridorY * 2 - midY
+        : midY + (dx / (distance || 1)) * distance * curvature;
     return {
       id: edge.id,
       source: edge.sourceNodeId,
@@ -468,6 +727,7 @@ export function buildVisualizationGraph(
       width: 1.25 + Math.sqrt(Math.max(0, flowImportance)) * 4.75,
       opacity: Math.min(0.98, 0.2 + edge.conditionalProbability * 0.48 + flowImportance * 0.3),
       flowImportance,
+      routing,
     };
   });
   const events: VisualizationEvent[] = [];
@@ -508,13 +768,24 @@ export function buildVisualizationGraph(
     maxX = Math.max(maxX, node.x + node.radius + 90);
     maxY = Math.max(maxY, node.y + node.radius + 100);
   }
+  for (const edge of edges) {
+    const source = nodes.find((node) => node.id === edge.source);
+    const target = nodes.find((node) => node.id === edge.target);
+    if (!source || !target) continue;
+    const middleX = source.x * 0.25 + edge.controlX * 0.5 + target.x * 0.25;
+    const middleY = source.y * 0.25 + edge.controlY * 0.5 + target.y * 0.25;
+    minX = Math.min(minX, middleX - 40);
+    minY = Math.min(minY, middleY - 40);
+    maxX = Math.max(maxX, middleX + 40);
+    maxY = Math.max(maxY, middleY + 40);
+  }
   const particleBudget = Math.min(120, Math.max(edges.length, 24 + edges.length * 2));
   return {
     nodes,
     edges,
     events,
     seed,
-    layoutVersion: 'SELECTED_POLICY_SCC_LAYOUT_V1',
+    layoutVersion: 'SELECTED_POLICY_SEMANTIC_SCC_LAYOUT_V2',
     policyFlowVersion: flow.version,
     policyFlowStatus: flow.status,
     sourceBundleId: flow.sourceBundleId,
@@ -525,6 +796,14 @@ export function buildVisualizationGraph(
     recoveryEdgeIds: [...flow.recoveryEdges],
     topology: flow.topology,
     performance: { layoutMs: Math.max(0, now() - layoutStarted), particleBudget },
+    layoutEvidence: {
+      mode: 'SCC_HYBRID_SEMANTIC_V2',
+      ...layout.evidence,
+      recoveryCorridorEdgeCount: edges.filter((edge) =>
+        edge.routing === 'RECOVERY_CORRIDOR'
+      ).length,
+      defaultChronologicalOrdinals: false,
+    },
     bounds: {
       minX: Number.isFinite(minX) ? minX : 0,
       minY: Number.isFinite(minY) ? minY : 0,

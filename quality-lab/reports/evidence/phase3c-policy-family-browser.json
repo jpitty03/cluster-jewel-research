@@ -1,0 +1,1632 @@
+{
+  "input": {
+    "id": "phase3c_primordial_renewal_rotten_claws",
+    "name": "Phase 3C Primordial Bond plus Renewal plus Rotten Claws field consistency",
+    "baseType": "Large Cluster Jewel",
+    "clusterType": "Minions deal 10% increased Damage",
+    "itemLevel": 84,
+    "passiveCount": 8,
+    "finalRarity": "rare",
+    "extraAffixes": "allow-extra",
+    "targetMods": [
+      "Primordial Bond",
+      "Renewal",
+      "Rotten Claws"
+    ],
+    "expectedSaleValueChaos": 1708,
+    "priceContext": {
+      "currencyRates": {
+        "chaos": 1,
+        "divine": 213.5,
+        "fracturing": 298.6,
+        "annul": 11.66,
+        "exalt": 1.17,
+        "scour": 0.5391,
+        "alteration": 0.1336,
+        "transmutation": 0.005012,
+        "augmentation": 0.03941,
+        "regal": 0.03638,
+        "wildLifeforce": 0.02377,
+        "vividLifeforce": 0.08208,
+        "primalLifeforce": 0.04085
+      },
+      "cleanBaseCostChaos": 40,
+      "cleanBasePriceSource": "manual",
+      "cleanBasePriceProvenance": "Phase 3C frozen Primordial Bond + Renewal + Rotten Claws field fixture"
+    },
+    "searchBudget": {
+      "maxStates": 5000,
+      "maxWallTimeMs": 30000,
+      "maxExpansionRounds": 3
+    }
+  },
+  "selected": {
+    "actionId": "acquire_candidate_1_self-fracture_executable",
+    "name": "Self-fracture Primordial Bond",
+    "acquisitionCandidateId": "candidate_1",
+    "acquisitionMethodId": "self-fracture_executable",
+    "expectedTotalCostChaos": 1459.7923662158182,
+    "lowerBoundChaos": 1408.1154452858168,
+    "incumbentUpperBoundChaos": 1459.7923662158182,
+    "optimalityGapChaos": 51.67692093000528,
+    "status": "RESOLVED",
+    "couldBeatResolvedIncumbent": false,
+    "metrics": {
+      "expectedChaosCost": 1459.7923662158182,
+      "expectedPhysicalActions": 740.8471930293676,
+      "estimatedManualTimeMs": 314538.8772117272,
+      "objectiveScore": 1459.7923662158182,
+      "effortConfidence": "DEFAULT_APPROXIMATE"
+    }
+  },
+  "open": {
+    "spec": {
+      "id": "family_open",
+      "kind": "OPEN",
+      "name": "Open Policy (All Modeled Mechanics)",
+      "description": "Unconstrained search across every legal and enabled modeled mechanic.",
+      "badge": "Open search",
+      "forcedAcquisitionType": "OPEN"
+    },
+    "status": "SELECTED_WINNER",
+    "evaluationSource": "INDEPENDENT_SOLVE",
+    "incumbentSource": "INDEPENDENT_DISCOVERY",
+    "familySearchStatus": "BEST_FOUND_UNPROVEN",
+    "route": {
+      "actionId": "acquire_candidate_1_self-fracture_executable",
+      "name": "Self-fracture Primordial Bond",
+      "acquisitionCandidateId": "candidate_1",
+      "acquisitionMethodId": "self-fracture_executable",
+      "expectedTotalCostChaos": 1459.7923662158182,
+      "lowerBoundChaos": 1408.1154452858168,
+      "incumbentUpperBoundChaos": 1459.7923662158182,
+      "optimalityGapChaos": 51.676920930001415,
+      "status": "RESOLVED",
+      "couldBeatResolvedIncumbent": false,
+      "metrics": {
+        "expectedChaosCost": 1459.7923662158182,
+        "expectedPhysicalActions": 740.8471930293676,
+        "estimatedManualTimeMs": 314538.8772117272,
+        "objectiveScore": 1459.7923662158182,
+        "effortConfidence": "DEFAULT_APPROXIMATE"
+      }
+    },
+    "craftPlan": {
+      "status": "CERTIFIED",
+      "startingPoint": "Primordial Bond",
+      "steps": [
+        {
+          "id": "acquire",
+          "phase": "ACQUIRE",
+          "title": "Create the fractured starting base",
+          "instruction": "Follow the selected executable self-fracture synthesis for Primordial Bond. Use the returned Fracturing Orb policy; a wrong permanent fracture follows the returned reacquire/reprepare recovery.",
+          "actionIds": [
+            "fracturing_orb",
+            "alteration_orb",
+            "exalted_orb",
+            "augmentation_orb",
+            "regal_orb",
+            "transmutation_orb"
+          ],
+          "actionNames": [
+            "Fracturing Orb",
+            "Orb of Alteration",
+            "Exalted Orb Slam",
+            "Orb of Augmentation",
+            "Regal Orb",
+            "Orb of Transmutation"
+          ],
+          "targetProgressBefore": 0,
+          "targetProgressAfter": 0,
+          "decisionDetails": []
+        },
+        {
+          "id": "initialize",
+          "phase": "INITIALIZE",
+          "title": "Make it Magic",
+          "instruction": "Use Orb of Transmutation to begin the rolling loop.",
+          "actionIds": [
+            "transmutation_orb"
+          ],
+          "actionNames": [
+            "Orb of Transmutation"
+          ],
+          "decisionDetails": []
+        },
+        {
+          "id": "roll",
+          "phase": "ROLL",
+          "title": "Roll for a target modifier",
+          "instruction": "Use Orb of Alteration until one desired modifier appears in a state the selected policy keeps.",
+          "actionIds": [
+            "alteration_orb"
+          ],
+          "actionNames": [
+            "Orb of Alteration"
+          ],
+          "targetProgressBefore": 0,
+          "targetProgressAfter": 1,
+          "decisionDetails": []
+        },
+        {
+          "id": "fill",
+          "phase": "FILL",
+          "title": "Fill the Magic item when needed",
+          "instruction": "Use Orb of Augmentation when the selected policy wants another Magic affix before promotion.",
+          "actionIds": [
+            "augmentation_orb"
+          ],
+          "actionNames": [
+            "Orb of Augmentation"
+          ],
+          "decisionDetails": []
+        },
+        {
+          "id": "promote",
+          "phase": "PROMOTE",
+          "title": "Promote the keepable Magic states",
+          "instruction": "Use Regal Orb only for the one-target Magic states the selected policy promotes; otherwise continue rolling. Expand Decision details when exact current affixes matter.",
+          "actionIds": [
+            "regal_orb"
+          ],
+          "actionNames": [
+            "Regal Orb"
+          ],
+          "decisionDetails": [
+            {
+              "id": "decision_1",
+              "summary": "rare 0P/0S states with the same target progress choose different actions based on exact current affixes.",
+              "representedStateCount": 227,
+              "expectedVisits": 426.6010638293448,
+              "options": [
+                {
+                  "actionId": "alteration_orb",
+                  "action": "Orb of Alteration",
+                  "representedStateCount": 208,
+                  "expectedVisits": 323.68085106349275,
+                  "policyRuleIndices": [
+                    7,
+                    8,
+                    9,
+                    10,
+                    11,
+                    12,
+                    13,
+                    14,
+                    15,
+                    17,
+                    18,
+                    25,
+                    26,
+                    28,
+                    29,
+                    30,
+                    31,
+                    32,
+                    33,
+                    34,
+                    35,
+                    36,
+                    37,
+                    38,
+                    39,
+                    40,
+                    41,
+                    42,
+                    43,
+                    44,
+                    45,
+                    46,
+                    47,
+                    48,
+                    49,
+                    50,
+                    51,
+                    52,
+                    53,
+                    54,
+                    55,
+                    56,
+                    57,
+                    58,
+                    59,
+                    60,
+                    61,
+                    62,
+                    63,
+                    64,
+                    65,
+                    66,
+                    67,
+                    68,
+                    69,
+                    70,
+                    71,
+                    72,
+                    73,
+                    74,
+                    75,
+                    76,
+                    77,
+                    78,
+                    79,
+                    80,
+                    81,
+                    82,
+                    83,
+                    84,
+                    85,
+                    86,
+                    87,
+                    88,
+                    89,
+                    90,
+                    91,
+                    92,
+                    93,
+                    94,
+                    95,
+                    96,
+                    97,
+                    98,
+                    99,
+                    100,
+                    101,
+                    102,
+                    103,
+                    104,
+                    105,
+                    108,
+                    109,
+                    110,
+                    111,
+                    112,
+                    113,
+                    114,
+                    115,
+                    116,
+                    117,
+                    118,
+                    119,
+                    120,
+                    121,
+                    122,
+                    123,
+                    124,
+                    125,
+                    126,
+                    127,
+                    128,
+                    129,
+                    130,
+                    131,
+                    132,
+                    133,
+                    136,
+                    137,
+                    138,
+                    139,
+                    140,
+                    141,
+                    142,
+                    143,
+                    144,
+                    145,
+                    146,
+                    147,
+                    148,
+                    149,
+                    150,
+                    151,
+                    152,
+                    153,
+                    154,
+                    155,
+                    156,
+                    157,
+                    158,
+                    159,
+                    160,
+                    161,
+                    162,
+                    163,
+                    164,
+                    165,
+                    166,
+                    167,
+                    168,
+                    169,
+                    170,
+                    171,
+                    172,
+                    173,
+                    174,
+                    175,
+                    176,
+                    177,
+                    178,
+                    179,
+                    180,
+                    181,
+                    182,
+                    183,
+                    184,
+                    185,
+                    186,
+                    187,
+                    188,
+                    189,
+                    190,
+                    191,
+                    192,
+                    193,
+                    194,
+                    195,
+                    196,
+                    197,
+                    198,
+                    199,
+                    200,
+                    201,
+                    202,
+                    203,
+                    204,
+                    205,
+                    206,
+                    207,
+                    208,
+                    209,
+                    210,
+                    211,
+                    212,
+                    213,
+                    214,
+                    215,
+                    216,
+                    217,
+                    218,
+                    219,
+                    220,
+                    221,
+                    222,
+                    223,
+                    224,
+                    225,
+                    226
+                  ]
+                },
+                {
+                  "actionId": "augmentation_orb",
+                  "action": "Orb of Augmentation",
+                  "representedStateCount": 13,
+                  "expectedVisits": 82.92021276587121,
+                  "policyRuleIndices": [
+                    0,
+                    1,
+                    2,
+                    3,
+                    4,
+                    5,
+                    6,
+                    16,
+                    23,
+                    24,
+                    106,
+                    107,
+                    135
+                  ]
+                },
+                {
+                  "actionId": "transmutation_orb",
+                  "action": "Orb of Transmutation",
+                  "representedStateCount": 1,
+                  "expectedVisits": 3.999999999996871,
+                  "policyRuleIndices": [
+                    19
+                  ]
+                },
+                {
+                  "actionId": "fracturing_orb",
+                  "action": "Fracturing Orb",
+                  "representedStateCount": 1,
+                  "expectedVisits": 3.9999999999958504,
+                  "policyRuleIndices": [
+                    20
+                  ]
+                },
+                {
+                  "actionId": "regal_orb",
+                  "action": "Regal Orb",
+                  "representedStateCount": 1,
+                  "expectedVisits": 3.9999999999958216,
+                  "policyRuleIndices": [
+                    21
+                  ]
+                },
+                {
+                  "actionId": "exalted_orb",
+                  "action": "Exalted Orb Slam",
+                  "representedStateCount": 1,
+                  "expectedVisits": 3.999999999995821,
+                  "policyRuleIndices": [
+                    22
+                  ]
+                },
+                {
+                  "actionId": "restart_reacquire",
+                  "action": "Abandon attempt and reacquire a clean base",
+                  "representedStateCount": 1,
+                  "expectedVisits": 2.999999999996883,
+                  "policyRuleIndices": [
+                    27
+                  ]
+                },
+                {
+                  "actionId": "scouring_orb",
+                  "action": "Orb of Scouring",
+                  "representedStateCount": 1,
+                  "expectedVisits": 0.9999999999989615,
+                  "policyRuleIndices": [
+                    134
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "id": "finish",
+          "phase": "FINISH",
+          "title": "Try to finish the missing target",
+          "instruction": "Use Exalted Orb Slam only in the selected finishing states where the missing target can still be reached.",
+          "actionIds": [
+            "exalted_orb"
+          ],
+          "actionNames": [
+            "Exalted Orb Slam"
+          ],
+          "decisionDetails": [
+            {
+              "id": "decision_2",
+              "summary": "rare 1P/2S states with the same target progress choose different actions based on exact current affixes.",
+              "representedStateCount": 16,
+              "expectedVisits": 6.253375010405113,
+              "options": [
+                {
+                  "actionId": "exalted_orb",
+                  "action": "Exalted Orb Slam",
+                  "representedStateCount": 14,
+                  "expectedVisits": 5.816423874136091,
+                  "policyRuleIndices": [
+                    236,
+                    237,
+                    238,
+                    239,
+                    240,
+                    241,
+                    242,
+                    243,
+                    244,
+                    256,
+                    258,
+                    259,
+                    262,
+                    263
+                  ]
+                },
+                {
+                  "actionId": "scouring_orb",
+                  "action": "Orb of Scouring",
+                  "representedStateCount": 2,
+                  "expectedVisits": 0.4369511362690222,
+                  "policyRuleIndices": [
+                    254,
+                    266
+                  ]
+                }
+              ]
+            },
+            {
+              "id": "decision_3",
+              "summary": "rare 1P/2S states with the same target progress choose different actions based on exact current affixes.",
+              "representedStateCount": 16,
+              "expectedVisits": 6.253375010405113,
+              "options": [
+                {
+                  "actionId": "exalted_orb",
+                  "action": "Exalted Orb Slam",
+                  "representedStateCount": 14,
+                  "expectedVisits": 5.816423874136091,
+                  "policyRuleIndices": [
+                    245,
+                    246,
+                    247,
+                    248,
+                    249,
+                    250,
+                    251,
+                    252,
+                    253,
+                    257,
+                    260,
+                    261,
+                    264,
+                    265
+                  ]
+                },
+                {
+                  "actionId": "scouring_orb",
+                  "action": "Orb of Scouring",
+                  "representedStateCount": 2,
+                  "expectedVisits": 0.4369511362690222,
+                  "policyRuleIndices": [
+                    255,
+                    267
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "id": "recover",
+          "phase": "RECOVER",
+          "title": "Recover from misses",
+          "instruction": "Use Abandon attempt and reacquire a clean base and Orb of Scouring when the selected policy calls for recovery. If it Scours, continue from the resulting item's actual rarity/state; with one fractured affix, Scour leaves a Magic item. If it Reacquires, return to the selected acquisition state. Expand Decision details for the exact next action.",
+          "actionIds": [
+            "restart_reacquire",
+            "scouring_orb"
+          ],
+          "actionNames": [
+            "Abandon attempt and reacquire a clean base",
+            "Orb of Scouring"
+          ],
+          "decisionDetails": []
+        },
+        {
+          "id": "success",
+          "phase": "SUCCESS",
+          "title": "Finish",
+          "instruction": "Stop when every requested target condition is satisfied.",
+          "actionIds": [],
+          "actionNames": [],
+          "targetProgressBefore": 2,
+          "targetProgressAfter": 3,
+          "decisionDetails": []
+        }
+      ],
+      "recovery": {
+        "actionIds": [
+          "restart_reacquire",
+          "scouring_orb"
+        ],
+        "provenance": "Fractured affixes survive Scouring and block further Fracturing Orb use, so a wrong fracture has no in-place reset. Recovery is only modeled through restart/reacquisition, which pays the clean-base price again."
+      },
+      "targetOrderPreference": {
+        "kind": "NONE",
+        "targetModIds": [],
+        "strength": "NONE",
+        "evidence": "No consistent identity-specific preservation split across 0 analogous selected-policy Magic contexts: Primordial Bond=1/11, Renewal=0/0, Rotten Claws=0/0.",
+        "behaviors": [
+          {
+            "targetModId": "Primordial Bond",
+            "representedMagicStates": 11,
+            "expectedVisits": 262.3614769066734,
+            "preserveStates": 1,
+            "preserveVisits": 68.97301719936435,
+            "rerollStates": 10,
+            "rerollVisits": 193.388459707309,
+            "selectedActions": [
+              {
+                "actionId": "alteration_orb",
+                "representedStates": 10,
+                "expectedVisits": 193.388459707309
+              },
+              {
+                "actionId": "augmentation_orb",
+                "representedStates": 1,
+                "expectedVisits": 68.97301719936435
+              }
+            ]
+          },
+          {
+            "targetModId": "Renewal",
+            "representedMagicStates": 0,
+            "expectedVisits": 0,
+            "preserveStates": 0,
+            "preserveVisits": 0,
+            "rerollStates": 0,
+            "rerollVisits": 0,
+            "selectedActions": []
+          },
+          {
+            "targetModId": "Rotten Claws",
+            "representedMagicStates": 0,
+            "expectedVisits": 0,
+            "preserveStates": 0,
+            "preserveVisits": 0,
+            "rerollStates": 0,
+            "rerollVisits": 0,
+            "selectedActions": []
+          }
+        ]
+      },
+      "detailedDecisionCount": 3,
+      "exactPolicyBranchCount": 268,
+      "exactPolicyBranchesHiddenByDefault": 268,
+      "selectedActionIds": [
+        "fracturing_orb",
+        "restart_reacquire",
+        "alteration_orb",
+        "exalted_orb",
+        "scouring_orb",
+        "augmentation_orb",
+        "regal_orb",
+        "transmutation_orb"
+      ],
+      "representedActionIds": [
+        "fracturing_orb",
+        "alteration_orb",
+        "exalted_orb",
+        "augmentation_orb",
+        "regal_orb",
+        "transmutation_orb",
+        "restart_reacquire",
+        "scouring_orb"
+      ],
+      "uncoveredActionIds": [],
+      "inventedActionIds": [],
+      "excludedAccountingActionIds": [
+        "clean_base_initial"
+      ],
+      "excludedVirtualActionIds": [
+        "acquire_candidate_1_self-fracture_executable"
+      ],
+      "unknownActionIds": [],
+      "expectedPhysicalActions": 740.8471930293676,
+      "estimatedManualTimeMs": 314538.8772117272,
+      "optimalityNote": "This plan is the best certified policy found at the current search depth; Retry deeper may improve the expected cost or decisions.",
+      "provenance": "Presentation-only deterministic compression of the certified selected acquisition and on-policy rules. Phase order comes from shared action mechanics; conflicts retain exact policy-rule indices."
+    },
+    "whyNotSelectedExplanation": "This exact independently resolved policy is selected by the requested objective.",
+    "acquisitionStatus": "RESOLVED",
+    "acquisitionL": 338.6,
+    "acquisitionU": 1406.2963152858165,
+    "downstreamStatus": "RESOLVED",
+    "downstreamL": 1.8191300000003139,
+    "downstreamU": 53.496050930001616,
+    "fullRouteStatus": "RESOLVED",
+    "fullRouteL": 1408.1154452858168,
+    "fullRouteU": 1459.7923662158182,
+    "requiredActionObservedOnPolicy": true,
+    "onPolicyActionIds": [
+      "alteration_orb",
+      "augmentation_orb",
+      "clean_base_initial",
+      "exalted_orb",
+      "fracturing_orb",
+      "regal_orb",
+      "restart_reacquire",
+      "scouring_orb",
+      "transmutation_orb"
+    ],
+    "expectedActionUsage": [
+      {
+        "actionId": "fracturing_orb",
+        "actionName": "Fracturing Orb",
+        "expectedCount": 3.9999999999958504,
+        "expectedCostChaos": 1194.3999999987611
+      },
+      {
+        "actionId": "restart_reacquire",
+        "actionName": "Abandon attempt and reacquire a clean base",
+        "expectedCount": 2.999999999996883,
+        "expectedCostChaos": 119.99999999987531
+      },
+      {
+        "actionId": "alteration_orb",
+        "actionName": "Orb of Alteration",
+        "expectedCount": 517.0693107708024,
+        "expectedCostChaos": 69.0804599189791
+      },
+      {
+        "actionId": "clean_base_initial",
+        "actionName": "Initial clean cluster jewel base",
+        "expectedCount": 1,
+        "expectedCostChaos": 40
+      },
+      {
+        "actionId": "exalted_orb",
+        "actionName": "Exalted Orb Slam",
+        "expectedCount": 15.632847748267999,
+        "expectedCostChaos": 18.29043186547356
+      },
+      {
+        "actionId": "scouring_orb",
+        "actionName": "Orb of Scouring",
+        "expectedCount": 20.62590227253608,
+        "expectedCostChaos": 11.119423915124258
+      },
+      {
+        "actionId": "augmentation_orb",
+        "actionName": "Orb of Augmentation",
+        "expectedCount": 151.89322996523555,
+        "expectedCostChaos": 5.986112192929935
+      },
+      {
+        "actionId": "regal_orb",
+        "actionName": "Regal Orb",
+        "expectedCount": 24.625902272533043,
+        "expectedCostChaos": 0.8958903246747522
+      },
+      {
+        "actionId": "transmutation_orb",
+        "actionName": "Orb of Transmutation",
+        "expectedCount": 3.999999999996871,
+        "expectedCostChaos": 0.020047999999984318
+      }
+    ],
+    "policyHealth": {
+      "selectedPolicyStatus": "FULLY RESOLVED / PROPER / ABSORBING / COST-RECONCILED",
+      "proofLevel": "BEST FULLY RESOLVED POLICY FOUND",
+      "onPolicyReachableStates": 361,
+      "onPolicyTerminalStates": 15,
+      "onPolicyUnresolvedTransitions": 0,
+      "terminalAbsorptionProbability": 0.9999999999884396,
+      "proper": true,
+      "fullyResolved": true,
+      "bellmanConverged": true,
+      "occupancyConverged": true,
+      "costReconciled": true,
+      "reconciliationDifferenceChaos": 1.0913936421275139e-11
+    },
+    "sessionIdentity": "phase2j-4ae46f61:family_open",
+    "retainedStates": 3334,
+    "transitionDistributionsGenerated": 0,
+    "budget": {
+      "maxStates": 5000,
+      "maxWallTimeMs": 1479,
+      "maxExpansionRounds": 3,
+      "elapsedMs": 1605
+    },
+    "objectiveEligibility": "RESOLVED_ELIGIBLE",
+    "policyEquivalenceFingerprint": "policy-b8fc0f29",
+    "policyEquivalenceEvidence": {
+      "version": "CANONICAL_POLICY_EQUIVALENCE_V1",
+      "physicalAcquisitionIdentity": "{\"state\":\"Large Cluster Jewel|Minions deal 10% increased Damage|84|8|magic|influenced=false|synthesised=false|acquisitionMenu=false|methodFamilyActionEvidence=|Suffix:Primordial Bond:1:F:\",\"kind\":\"SELF_FRACTURE\",\"method\":\"self-fracture_executable\",\"synthesisTerminalSemantics\":\"Terminal when the requested modifier is present AND fractured, and no unmatched removable explicit affix remains, so the resulting physical state is a legal reusable starting base for downstream crafting.\"}",
+      "normalizedPolicyDecisionCount": 572,
+      "requiredActionEvidence": [
+        "alteration_orb",
+        "augmentation_orb",
+        "clean_base_initial",
+        "exalted_orb",
+        "fracturing_orb",
+        "regal_orb",
+        "restart_reacquire",
+        "scouring_orb",
+        "transmutation_orb"
+      ],
+      "recoveryDecisionCount": 306,
+      "terminalStateCount": 1,
+      "usageTolerance": 0.000001
+    },
+    "equivalentToSelectedPolicy": false,
+    "costDifferenceChaos": 0,
+    "costDifferencePercent": 0,
+    "playerRouteName": "Self-fracture Primordial Bond"
+  },
+  "conventional": {
+    "spec": {
+      "id": "family_conventional",
+      "kind": "CONVENTIONAL",
+      "name": "Conventional Alt / Aug / Regal",
+      "description": "Clean-base rolling constrained to currency preparation, cleanup, promotion, and slams; Harvest and self-fracture are forbidden.",
+      "badge": "Alt + Regal",
+      "allowedActionIds": [
+        "transmutation_orb",
+        "alteration_orb",
+        "augmentation_orb",
+        "regal_orb",
+        "scouring_orb",
+        "annulment_orb",
+        "exalted_orb"
+      ],
+      "forbiddenActionIds": [
+        "fracturing_orb",
+        "harvest_reforge_life",
+        "harvest_reforge_attack",
+        "harvest_reforge_physical"
+      ],
+      "forcedAcquisitionType": "CLEAN"
+    },
+    "status": "MORE_EXPENSIVE",
+    "costDifferenceChaos": 816.8484003670542,
+    "costDifferencePercent": 55.956478419225405,
+    "evaluationSource": "INDEPENDENT_SOLVE",
+    "incumbentSource": "IMPROVED_FROM_KNOWN_POLICY",
+    "familySearchStatus": "BEST_FOUND_UNPROVEN",
+    "independentFullRouteU": 2276.640766582904,
+    "knownPolicyCostChaos": 4767.73126396295,
+    "revalidatedKnownPolicyCostChaos": 4767.7312611739435,
+    "selectedOpenPolicyCostChaos": 1459.7923662160783,
+    "selectedOpenPolicyAdmissibility": {
+      "version": "POLICY_ADMISSIBILITY_PHASE3C_V1",
+      "admissible": false,
+      "familyId": "family_conventional",
+      "sourcePolicyFingerprint": "selected-dbb616c0",
+      "sourceAcquisitionKind": "SELF_FRACTURE",
+      "sourceAcquisitionCostChaos": 1406.2963152858167,
+      "familyAcquisitionCostChaos": 40,
+      "selectedPolicyDecisionCount": 346,
+      "selectedPhysicalActionIds": [
+        "alteration_orb",
+        "augmentation_orb",
+        "exalted_orb",
+        "regal_orb",
+        "scouring_orb"
+      ],
+      "transitionsRegenerated": 0,
+      "transitionOutcomesCompared": 0,
+      "maximumTransitionProbabilityDifference": 0,
+      "failures": [
+        {
+          "code": "ACQUISITION_KIND_MISMATCH",
+          "message": "Family requires CLEAN, source policy uses SELF_FRACTURE.",
+          "expected": "CLEAN",
+          "actual": "SELF_FRACTURE"
+        },
+        {
+          "code": "ACQUISITION_IDENTITY_MISMATCH",
+          "message": "The physical acquisition state does not match the family start state.",
+          "expected": "Large Cluster Jewel|Minions deal 10% increased Damage|84|8|normal|influenced=false|synthesised=false|acquisitionMenu=false|methodFamilyActionEvidence=",
+          "actual": "Large Cluster Jewel|Minions deal 10% increased Damage|84|8|magic|influenced=false|synthesised=false|acquisitionMenu=false|methodFamilyActionEvidence=|Suffix:Primordial Bond:1:F:"
+        },
+        {
+          "code": "ACQUISITION_COST_MISMATCH",
+          "message": "The family-context acquisition cost differs from the source policy.",
+          "expected": 40,
+          "actual": 1406.2963152858167
+        }
+      ]
+    },
+    "knownPolicyAdmissibility": {
+      "version": "POLICY_ADMISSIBILITY_PHASE3C_V1",
+      "admissible": true,
+      "familyId": "family_conventional",
+      "sourcePolicyFingerprint": "selected-a0abab86",
+      "sourceAcquisitionKind": "CLEAN",
+      "sourceAcquisitionCostChaos": 40,
+      "familyAcquisitionCostChaos": 40,
+      "selectedPolicyDecisionCount": 400,
+      "selectedPhysicalActionIds": [
+        "alteration_orb",
+        "augmentation_orb",
+        "exalted_orb",
+        "regal_orb",
+        "scouring_orb",
+        "transmutation_orb"
+      ],
+      "transitionsRegenerated": 400,
+      "transitionOutcomesCompared": 54185,
+      "maximumTransitionProbabilityDifference": 0,
+      "failures": [],
+      "evaluation": {
+        "startKey": "Large Cluster Jewel:Minions deal 10% increased Damage:84:8:flags(influenced=false,synthesised=false,acquisitionMenu=false,methodFamilyActionEvidence=):normal|P:[]|S:[]",
+        "reachableStateCount": 415,
+        "reachableNonTerminalStateCount": 400,
+        "reachableTerminalStateCount": 15,
+        "unresolvedTransitionCount": 0,
+        "probabilityRowsReconciled": true,
+        "maximumProbabilityRowDifference": 1.5543122344752192e-15,
+        "totalExpectedCostChaos": 4727.7312611739435,
+        "expectedPhysicalActions": 35645.515548847296,
+        "estimatedManualTimeMs": 14258206.219538897,
+        "terminalAbsorptionProbability": 1.0000000000891556,
+        "proper": true,
+        "valueConverged": true,
+        "occupancyConverged": true,
+        "costReconciled": true,
+        "reconciliationDifferenceChaos": 0.0000029772227208013646,
+        "valueIterations": 6,
+        "occupancyIterations": 6,
+        "expectedVisitsByStateKey": {},
+        "valuesByStateKey": {},
+        "expectedActionUsage": [
+          {
+            "actionId": "alteration_orb",
+            "actionName": "Orb of Alteration",
+            "expectedCount": 35043.57823757385,
+            "expectedCostChaos": 4681.82205253987
+          },
+          {
+            "actionId": "augmentation_orb",
+            "actionName": "Orb of Augmentation",
+            "expectedCount": 529.4267567011905,
+            "expectedCostChaos": 20.864708481593922
+          },
+          {
+            "actionId": "exalted_orb",
+            "actionName": "Exalted Orb Slam",
+            "expectedCount": 11.632847749309795,
+            "expectedCostChaos": 13.610431866692453
+          },
+          {
+            "actionId": "scouring_orb",
+            "actionName": "Orb of Scouring",
+            "expectedCount": 19.62590227428927,
+            "expectedCostChaos": 10.580323916069357
+          },
+          {
+            "actionId": "regal_orb",
+            "actionName": "Regal Orb",
+            "expectedCount": 20.625902274377083,
+            "expectedCostChaos": 0.7503703247418383
+          },
+          {
+            "actionId": "transmutation_orb",
+            "actionName": "Orb of Transmutation",
+            "expectedCount": 20.62590227428997,
+            "expectedCostChaos": 0.10337702219874133
+          }
+        ]
+      },
+      "sourceParity": {
+        "expectedDownstreamCostChaos": 4727.73126396295,
+        "revalidatedDownstreamCostChaos": 4727.7312611739435,
+        "costDifferenceChaos": 0.0000027890064302482642,
+        "expectedPhysicalActions": 35645.51554742855,
+        "revalidatedPhysicalActions": 35645.515548847296,
+        "actionDifference": 0.0000014187462511472404,
+        "expectedManualTimeMs": 14258206.21897142,
+        "revalidatedManualTimeMs": 14258206.219538897,
+        "timeDifferenceMs": 0.0005674771964550018
+      }
+    },
+    "searchDivergence": {
+      "knownRetainedStates": 5000,
+      "independentRetainedStates": 3334,
+      "retainedStatesOnlyInKnown": 4113,
+      "retainedStatesOnlyInIndependent": 2447,
+      "commonRetainedStates": 887,
+      "knownOnPolicyStatesMissingFromIndependentGraph": 0,
+      "commonOnPolicyStatesWithDifferentActions": 76,
+      "knownSelectedActionsMissingFromIndependentGraph": 0,
+      "rankedDivergences": [
+        {
+          "stateKey": "Large Cluster Jewel:Minions deal 10% increased Damage:84:8:flags(influenced=false,synthesised=false,acquisitionMenu=false,methodFamilyActionEvidence=):magic|P:[groups(Rotten Claws):id(Rotten Claws):t1:name(Rotten Claws):target(2)]|S:[]",
+          "state": {
+            "rarity": "magic",
+            "affixCount": 1,
+            "matchedTargetCount": 1,
+            "targetCount": 3
+          },
+          "occupancyUnderKnownPolicy": 422.4195756849039,
+          "occupancyUnderIndependentPolicy": 188.58224230094768,
+          "knownSelectedActionId": "alteration_orb",
+          "independentSelectedActionId": "augmentation_orb",
+          "knownActionQInKnownGraph": 4727.859851537509,
+          "independentActionQInKnownGraph": 4727.899261537496,
+          "knownActionQInIndependentGraph": 2236.769354559536,
+          "independentActionQInIndependentGraph": 2235.49824771115,
+          "reason": "DIFFERENT_Q_SELECTION"
+        },
+        {
+          "stateKey": "Large Cluster Jewel:Minions deal 10% increased Damage:84:8:flags(influenced=false,synthesised=false,acquisitionMenu=false,methodFamilyActionEvidence=):magic|P:[groups(Rotten Claws):id(Rotten Claws):t1:name(Rotten Claws):target(2)]|S:[groups(Primordial Bond):id(Primordial Bond):t1:name(Primordial Bond):target(0)]",
+          "state": {
+            "rarity": "magic",
+            "affixCount": 2,
+            "matchedTargetCount": 2,
+            "targetCount": 3
+          },
+          "occupancyUnderKnownPolicy": 15.469426705167784,
+          "occupancyUnderIndependentPolicy": 9.208093384216609,
+          "knownSelectedActionId": "alteration_orb",
+          "independentSelectedActionId": "regal_orb",
+          "knownActionQInKnownGraph": 4727.859851537509,
+          "knownActionQInIndependentGraph": 2236.769354559536,
+          "independentActionQInIndependentGraph": 2129.4115355067424,
+          "reason": "DIFFERENT_Q_SELECTION"
+        },
+        {
+          "stateKey": "Large Cluster Jewel:Minions deal 10% increased Damage:84:8:flags(influenced=false,synthesised=false,acquisitionMenu=false,methodFamilyActionEvidence=):rare|P:[groups(AfflictionJewelSmallPassivesGrantArmour)|groups(Renewal):id(Renewal):t1:name(Renewal):target(1)]|S:[groups(Primordial Bond):id(Primordial Bond):t1:name(Primordial Bond):target(0)]",
+          "state": {
+            "rarity": "rare",
+            "affixCount": 3,
+            "matchedTargetCount": 2,
+            "targetCount": 3
+          },
+          "occupancyUnderKnownPolicy": 0.986531257852728,
+          "occupancyUnderIndependentPolicy": 0.8708086521751208,
+          "knownSelectedActionId": "scouring_orb",
+          "independentSelectedActionId": "exalted_orb",
+          "knownActionQInKnownGraph": 4728.270363537496,
+          "independentActionQInKnownGraph": 4729.440363537498,
+          "knownActionQInIndependentGraph": 2237.179866559531,
+          "independentActionQInIndependentGraph": 2214.0718986531824,
+          "reason": "DIFFERENT_Q_SELECTION"
+        },
+        {
+          "stateKey": "Large Cluster Jewel:Minions deal 10% increased Damage:84:8:flags(influenced=false,synthesised=false,acquisitionMenu=false,methodFamilyActionEvidence=):rare|P:[groups(AfflictionJewelSmallPassivesGrantES)|groups(Renewal):id(Renewal):t1:name(Renewal):target(1)]|S:[groups(Primordial Bond):id(Primordial Bond):t1:name(Primordial Bond):target(0)]",
+          "state": {
+            "rarity": "rare",
+            "affixCount": 3,
+            "matchedTargetCount": 2,
+            "targetCount": 3
+          },
+          "occupancyUnderKnownPolicy": 0.986531257852728,
+          "occupancyUnderIndependentPolicy": 0.8708086521751208,
+          "knownSelectedActionId": "scouring_orb",
+          "independentSelectedActionId": "exalted_orb",
+          "knownActionQInKnownGraph": 4728.270363537496,
+          "independentActionQInKnownGraph": 4729.440363537498,
+          "knownActionQInIndependentGraph": 2237.179866559531,
+          "independentActionQInIndependentGraph": 2214.0718986531824,
+          "reason": "DIFFERENT_Q_SELECTION"
+        },
+        {
+          "stateKey": "Large Cluster Jewel:Minions deal 10% increased Damage:84:8:flags(influenced=false,synthesised=false,acquisitionMenu=false,methodFamilyActionEvidence=):rare|P:[groups(AfflictionJewelSmallPassivesGrantEvasion)|groups(Renewal):id(Renewal):t1:name(Renewal):target(1)]|S:[groups(Primordial Bond):id(Primordial Bond):t1:name(Primordial Bond):target(0)]",
+          "state": {
+            "rarity": "rare",
+            "affixCount": 3,
+            "matchedTargetCount": 2,
+            "targetCount": 3
+          },
+          "occupancyUnderKnownPolicy": 0.986531257852728,
+          "occupancyUnderIndependentPolicy": 0.8349600191694845,
+          "knownSelectedActionId": "scouring_orb",
+          "independentSelectedActionId": "exalted_orb",
+          "knownActionQInKnownGraph": 4728.270363537496,
+          "independentActionQInKnownGraph": 4729.440363537498,
+          "knownActionQInIndependentGraph": 2237.179866559531,
+          "independentActionQInIndependentGraph": 2216.094101470351,
+          "reason": "DIFFERENT_Q_SELECTION"
+        },
+        {
+          "stateKey": "Large Cluster Jewel:Minions deal 10% increased Damage:84:8:flags(influenced=false,synthesised=false,acquisitionMenu=false,methodFamilyActionEvidence=):rare|P:[groups(AfflictionJewelSmallPassivesGrantLife)|groups(Renewal):id(Renewal):t1:name(Renewal):target(1)]|S:[groups(Primordial Bond):id(Primordial Bond):t1:name(Primordial Bond):target(0)]",
+          "state": {
+            "rarity": "rare",
+            "affixCount": 3,
+            "matchedTargetCount": 2,
+            "targetCount": 3
+          },
+          "occupancyUnderKnownPolicy": 0.986531257852728,
+          "occupancyUnderIndependentPolicy": 0.8708086521751208,
+          "knownSelectedActionId": "scouring_orb",
+          "independentSelectedActionId": "exalted_orb",
+          "knownActionQInKnownGraph": 4728.270363537496,
+          "independentActionQInKnownGraph": 4729.440363537498,
+          "knownActionQInIndependentGraph": 2237.179866559531,
+          "independentActionQInIndependentGraph": 2214.0718986531824,
+          "reason": "DIFFERENT_Q_SELECTION"
+        },
+        {
+          "stateKey": "Large Cluster Jewel:Minions deal 10% increased Damage:84:8:flags(influenced=false,synthesised=false,acquisitionMenu=false,methodFamilyActionEvidence=):rare|P:[groups(AfflictionJewelSmallPassivesGrantMana)|groups(Renewal):id(Renewal):t1:name(Renewal):target(1)]|S:[groups(Primordial Bond):id(Primordial Bond):t1:name(Primordial Bond):target(0)]",
+          "state": {
+            "rarity": "rare",
+            "affixCount": 3,
+            "matchedTargetCount": 2,
+            "targetCount": 3
+          },
+          "occupancyUnderKnownPolicy": 0.986531257852728,
+          "occupancyUnderIndependentPolicy": 0.8708086521751208,
+          "knownSelectedActionId": "scouring_orb",
+          "independentSelectedActionId": "exalted_orb",
+          "knownActionQInKnownGraph": 4728.270363537496,
+          "independentActionQInKnownGraph": 4729.440363537498,
+          "knownActionQInIndependentGraph": 2237.179866559531,
+          "independentActionQInIndependentGraph": 2214.0718986531824,
+          "reason": "DIFFERENT_Q_SELECTION"
+        },
+        {
+          "stateKey": "Large Cluster Jewel:Minions deal 10% increased Damage:84:8:flags(influenced=false,synthesised=false,acquisitionMenu=false,methodFamilyActionEvidence=):rare|P:[groups(AfflictionJewelSmallPassivesGrantArmour)|groups(Renewal):id(Renewal):t1:name(Renewal):target(1)]|S:[groups(AfflictionJewelSmallPassivesGrantChaosRes)|groups(Primordial Bond):id(Primordial Bond):t1:name(Primordial Bond):target(0)]",
+          "state": {
+            "rarity": "rare",
+            "affixCount": 4,
+            "matchedTargetCount": 2,
+            "targetCount": 3
+          },
+          "occupancyUnderKnownPolicy": 0.11987014068684287,
+          "occupancyUnderIndependentPolicy": 0.14633567469544037,
+          "knownSelectedActionId": "scouring_orb",
+          "independentSelectedActionId": "annulment_orb",
+          "knownActionQInKnownGraph": 4728.270363537496,
+          "knownActionQInIndependentGraph": 2237.179866559531,
+          "independentActionQInIndependentGraph": 2211.017564616916,
+          "reason": "DIFFERENT_Q_SELECTION"
+        },
+        {
+          "stateKey": "Large Cluster Jewel:Minions deal 10% increased Damage:84:8:flags(influenced=false,synthesised=false,acquisitionMenu=false,methodFamilyActionEvidence=):rare|P:[groups(AfflictionJewelSmallPassivesGrantArmour)|groups(Renewal):id(Renewal):t1:name(Renewal):target(1)]|S:[groups(AfflictionJewelSmallPassivesGrantColdRes)|groups(Primordial Bond):id(Primordial Bond):t1:name(Primordial Bond):target(0)]",
+          "state": {
+            "rarity": "rare",
+            "affixCount": 4,
+            "matchedTargetCount": 2,
+            "targetCount": 3
+          },
+          "occupancyUnderKnownPolicy": 0.11987014068684287,
+          "occupancyUnderIndependentPolicy": 0.14633567469544037,
+          "knownSelectedActionId": "scouring_orb",
+          "independentSelectedActionId": "annulment_orb",
+          "knownActionQInKnownGraph": 4728.270363537496,
+          "knownActionQInIndependentGraph": 2237.179866559531,
+          "independentActionQInIndependentGraph": 2211.017564616916,
+          "reason": "DIFFERENT_Q_SELECTION"
+        },
+        {
+          "stateKey": "Large Cluster Jewel:Minions deal 10% increased Damage:84:8:flags(influenced=false,synthesised=false,acquisitionMenu=false,methodFamilyActionEvidence=):rare|P:[groups(AfflictionJewelSmallPassivesGrantArmour)|groups(Renewal):id(Renewal):t1:name(Renewal):target(1)]|S:[groups(AfflictionJewelSmallPassivesGrantDex)|groups(Primordial Bond):id(Primordial Bond):t1:name(Primordial Bond):target(0)]",
+          "state": {
+            "rarity": "rare",
+            "affixCount": 4,
+            "matchedTargetCount": 2,
+            "targetCount": 3
+          },
+          "occupancyUnderKnownPolicy": 0.11987014068684287,
+          "occupancyUnderIndependentPolicy": 0.14633567469544037,
+          "knownSelectedActionId": "scouring_orb",
+          "independentSelectedActionId": "annulment_orb",
+          "knownActionQInKnownGraph": 4728.270363537496,
+          "knownActionQInIndependentGraph": 2237.179866559531,
+          "independentActionQInIndependentGraph": 2211.017564616916,
+          "reason": "DIFFERENT_Q_SELECTION"
+        },
+        {
+          "stateKey": "Large Cluster Jewel:Minions deal 10% increased Damage:84:8:flags(influenced=false,synthesised=false,acquisitionMenu=false,methodFamilyActionEvidence=):rare|P:[groups(AfflictionJewelSmallPassivesGrantArmour)|groups(Renewal):id(Renewal):t1:name(Renewal):target(1)]|S:[groups(AfflictionJewelSmallPassivesGrantElementalRes)|groups(Primordial Bond):id(Primordial Bond):t1:name(Primordial Bond):target(0)]",
+          "state": {
+            "rarity": "rare",
+            "affixCount": 4,
+            "matchedTargetCount": 2,
+            "targetCount": 3
+          },
+          "occupancyUnderKnownPolicy": 0.11987014068684287,
+          "occupancyUnderIndependentPolicy": 0.14633567469544037,
+          "knownSelectedActionId": "scouring_orb",
+          "independentSelectedActionId": "annulment_orb",
+          "knownActionQInKnownGraph": 4728.270363537496,
+          "knownActionQInIndependentGraph": 2237.179866559531,
+          "independentActionQInIndependentGraph": 2211.017564616916,
+          "reason": "DIFFERENT_Q_SELECTION"
+        },
+        {
+          "stateKey": "Large Cluster Jewel:Minions deal 10% increased Damage:84:8:flags(influenced=false,synthesised=false,acquisitionMenu=false,methodFamilyActionEvidence=):rare|P:[groups(AfflictionJewelSmallPassivesGrantArmour)|groups(Renewal):id(Renewal):t1:name(Renewal):target(1)]|S:[groups(AfflictionJewelSmallPassivesGrantFireRes)|groups(Primordial Bond):id(Primordial Bond):t1:name(Primordial Bond):target(0)]",
+          "state": {
+            "rarity": "rare",
+            "affixCount": 4,
+            "matchedTargetCount": 2,
+            "targetCount": 3
+          },
+          "occupancyUnderKnownPolicy": 0.11987014068684287,
+          "occupancyUnderIndependentPolicy": 0.14633567469544037,
+          "knownSelectedActionId": "scouring_orb",
+          "independentSelectedActionId": "annulment_orb",
+          "knownActionQInKnownGraph": 4728.270363537496,
+          "knownActionQInIndependentGraph": 2237.179866559531,
+          "independentActionQInIndependentGraph": 2211.017564616916,
+          "reason": "DIFFERENT_Q_SELECTION"
+        },
+        {
+          "stateKey": "Large Cluster Jewel:Minions deal 10% increased Damage:84:8:flags(influenced=false,synthesised=false,acquisitionMenu=false,methodFamilyActionEvidence=):rare|P:[groups(AfflictionJewelSmallPassivesGrantArmour)|groups(Renewal):id(Renewal):t1:name(Renewal):target(1)]|S:[groups(AfflictionJewelSmallPassivesGrantInt)|groups(Primordial Bond):id(Primordial Bond):t1:name(Primordial Bond):target(0)]",
+          "state": {
+            "rarity": "rare",
+            "affixCount": 4,
+            "matchedTargetCount": 2,
+            "targetCount": 3
+          },
+          "occupancyUnderKnownPolicy": 0.11987014068684287,
+          "occupancyUnderIndependentPolicy": 0.14633567469544037,
+          "knownSelectedActionId": "scouring_orb",
+          "independentSelectedActionId": "annulment_orb",
+          "knownActionQInKnownGraph": 4728.270363537496,
+          "knownActionQInIndependentGraph": 2237.179866559531,
+          "independentActionQInIndependentGraph": 2211.017564616916,
+          "reason": "DIFFERENT_Q_SELECTION"
+        },
+        {
+          "stateKey": "Large Cluster Jewel:Minions deal 10% increased Damage:84:8:flags(influenced=false,synthesised=false,acquisitionMenu=false,methodFamilyActionEvidence=):rare|P:[groups(AfflictionJewelSmallPassivesGrantArmour)|groups(Renewal):id(Renewal):t1:name(Renewal):target(1)]|S:[groups(AfflictionJewelSmallPassivesGrantLifeRegen)|groups(Primordial Bond):id(Primordial Bond):t1:name(Primordial Bond):target(0)]",
+          "state": {
+            "rarity": "rare",
+            "affixCount": 4,
+            "matchedTargetCount": 2,
+            "targetCount": 3
+          },
+          "occupancyUnderKnownPolicy": 0.11987014068684287,
+          "occupancyUnderIndependentPolicy": 0.14633567469544037,
+          "knownSelectedActionId": "scouring_orb",
+          "independentSelectedActionId": "annulment_orb",
+          "knownActionQInKnownGraph": 4728.270363537496,
+          "knownActionQInIndependentGraph": 2237.179866559531,
+          "independentActionQInIndependentGraph": 2211.017564616916,
+          "reason": "DIFFERENT_Q_SELECTION"
+        },
+        {
+          "stateKey": "Large Cluster Jewel:Minions deal 10% increased Damage:84:8:flags(influenced=false,synthesised=false,acquisitionMenu=false,methodFamilyActionEvidence=):rare|P:[groups(AfflictionJewelSmallPassivesGrantArmour)|groups(Renewal):id(Renewal):t1:name(Renewal):target(1)]|S:[groups(AfflictionJewelSmallPassivesGrantManaRegen)|groups(Primordial Bond):id(Primordial Bond):t1:name(Primordial Bond):target(0)]",
+          "state": {
+            "rarity": "rare",
+            "affixCount": 4,
+            "matchedTargetCount": 2,
+            "targetCount": 3
+          },
+          "occupancyUnderKnownPolicy": 0.11987014068684287,
+          "occupancyUnderIndependentPolicy": 0.14633567469544037,
+          "knownSelectedActionId": "scouring_orb",
+          "independentSelectedActionId": "annulment_orb",
+          "knownActionQInKnownGraph": 4728.270363537496,
+          "knownActionQInIndependentGraph": 2237.179866559531,
+          "independentActionQInIndependentGraph": 2211.017564616916,
+          "reason": "DIFFERENT_Q_SELECTION"
+        },
+        {
+          "stateKey": "Large Cluster Jewel:Minions deal 10% increased Damage:84:8:flags(influenced=false,synthesised=false,acquisitionMenu=false,methodFamilyActionEvidence=):rare|P:[groups(AfflictionJewelSmallPassivesGrantArmour)|groups(Renewal):id(Renewal):t1:name(Renewal):target(1)]|S:[groups(AfflictionJewelSmallPassivesGrantStr)|groups(Primordial Bond):id(Primordial Bond):t1:name(Primordial Bond):target(0)]",
+          "state": {
+            "rarity": "rare",
+            "affixCount": 4,
+            "matchedTargetCount": 2,
+            "targetCount": 3
+          },
+          "occupancyUnderKnownPolicy": 0.11987014068684287,
+          "occupancyUnderIndependentPolicy": 0.14633567469544037,
+          "knownSelectedActionId": "scouring_orb",
+          "independentSelectedActionId": "annulment_orb",
+          "knownActionQInKnownGraph": 4728.270363537496,
+          "knownActionQInIndependentGraph": 2237.179866559531,
+          "independentActionQInIndependentGraph": 2211.017564616916,
+          "reason": "DIFFERENT_Q_SELECTION"
+        },
+        {
+          "stateKey": "Large Cluster Jewel:Minions deal 10% increased Damage:84:8:flags(influenced=false,synthesised=false,acquisitionMenu=false,methodFamilyActionEvidence=):rare|P:[groups(AfflictionJewelSmallPassivesGrantES)|groups(Renewal):id(Renewal):t1:name(Renewal):target(1)]|S:[groups(AfflictionJewelSmallPassivesGrantChaosRes)|groups(Primordial Bond):id(Primordial Bond):t1:name(Primordial Bond):target(0)]",
+          "state": {
+            "rarity": "rare",
+            "affixCount": 4,
+            "matchedTargetCount": 2,
+            "targetCount": 3
+          },
+          "occupancyUnderKnownPolicy": 0.11987014068684287,
+          "occupancyUnderIndependentPolicy": 0.14633567469544037,
+          "knownSelectedActionId": "scouring_orb",
+          "independentSelectedActionId": "annulment_orb",
+          "knownActionQInKnownGraph": 4728.270363537496,
+          "knownActionQInIndependentGraph": 2237.179866559531,
+          "independentActionQInIndependentGraph": 2211.017564616916,
+          "reason": "DIFFERENT_Q_SELECTION"
+        },
+        {
+          "stateKey": "Large Cluster Jewel:Minions deal 10% increased Damage:84:8:flags(influenced=false,synthesised=false,acquisitionMenu=false,methodFamilyActionEvidence=):rare|P:[groups(AfflictionJewelSmallPassivesGrantES)|groups(Renewal):id(Renewal):t1:name(Renewal):target(1)]|S:[groups(AfflictionJewelSmallPassivesGrantColdRes)|groups(Primordial Bond):id(Primordial Bond):t1:name(Primordial Bond):target(0)]",
+          "state": {
+            "rarity": "rare",
+            "affixCount": 4,
+            "matchedTargetCount": 2,
+            "targetCount": 3
+          },
+          "occupancyUnderKnownPolicy": 0.11987014068684287,
+          "occupancyUnderIndependentPolicy": 0.14633567469544037,
+          "knownSelectedActionId": "scouring_orb",
+          "independentSelectedActionId": "annulment_orb",
+          "knownActionQInKnownGraph": 4728.270363537496,
+          "knownActionQInIndependentGraph": 2237.179866559531,
+          "independentActionQInIndependentGraph": 2211.017564616916,
+          "reason": "DIFFERENT_Q_SELECTION"
+        },
+        {
+          "stateKey": "Large Cluster Jewel:Minions deal 10% increased Damage:84:8:flags(influenced=false,synthesised=false,acquisitionMenu=false,methodFamilyActionEvidence=):rare|P:[groups(AfflictionJewelSmallPassivesGrantES)|groups(Renewal):id(Renewal):t1:name(Renewal):target(1)]|S:[groups(AfflictionJewelSmallPassivesGrantDex)|groups(Primordial Bond):id(Primordial Bond):t1:name(Primordial Bond):target(0)]",
+          "state": {
+            "rarity": "rare",
+            "affixCount": 4,
+            "matchedTargetCount": 2,
+            "targetCount": 3
+          },
+          "occupancyUnderKnownPolicy": 0.11987014068684287,
+          "occupancyUnderIndependentPolicy": 0.14633567469544037,
+          "knownSelectedActionId": "scouring_orb",
+          "independentSelectedActionId": "annulment_orb",
+          "knownActionQInKnownGraph": 4728.270363537496,
+          "knownActionQInIndependentGraph": 2237.179866559531,
+          "independentActionQInIndependentGraph": 2211.017564616916,
+          "reason": "DIFFERENT_Q_SELECTION"
+        },
+        {
+          "stateKey": "Large Cluster Jewel:Minions deal 10% increased Damage:84:8:flags(influenced=false,synthesised=false,acquisitionMenu=false,methodFamilyActionEvidence=):rare|P:[groups(AfflictionJewelSmallPassivesGrantES)|groups(Renewal):id(Renewal):t1:name(Renewal):target(1)]|S:[groups(AfflictionJewelSmallPassivesGrantElementalRes)|groups(Primordial Bond):id(Primordial Bond):t1:name(Primordial Bond):target(0)]",
+          "state": {
+            "rarity": "rare",
+            "affixCount": 4,
+            "matchedTargetCount": 2,
+            "targetCount": 3
+          },
+          "occupancyUnderKnownPolicy": 0.11987014068684287,
+          "occupancyUnderIndependentPolicy": 0.14633567469544037,
+          "knownSelectedActionId": "scouring_orb",
+          "independentSelectedActionId": "annulment_orb",
+          "knownActionQInKnownGraph": 4728.270363537496,
+          "knownActionQInIndependentGraph": 2237.179866559531,
+          "independentActionQInIndependentGraph": 2211.017564616916,
+          "reason": "DIFFERENT_Q_SELECTION"
+        }
+      ]
+    },
+    "route": {
+      "actionId": "method:family_conventional",
+      "name": "Start clean base",
+      "expectedTotalCostChaos": 2276.6407665828724,
+      "lowerBoundChaos": 40.14397503191489,
+      "incumbentUpperBoundChaos": 2276.6407665828724,
+      "optimalityGapChaos": 2236.4967915509574,
+      "status": "RESOLVED",
+      "couldBeatResolvedIncumbent": true,
+      "metrics": {
+        "expectedChaosCost": 2276.6407665828724,
+        "expectedPhysicalActions": 16142.004545840233,
+        "estimatedManualTimeMs": 6456801.81833598,
+        "objectiveScore": 2276.6407665828724,
+        "effortConfidence": "DEFAULT_APPROXIMATE"
+      },
+      "acquisitionMetrics": {
+        "expectedChaosCost": 40,
+        "expectedPhysicalActions": 0,
+        "estimatedManualTimeMs": 0,
+        "objectiveScore": 40,
+        "effortConfidence": "DEFAULT_APPROXIMATE"
+      },
+      "downstreamMetrics": {
+        "expectedChaosCost": 2236.6407665828724,
+        "expectedPhysicalActions": 16142.004545840233,
+        "estimatedManualTimeMs": 6456801.81833598,
+        "objectiveScore": 2236.640766559536,
+        "effortConfidence": "DEFAULT_APPROXIMATE"
+      },
+      "acquisitionCandidateId": "candidate_0",
+      "acquisitionMethodId": "clean-base_0"
+    },
+    "acquisitionStatus": "RESOLVED",
+    "acquisitionL": 40,
+    "acquisitionU": 40,
+    "downstreamStatus": "RESOLVED",
+    "downstreamL": 0.14397503191489136,
+    "downstreamU": 2236.6407665828724,
+    "fullRouteStatus": "RESOLVED",
+    "fullRouteL": 40.14397503191489,
+    "fullRouteU": 2276.6407665828724,
+    "requiredActionObservedOnPolicy": true,
+    "onPolicyActionIds": [
+      "alteration_orb",
+      "annulment_orb",
+      "augmentation_orb",
+      "clean_base_initial",
+      "exalted_orb",
+      "regal_orb",
+      "scouring_orb",
+      "transmutation_orb"
+    ],
+    "expectedActionUsage": [
+      {
+        "actionId": "alteration_orb",
+        "actionName": "Orb of Alteration",
+        "expectedCount": 15635.418582148759,
+        "expectedCostChaos": 2088.8919225750574
+      },
+      {
+        "actionId": "annulment_orb",
+        "actionName": "Orb of Annulment",
+        "expectedCount": 8.46436680829586,
+        "expectedCostChaos": 98.6945169847297
+      },
+      {
+        "actionId": "clean_base_initial",
+        "actionName": "Initial clean cluster jewel base",
+        "expectedCount": 1,
+        "expectedCostChaos": 40
+      },
+      {
+        "actionId": "exalted_orb",
+        "actionName": "Exalted Orb Slam",
+        "expectedCount": 18.93696349868904,
+        "expectedCostChaos": 22.15624729346626
+      },
+      {
+        "actionId": "augmentation_orb",
+        "actionName": "Orb of Augmentation",
+        "expectedCount": 424.93607307920865,
+        "expectedCostChaos": 16.746730640051613
+      },
+      {
+        "actionId": "scouring_orb",
+        "actionName": "Orb of Scouring",
+        "expectedCount": 17.416186768408636,
+        "expectedCostChaos": 9.389066286849006
+      },
+      {
+        "actionId": "regal_orb",
+        "actionName": "Regal Orb",
+        "expectedCount": 18.416186768433217,
+        "expectedCostChaos": 0.6699808746356005
+      },
+      {
+        "actionId": "transmutation_orb",
+        "actionName": "Orb of Transmutation",
+        "expectedCount": 18.41618676840729,
+        "expectedCostChaos": 0.09230192808325734
+      }
+    ],
+    "policyHealth": {
+      "selectedPolicyStatus": "FULLY RESOLVED / PROPER / ABSORBING / COST-RECONCILED",
+      "proofLevel": "BEST FULLY RESOLVED POLICY FOUND",
+      "onPolicyReachableStates": 1214,
+      "onPolicyTerminalStates": 15,
+      "onPolicyUnresolvedTransitions": 0,
+      "terminalAbsorptionProbability": 0.9999999999929781,
+      "proper": true,
+      "fullyResolved": true,
+      "bellmanConverged": true,
+      "occupancyConverged": true,
+      "costReconciled": true,
+      "reconciliationDifferenceChaos": 2.3367647372651845e-8
+    },
+    "sessionIdentity": "phase2j-4ae46f61:family_conventional",
+    "retainedStates": 3334,
+    "transitionDistributionsGenerated": 7005,
+    "budget": {
+      "maxStates": 5000,
+      "maxWallTimeMs": 1083,
+      "maxExpansionRounds": 3,
+      "elapsedMs": 921
+    },
+    "whyNotSelectedExplanation": "This resolved eligible policy is dominated by the selected policy for the requested objective and its tie-breakers.",
+    "objectiveEligibility": "OBJECTIVE_DOMINATED",
+    "policyEquivalenceFingerprint": "policy-4aa41222",
+    "policyEquivalenceEvidence": {
+      "version": "CANONICAL_POLICY_EQUIVALENCE_V1",
+      "physicalAcquisitionIdentity": "{\"state\":\"Large Cluster Jewel|Minions deal 10% increased Damage|84|8|normal|influenced=false|synthesised=false|acquisitionMenu=false|methodFamilyActionEvidence=\",\"kind\":\"CLEAN\",\"method\":\"clean-base\",\"synthesisTerminalSemantics\":\"CLEAN_BASE\"}",
+      "normalizedPolicyDecisionCount": 1199,
+      "requiredActionEvidence": [
+        "alteration_orb",
+        "annulment_orb",
+        "augmentation_orb",
+        "clean_base_initial",
+        "exalted_orb",
+        "regal_orb",
+        "scouring_orb",
+        "transmutation_orb"
+      ],
+      "recoveryDecisionCount": 794,
+      "terminalStateCount": 0,
+      "usageTolerance": 0.000001
+    },
+    "equivalentToSelectedPolicy": false,
+    "playerRouteName": "Start clean base"
+  },
+  "familyMatrix": [
+    {
+      "id": "family_open",
+      "kind": "OPEN",
+      "incumbentSource": "INDEPENDENT_DISCOVERY",
+      "familySearchStatus": "BEST_FOUND_UNPROVEN",
+      "fullRouteU": 1459.7923662158182
+    },
+    {
+      "id": "family_conventional",
+      "kind": "CONVENTIONAL",
+      "admissible": false,
+      "incumbentSource": "IMPROVED_FROM_KNOWN_POLICY",
+      "familySearchStatus": "BEST_FOUND_UNPROVEN",
+      "fullRouteU": 2276.6407665828724
+    },
+    {
+      "id": "family_harvest_life",
+      "kind": "HARVEST",
+      "admissible": false,
+      "incumbentSource": "INDEPENDENT_DISCOVERY",
+      "familySearchStatus": "OPTIMAL_PROVEN",
+      "fullRouteU": 7745.628943129042
+    },
+    {
+      "id": "family_harvest_attack",
+      "kind": "HARVEST",
+      "admissible": false,
+      "incumbentSource": "INDEPENDENT_DISCOVERY",
+      "familySearchStatus": "OPTIMAL_PROVEN",
+      "fullRouteU": 10144.56978018763
+    },
+    {
+      "id": "family_harvest_physical",
+      "kind": "HARVEST",
+      "admissible": false,
+      "incumbentSource": "INDEPENDENT_DISCOVERY",
+      "familySearchStatus": "OPTIMAL_PROVEN",
+      "fullRouteU": 3923.838000556671
+    },
+    {
+      "id": "family_fracture_Primordial Bond",
+      "kind": "SELF_FRACTURE",
+      "admissible": false,
+      "incumbentSource": "INDEPENDENT_DISCOVERY",
+      "familySearchStatus": "BEST_FOUND_UNPROVEN",
+      "fullRouteU": 1459.7923662160777
+    },
+    {
+      "id": "family_fracture_harvest_Primordial Bond_life",
+      "kind": "SELF_FRACTURE_HARVEST",
+      "admissible": false,
+      "incumbentSource": "INDEPENDENT_DISCOVERY",
+      "familySearchStatus": "OPTIMAL_PROVEN",
+      "fullRouteU": 1753.4390054926168
+    },
+    {
+      "id": "family_fracture_harvest_Primordial Bond_attack",
+      "kind": "SELF_FRACTURE_HARVEST",
+      "admissible": false,
+      "incumbentSource": "INDEPENDENT_DISCOVERY",
+      "familySearchStatus": "OPTIMAL_PROVEN",
+      "fullRouteU": 1631.2347557732853
+    },
+    {
+      "id": "family_fracture_harvest_Primordial Bond_physical",
+      "kind": "SELF_FRACTURE_HARVEST",
+      "admissible": false,
+      "incumbentSource": "INDEPENDENT_DISCOVERY",
+      "familySearchStatus": "OPTIMAL_PROVEN",
+      "fullRouteU": 1497.6438114467085
+    },
+    {
+      "id": "family_fracture_Renewal",
+      "kind": "SELF_FRACTURE",
+      "admissible": false,
+      "incumbentSource": "INDEPENDENT_DISCOVERY",
+      "familySearchStatus": "BEST_FOUND_UNPROVEN",
+      "fullRouteU": 1636.3811154830041
+    },
+    {
+      "id": "family_fracture_harvest_Renewal_life",
+      "kind": "SELF_FRACTURE_HARVEST",
+      "admissible": false,
+      "incumbentSource": "INDEPENDENT_DISCOVERY",
+      "familySearchStatus": "OPTIMAL_PROVEN",
+      "fullRouteU": 2307.3743077776544
+    },
+    {
+      "id": "family_fracture_harvest_Renewal_attack",
+      "kind": "SELF_FRACTURE_HARVEST",
+      "admissible": false,
+      "incumbentSource": "INDEPENDENT_DISCOVERY",
+      "familySearchStatus": "OPTIMAL_PROVEN",
+      "fullRouteU": 1832.868625246947
+    },
+    {
+      "id": "family_fracture_harvest_Renewal_physical",
+      "kind": "SELF_FRACTURE_HARVEST",
+      "admissible": false,
+      "incumbentSource": "INDEPENDENT_DISCOVERY",
+      "familySearchStatus": "OPTIMAL_PROVEN",
+      "fullRouteU": 1541.936265623351
+    },
+    {
+      "id": "family_fracture_Rotten Claws",
+      "kind": "SELF_FRACTURE",
+      "admissible": false,
+      "incumbentSource": "INDEPENDENT_DISCOVERY",
+      "familySearchStatus": "BEST_FOUND_UNPROVEN",
+      "fullRouteU": 1636.3811154829789
+    },
+    {
+      "id": "family_fracture_harvest_Rotten Claws_life",
+      "kind": "SELF_FRACTURE_HARVEST",
+      "admissible": false,
+      "incumbentSource": "INDEPENDENT_DISCOVERY",
+      "familySearchStatus": "OPTIMAL_PROVEN",
+      "fullRouteU": 1827.2551015886415
+    },
+    {
+      "id": "family_fracture_harvest_Rotten Claws_attack",
+      "kind": "SELF_FRACTURE_HARVEST",
+      "admissible": false,
+      "incumbentSource": "INDEPENDENT_DISCOVERY",
+      "familySearchStatus": "OPTIMAL_PROVEN",
+      "fullRouteU": 12482.986672865902
+    },
+    {
+      "id": "family_fracture_harvest_Rotten Claws_physical",
+      "kind": "SELF_FRACTURE_HARVEST",
+      "admissible": false,
+      "familySearchStatus": "UNRESOLVED"
+    },
+    {
+      "id": "family_chaos_reforge",
+      "kind": "CHAOS_REFORGE"
+    }
+  ]
+}

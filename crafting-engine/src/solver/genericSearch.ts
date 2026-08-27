@@ -1136,6 +1136,202 @@ function solveSelectedPolicyLinearSystem(
   };
 }
 
+export interface FixedPolicyGraphEvaluation {
+  startKey: string;
+  reachableStateCount: number;
+  reachableNonTerminalStateCount: number;
+  reachableTerminalStateCount: number;
+  unresolvedTransitionCount: number;
+  probabilityRowsReconciled: boolean;
+  maximumProbabilityRowDifference: number;
+  totalExpectedCostChaos: number;
+  expectedPhysicalActions: number;
+  estimatedManualTimeMs: number;
+  terminalAbsorptionProbability: number;
+  proper: boolean;
+  valueConverged: boolean;
+  occupancyConverged: boolean;
+  costReconciled: boolean;
+  reconciliationDifferenceChaos: number;
+  valueIterations: number;
+  occupancyIterations: number;
+  expectedVisitsByStateKey: Map<string, number>;
+  valuesByStateKey: Map<string, number>;
+  expectedActionUsage: ExpectedActionUsageResult[];
+}
+
+/**
+ * Independently evaluates one already-selected policy over an exact retained graph.
+ *
+ * This does not run policy improvement and does not trust a source scalar value. It
+ * solves the fixed Markov policy afresh for value and occupancy, then reconciles the
+ * start value against expected action usage. Callers remain responsible for proving
+ * that every selected action and transition is legal in their narrower action context.
+ */
+export function evaluateFixedPolicyGraph(options: {
+  startState: ItemState;
+  target: TargetDefinition;
+  nodes: Map<string, CanonicalGraphNode>;
+  policyMap: Map<string, StatePolicyDecision>;
+  canonicalStateKey?: (state: ItemState, target: TargetDefinition) => string;
+  deadlineMs?: number;
+  tolerance?: number;
+}): FixedPolicyGraphEvaluation {
+  const tolerance = options.tolerance ?? 1e-8;
+  const stateKey = (state: ItemState): string =>
+    options.canonicalStateKey?.(state, options.target) ??
+    getCanonicalStateKey(state, options.target);
+  const startKey = stateKey(options.startState);
+  const reachableKeys = new Set<string>();
+  const nonTerminalKeys = new Set<string>();
+  const terminalKeys = new Set<string>();
+  const stack = [startKey];
+  let unresolvedTransitionCount = 0;
+  let maximumProbabilityRowDifference = 0;
+
+  while (stack.length > 0) {
+    if (options.deadlineMs !== undefined && Date.now() >= options.deadlineMs) {
+      throw new Error('Fixed-policy evaluation exceeded its deadline');
+    }
+    const key = stack.pop()!;
+    if (reachableKeys.has(key)) continue;
+    reachableKeys.add(key);
+    const node = options.nodes.get(key);
+    if (!node) {
+      unresolvedTransitionCount++;
+      continue;
+    }
+    if (node.isTerminal || satisfiesTarget(node.state, options.target)) {
+      terminalKeys.add(key);
+      continue;
+    }
+    const decision = options.policyMap.get(key);
+    const action = decision ? node.actions.get(decision.bestActionId) : undefined;
+    if (!decision || !action || action.deferred || !action.isDirectlyResolved) {
+      unresolvedTransitionCount++;
+      continue;
+    }
+    nonTerminalKeys.add(key);
+    const rowSum = action.transitions.reduce(
+      (sum, transition) => sum + transition.probability,
+      0,
+    );
+    maximumProbabilityRowDifference = Math.max(
+      maximumProbabilityRowDifference,
+      Math.abs(1 - rowSum),
+    );
+    for (const transition of action.transitions) {
+      const targetNode = options.nodes.get(transition.targetKey);
+      if (
+        targetNode?.isTerminal === true ||
+        satisfiesTarget(transition.nextState, options.target)
+      ) {
+        terminalKeys.add(transition.targetKey);
+        reachableKeys.add(transition.targetKey);
+      } else if (targetNode) {
+        stack.push(transition.targetKey);
+      } else {
+        unresolvedTransitionCount++;
+      }
+    }
+  }
+
+  const valueSolve = solveSelectedPolicyLinearSystem(
+    options.nodes,
+    options.policyMap,
+    nonTerminalKeys,
+    (_key, action) => action.immediateCostChaos,
+    false,
+    undefined,
+    tolerance,
+    4_000,
+    options.deadlineMs,
+  );
+  const occupancySolve = solveSelectedPolicyLinearSystem(
+    options.nodes,
+    options.policyMap,
+    nonTerminalKeys,
+    (key) => key === startKey ? 1 : 0,
+    true,
+    undefined,
+    tolerance,
+    4_000,
+    options.deadlineMs,
+  );
+
+  const usage = new Map<string, ExpectedActionUsageResult>();
+  let terminalAbsorptionProbability = terminalKeys.has(startKey) ? 1 : 0;
+  let expectedPhysicalActions = 0;
+  let estimatedManualTimeMs = 0;
+  for (const key of nonTerminalKeys) {
+    const visits = Math.max(0, occupancySolve.values.get(key) ?? 0);
+    if (visits <= 0) continue;
+    const node = options.nodes.get(key)!;
+    const decision = options.policyMap.get(key)!;
+    const action = node.actions.get(decision.bestActionId)!;
+    const entry = usage.get(decision.bestActionId) ?? {
+      actionId: decision.bestActionId,
+      actionName: decision.bestActionName,
+      expectedCount: 0,
+      expectedCostChaos: 0,
+    };
+    entry.expectedCount += visits;
+    entry.expectedCostChaos += visits * action.immediateCostChaos;
+    usage.set(decision.bestActionId, entry);
+    expectedPhysicalActions += visits * action.costVector.physicalActionCount;
+    estimatedManualTimeMs += visits * action.costVector.estimatedManualTimeMs;
+    for (const transition of action.transitions) {
+      const targetNode = options.nodes.get(transition.targetKey);
+      if (
+        targetNode?.isTerminal === true ||
+        satisfiesTarget(transition.nextState, options.target)
+      ) terminalAbsorptionProbability += visits * transition.probability;
+    }
+  }
+  const expectedActionUsage = [...usage.values()].sort(
+    (left, right) => right.expectedCostChaos - left.expectedCostChaos ||
+      left.actionId.localeCompare(right.actionId),
+  );
+  const totalExpectedCostChaos = valueSolve.values.get(startKey) ??
+    (terminalKeys.has(startKey) ? 0 : Infinity);
+  const usageCostChaos = expectedActionUsage.reduce(
+    (sum, entry) => sum + entry.expectedCostChaos,
+    0,
+  );
+  const reconciliationDifferenceChaos = Math.abs(
+    totalExpectedCostChaos - usageCostChaos,
+  );
+  const probabilityRowsReconciled = maximumProbabilityRowDifference <= tolerance;
+  const proper = unresolvedTransitionCount === 0 &&
+    valueSolve.converged && occupancySolve.converged &&
+    probabilityRowsReconciled &&
+    Math.abs(1 - terminalAbsorptionProbability) <= 1e-6;
+
+  return {
+    startKey,
+    reachableStateCount: reachableKeys.size,
+    reachableNonTerminalStateCount: nonTerminalKeys.size,
+    reachableTerminalStateCount: terminalKeys.size,
+    unresolvedTransitionCount,
+    probabilityRowsReconciled,
+    maximumProbabilityRowDifference,
+    totalExpectedCostChaos,
+    expectedPhysicalActions,
+    estimatedManualTimeMs,
+    terminalAbsorptionProbability,
+    proper,
+    valueConverged: valueSolve.converged,
+    occupancyConverged: occupancySolve.converged,
+    costReconciled: reconciliationDifferenceChaos <= 0.05,
+    reconciliationDifferenceChaos,
+    valueIterations: valueSolve.iterations,
+    occupancyIterations: occupancySolve.iterations,
+    expectedVisitsByStateKey: occupancySolve.values,
+    valuesByStateKey: valueSolve.values,
+    expectedActionUsage,
+  };
+}
+
 /**
  * Generic Stochastic Shortest-Path / Bellman Value Iteration solver.
  * Evaluates candidate Q-values, on-policy vs full-graph reachability,

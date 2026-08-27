@@ -89,6 +89,14 @@ function graphBounds(graph: VisualizationGraph, mode: 'SELECTED_ROUTE' | 'ALL') 
   if (nodes.length === 0) {
     return { minX: 0, maxX: 1000, minY: 0, maxY: 600 };
   }
+  if (nodes.length === graph.nodes.length) {
+    return {
+      minX: graph.bounds.minX,
+      maxX: graph.bounds.maxX,
+      minY: graph.bounds.minY,
+      maxY: graph.bounds.maxY,
+    };
+  }
   return {
     minX: Math.min(...nodes.map((node) => node.x - node.radius - 74)),
     maxX: Math.max(...nodes.map((node) => node.x + node.radius + 74)),
@@ -113,7 +121,7 @@ function calculateTransform(
       Math.max(1, displayWidth - padding * 2) / graphWidth,
       Math.max(1, displayHeight - padding * 2) / graphHeight,
     ),
-    0.12,
+    0.28,
     2.5,
   );
   const scale = baseScale * camera.zoom;
@@ -180,8 +188,8 @@ function buildLabelLayouts(
   activeNodeId: string | null,
 ): LabelLayout[] {
   if (displayWidth <= 0 || displayHeight <= 0) return [];
-  const lowDetail = camera.zoom < 0.62;
-  const highDetail = camera.zoom >= 1.55;
+  const lowDetail = transform.scale < 0.32;
+  const highDetail = transform.scale >= 1.25;
   const baseMode = camera.fitMode === 'MANUAL' ? camera.baseFitMode : camera.fitMode;
   const candidates = graph.nodes
     .filter((node) => {
@@ -200,8 +208,8 @@ function buildLabelLayouts(
   for (const node of candidates) {
     const focused = node.id === selectedNodeId || node.id === hoveredNodeId || node.id === activeNodeId;
     const collapsed = lowDetail && !focused && node.kind !== 'TERMINAL_SUCCESS';
-    const labelWidth = collapsed ? 34 : node.isSelectedRoute ? 116 : 136;
-    const labelHeight = collapsed ? 32 : 48;
+    const labelWidth = collapsed ? 34 : node.isSelectedRoute ? 150 : 164;
+    const labelHeight = collapsed ? 32 : 62;
     const anchorX = node.x * transform.scale + transform.offsetX;
     const anchorY = node.y * transform.scale + transform.offsetY;
     const radius = Math.max(10, node.radius * transform.scale);
@@ -257,7 +265,7 @@ export const MarkovConstellation: React.FC<MarkovConstellationProps> = ({
   graph,
   selectedRouteName,
   width = 900,
-  height = 520,
+  height = 760,
   isLive: _isLive = false,
   deterministicMode = false,
   onNodeClick,
@@ -877,6 +885,15 @@ export const MarkovConstellation: React.FC<MarkovConstellationProps> = ({
       data-recovery-edge-count={graph.topology.recoveryEdgeCount}
       data-particle-count={particleCount}
       data-layout-ms={graph.performance.layoutMs.toFixed(3)}
+      data-layout-mode={graph.layoutEvidence.mode}
+      data-large-scc-count={graph.layoutEvidence.largeSccCount}
+      data-large-scc-node-count={graph.layoutEvidence.largeSccNodeCount}
+      data-semantic-band-count={graph.layoutEvidence.semanticBandCount}
+      data-layout-horizontal-span={graph.layoutEvidence.horizontalSpan.toFixed(3)}
+      data-layout-vertical-span={graph.layoutEvidence.verticalSpan.toFixed(3)}
+      data-minimum-node-distance={graph.layoutEvidence.minimumNodeCenterDistance.toFixed(3)}
+      data-recovery-corridor-edge-count={graph.layoutEvidence.recoveryCorridorEdgeCount}
+      data-default-chronological-ordinals={graph.layoutEvidence.defaultChronologicalOrdinals}
       data-selected-route-node-ids={graph.selectedRouteNodeIds.join(',')}
       data-selected-route-edge-ids={graph.selectedRouteEdgeIds.join(',')}
       data-terminal-node-count={graph.nodes.filter((node) =>
@@ -967,6 +984,7 @@ export const MarkovConstellation: React.FC<MarkovConstellationProps> = ({
                 data-edge-anchor={edge.id}
                 data-conditional-probability={edge.probability.toPrecision(12)}
                 data-expected-flow={edge.expectedVisits.toPrecision(12)}
+                data-edge-routing={edge.routing}
                 onClick={(event) => {
                   if (event.detail === 0) selectEdge(edge);
                 }}
@@ -989,12 +1007,16 @@ export const MarkovConstellation: React.FC<MarkovConstellationProps> = ({
                 }}
                 data-node-id={node.id}
                 data-node-anchor={node.id}
+                data-node-x={node.x.toFixed(3)}
+                data-node-y={node.y.toFixed(3)}
+                data-semantic-band={node.semanticBand}
+                data-recovery-lane={node.recoveryLane}
                 onFocus={() => setHoveredNodeId(node.id)}
                 onBlur={() => setHoveredNodeId(null)}
                 onClick={(event) => {
                   if (event.detail === 0) selectNode(node);
                 }}
-                aria-label={`Select ${node.stepNumber ? `step ${node.stepNumber}, ` : ''}${node.fullLabel}`}
+                aria-label={`Select ${node.fullLabel}`}
               />
             );
           })}
@@ -1012,13 +1034,16 @@ export const MarkovConstellation: React.FC<MarkovConstellationProps> = ({
               onClick={(event) => {
                 if (event.detail === 0) selectNode(layout.node);
               }}
-              aria-label={`${layout.node.stepNumber ? `Step ${layout.node.stepNumber}: ` : ''}${layout.node.fullLabel}. ${layout.node.details.routeStatus}`}
+              aria-label={`${advancedLabels && layout.node.stepNumber ? `Traversal index ${layout.node.stepNumber}: ` : ''}${layout.node.fullLabel}. ${layout.node.details.routeStatus}`}
             >
               {layout.collapsed
-                ? <span>{layout.node.stepNumber ?? (layout.node.kind === 'TERMINAL_SUCCESS' ? '✓' : '•')}</span>
+                ? <span>{layout.node.kind === 'TERMINAL_SUCCESS' ? '✓' : '•'}</span>
                 : <>
-                    {layout.node.stepNumber && <span className="node-label-step">{layout.node.stepNumber}</span>}
-                    <span className="node-label-title">{layout.node.label}</span>
+                    {advancedLabels && layout.node.stepNumber && <span className="node-label-step">#{layout.node.stepNumber}</span>}
+                    <span className="node-label-copy">
+                      <span className="node-label-title">{layout.node.label}</span>
+                      {layout.node.sublabel && <span className="node-label-sublabel">{layout.node.sublabel}</span>}
+                    </span>
                   </>}
             </button>
           ))}
@@ -1032,6 +1057,7 @@ export const MarkovConstellation: React.FC<MarkovConstellationProps> = ({
               data-conditional-probability={edge.probability.toPrecision(12)}
               data-expected-flow={edge.expectedVisits.toPrecision(12)}
               data-outcome-kind={edge.outcomeKind}
+              data-edge-routing={edge.routing}
               onClick={(event) => {
                 if (event.detail === 0) selectEdge(edge);
               }}
@@ -1043,7 +1069,9 @@ export const MarkovConstellation: React.FC<MarkovConstellationProps> = ({
         {selectedNode && (
           <aside className="node-detail-overlay" aria-label="Selected constellation node details" data-selected-node-id={selectedNode.id}>
             <div className="node-detail-heading">
-              <span>{selectedNode.stepNumber ? `Step ${selectedNode.stepNumber}` : selectedNode.kind.replace(/_/g, ' ')}</span>
+              <span>{advancedLabels && selectedNode.stepNumber
+                ? `Traversal index ${selectedNode.stepNumber}`
+                : selectedNode.kind.replace(/_/g, ' ')}</span>
               <h4>{selectedNode.fullLabel}</h4>
             </div>
             {selectedNode.details.targetTexts.length > 0 && (
@@ -1130,11 +1158,11 @@ export const MarkovConstellation: React.FC<MarkovConstellationProps> = ({
               && graph.acquisitionContext.kind === 'SELF_FRACTURE'
               ? 'Fracture'
               : node.label;
-            const railLabel = node.stepNumber
-              ? `${node.stepNumber} ${compactLabel}`
+            const railLabel = advancedLabels && node.stepNumber
+              ? `#${node.stepNumber} ${compactLabel}`
               : index === 0
-                ? 'Start'
-                : compactLabel;
+                ? `Start · ${compactLabel}`
+                : `${compactLabel}${node.sublabel ? ` · ${node.sublabel}` : ''}`;
             return (
               <button
                 type="button"

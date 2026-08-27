@@ -1,6 +1,6 @@
 {
   "schemaVersion": "PHASE3A_QUALITY_REPORT_V1",
-  "runId": "2026-08-27T15-09-53-031Z",
+  "runId": "2026-08-27T19-25-58-305Z",
   "suite": "RELEASE",
   "requestedGateIds": [
     "A-clean-worker-canonical",
@@ -9,9 +9,11 @@
     "B-self-fracture-policy",
     "B-fractured-magic-alter-price-reversal",
     "B-harvest-objective-policy",
+    "C-policy-family-admissibility",
     "C-cluster-handoff",
     "C-share-export-roundtrip",
     "C-responsive-accessibility",
+    "D-constellation-large-scc-layout",
     "D-real-policy-flow-differential",
     "D-frozen-policy-flow-renderer",
     "D-constellation-interaction-short-replay"
@@ -23,24 +25,26 @@
     "B-self-fracture-policy",
     "B-fractured-magic-alter-price-reversal",
     "B-harvest-objective-policy",
+    "C-policy-family-admissibility",
     "C-cluster-handoff",
     "C-share-export-roundtrip",
     "C-responsive-accessibility",
+    "D-constellation-large-scc-layout",
     "D-real-policy-flow-differential",
     "D-frozen-policy-flow-renderer",
     "D-constellation-interaction-short-replay"
   ],
-  "startedAt": "2026-08-27T15:09:53.032Z",
-  "finishedAt": "2026-08-27T15:11:36.760Z",
+  "startedAt": "2026-08-27T19:25:58.306Z",
+  "finishedAt": "2026-08-27T19:28:32.393Z",
   "status": "PASSED",
   "identity": {
-    "applicationSourceBuildHash": "app-231264501792683fb852",
-    "fixtureCorpusVersion": "Phase3B-Frozen-Browser-Corpus-1",
-    "fixtureCorpusHash": "corpus-f82fabccc70fb4a4937c",
-    "priceSnapshotIdentity": "prices-c030074ab584f9e3",
+    "applicationSourceBuildHash": "app-3caf9ff2f53e5897de86",
+    "fixtureCorpusVersion": "Phase3C-Frozen-Browser-Corpus-1",
+    "fixtureCorpusHash": "corpus-b9aedc966f617dd79f9d",
+    "priceSnapshotIdentity": "prices-086bbb3ef86a6b63",
     "browserVersion": "151.0.7922.34",
     "harnessVersion": "PHASE3A_QUALITY_LAB_V1",
-    "compatibilityHash": "compatible-52913c9a49518520a46c9e08"
+    "compatibilityHash": "compatible-393dc1903861b9aaf8d1e711"
   },
   "scheduling": {
     "processLevelShards": [
@@ -74,15 +78,17 @@
       {
         "shard": "C",
         "gateIds": [
+          "C-policy-family-admissibility",
           "C-cluster-handoff",
           "C-share-export-roundtrip",
           "C-responsive-accessibility"
         ],
-        "mode": "PARALLEL_BROWSER_LIGHT"
+        "mode": "SERIAL_SOLVER_HEAVY"
       },
       {
         "shard": "D",
         "gateIds": [
+          "D-constellation-large-scc-layout",
           "D-real-policy-flow-differential",
           "D-frozen-policy-flow-renderer",
           "D-constellation-interaction-short-replay"
@@ -92,11 +98,11 @@
     ]
   },
   "counts": {
-    "passed": 12,
+    "passed": 14,
     "failed": 0,
     "resumed": 0,
     "skipped": 0,
-    "total": 12
+    "total": 14
   },
   "results": [
     {
@@ -113,9 +119,9 @@
       "costClass": "FAST",
       "status": "PASS",
       "passed": true,
-      "startedAt": "2026-08-27T15:09:53.939Z",
-      "finishedAt": "2026-08-27T15:09:56.118Z",
-      "durationMs": 2179,
+      "startedAt": "2026-08-27T19:25:59.178Z",
+      "finishedAt": "2026-08-27T19:26:01.361Z",
+      "durationMs": 2182,
       "details": {
         "fixture": "cheap_one_mod",
         "protocol": {
@@ -146,14 +152,14 @@
         }
       },
       "executionIdentity": {
-        "applicationSourceBuildHash": "app-231264501792683fb852",
+        "applicationSourceBuildHash": "app-3caf9ff2f53e5897de86",
         "gateIdVersion": "A-clean-worker-canonical@1",
-        "fixtureCorpusVersion": "Phase3B-Frozen-Browser-Corpus-1",
+        "fixtureCorpusVersion": "Phase3C-Frozen-Browser-Corpus-1",
         "fixtureInputHash": "fixture-a8a605222b9c93d082e9",
-        "priceSnapshotIdentity": "prices-c030074ab584f9e3",
+        "priceSnapshotIdentity": "prices-086bbb3ef86a6b63",
         "browserVersion": "151.0.7922.34",
         "harnessVersion": "PHASE3A_QUALITY_LAB_V1",
-        "compatibilityHash": "compatible-52913c9a49518520a46c9e08"
+        "compatibilityHash": "compatible-393dc1903861b9aaf8d1e711"
       }
     },
     {
@@ -169,9 +175,9 @@
       "costClass": "FAST",
       "status": "PASS",
       "passed": true,
-      "startedAt": "2026-08-27T15:09:56.118Z",
-      "finishedAt": "2026-08-27T15:09:57.990Z",
-      "durationMs": 1872,
+      "startedAt": "2026-08-27T19:26:01.361Z",
+      "finishedAt": "2026-08-27T19:26:03.067Z",
+      "durationMs": 1706,
       "details": {
         "accounting": {
           "selectedBundleId": "core:clean-open-policy",
@@ -187,14 +193,14 @@
         }
       },
       "executionIdentity": {
-        "applicationSourceBuildHash": "app-231264501792683fb852",
+        "applicationSourceBuildHash": "app-3caf9ff2f53e5897de86",
         "gateIdVersion": "A-proof-accounting-no-fallback@1",
-        "fixtureCorpusVersion": "Phase3B-Frozen-Browser-Corpus-1",
+        "fixtureCorpusVersion": "Phase3C-Frozen-Browser-Corpus-1",
         "fixtureInputHash": "fixture-a8a605222b9c93d082e9",
-        "priceSnapshotIdentity": "prices-c030074ab584f9e3",
+        "priceSnapshotIdentity": "prices-086bbb3ef86a6b63",
         "browserVersion": "151.0.7922.34",
         "harnessVersion": "PHASE3A_QUALITY_LAB_V1",
-        "compatibilityHash": "compatible-52913c9a49518520a46c9e08"
+        "compatibilityHash": "compatible-393dc1903861b9aaf8d1e711"
       }
     },
     {
@@ -210,23 +216,23 @@
       "costClass": "MEDIUM",
       "status": "PASS",
       "passed": true,
-      "startedAt": "2026-08-27T15:09:57.990Z",
-      "finishedAt": "2026-08-27T15:10:00.186Z",
-      "durationMs": 2196,
+      "startedAt": "2026-08-27T19:26:03.067Z",
+      "finishedAt": "2026-08-27T19:26:05.122Z",
+      "durationMs": 2055,
       "details": {
         "terminated": true,
         "replacementSpawned": true,
         "recovered": "BEST_RESOLVED_ACQUISITION_SAFE"
       },
       "executionIdentity": {
-        "applicationSourceBuildHash": "app-231264501792683fb852",
+        "applicationSourceBuildHash": "app-3caf9ff2f53e5897de86",
         "gateIdVersion": "A-cancel-replace-recover@1",
-        "fixtureCorpusVersion": "Phase3B-Frozen-Browser-Corpus-1",
+        "fixtureCorpusVersion": "Phase3C-Frozen-Browser-Corpus-1",
         "fixtureInputHash": "fixture-41b8cfceeef9062a5af9",
-        "priceSnapshotIdentity": "prices-c030074ab584f9e3",
+        "priceSnapshotIdentity": "prices-086bbb3ef86a6b63",
         "browserVersion": "151.0.7922.34",
         "harnessVersion": "PHASE3A_QUALITY_LAB_V1",
-        "compatibilityHash": "compatible-52913c9a49518520a46c9e08"
+        "compatibilityHash": "compatible-393dc1903861b9aaf8d1e711"
       }
     },
     {
@@ -246,9 +252,9 @@
       "costClass": "SOLVER_HEAVY",
       "status": "PASS",
       "passed": true,
-      "startedAt": "2026-08-27T15:10:18.358Z",
-      "finishedAt": "2026-08-27T15:10:45.365Z",
-      "durationMs": 27007,
+      "startedAt": "2026-08-27T19:26:21.381Z",
+      "finishedAt": "2026-08-27T19:26:48.088Z",
+      "durationMs": 26707,
       "details": {
         "conserved": {
           "nodes": 18,
@@ -338,14 +344,14 @@
         "artifact": "quality-lab\\reports\\evidence\\phase3b-current-self-fracture-flow.json"
       },
       "executionIdentity": {
-        "applicationSourceBuildHash": "app-231264501792683fb852",
+        "applicationSourceBuildHash": "app-3caf9ff2f53e5897de86",
         "gateIdVersion": "B-self-fracture-policy@2",
-        "fixtureCorpusVersion": "Phase3B-Frozen-Browser-Corpus-1",
+        "fixtureCorpusVersion": "Phase3C-Frozen-Browser-Corpus-1",
         "fixtureInputHash": "fixture-2f70c545c1e6acdbe389",
-        "priceSnapshotIdentity": "prices-c030074ab584f9e3",
+        "priceSnapshotIdentity": "prices-086bbb3ef86a6b63",
         "browserVersion": "151.0.7922.34",
         "harnessVersion": "PHASE3A_QUALITY_LAB_V1",
-        "compatibilityHash": "compatible-52913c9a49518520a46c9e08"
+        "compatibilityHash": "compatible-393dc1903861b9aaf8d1e711"
       }
     },
     {
@@ -365,9 +371,9 @@
       "costClass": "SOLVER_HEAVY",
       "status": "PASS",
       "passed": true,
-      "startedAt": "2026-08-27T15:10:45.365Z",
-      "finishedAt": "2026-08-27T15:11:14.346Z",
-      "durationMs": 28980,
+      "startedAt": "2026-08-27T19:26:48.088Z",
+      "finishedAt": "2026-08-27T19:27:16.131Z",
+      "durationMs": 28043,
       "details": {
         "route": {
           "recommendationStatus": "PROVISIONAL_RESOLVED",
@@ -434,14 +440,14 @@
         "flowArtifact": "quality-lab\\reports\\evidence\\phase3b-alter-self-loop-flow.json"
       },
       "executionIdentity": {
-        "applicationSourceBuildHash": "app-231264501792683fb852",
+        "applicationSourceBuildHash": "app-3caf9ff2f53e5897de86",
         "gateIdVersion": "B-fractured-magic-alter-price-reversal@1",
-        "fixtureCorpusVersion": "Phase3B-Frozen-Browser-Corpus-1",
+        "fixtureCorpusVersion": "Phase3C-Frozen-Browser-Corpus-1",
         "fixtureInputHash": "fixture-f6b9fbf1b8b89d388877",
-        "priceSnapshotIdentity": "prices-c030074ab584f9e3",
+        "priceSnapshotIdentity": "prices-086bbb3ef86a6b63",
         "browserVersion": "151.0.7922.34",
         "harnessVersion": "PHASE3A_QUALITY_LAB_V1",
-        "compatibilityHash": "compatible-52913c9a49518520a46c9e08"
+        "compatibilityHash": "compatible-393dc1903861b9aaf8d1e711"
       }
     },
     {
@@ -459,9 +465,9 @@
       "costClass": "SOLVER_HEAVY",
       "status": "PASS",
       "passed": true,
-      "startedAt": "2026-08-27T15:11:14.346Z",
-      "finishedAt": "2026-08-27T15:11:36.617Z",
-      "durationMs": 22271,
+      "startedAt": "2026-08-27T19:27:16.131Z",
+      "finishedAt": "2026-08-27T19:27:37.131Z",
+      "durationMs": 21000,
       "details": {
         "objective": {
           "kind": "FEWEST_ACTIONS_WITHIN_COST",
@@ -476,7 +482,7 @@
         "repeatEdges": 2,
         "successEdges": 2,
         "accounting": {
-          "selectedBundleId": "bundle:family_harvest_defences",
+          "selectedBundleId": "bundle:family_harvest_defences:independent",
           "maximumDifferenceChaos": 1.1368683772161603e-13,
           "acquisitionCostChaos": 4,
           "downstreamCostChaos": 572.57990101593,
@@ -484,14 +490,86 @@
         }
       },
       "executionIdentity": {
-        "applicationSourceBuildHash": "app-231264501792683fb852",
+        "applicationSourceBuildHash": "app-3caf9ff2f53e5897de86",
         "gateIdVersion": "B-harvest-objective-policy@1",
-        "fixtureCorpusVersion": "Phase3B-Frozen-Browser-Corpus-1",
+        "fixtureCorpusVersion": "Phase3C-Frozen-Browser-Corpus-1",
         "fixtureInputHash": "fixture-00e49a73585df6bded7e",
-        "priceSnapshotIdentity": "prices-c030074ab584f9e3",
+        "priceSnapshotIdentity": "prices-086bbb3ef86a6b63",
         "browserVersion": "151.0.7922.34",
         "harnessVersion": "PHASE3A_QUALITY_LAB_V1",
-        "compatibilityHash": "compatible-52913c9a49518520a46c9e08"
+        "compatibilityHash": "compatible-393dc1903861b9aaf8d1e711"
+      }
+    },
+    {
+      "id": "C-policy-family-admissibility",
+      "title": "Real field Worker revalidates known Open policy inside constrained families",
+      "phase": "3C",
+      "shard": "C",
+      "tags": [
+        "phase3c",
+        "worker",
+        "solver",
+        "proof",
+        "method-family"
+      ],
+      "costClass": "SOLVER_HEAVY",
+      "status": "PASS",
+      "passed": true,
+      "startedAt": "2026-08-27T19:27:38.083Z",
+      "finishedAt": "2026-08-27T19:28:27.076Z",
+      "durationMs": 48992,
+      "details": {
+        "openU": 1459.7923662158182,
+        "selectedOpenU": 1459.7923662160783,
+        "selectedOpenAdmissible": false,
+        "selectedOpenFailures": [
+          {
+            "code": "ACQUISITION_KIND_MISMATCH",
+            "message": "Family requires CLEAN, source policy uses SELF_FRACTURE.",
+            "expected": "CLEAN",
+            "actual": "SELF_FRACTURE"
+          },
+          {
+            "code": "ACQUISITION_IDENTITY_MISMATCH",
+            "message": "The physical acquisition state does not match the family start state.",
+            "expected": "Large Cluster Jewel|Minions deal 10% increased Damage|84|8|normal|influenced=false|synthesised=false|acquisitionMenu=false|methodFamilyActionEvidence=",
+            "actual": "Large Cluster Jewel|Minions deal 10% increased Damage|84|8|magic|influenced=false|synthesised=false|acquisitionMenu=false|methodFamilyActionEvidence=|Suffix:Primordial Bond:1:F:"
+          },
+          {
+            "code": "ACQUISITION_COST_MISMATCH",
+            "message": "The family-context acquisition cost differs from the source policy.",
+            "expected": 40,
+            "actual": 1406.2963152858167
+          }
+        ],
+        "conventionalU": 2276.6407665828724,
+        "knownU": 4767.7312611739435,
+        "admissible": true,
+        "transitionsRegenerated": 400,
+        "transitionOutcomesCompared": 54185,
+        "incumbentSource": "IMPROVED_FROM_KNOWN_POLICY",
+        "familySearchStatus": "BEST_FOUND_UNPROVEN",
+        "sameFingerprint": false,
+        "equivalentToSelectedPolicy": false,
+        "accounting": {
+          "selectedBundleId": "core:open-selected-policy",
+          "maximumDifferenceChaos": 1.4779288903810084e-11,
+          "acquisitionCostChaos": 1406.2963152858165,
+          "downstreamCostChaos": 53.496050930001616,
+          "fullRouteCostChaos": 1459.7923662158182
+        },
+        "artifact": "quality-lab\\reports\\evidence\\phase3c-policy-family-browser.json",
+        "screenshot": "quality-lab\\reports\\evidence\\phase3c-policy-family-desktop.png"
+      },
+      "executionIdentity": {
+        "applicationSourceBuildHash": "app-3caf9ff2f53e5897de86",
+        "gateIdVersion": "C-policy-family-admissibility@1",
+        "fixtureCorpusVersion": "Phase3C-Frozen-Browser-Corpus-1",
+        "fixtureInputHash": "fixture-c0956dc4af1bc5d29323",
+        "priceSnapshotIdentity": "prices-086bbb3ef86a6b63",
+        "browserVersion": "151.0.7922.34",
+        "harnessVersion": "PHASE3A_QUALITY_LAB_V1",
+        "compatibilityHash": "compatible-393dc1903861b9aaf8d1e711"
       }
     },
     {
@@ -507,9 +585,9 @@
       "costClass": "FAST",
       "status": "PASS",
       "passed": true,
-      "startedAt": "2026-08-27T15:09:54.044Z",
-      "finishedAt": "2026-08-27T15:09:55.156Z",
-      "durationMs": 1112,
+      "startedAt": "2026-08-27T19:28:27.076Z",
+      "finishedAt": "2026-08-27T19:28:28.022Z",
+      "durationMs": 946,
       "details": {
         "passiveChoice": "8",
         "targetIds": [],
@@ -517,14 +595,14 @@
         "focusedBanner": true
       },
       "executionIdentity": {
-        "applicationSourceBuildHash": "app-231264501792683fb852",
+        "applicationSourceBuildHash": "app-3caf9ff2f53e5897de86",
         "gateIdVersion": "C-cluster-handoff@1",
-        "fixtureCorpusVersion": "Phase3B-Frozen-Browser-Corpus-1",
+        "fixtureCorpusVersion": "Phase3C-Frozen-Browser-Corpus-1",
         "fixtureInputHash": "fixture-4f53cda18c2baa0c0354",
-        "priceSnapshotIdentity": "prices-c030074ab584f9e3",
+        "priceSnapshotIdentity": "prices-086bbb3ef86a6b63",
         "browserVersion": "151.0.7922.34",
         "harnessVersion": "PHASE3A_QUALITY_LAB_V1",
-        "compatibilityHash": "compatible-52913c9a49518520a46c9e08"
+        "compatibilityHash": "compatible-393dc1903861b9aaf8d1e711"
       }
     },
     {
@@ -541,9 +619,9 @@
       "costClass": "FAST",
       "status": "PASS",
       "passed": true,
-      "startedAt": "2026-08-27T15:09:55.156Z",
-      "finishedAt": "2026-08-27T15:09:57.609Z",
-      "durationMs": 2453,
+      "startedAt": "2026-08-27T19:28:28.022Z",
+      "finishedAt": "2026-08-27T19:28:30.123Z",
+      "durationMs": 2101,
       "details": {
         "exportVersion": "2Y.1",
         "shareHashLength": 4355,
@@ -553,14 +631,14 @@
         "policyFlowExported": true
       },
       "executionIdentity": {
-        "applicationSourceBuildHash": "app-231264501792683fb852",
+        "applicationSourceBuildHash": "app-3caf9ff2f53e5897de86",
         "gateIdVersion": "C-share-export-roundtrip@1",
-        "fixtureCorpusVersion": "Phase3B-Frozen-Browser-Corpus-1",
+        "fixtureCorpusVersion": "Phase3C-Frozen-Browser-Corpus-1",
         "fixtureInputHash": "fixture-a8a605222b9c93d082e9",
-        "priceSnapshotIdentity": "prices-c030074ab584f9e3",
+        "priceSnapshotIdentity": "prices-086bbb3ef86a6b63",
         "browserVersion": "151.0.7922.34",
         "harnessVersion": "PHASE3A_QUALITY_LAB_V1",
-        "compatibilityHash": "compatible-52913c9a49518520a46c9e08"
+        "compatibilityHash": "compatible-393dc1903861b9aaf8d1e711"
       }
     },
     {
@@ -577,9 +655,9 @@
       "costClass": "FAST",
       "status": "PASS",
       "passed": true,
-      "startedAt": "2026-08-27T15:09:57.609Z",
-      "finishedAt": "2026-08-27T15:10:00.161Z",
-      "durationMs": 2552,
+      "startedAt": "2026-08-27T19:28:30.123Z",
+      "finishedAt": "2026-08-27T19:28:32.274Z",
+      "durationMs": 2151,
       "details": {
         "geometry": {
           "viewport": 390,
@@ -587,17 +665,87 @@
           "bodyWidth": 390
         },
         "keyboardNodeFocus": true,
-        "screenshot": "quality-lab\\artifacts\\phase3a-2026-08-27T15-09-53-031Z\\shard-C\\phase3a-responsive-mobile.png"
+        "screenshot": "quality-lab\\artifacts\\phase3a-2026-08-27T19-25-58-305Z\\shard-C\\phase3a-responsive-mobile.png"
       },
       "executionIdentity": {
-        "applicationSourceBuildHash": "app-231264501792683fb852",
+        "applicationSourceBuildHash": "app-3caf9ff2f53e5897de86",
         "gateIdVersion": "C-responsive-accessibility@1",
-        "fixtureCorpusVersion": "Phase3B-Frozen-Browser-Corpus-1",
+        "fixtureCorpusVersion": "Phase3C-Frozen-Browser-Corpus-1",
         "fixtureInputHash": "fixture-a8a605222b9c93d082e9",
-        "priceSnapshotIdentity": "prices-c030074ab584f9e3",
+        "priceSnapshotIdentity": "prices-086bbb3ef86a6b63",
         "browserVersion": "151.0.7922.34",
         "harnessVersion": "PHASE3A_QUALITY_LAB_V1",
-        "compatibilityHash": "compatible-52913c9a49518520a46c9e08"
+        "compatibilityHash": "compatible-393dc1903861b9aaf8d1e711"
+      }
+    },
+    {
+      "id": "D-constellation-large-scc-layout",
+      "title": "Frozen real field-class cyclic policy uses readable semantic SCC layout",
+      "phase": "3C",
+      "shard": "D",
+      "tags": [
+        "phase3c",
+        "constellation",
+        "visual",
+        "responsive",
+        "accessibility"
+      ],
+      "costClass": "FAST",
+      "status": "PASS",
+      "passed": true,
+      "startedAt": "2026-08-27T19:25:59.178Z",
+      "finishedAt": "2026-08-27T19:26:04.608Z",
+      "durationMs": 5430,
+      "details": {
+        "topologyFingerprint": "topology-3c852336",
+        "nodeCount": 43,
+        "edgeCount": 191,
+        "layoutMode": "SCC_HYBRID_SEMANTIC_V2",
+        "semanticBands": [
+          "ACQUISITION_NORMAL",
+          "MAGIC_ROLLING",
+          "PROMOTION",
+          "RECOVERY",
+          "RARE_FINISHING",
+          "GOAL"
+        ],
+        "horizontalSpan": 1120,
+        "verticalSpan": 1456,
+        "minimumNodeDistance": 112,
+        "recoveryCorridors": 34,
+        "collisionCount": 0,
+        "viewportHeight": 700,
+        "goalSeparation": {
+          "goalMin": 1530,
+          "normalMin": 130
+        },
+        "mobileGeometry": {
+          "viewport": 390,
+          "documentWidth": 390,
+          "bodyWidth": 390
+        },
+        "interactions": {
+          "node": true,
+          "edge": true,
+          "fitAll": true,
+          "reset": true,
+          "routeFocus": true
+        },
+        "screenshots": {
+          "desktop": "quality-lab\\reports\\evidence\\phase3c-constellation-1440x900.png",
+          "wide": "quality-lab\\reports\\evidence\\phase3c-constellation-1920x1080.png",
+          "mobile": "quality-lab\\reports\\evidence\\phase3c-constellation-mobile.png"
+        }
+      },
+      "executionIdentity": {
+        "applicationSourceBuildHash": "app-3caf9ff2f53e5897de86",
+        "gateIdVersion": "D-constellation-large-scc-layout@1",
+        "fixtureCorpusVersion": "Phase3C-Frozen-Browser-Corpus-1",
+        "fixtureInputHash": "fixture-89dab0a1ee7217729555",
+        "priceSnapshotIdentity": "prices-086bbb3ef86a6b63",
+        "browserVersion": "151.0.7922.34",
+        "harnessVersion": "PHASE3A_QUALITY_LAB_V1",
+        "compatibilityHash": "compatible-393dc1903861b9aaf8d1e711"
       }
     },
     {
@@ -615,9 +763,9 @@
       "costClass": "FAST",
       "status": "PASS",
       "passed": true,
-      "startedAt": "2026-08-27T15:10:01.221Z",
-      "finishedAt": "2026-08-27T15:10:03.085Z",
-      "durationMs": 1864,
+      "startedAt": "2026-08-27T19:26:04.608Z",
+      "finishedAt": "2026-08-27T19:26:06.495Z",
+      "durationMs": 1887,
       "details": {
         "sourceAppCommit": "df49b94ecca555671d8c78268d3149c2b8c84c7b",
         "normalizedSummarySha256": "12c4d104b9fd3f9c43499995e024d05df4fb9de90b9b0e72ca4233a8564d0746",
@@ -630,14 +778,14 @@
         "workerToDom": true
       },
       "executionIdentity": {
-        "applicationSourceBuildHash": "app-231264501792683fb852",
+        "applicationSourceBuildHash": "app-3caf9ff2f53e5897de86",
         "gateIdVersion": "D-real-policy-flow-differential@1",
-        "fixtureCorpusVersion": "Phase3B-Frozen-Browser-Corpus-1",
+        "fixtureCorpusVersion": "Phase3C-Frozen-Browser-Corpus-1",
         "fixtureInputHash": "fixture-eae470b544f63a5880cc",
-        "priceSnapshotIdentity": "prices-c030074ab584f9e3",
+        "priceSnapshotIdentity": "prices-086bbb3ef86a6b63",
         "browserVersion": "151.0.7922.34",
         "harnessVersion": "PHASE3A_QUALITY_LAB_V1",
-        "compatibilityHash": "compatible-52913c9a49518520a46c9e08"
+        "compatibilityHash": "compatible-393dc1903861b9aaf8d1e711"
       }
     },
     {
@@ -653,9 +801,9 @@
       "costClass": "FAST",
       "status": "PASS",
       "passed": true,
-      "startedAt": "2026-08-27T15:10:03.085Z",
-      "finishedAt": "2026-08-27T15:10:04.967Z",
-      "durationMs": 1882,
+      "startedAt": "2026-08-27T19:26:06.495Z",
+      "finishedAt": "2026-08-27T19:26:08.235Z",
+      "durationMs": 1739,
       "details": {
         "certificationScope": "RENDERER_INTERACTION_ONLY",
         "topologyFingerprint": "topology-4481a40d",
@@ -664,14 +812,14 @@
         "branchInteraction": true
       },
       "executionIdentity": {
-        "applicationSourceBuildHash": "app-231264501792683fb852",
+        "applicationSourceBuildHash": "app-3caf9ff2f53e5897de86",
         "gateIdVersion": "D-frozen-policy-flow-renderer@1",
-        "fixtureCorpusVersion": "Phase3B-Frozen-Browser-Corpus-1",
+        "fixtureCorpusVersion": "Phase3C-Frozen-Browser-Corpus-1",
         "fixtureInputHash": "fixture-eae470b544f63a5880cc",
-        "priceSnapshotIdentity": "prices-c030074ab584f9e3",
+        "priceSnapshotIdentity": "prices-086bbb3ef86a6b63",
         "browserVersion": "151.0.7922.34",
         "harnessVersion": "PHASE3A_QUALITY_LAB_V1",
-        "compatibilityHash": "compatible-52913c9a49518520a46c9e08"
+        "compatibilityHash": "compatible-393dc1903861b9aaf8d1e711"
       }
     },
     {
@@ -688,9 +836,9 @@
       "costClass": "MEDIUM",
       "status": "PASS",
       "passed": true,
-      "startedAt": "2026-08-27T15:10:04.967Z",
-      "finishedAt": "2026-08-27T15:10:17.331Z",
-      "durationMs": 12364,
+      "startedAt": "2026-08-27T19:26:08.235Z",
+      "finishedAt": "2026-08-27T19:26:20.487Z",
+      "durationMs": 12252,
       "details": {
         "selectedEdge": "flow_downstream_7a37989d",
         "keyboardCamera": true,
@@ -700,91 +848,93 @@
         "memoryDeltaBytes": 0
       },
       "executionIdentity": {
-        "applicationSourceBuildHash": "app-231264501792683fb852",
+        "applicationSourceBuildHash": "app-3caf9ff2f53e5897de86",
         "gateIdVersion": "D-constellation-interaction-short-replay@1",
-        "fixtureCorpusVersion": "Phase3B-Frozen-Browser-Corpus-1",
+        "fixtureCorpusVersion": "Phase3C-Frozen-Browser-Corpus-1",
         "fixtureInputHash": "fixture-a8a605222b9c93d082e9",
-        "priceSnapshotIdentity": "prices-c030074ab584f9e3",
+        "priceSnapshotIdentity": "prices-086bbb3ef86a6b63",
         "browserVersion": "151.0.7922.34",
         "harnessVersion": "PHASE3A_QUALITY_LAB_V1",
-        "compatibilityHash": "compatible-52913c9a49518520a46c9e08"
+        "compatibilityHash": "compatible-393dc1903861b9aaf8d1e711"
       }
     }
   ],
   "runtime": {
-    "totalWallMs": 103727,
-    "summedGateMs": 106732,
-    "appStartupMs": 1386,
-    "browserStartupMs": 350,
-    "solverHeavyMs": 78258,
-    "visualInteractionMs": 75761,
-    "harnessOverheadMs": 2081,
+    "totalWallMs": 154087,
+    "summedGateMs": 157191,
+    "appStartupMs": 1383,
+    "browserStartupMs": 298,
+    "solverHeavyMs": 124742,
+    "visualInteractionMs": 79155,
+    "harnessOverheadMs": 1972,
     "categoryTotalsMs": {
-      "worker": 88822,
-      "solver": 86369,
-      "proof": 86626,
-      "clean": 2179,
-      "cancellation": 2196,
-      "phase3b": 55987,
-      "fracture": 55987,
-      "handoff": 30572,
-      "constellation": 74649,
-      "visual": 47642,
-      "objectives": 22271,
-      "harvest": 22271,
-      "responsive": 16028,
-      "accessibility": 17910,
-      "share-export": 2453
+      "worker": 134673,
+      "solver": 132572,
+      "proof": 132618,
+      "clean": 2182,
+      "cancellation": 2055,
+      "phase3b": 54750,
+      "fracture": 54750,
+      "handoff": 29754,
+      "constellation": 78209,
+      "visual": 51502,
+      "objectives": 21000,
+      "harvest": 21000,
+      "phase3c": 54422,
+      "method-family": 48992,
+      "responsive": 20779,
+      "accessibility": 22518,
+      "share-export": 2101
     },
     "slowestGates": [
       {
+        "id": "C-policy-family-admissibility",
+        "durationMs": 48992,
+        "status": "PASS"
+      },
+      {
         "id": "B-fractured-magic-alter-price-reversal",
-        "durationMs": 28980,
+        "durationMs": 28043,
         "status": "PASS"
       },
       {
         "id": "B-self-fracture-policy",
-        "durationMs": 27007,
+        "durationMs": 26707,
         "status": "PASS"
       },
       {
         "id": "B-harvest-objective-policy",
-        "durationMs": 22271,
+        "durationMs": 21000,
         "status": "PASS"
       },
       {
         "id": "D-constellation-interaction-short-replay",
-        "durationMs": 12364,
+        "durationMs": 12252,
         "status": "PASS"
       },
       {
-        "id": "C-responsive-accessibility",
-        "durationMs": 2552,
-        "status": "PASS"
-      },
-      {
-        "id": "C-share-export-roundtrip",
-        "durationMs": 2453,
-        "status": "PASS"
-      },
-      {
-        "id": "A-cancel-replace-recover",
-        "durationMs": 2196,
+        "id": "D-constellation-large-scc-layout",
+        "durationMs": 5430,
         "status": "PASS"
       },
       {
         "id": "A-clean-worker-canonical",
-        "durationMs": 2179,
+        "durationMs": 2182,
         "status": "PASS"
       },
       {
-        "id": "D-frozen-policy-flow-renderer",
-        "durationMs": 1882,
+        "id": "C-responsive-accessibility",
+        "durationMs": 2151,
         "status": "PASS"
       },
       {
-        "id": "A-proof-accounting-no-fallback",
-        "durationMs": 1872,
+        "id": "C-share-export-roundtrip",
+        "durationMs": 2101,
+        "status": "PASS"
+      },
+      {
+        "id": "A-cancel-replace-recover",
+        "durationMs": 2055,
         "status": "PASS"
       }
     ]
@@ -795,12 +945,17 @@
     "network": []
   },
   "artifacts": {
-    "phase3aShareExport": "quality-lab\\artifacts\\phase3a-2026-08-27T15-09-53-031Z\\shard-C\\phase3a-share-export.json",
-    "phase3aResponsiveMobile": "quality-lab\\artifacts\\phase3a-2026-08-27T15-09-53-031Z\\shard-C\\phase3a-responsive-mobile.png",
+    "phase3cConstellationDesktop": "quality-lab\\reports\\evidence\\phase3c-constellation-1440x900.png",
+    "phase3cConstellationWide": "quality-lab\\reports\\evidence\\phase3c-constellation-1920x1080.png",
+    "phase3cConstellationMobile": "quality-lab\\reports\\evidence\\phase3c-constellation-mobile.png",
     "phase3bCurrentSelfFractureFlow": "quality-lab\\reports\\evidence\\phase3b-current-self-fracture-flow.json",
     "phase3bAlterSelfLoopScreenshot": "quality-lab\\reports\\evidence\\phase3b-alter-self-loop.png",
     "phase3bAlterSelfLoopFlow": "quality-lab\\reports\\evidence\\phase3b-alter-self-loop-flow.json",
-    "runReport": "quality-lab\\artifacts\\phase3a-2026-08-27T15-09-53-031Z\\report.json",
+    "phase3cPolicyFamilyBrowser": "quality-lab\\reports\\evidence\\phase3c-policy-family-browser.json",
+    "phase3cPolicyFamilyScreenshot": "quality-lab\\reports\\evidence\\phase3c-policy-family-desktop.png",
+    "phase3aShareExport": "quality-lab\\artifacts\\phase3a-2026-08-27T19-25-58-305Z\\shard-C\\phase3a-share-export.json",
+    "phase3aResponsiveMobile": "quality-lab\\artifacts\\phase3a-2026-08-27T19-25-58-305Z\\shard-C\\phase3a-responsive-mobile.png",
+    "runReport": "quality-lab\\artifacts\\phase3a-2026-08-27T19-25-58-305Z\\report.json",
     "stableReport": "quality-lab\\reports\\phase3a-release-gate.json",
     "summary": "quality-lab\\reports\\phase3a-release-summary.md"
   }

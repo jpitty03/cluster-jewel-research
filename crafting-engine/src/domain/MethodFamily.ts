@@ -1,6 +1,10 @@
 import type { CraftPlanSummary } from '../service/craftPlan.ts';
 import type { ExpectedActionUsage, RouteSummary } from '../service/optimizerService.ts';
 import type { RepeatableRerollCertificationEvidence } from '../solver/repeatableRerollCertification.ts';
+import type {
+  PolicyAdmissibilityResult,
+  PolicySearchDivergenceReport,
+} from '../service/policyAdmissibility.ts';
 
 export type MethodFamilyKind =
   | 'OPEN'
@@ -25,6 +29,16 @@ export type MethodFamilyEvaluationSource =
   | 'INDEPENDENT_SOLVE'
   | 'OPEN_SEARCH_SUMMARY'
   | 'NOT_SEARCHED';
+
+export type MethodFamilyIncumbentSource =
+  | 'INDEPENDENT_DISCOVERY'
+  | 'ADMISSIBLE_KNOWN_POLICY'
+  | 'IMPROVED_FROM_KNOWN_POLICY';
+
+export type MethodFamilySearchStatus =
+  | 'OPTIMAL_PROVEN'
+  | 'BEST_FOUND_UNPROVEN'
+  | 'UNRESOLVED';
 
 export type MethodFamilyStageStatus =
   | 'NOT_APPLICABLE'
@@ -59,6 +73,18 @@ export interface MethodFamilyResult {
   spec: MethodFamilySpec;
   status: MethodFamilyStatus;
   evaluationSource: MethodFamilyEvaluationSource;
+  /** How the executable family upper bound was established; never implies family optimality. */
+  incumbentSource?: MethodFamilyIncumbentSource;
+  /** Explicitly separates executable-policy certification from family optimum proof. */
+  familySearchStatus?: MethodFamilySearchStatus;
+  independentFullRouteU?: number;
+  knownPolicyCostChaos?: number;
+  revalidatedKnownPolicyCostChaos?: number;
+  selectedOpenPolicyCostChaos?: number;
+  /** Audit of the canonical selected Open policy, even when a different known policy seeds U. */
+  selectedOpenPolicyAdmissibility?: PolicyAdmissibilityResult;
+  knownPolicyAdmissibility?: PolicyAdmissibilityResult;
+  searchDivergence?: PolicySearchDivergenceReport;
   objectiveEligibility?: MethodFamilyObjectiveEligibility;
   /** Canonical player-facing route-family label, available even before U resolves. */
   playerRouteName?: string;
