@@ -59,6 +59,7 @@ export interface BugReportBundle {
     recommendationStatus?: string;
     recommendedRouteName?: string;
     presentation?: OptimizeCraftResult['presentation'];
+    policyFlow?: OptimizeCraftResult['policyFlow'];
     fullRouteUsage?: OptimizeCraftResult['fullRouteUsage'];
     harvestComparison?: OptimizeCraftResult['harvestComparison'];
     methodFamilies?: Array<{
@@ -156,6 +157,7 @@ export function generateBugReportBundle(
       recommendationStatus: result.recommendationStatus,
       recommendedRouteName: result.recommended?.name,
       presentation: result.presentation,
+      policyFlow: result.policyFlow,
       fullRouteUsage: result.fullRouteUsage,
       harvestComparison: result.harvestComparison,
       methodFamilies: result.methodPortfolio?.map((family) => ({

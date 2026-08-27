@@ -144,9 +144,7 @@ const cleanBaseAccounting = result.fullRouteUsage.acquisitionActions.find(
 assert(cleanBaseAccounting, 'Initial clean base disappeared from acquisition accounting');
 
 const graph = buildVisualizationGraph(
-  result.craftPlan,
-  result.methodPortfolio,
-  result.recommended,
+  result.policyFlow!,
   { acquisitionContext: result.presentation.acquisitionContext },
 );
 const selectedHarvestNodes = graph.nodes.filter((node) =>
@@ -193,15 +191,10 @@ assert.equal(unknownPlan.status, 'UNCERTIFIED');
 assert.deepEqual(unknownPlan.steps, []);
 assert(unknownPlan.unknownActionIds.includes(unknownActionId));
 assert(unknownPlan.withheldReason?.includes('withheld'));
-const unknownGraph = buildVisualizationGraph(
-  unknownPlan,
-  result.methodPortfolio,
-  result.recommended,
-  { acquisitionContext: result.presentation.acquisitionContext },
-);
-assert(!unknownGraph.nodes.some((node) => node.isSelectedRoute && node.kind === 'HARVEST_REFORGE'));
+assert(result.policyFlow, 'Certified selected policy omitted policy-flow evidence');
+assert(!result.policyFlow.nodes.some((node) => node.selectedActionId === unknownActionId));
 lines.push('\nX3 — unknown positive action fails closed');
-lines.push(`unknown=${unknownActionId}; classification=UNKNOWN; phase=NONE; plan=${unknownPlan.status}; steps=${unknownPlan.steps.length}; exact diagnostic retained=YES; Harvest node=NO`);
+lines.push(`unknown=${unknownActionId}; classification=UNKNOWN; phase=NONE; plan=${unknownPlan.status}; steps=${unknownPlan.steps.length}; exact diagnostic retained=YES; policy-flow contamination=NO`);
 
 assert.equal(classifyCraftPlanAction('harvest_reforge_defences').kind, 'CRAFT_MECHANIC');
 assert.equal(craftPlanPhaseForAction('harvest_reforge_defences'), 'SPECIALIZED');
@@ -270,8 +263,8 @@ writeFileSync(evidencePath, `${JSON.stringify({
     planStatus: unknownPlan.status,
     steps: unknownPlan.steps,
     retainedUnknownActionIds: unknownPlan.unknownActionIds,
-    selectedHarvestNodeCount: unknownGraph.nodes.filter((node) =>
-      node.isSelectedRoute && node.kind === 'HARVEST_REFORGE'
+    policyFlowUnknownActionCount: result.policyFlow.nodes.filter((node) =>
+      node.selectedActionId === unknownActionId
     ).length,
   },
 }, null, 2)}\n`, 'utf8');

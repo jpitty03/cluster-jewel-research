@@ -1,6 +1,10 @@
 import type { SolverContext } from '../domain/CraftAction.ts';
 import type { ItemState } from '../domain/ItemState.ts';
 import { getAllAffixes, getPhysicalStateSignature, normalizeItemState } from '../domain/ItemState.ts';
+import {
+  buildPolicyFlowComponent,
+  type PolicyFlowComponent,
+} from '../domain/PolicyFlow.ts';
 import type { PriceConfidence } from '../domain/PriceBook.ts';
 import type { ModRequirement, TargetDefinition } from '../domain/TargetDefinition.ts';
 import {
@@ -170,6 +174,8 @@ export interface AcquisitionSynthesisResult {
   fractureOutcomes: FractureOutcomeObservation[];
   wrongFractureRecovery: WrongFractureRecoverySummary;
   policy: AcquisitionPolicyRule[];
+  /** Presentation-only exact occupancy/transition aggregation; omitted from candidate summaries. */
+  policyFlowComponent: PolicyFlowComponent;
   terminalPhysicalStateSignatures: string[];
   proof: {
     selectedPolicyStatus: string;
@@ -523,6 +529,7 @@ export function synthesizeAcquisition(
 
   const expectedPreparationPhysicalActions = result.metrics?.expectedPhysicalActions;
   const expectedPreparationManualTimeMs = result.metrics?.estimatedManualTimeMs;
+  const policyFlowComponent = buildPolicyFlowComponent(result, 'ACQUISITION');
 
   return {
     status,
@@ -564,6 +571,7 @@ export function synthesizeAcquisition(
         'which pays the clean-base price again.',
     },
     policy,
+    policyFlowComponent,
     terminalPhysicalStateSignatures,
     proof: {
       selectedPolicyStatus: result.optimalityProof.selectedPolicyStatus,

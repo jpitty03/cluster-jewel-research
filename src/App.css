@@ -3293,7 +3293,7 @@ td a {
 }
 
 /* ==========================================================================
-   Markov Constellation Visualizer Styles (Phase 2Q)
+   Markov Constellation Visualizer Styles (selected-policy flow)
    ========================================================================== */
 .markov-constellation-container {
   background: #070b14;
@@ -3515,6 +3515,24 @@ td a {
   cursor: inherit;
 }
 
+.constellation-edge-anchor {
+  position: absolute;
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  border-radius: 999px;
+  background: transparent;
+  pointer-events: auto;
+  cursor: inherit;
+}
+
+.constellation-edge-anchor:focus-visible {
+  outline: 3px solid #fbbf24;
+  outline-offset: 2px;
+  background: rgba(251, 191, 36, 0.18);
+}
+
 .constellation-node-anchor:focus-visible {
   outline: 3px solid #fbbf24;
   outline-offset: 3px;
@@ -3580,6 +3598,21 @@ td a {
   text-shadow: 0 1px 2px #000;
   -webkit-box-orient: vertical;
   -webkit-line-clamp: 2;
+  pointer-events: auto;
+  cursor: inherit;
+  font-family: inherit;
+}
+
+.constellation-edge-label.recovery-edge {
+  border-color: rgba(251, 146, 60, 0.72);
+  color: #fed7aa;
+}
+
+.constellation-edge-label.selected,
+.constellation-edge-label:focus-visible {
+  outline: 3px solid #fbbf24;
+  outline-offset: 2px;
+  border-color: #fff;
 }
 
 .constellation-zoom-readout {

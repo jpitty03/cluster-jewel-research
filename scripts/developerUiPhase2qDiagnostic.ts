@@ -30,16 +30,13 @@ const input: OptimizeCraftInput = {
 };
 
 const result = service.optimize(input);
+assert(result.policyFlow, 'Real optimizer result omitted selected-policy flow evidence');
 const graphA = buildVisualizationGraph(
-  result.craftPlan,
-  result.methodPortfolio ?? [],
-  result.recommended ?? undefined,
+  result.policyFlow,
   { seed: 'phase2t_graph_regression' },
 );
 const graphB = buildVisualizationGraph(
-  result.craftPlan,
-  result.methodPortfolio ?? [],
-  result.recommended ?? undefined,
+  result.policyFlow,
   { seed: 'phase2t_graph_regression' },
 );
 
@@ -60,7 +57,10 @@ assert(graphA.nodes.every((node) => node.label.trim().length > 0));
 lines.push(`PASS: ${graphA.selectedRouteNodeIds.length} selected-route nodes and every node has a discoverable label.`);
 
 lines.push('\nQ3 — Deterministic layout seed');
-assert.deepEqual(graphA, graphB);
+assert.deepEqual(
+  { ...graphA, performance: { ...graphA.performance, layoutMs: 0 } },
+  { ...graphB, performance: { ...graphB.performance, layoutMs: 0 } },
+);
 lines.push('PASS: identical optimizer input and seed serialize identical graph nodes, edges, events, and bounds.');
 
 lines.push('\nQ4 — Certification boundary');

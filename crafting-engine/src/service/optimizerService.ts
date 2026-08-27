@@ -9,6 +9,11 @@ import {
 } from '../domain/PriceBook.ts';
 import type { BaseType, ItemRarity, ItemState } from '../domain/ItemState.ts';
 import { getAllAffixes, getPhysicalStateSignature, normalizeItemState } from '../domain/ItemState.ts';
+import {
+  buildPolicyFlowComponent,
+  buildSelectedPolicyFlowSummary,
+  type PolicyFlowSummary,
+} from '../domain/PolicyFlow.ts';
 import type { TargetDefinition } from '../domain/TargetDefinition.ts';
 import { getAllTargetModRequirements, matchesModRequirement } from '../domain/TargetDefinition.ts';
 import type {
@@ -827,6 +832,8 @@ export interface OptimizeCraftResult {
   fullRouteUsage: FullRouteUsageSummary;
   policyExplanation: PolicyExplanationRule[];
   craftPlan: CraftPlanSummary;
+  /** Exact selected-policy occupancy/transition projection for presentation only. */
+  policyFlow?: PolicyFlowSummary;
   policyRules: PolicyRule[];
   acquisition: AcquisitionSummary;
   expectedCostChaos: number | null;
@@ -6782,6 +6789,17 @@ export class OptimizerService {
       },
       methodFamilyCounts,
     };
+    const selectedAcquisitionFlow = selectedBundle?.acquisitionSynthesis && selectedStartIndex >= 0
+      ? synthesisResults.get(selectedStartIndex)?.policyFlowComponent
+      : undefined;
+    const finalPolicyFlow = selectedBundle && selectedSolverResult && !consistencyFailed
+      ? buildSelectedPolicyFlowSummary({
+          sourceBundleId: selectedBundle.id,
+          sourcePolicyFingerprint: selectedBundle.policyEquivalenceFingerprint,
+          downstream: buildPolicyFlowComponent(selectedSolverResult, 'DOWNSTREAM'),
+          acquisition: selectedAcquisitionFlow,
+        })
+      : undefined;
     const finalWarningDetails: OptimizationWarning[] = [
       ...uniqueWarningDetails,
       ...(consistencyFailed ? [{
@@ -6809,6 +6827,7 @@ export class OptimizerService {
       expectedActionUsage: selectedExpectedUsage,
       fullRouteUsage: selectedUsage,
       policyExplanation: consistencyFailed ? [] : finalPolicyExplanation,
+      policyFlow: finalPolicyFlow,
       policyRules: consistencyFailed ? [] : finalPolicyRules,
       acquisition: finalAcquisition,
       alternatives: selectedRoutes.filter((route) =>

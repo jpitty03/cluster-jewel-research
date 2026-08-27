@@ -1259,6 +1259,7 @@ export function CraftOptimizer({ seed = null, onBackToClusterJewels }: CraftOpti
         recommendedRoute: res.recommended?.name,
         metrics: res.recommended?.metrics,
         presentation: res.presentation,
+        policyFlow: res.policyFlow,
         fullRouteUsage: res.fullRouteUsage,
         shoppingListCurrencies: res.expectedCurrencies,
         harvestComparison: res.harvestComparison,
@@ -1341,11 +1342,9 @@ export function CraftOptimizer({ seed = null, onBackToClusterJewels }: CraftOpti
   const selectedSynthesis = selectedMethod?.executable ? selectedAcquisition?.synthesis : undefined;
 
   const constellationGraph = useMemo(() => {
-    if (!result?.craftPlan) return null;
+    if (!result?.policyFlow) return null;
     return buildVisualizationGraph(
-      result.craftPlan,
-      result.methodPortfolio ?? [],
-      result.recommended ?? undefined,
+      result.policyFlow,
       {
         modifierDescriptors: targetDescriptors,
         acquisitionContext: result.presentation.acquisitionContext,

@@ -418,6 +418,7 @@ function compactWorkerEvents(events: CapturedWorkerEvent[]): CapturedWorkerEvent
           expectedCostChaos: result.expectedCostChaos,
           alternatives: result.alternatives,
           expectedActionUsage: result.expectedActionUsage,
+          policyFlow: result.policyFlow,
           presentation: result.presentation,
           internalConsistency: result.internalConsistency,
           fullRouteUsage: result.fullRouteUsage,
@@ -4678,6 +4679,296 @@ async function runPhase2Y(page: Page, evidence: BrowserEvidence): Promise<void> 
   });
 }
 
+function selectedPolicyFlow(result: JsonRecord, label: string): JsonRecord {
+  const flow = jsonRecord(result.policyFlow, `${label} selected-policy flow`);
+  assert.equal(flow.version, 'SELECTED_POLICY_FLOW_V1');
+  assert.equal(flow.status, 'CERTIFIED');
+  const reconciliation = jsonRecord(flow.reconciliation, `${label} flow reconciliation`);
+  assert.equal(reconciliation.certified, true);
+  assert.equal(reconciliation.outgoingFlowConserved, true);
+  assert.equal(reconciliation.conditionalProbabilitiesConserved, true);
+  assert.equal(reconciliation.terminalAbsorptionReconciled, true);
+  return flow;
+}
+
+function assertBrowserFlowConservation(flow: JsonRecord, label: string): Record<string, unknown> {
+  const nodes = arrayValue(flow.nodes, `${label} nodes`).map((entry) => jsonRecord(entry, `${label} node`));
+  const edges = arrayValue(flow.edges, `${label} edges`).map((entry) => jsonRecord(entry, `${label} edge`));
+  const terminalIds = new Set(arrayValue(flow.terminalNodeIds, `${label} terminal IDs`).map(String));
+  for (const node of nodes) {
+    const nodeId = String(node.id);
+    const outgoing = edges.filter((edge) => edge.sourceNodeId === nodeId);
+    if (terminalIds.has(nodeId)) {
+      assert.equal(outgoing.length, 0, `${label}/${nodeId} terminal has outgoing flow`);
+      continue;
+    }
+    assert(outgoing.length > 0, `${label}/${nodeId} has no outgoing flow`);
+    assertNear(
+      outgoing.reduce((sum, edge) => sum + numberValue(edge.expectedFlow, `${label} expected flow`), 0),
+      numberValue(node.expectedVisits, `${label} expected visits`),
+      `${label}/${nodeId} outgoing flow`,
+      1e-7,
+    );
+    assertNear(
+      outgoing.reduce((sum, edge) => sum + numberValue(edge.conditionalProbability, `${label} probability`), 0),
+      1,
+      `${label}/${nodeId} outgoing probability`,
+      1e-7,
+    );
+  }
+  const aggregation = jsonRecord(flow.aggregation, `${label} aggregation`);
+  for (const entry of arrayValue(aggregation.differentialSamples, `${label} differential samples`)) {
+    const sample = jsonRecord(entry, `${label} differential sample`);
+    assertNear(
+      numberValue(sample.exactExpectedFlow, `${label} sample flow`),
+      numberValue(sample.occupancy, `${label} sample occupancy`) *
+        numberValue(sample.exactProbability, `${label} sample probability`),
+      `${label} exact-state differential`,
+      1e-10,
+    );
+  }
+  return {
+    nodes: nodes.length,
+    edges: edges.length,
+    differentialSamples: arrayValue(aggregation.differentialSamples, `${label} samples`).length,
+  };
+}
+
+async function runPhase2Z(page: Page, evidence: BrowserEvidence): Promise<void> {
+  const scenario = 'phase2z-selected-policy-branching-constellation';
+  await ensureOptimizerPage(page, String(evidence.productionUrl));
+  let cleanResult: JsonRecord | undefined;
+  let fractureResult: JsonRecord | undefined;
+  let harvestResult: JsonRecord | undefined;
+  let cleanFlow: JsonRecord | undefined;
+  let fractureFlow: JsonRecord | undefined;
+  let harvestFlow: JsonRecord | undefined;
+
+  await gate(evidence, scenario, 'Z1-real-worker-policy-flow-boundary', async () => {
+    const input = fixture('cheap_one_mod');
+    await importFixture(page, input);
+    await setBudget(page, input.searchBudget);
+    cleanResult = await runOptimization(page, input.searchBudget.maxWallTimeMs);
+    cleanFlow = selectedPolicyFlow(cleanResult, 'clean control');
+    const consistency = jsonRecord(cleanResult.internalConsistency, 'clean consistency');
+    assert.equal(cleanFlow.sourceBundleId, consistency.selectedBundleId);
+    const container = page.getByTestId('markov-constellation-container');
+    await container.waitFor();
+    assert.equal(await container.getAttribute('data-policy-flow-version'), 'SELECTED_POLICY_FLOW_V1');
+    assert.equal(await container.getAttribute('data-policy-flow-status'), 'CERTIFIED');
+    assert.equal(await container.getAttribute('data-source-bundle-id'), String(cleanFlow.sourceBundleId));
+    return {
+      sourceBundleId: cleanFlow.sourceBundleId,
+      sourcePolicyFingerprint: cleanFlow.sourcePolicyFingerprint,
+      workerToDomIdentity: true,
+    };
+  });
+
+  await gate(evidence, scenario, 'Z2-flow-conservation-and-exact-state-differential', async () => {
+    assert(cleanFlow, 'Clean Worker flow unavailable');
+    return assertBrowserFlowConservation(cleanFlow, 'clean control');
+  });
+
+  await gate(evidence, scenario, 'Z3-selected-branch-click-and-explanation', async () => {
+    assert(cleanFlow, 'Clean Worker flow unavailable');
+    const nodes = arrayValue(cleanFlow.nodes, 'clean nodes').map((entry) => jsonRecord(entry, 'clean node'));
+    const edges = arrayValue(cleanFlow.edges, 'clean edges').map((entry) => jsonRecord(entry, 'clean edge'));
+    const branchNode = nodes.find((node) =>
+      edges.filter((edge) => edge.sourceNodeId === node.id).length >= 2
+    );
+    assert(branchNode, 'Clean flow has no evidence-derived branch node');
+    const branch = edges
+      .filter((edge) => edge.sourceNodeId === branchNode.id)
+      .sort((left, right) =>
+        numberValue(right.expectedFlow, 'right branch flow') - numberValue(left.expectedFlow, 'left branch flow')
+      )[0];
+    const anchor = page.locator(`[data-edge-anchor="${String(branch.id)}"]`);
+    await anchor.focus();
+    await page.keyboard.press('Enter');
+    const detail = page.getByLabel('Selected constellation edge details');
+    await detail.waitFor();
+    assert((await detail.innerText()).includes('Occupancy-weighted policy-flow probability'));
+    assert((await detail.innerText()).includes('Expected traversals per craft'));
+    assert.equal(await detail.getAttribute('data-selected-edge-id'), String(branch.id));
+    const screenshot = join(evidenceDirectory, 'phase2z-selected-branch-detail.png');
+    await page.getByTestId('markov-constellation-container').screenshot({ path: screenshot });
+    evidence.artifacts.phase2zSelectedBranchDetail = relative(repositoryRoot, screenshot);
+    await detail.getByRole('button', { name: 'Close selected edge details' }).click();
+    return {
+      edgeId: branch.id,
+      probability: branch.conditionalProbability,
+      expectedFlow: branch.expectedFlow,
+      outcomeKind: branch.outcomeKind,
+    };
+  });
+
+  await gate(evidence, scenario, 'Z4-pan-zoom-keyboard-and-route-focus', async () => {
+    const container = page.getByTestId('markov-constellation-container');
+    await container.scrollIntoViewIfNeeded();
+    await page.getByRole('button', { name: 'Route Focus' }).click();
+    const initialZoom = Number(await container.getAttribute('data-camera-zoom'));
+    await page.getByRole('button', { name: 'Zoom constellation in' }).click();
+    assert(Number(await container.getAttribute('data-camera-zoom')) > initialZoom);
+    const viewport = page.getByRole('region', { name: 'Interactive Markov Constellation camera' });
+    await viewport.focus();
+    await page.keyboard.press('ArrowRight');
+    assert.notEqual(await container.getAttribute('data-camera-pan-x'), '0.000');
+    await page.keyboard.press('0');
+    await page.getByRole('button', { name: 'Fit All' }).click();
+    assert.equal(await container.getAttribute('data-camera-fit-mode'), 'ALL');
+    await page.getByRole('button', { name: 'Route Focus' }).click();
+    return {
+      panZoom: true,
+      keyboard: true,
+      routeFocus: true,
+      fitAll: true,
+    };
+  });
+
+  await gate(evidence, scenario, 'Z5-reduced-motion-deterministic-render', async () => {
+    const pause = page.getByRole('button', { name: /Pause Animation|Resume Animation/ });
+    if ((await pause.getAttribute('aria-label')) === 'Pause Animation') await pause.click();
+    const motion = page.getByRole('button', { name: 'Toggle Reduced Motion' });
+    if ((await motion.innerText()).trim() !== 'Static') await motion.click();
+    const canvas = page.getByRole('img', { name: 'Markov Constellation state transition diagram' });
+    const first = await canvas.screenshot();
+    await page.waitForTimeout(300);
+    const second = await canvas.screenshot();
+    assert(first.equals(second), 'Reduced-motion Constellation frame was not deterministic');
+    return { bytes: first.length, equal: true };
+  });
+
+  await gate(evidence, scenario, 'Z6-replay-scroll-ownership-and-particle-budget', async () => {
+    const container = page.getByTestId('markov-constellation-container');
+    const motion = page.getByRole('button', { name: 'Toggle Reduced Motion' });
+    if ((await motion.innerText()).trim() === 'Static') await motion.click();
+    await page.getByRole('button', { name: /Replay/ }).click();
+    const play = page.getByRole('button', { name: /Pause Animation|Resume Animation/ });
+    if ((await play.getAttribute('aria-label')) === 'Resume Animation') await play.click();
+    await page.evaluate(() => window.scrollTo(0, document.body.scrollHeight));
+    const before = await page.evaluate(() => window.scrollY);
+    await page.waitForTimeout(2100);
+    const after = await page.evaluate(() => window.scrollY);
+    assert(Math.abs(after - before) <= 2, `Replay moved document scroll from ${before} to ${after}`);
+    const particleCount = Number(await container.getAttribute('data-particle-count'));
+    assert(particleCount > 0 && particleCount <= 120);
+    return { documentScrollBefore: before, documentScrollAfter: after, particleCount };
+  });
+
+  await gate(evidence, scenario, 'Z7-regal-recovery-and-reacquire-destinations', async () => {
+    const input = fixture('phase2x_three_notable_handoff');
+    await importFixture(page, input);
+    await setBudget(page, input.searchBudget);
+    fractureResult = await runOptimization(page, input.searchBudget.maxWallTimeMs);
+    fractureFlow = selectedPolicyFlow(fractureResult, 'self-fracture control');
+    assertBrowserFlowConservation(fractureFlow, 'self-fracture control');
+    const nodes = arrayValue(fractureFlow.nodes, 'fracture nodes').map((entry) => jsonRecord(entry, 'fracture node'));
+    const edges = arrayValue(fractureFlow.edges, 'fracture edges').map((entry) => jsonRecord(entry, 'fracture edge'));
+    const regalNodes = nodes.filter((node) => node.selectedActionId === 'regal_orb');
+    const branchedRegal = regalNodes.find((node) =>
+      edges.filter((edge) => edge.sourceNodeId === node.id).length >= 2
+    );
+    assert(branchedRegal, 'Real selected Regal policy did not branch');
+    const scour = edges.filter((edge) => edge.actionId === 'scouring_orb');
+    const reacquire = edges.filter((edge) => edge.actionId === 'restart_reacquire');
+    assert(scour.length > 0 && reacquire.length > 0);
+    assert(scour.every((edge) => edge.outcomeKind === 'RECOVERY'));
+    assert(reacquire.every((edge) => edge.outcomeKind === 'REACQUIRE'));
+    const fracturedScour = scour.find((edge) => {
+      const target = nodes.find((node) => node.id === edge.targetNodeId);
+      return arrayValue(target?.fracturedTargetModIds, 'fractured target IDs').length === 1;
+    });
+    assert(fracturedScour, 'No one-fractured Scour destination was serialized');
+    const destination = nodes.find((node) => node.id === fracturedScour.targetNodeId)!;
+    assert.equal(destination.rarity, 'magic');
+    assert.notEqual(destination.selectedActionId, 'transmutation_orb');
+    assert.equal(fracturedScour.nextSelectedActionId, destination.selectedActionId);
+    const edgeAnchor = page.locator(`[data-edge-anchor="${String(fracturedScour.id)}"]`);
+    await edgeAnchor.focus();
+    await page.keyboard.press('Enter');
+    const detail = page.getByLabel('Selected constellation edge details');
+    await detail.waitFor();
+    assert((await detail.innerText()).includes(String(destination.selectedActionName)));
+    const screenshot = join(evidenceDirectory, 'phase2z-fractured-scour-destination.png');
+    await page.getByTestId('markov-constellation-container').screenshot({ path: screenshot });
+    evidence.artifacts.phase2zFracturedScourDestination = relative(repositoryRoot, screenshot);
+    await detail.getByRole('button', { name: 'Close selected edge details' }).click();
+    return {
+      regalBranches: edges.filter((edge) => edge.sourceNodeId === branchedRegal.id).length,
+      scourBranches: scour.length,
+      reacquireBranches: reacquire.length,
+      fracturedScourDestination: {
+        rarity: destination.rarity,
+        selectedActionId: destination.selectedActionId,
+      },
+    };
+  });
+
+  await gate(evidence, scenario, 'Z8-selected-harvest-repeat-and-success-flow', async () => {
+    const input = fixture('phase2w_armour_evasion_12');
+    await importFixture(page, input);
+    await setBudget(page, input.searchBudget);
+    await setObjective(page, 'FEWEST_ACTIONS_WITHIN_COST', 600);
+    harvestResult = await runOptimization(page, input.searchBudget.maxWallTimeMs);
+    harvestFlow = selectedPolicyFlow(harvestResult, 'Harvest control');
+    assertBrowserFlowConservation(harvestFlow, 'Harvest control');
+    const nodes = arrayValue(harvestFlow.nodes, 'Harvest nodes').map((entry) => jsonRecord(entry, 'Harvest node'));
+    const edges = arrayValue(harvestFlow.edges, 'Harvest edges').map((entry) => jsonRecord(entry, 'Harvest edge'));
+    const harvestNodeIds = new Set(nodes
+      .filter((node) => String(node.selectedActionId).startsWith('harvest_reforge_'))
+      .map((node) => String(node.id)));
+    assert(harvestNodeIds.size > 0, 'Fewest-actions control did not select Harvest');
+    const selectedEdges = edges.filter((edge) => harvestNodeIds.has(String(edge.sourceNodeId)));
+    const repeatEdge = selectedEdges.find((edge) => edge.outcomeKind === 'REPEAT');
+    assert(repeatEdge);
+    assert(selectedEdges.some((edge) => edge.outcomeKind === 'SUCCESS'));
+    const anchor = page.locator(`[data-edge-anchor="${String(repeatEdge.id)}"]`);
+    await anchor.focus();
+    await page.keyboard.press('Enter');
+    const detail = page.getByLabel('Selected constellation edge details');
+    await detail.waitFor();
+    assert((await detail.innerText()).includes('repeat'));
+    const screenshot = join(evidenceDirectory, 'phase2z-harvest-loop.png');
+    await page.getByTestId('markov-constellation-container').screenshot({ path: screenshot });
+    evidence.artifacts.phase2zHarvestLoop = relative(repositoryRoot, screenshot);
+    await detail.getByRole('button', { name: 'Close selected edge details' }).click();
+    return {
+      harvestNodes: harvestNodeIds.size,
+      repeatEdges: selectedEdges.filter((edge) => edge.outcomeKind === 'REPEAT').length,
+      successEdges: selectedEdges.filter((edge) => edge.outcomeKind === 'SUCCESS').length,
+    };
+  });
+
+  await gate(evidence, scenario, 'Z9-topology-diversity-worker-dom-and-performance', async () => {
+    assert(cleanFlow && fractureFlow && harvestFlow, 'Representative policy flows are unavailable');
+    const flows = [cleanFlow, fractureFlow, harvestFlow];
+    const topologies = flows.map((flow) => jsonRecord(flow.topology, 'topology'));
+    const fingerprints = topologies.map((topology) => String(topology.fingerprint));
+    assert.equal(new Set(fingerprints).size, fingerprints.length);
+    const current = page.getByTestId('markov-constellation-container');
+    assert.equal(await current.getAttribute('data-topology-fingerprint'), fingerprints[2]);
+    const layoutMs = Number(await current.getAttribute('data-layout-ms'));
+    assert(layoutMs >= 0 && layoutMs < 250);
+    const artifact = join(evidenceDirectory, 'phase2z-browser-flow.json');
+    writeFileSync(artifact, `${JSON.stringify({
+      clean: cleanFlow,
+      selfFracture: fractureFlow,
+      harvest: harvestFlow,
+      topologyFingerprints: fingerprints,
+      layoutMs,
+    }, null, 2)}\n`, 'utf8');
+    evidence.artifacts.phase2zBrowserFlow = relative(repositoryRoot, artifact);
+    evidence.performance.phase2z = {
+      layoutMs,
+      policyAggregationMs: flows.map((flow) =>
+        numberValue(jsonRecord(flow.aggregation, 'flow aggregation').aggregationMs, 'aggregation ms')
+      ),
+      particleCount: Number(await current.getAttribute('data-particle-count')),
+    };
+    return { fingerprints, layoutMs, workerToDom: true };
+  });
+}
+
 async function runHarvestFixtures(page: Page, evidence: BrowserEvidence): Promise<void> {
   const scenario = 'harvest-method-and-economics';
   await ensureOptimizerPage(page, String(evidence.productionUrl));
@@ -4894,6 +5185,7 @@ function scenarioEnabled(requested: string, name: string): boolean {
     phase2w: ['phase2w', 'phase2w-handoff', 'phase2w-integration'],
     phase2x: ['phase2x', 'phase2x-semantics', 'phase2x-budget'],
     phase2y: ['phase2y'],
+    phase2z: ['phase2z', 'constellation-flow'],
     methods: ['methods', 'harvest', 'portfolio', 'harvest-witness'],
     responsive: ['responsive', 'accessibility'],
     animation: ['animation', 'constellation'],
@@ -4906,13 +5198,22 @@ function writeReports(evidence: BrowserEvidence): void {
   evidence.finishedAt = new Date().toISOString();
   evidence.status = evidence.checks.every((check) => check.passed) ? 'PASSED' : 'FAILED';
   const focusedCloseout = evidence.requestedScenario === 'phase2y-fuzz';
+  const phase2zFocused = evidence.requestedScenario === 'phase2z';
   const jsonReport = join(
     reportsDirectory,
-    focusedCloseout ? 'phase2y1-focused-gate.json' : 'release-gate.json',
+    focusedCloseout
+      ? 'phase2y1-focused-gate.json'
+      : phase2zFocused
+        ? 'phase2z-gate.json'
+        : 'release-gate.json',
   );
   const summaryReport = join(
     reportsDirectory,
-    focusedCloseout ? 'phase2y1-focused-summary.md' : 'summary.md',
+    focusedCloseout
+      ? 'phase2y1-focused-summary.md'
+      : phase2zFocused
+        ? 'phase2z-summary.md'
+        : 'summary.md',
   );
   if (focusedCloseout) {
     evidence.artifacts.phase2y1FocusedGate = relative(repositoryRoot, jsonReport);
@@ -4921,7 +5222,9 @@ function writeReports(evidence: BrowserEvidence): void {
   const lines = [
     focusedCloseout
       ? '# Phase 2Y.1 Focused Real-Browser Compaction Gate'
-      : '# Phase 2Y Real-Browser Release Gate',
+      : phase2zFocused
+        ? '# Phase 2Z Selected-Policy Branching Constellation Gate'
+        : '# Phase 2Y Real-Browser Release Gate',
     '',
     `- Run: ${evidence.runId}`,
     `- Started: ${evidence.startedAt}`,
@@ -5021,6 +5324,7 @@ async function main(): Promise<void> {
     if (scenarioEnabled(requested, 'responsive')) await runResponsiveAndKeyboard(page, evidence);
     if (scenarioEnabled(requested, 'animation')) await runConstellation(page, evidence, requested === 'nightly' ? 60_000 : 5_000);
     if (scenarioEnabled(requested, 'additional')) await runAdditionalFixtures(page, evidence);
+    if (scenarioEnabled(requested, 'phase2z')) await runPhase2Z(page, evidence);
     if (scenarioEnabled(requested, 'phase2y')) await runPhase2Y(page, evidence);
     if (requested === 'phase2y-fuzz') await runPhase2Y1FocusedCloseout(page, evidence);
 
@@ -5034,11 +5338,17 @@ async function main(): Promise<void> {
       evidenceDirectory,
       requested === 'phase2y-fuzz'
         ? 'phase2y1-focused-worker-events.json'
-        : 'worker-events.json',
+        : requested === 'phase2z'
+          ? 'phase2z-worker-events.json'
+          : 'worker-events.json',
     );
     writeFileSync(workerTrace, `${JSON.stringify(compactWorkerEvents(events), null, 2)}\n`, 'utf8');
     evidence.artifacts[
-      requested === 'phase2y-fuzz' ? 'phase2y1FocusedWorkerEvents' : 'workerEvents'
+      requested === 'phase2y-fuzz'
+        ? 'phase2y1FocusedWorkerEvents'
+        : requested === 'phase2z'
+          ? 'phase2zWorkerEvents'
+          : 'workerEvents'
     ] = relative(repositoryRoot, workerTrace);
     evidence.artifacts.videoDirectory = relative(repositoryRoot, join(artifactsDirectory, 'video'));
 

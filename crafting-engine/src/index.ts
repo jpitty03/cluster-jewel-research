@@ -24,6 +24,23 @@ export type {
   ModifierDisplayDescriptor,
   ModifierDisplaySource,
 } from './domain/ModifierDisplay.ts';
+export {
+  buildPolicyFlowComponent,
+  buildSelectedPolicyFlowSummary,
+  POLICY_FLOW_RECONCILIATION_TOLERANCE,
+  SELECTED_POLICY_FLOW_VERSION,
+} from './domain/PolicyFlow.ts';
+export type {
+  PolicyFlowAggregationEvidence,
+  PolicyFlowComponent,
+  PolicyFlowDifferentialSample,
+  PolicyFlowEdge,
+  PolicyFlowNode,
+  PolicyFlowOutcomeKind,
+  PolicyFlowReconciliation,
+  PolicyFlowSummary,
+  PolicyFlowTopology,
+} from './domain/PolicyFlow.ts';
 
 export type { StartingCraftOption };
 

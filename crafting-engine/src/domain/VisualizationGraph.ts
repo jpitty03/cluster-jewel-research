@@ -1,13 +1,10 @@
-import {
-  classifyCraftPlanAction,
-  type CraftPlanSummary,
-} from '../service/craftPlan.ts';
-import type { MethodFamilyResult } from './MethodFamily.ts';
-import type { RouteSummary } from '../service/optimizerService.ts';
-import {
-  playerizeModifierText,
-  type ModifierDisplayDescriptor,
-} from './ModifierDisplay.ts';
+import type {
+  PolicyFlowEdge,
+  PolicyFlowOutcomeKind,
+  PolicyFlowSummary,
+  PolicyFlowTopology,
+} from './PolicyFlow.ts';
+import type { ModifierDisplayDescriptor } from './ModifierDisplay.ts';
 
 export type MacroStateKind =
   | 'CLEAN_BASE'
@@ -20,12 +17,10 @@ export type MacroStateKind =
   | 'HARVEST_REFORGE'
   | 'RECOVERY_RESET'
   | 'TERMINAL_SUCCESS'
-  | 'UNRESOLVED_FRONTIER'
-  | 'DOMINATED_BRANCH';
+  | 'UNRESOLVED_FRONTIER';
 
 export interface VisualizationNode {
   id: string;
-  /** Persistent, collision-managed player label. */
   label: string;
   sublabel?: string;
   fullLabel: string;
@@ -34,21 +29,26 @@ export interface VisualizationNode {
   x: number;
   y: number;
   radius: number;
-  glowIntensity: number; // 0.0 to 1.0
+  glowIntensity: number;
   isCurrentFocus?: boolean;
   isSelectedRoute: boolean;
   isDominated: boolean;
   isUnresolved: boolean;
-  occupancyWeight: number; // 0.0 to 1.0 (relative visit volume)
+  occupancyWeight: number;
   details: {
     title: string;
     phase?: string;
     instruction?: string;
     actions: string[];
     targetTexts: string[];
-    expectedPhysicalActions?: number;
-    estimatedManualTimeMs?: number;
-    recoveryTargetStepId?: string;
+    expectedVisits: number;
+    occupancyShare: number;
+    exactStateCount: number;
+    rarity?: 'normal' | 'magic' | 'rare';
+    matchedTargetModIds: string[];
+    fracturedTargetModIds: string[];
+    representativeState?: string;
+    representativeStateKey?: string;
     routeStatus: string;
     technicalModifiers: ModifierDisplayDescriptor[];
   };
@@ -59,12 +59,25 @@ export interface VisualizationEdge {
   source: string;
   target: string;
   actionLabel: string;
-  probability: number; // 0.0 to 1.0
+  probability: number;
   expectedVisits: number;
+  exactTransitionCount: number;
+  outcomeKind: PolicyFlowOutcomeKind;
+  nextSelectedActionId?: string;
+  nextSelectedActionName?: string;
+  representativeOutcome?: string;
+  representativeState?: string;
+  evidenceKind: PolicyFlowEdge['evidenceKind'];
   isSelectedRoute: boolean;
   isDominated: boolean;
   isUnresolved: boolean;
-  curvature: number; // -0.5 to 0.5 for organic arcs
+  isRecovery: boolean;
+  curvature: number;
+  controlX: number;
+  controlY: number;
+  width: number;
+  opacity: number;
+  flowImportance: number;
 }
 
 export interface VisualizationWisp {
@@ -72,7 +85,7 @@ export interface VisualizationWisp {
   edgeId: string;
   sourceNodeId: string;
   targetNodeId: string;
-  progress: number; // 0.0 to 1.0 along the edge
+  progress: number;
   speed: number;
   size: number;
   opacity: number;
@@ -80,7 +93,7 @@ export interface VisualizationWisp {
 }
 
 export interface VisualizationEvent {
-  type: 'EXPANSION_ROUND' | 'INCUMBENT_UPDATE' | 'BRANCH_DOMINATED' | 'SEARCH_COMPLETE';
+  type: 'POLICY_ENTRY' | 'BRANCH_SPLIT' | 'RECOVERY_LOOP' | 'SEARCH_COMPLETE';
   timestampMs: number;
   description: string;
   activeNodeId?: string;
@@ -93,9 +106,19 @@ export interface VisualizationGraph {
   events: VisualizationEvent[];
   seed: string;
   layoutVersion: string;
+  policyFlowVersion: PolicyFlowSummary['version'];
+  policyFlowStatus: PolicyFlowSummary['status'];
+  sourceBundleId: string;
+  sourcePolicyFingerprint?: string;
   acquisitionContext: VisualizationAcquisitionContext;
   selectedRouteNodeIds: string[];
   selectedRouteEdgeIds: string[];
+  recoveryEdgeIds: string[];
+  topology: PolicyFlowTopology;
+  performance: {
+    layoutMs: number;
+    particleBudget: number;
+  };
   bounds: {
     minX: number;
     minY: number;
@@ -117,438 +140,398 @@ export interface GraphBuildOptions {
   seed?: string;
   width?: number;
   height?: number;
-  includeAlternatives?: boolean;
   modifierDescriptors?: ModifierDisplayDescriptor[];
   acquisitionContext?: VisualizationAcquisitionContext;
 }
 
-function compactStepLabel(step: CraftPlanSummary['steps'][number]): string {
-  if (step.phase === 'ACQUIRE') return 'Acquire';
-  if (step.phase === 'RECOVER') return 'Recover';
-  if (step.phase === 'SUCCESS') return 'Complete';
-  if (step.phase === 'FINISH') return 'Finish';
-  for (const actionId of step.actionIds) {
-    const classification = classifyCraftPlanAction(actionId);
-    if (classification.kind === 'CRAFT_MECHANIC') return classification.compactLabel;
-  }
-  const phaseLabels: Record<string, string> = {
-    INITIALIZE: 'Make Magic',
-    ROLL: 'Roll Target',
-    FILL: 'Fill Magic',
-    PROMOTE: 'Promote',
-  };
-  return phaseLabels[step.phase] ?? 'Craft';
+interface PositionedComponent {
+  id: number;
+  nodeIds: string[];
+  rank: number;
+  centerX: number;
+  centerY: number;
+  cyclic: boolean;
 }
 
-/**
- * Builds a deterministic, macro-state visualization graph dynamically derived
- * from the actual optimizer craft plan, recommended route, and method portfolio.
- */
-export function buildVisualizationGraph(
-  craftPlan: CraftPlanSummary,
-  methodPortfolio: MethodFamilyResult[] = [],
-  recommendedRoute?: RouteSummary,
-  options: GraphBuildOptions = {}
-): VisualizationGraph {
-  const descriptors = options.modifierDescriptors ?? [];
-  const descriptorById = new Map(descriptors.map((descriptor) => [descriptor.modId, descriptor]));
-  const playerText = (text: string, form: 'primary' | 'compact' = 'compact') =>
-    playerizeModifierText(text, descriptors, form);
-  const allSteps = craftPlan.steps || [];
-  const acquisitionContext = options.acquisitionContext ?? { kind: 'OTHER' };
-  const acquisitionStep = allSteps.find((step) => step.phase === 'ACQUIRE');
-  const steps = allSteps.filter((step) => step.phase !== 'ACQUIRE' && step.phase !== 'SUCCESS');
-  const includeAcquisitionNode = acquisitionContext.kind !== 'CLEAN' && acquisitionStep !== undefined;
-  const routeNodeCount = steps.length + (includeAcquisitionNode ? 1 : 0) + 2;
-  const routeSpacing = 190;
-  const width = Math.max(options.width ?? 1000, 180 + (routeNodeCount - 1) * routeSpacing);
-  const alternativeFamilies = methodPortfolio.filter((family) =>
-    family.spec.kind !== 'OPEN' && family.status !== 'SELECTED_WINNER'
-  );
-  const alternativeColumns = Math.max(1, Math.min(4, alternativeFamilies.length));
-  const alternativeRows = Math.ceil(alternativeFamilies.length / alternativeColumns);
-  const height = Math.max(options.height ?? 600, 480 + Math.max(0, alternativeRows - 1) * 115);
-  const seed = options.seed ?? 'markov_constellation_default_seed';
+function now(): number {
+  return globalThis.performance?.now?.() ?? Date.now();
+}
 
-  const nodes: VisualizationNode[] = [];
-  const edges: VisualizationEdge[] = [];
-  const selectedRouteNodeIds: string[] = [];
-  const selectedRouteEdgeIds: string[] = [];
-  const events: VisualizationEvent[] = [];
-
-  const centerY = Math.min(240, height * 0.36);
-  const isCertified = craftPlan.status === 'CERTIFIED';
-
-  // 1. Starting state is explicit acquisition context, never an action-id substring inference.
-  const startsClean = acquisitionContext.kind === 'CLEAN' || acquisitionContext.kind === 'SELF_FRACTURE';
-  const startNodeId = 'node_start';
-  const startNode: VisualizationNode = {
-    id: startNodeId,
-    label: startsClean ? 'Clean Base' : 'Starting Base',
-    sublabel: startsClean ? 'Normal start' : 'Selected acquisition',
-    fullLabel: recommendedRoute?.name ?? (startsClean ? 'Clean base' : 'Selected starting base'),
-    kind: 'CLEAN_BASE',
-    x: 90,
-    y: centerY,
-    radius: 20,
-    glowIntensity: 0.8,
-    isSelectedRoute: true,
-    isDominated: false,
-    isUnresolved: false,
-    occupancyWeight: 1.0,
-    details: {
-      title: recommendedRoute?.name ?? (startsClean ? 'Clean base' : 'Selected starting base'),
-      phase: 'ACQUIRE',
-      actions: [],
-      targetTexts: [],
-      routeStatus: recommendedRoute?.name ?? 'Selected route start',
-      technicalModifiers: [],
-    },
+function tarjan(
+  nodeIds: readonly string[],
+  edges: readonly Pick<PolicyFlowEdge, 'sourceNodeId' | 'targetNodeId'>[],
+): string[][] {
+  const adjacency = new Map(nodeIds.map((nodeId) => [nodeId, [] as string[]]));
+  for (const edge of edges) adjacency.get(edge.sourceNodeId)?.push(edge.targetNodeId);
+  for (const targets of adjacency.values()) targets.sort();
+  let nextIndex = 0;
+  const indices = new Map<string, number>();
+  const lowLinks = new Map<string, number>();
+  const stack: string[] = [];
+  const onStack = new Set<string>();
+  const components: string[][] = [];
+  const visit = (nodeId: string): void => {
+    indices.set(nodeId, nextIndex);
+    lowLinks.set(nodeId, nextIndex);
+    nextIndex += 1;
+    stack.push(nodeId);
+    onStack.add(nodeId);
+    for (const targetId of adjacency.get(nodeId) ?? []) {
+      if (!indices.has(targetId)) {
+        visit(targetId);
+        lowLinks.set(nodeId, Math.min(lowLinks.get(nodeId)!, lowLinks.get(targetId)!));
+      } else if (onStack.has(targetId)) {
+        lowLinks.set(nodeId, Math.min(lowLinks.get(nodeId)!, indices.get(targetId)!));
+      }
+    }
+    if (lowLinks.get(nodeId) !== indices.get(nodeId)) return;
+    const component: string[] = [];
+    while (stack.length > 0) {
+      const member = stack.pop()!;
+      onStack.delete(member);
+      component.push(member);
+      if (member === nodeId) break;
+    }
+    components.push(component.sort());
   };
-  nodes.push(startNode);
-  selectedRouteNodeIds.push(startNodeId);
-
-  events.push({
-    type: 'EXPANSION_ROUND',
-    timestampMs: 0,
-    description: `Initialized start base: ${startNode.label}.`,
-    activeNodeId: startNodeId,
-  });
-
-  // 2. Build the acquisition event and normal plan actions dynamically.
-  let prevNodeId = startNodeId;
-  let routeStepNumber = 0;
-  const totalSteps = steps.length + (includeAcquisitionNode ? 1 : 0);
-
-  if (includeAcquisitionNode && acquisitionStep) {
-    routeStepNumber++;
-    const targetDescriptor = acquisitionContext.targetModId
-      ? descriptorById.get(acquisitionContext.targetModId)
-      : undefined;
-    const targetLabel = targetDescriptor?.compactText ?? 'selected target';
-    const isSelfFracture = acquisitionContext.kind === 'SELF_FRACTURE';
-    const acquisitionLabel = isSelfFracture
-      ? `Create Fractured ${targetLabel}`
-      : 'Acquire Starting Base';
-    const acquisitionNodeId = 'node_acquisition';
-    const acquisitionNode: VisualizationNode = {
-      id: acquisitionNodeId,
-      label: acquisitionLabel,
-      sublabel: isSelfFracture ? targetLabel : 'Selected method',
-      fullLabel: acquisitionLabel,
-      stepNumber: routeStepNumber,
-      kind: isSelfFracture ? 'FRACTURE_FAMILY' : 'CLEAN_BASE',
-      x: 90 + routeStepNumber * routeSpacing,
-      y: centerY - 48,
-      radius: 18,
-      glowIntensity: 0.78,
-      isSelectedRoute: true,
-      isDominated: false,
-      isUnresolved: false,
-      occupancyWeight: 0.95,
-      details: {
-        title: acquisitionLabel,
-        phase: 'ACQUIRE',
-        instruction: playerText(acquisitionStep.instruction, 'primary'),
-        actions: acquisitionStep.actionNames.map((action) => playerText(action, 'primary')),
-        targetTexts: targetDescriptor ? [targetDescriptor.primaryText] : [],
-        expectedPhysicalActions: acquisitionStep.expectedPhysicalActions,
-        estimatedManualTimeMs: acquisitionStep.estimatedManualTimeMs,
-        routeStatus: isSelfFracture
-          ? 'Selected self-fracture acquisition event'
-          : 'Selected acquisition event',
-        technicalModifiers: targetDescriptor ? [targetDescriptor] : [],
-      },
-    };
-    nodes.push(acquisitionNode);
-    selectedRouteNodeIds.push(acquisitionNodeId);
-    const acquisitionEdgeId = `edge_${startNodeId}_to_${acquisitionNodeId}`;
-    edges.push({
-      id: acquisitionEdgeId,
-      source: startNodeId,
-      target: acquisitionNodeId,
-      actionLabel: isSelfFracture ? `Create fractured ${targetLabel}` : 'Acquire starting base',
-      probability: 1,
-      expectedVisits: 1,
-      isSelectedRoute: true,
-      isDominated: false,
-      isUnresolved: false,
-      curvature: -0.12,
-    });
-    selectedRouteEdgeIds.push(acquisitionEdgeId);
-    prevNodeId = acquisitionNodeId;
+  for (const nodeId of [...nodeIds].sort()) {
+    if (!indices.has(nodeId)) visit(nodeId);
   }
+  return components;
+}
 
-  steps.forEach((step, idx) => {
-    routeStepNumber++;
-    const stepNodeId = `node_step_${step.id || idx + 1}`;
-    const stepX = 90 + routeStepNumber * routeSpacing;
-    const verticalOffset = routeStepNumber % 2 === 1 ? -48 : 48;
-    const stepY = centerY + verticalOffset;
-    const targetDescriptors = (step.preferredTargetModIds ?? [])
-      .flatMap((modId) => descriptorById.get(modId) ?? []);
-    const targetTexts = targetDescriptors.map((descriptor) => descriptor.compactText);
-    const fullTitle = playerText(step.title, 'primary');
-
-    const hasHarvestMechanic = step.actionIds.some((actionId) => {
-      const classification = classifyCraftPlanAction(actionId);
-      return classification.kind === 'CRAFT_MECHANIC' &&
-        classification.actionType === 'HARVEST_REFORGE';
+function componentLayout(flow: PolicyFlowSummary, width: number, height: number): {
+  components: PositionedComponent[];
+  positionByNodeId: Map<string, { x: number; y: number }>;
+  width: number;
+  height: number;
+} {
+  const componentNodes = tarjan(flow.nodes.map((node) => node.id), flow.edges);
+  const componentByNode = new Map<string, number>();
+  componentNodes.forEach((nodes, componentId) => {
+    for (const nodeId of nodes) componentByNode.set(nodeId, componentId);
+  });
+  const outgoing = new Map<number, Set<number>>();
+  const incomingCount = new Map<number, number>();
+  for (let componentId = 0; componentId < componentNodes.length; componentId += 1) {
+    outgoing.set(componentId, new Set());
+    incomingCount.set(componentId, 0);
+  }
+  for (const edge of flow.edges) {
+    const source = componentByNode.get(edge.sourceNodeId);
+    const target = componentByNode.get(edge.targetNodeId);
+    if (source === undefined || target === undefined || source === target) continue;
+    const targets = outgoing.get(source)!;
+    if (targets.has(target)) continue;
+    targets.add(target);
+    incomingCount.set(target, (incomingCount.get(target) ?? 0) + 1);
+  }
+  const queue = [...incomingCount.entries()]
+    .filter(([, count]) => count === 0)
+    .map(([componentId]) => componentId)
+    .sort((left, right) => componentNodes[left][0].localeCompare(componentNodes[right][0]));
+  const topological: number[] = [];
+  while (queue.length > 0) {
+    const componentId = queue.shift()!;
+    topological.push(componentId);
+    for (const target of [...(outgoing.get(componentId) ?? [])].sort()) {
+      const remaining = (incomingCount.get(target) ?? 0) - 1;
+      incomingCount.set(target, remaining);
+      if (remaining === 0) {
+        queue.push(target);
+        queue.sort((left, right) =>
+          componentNodes[left][0].localeCompare(componentNodes[right][0])
+        );
+      }
+    }
+  }
+  const ranks = new Map<number, number>();
+  for (const startNodeId of flow.startNodeIds) {
+    const componentId = componentByNode.get(startNodeId);
+    if (componentId !== undefined) ranks.set(componentId, 0);
+  }
+  for (const componentId of topological) {
+    const rank = ranks.get(componentId) ?? 0;
+    for (const target of outgoing.get(componentId) ?? []) {
+      ranks.set(target, Math.max(ranks.get(target) ?? 0, rank + 1));
+    }
+  }
+  const maximumRank = Math.max(0, ...ranks.values());
+  const columns = maximumRank + 1;
+  const computedWidth = Math.max(width, 260 + Math.max(0, columns - 1) * 260);
+  const componentsByRank = new Map<number, number[]>();
+  componentNodes.forEach((_, componentId) => {
+    const rank = ranks.get(componentId) ?? 0;
+    const row = componentsByRank.get(rank) ?? [];
+    row.push(componentId);
+    componentsByRank.set(rank, row);
+  });
+  const busiestRank = Math.max(1, ...[...componentsByRank.values()].map((row) => row.length));
+  const computedHeight = Math.max(height, 240 + Math.max(0, busiestRank - 1) * 220);
+  const selfLoops = new Set(flow.edges
+    .filter((edge) => edge.sourceNodeId === edge.targetNodeId)
+    .map((edge) => edge.sourceNodeId));
+  const positions = new Map<string, { x: number; y: number }>();
+  const positionedComponents: PositionedComponent[] = [];
+  for (const [rank, componentIds] of [...componentsByRank.entries()].sort((a, b) => a[0] - b[0])) {
+    componentIds.sort((left, right) => {
+      const leftVisits = componentNodes[left].reduce((sum, nodeId) =>
+        sum + (flow.nodes.find((node) => node.id === nodeId)?.expectedVisits ?? 0), 0);
+      const rightVisits = componentNodes[right].reduce((sum, nodeId) =>
+        sum + (flow.nodes.find((node) => node.id === nodeId)?.expectedVisits ?? 0), 0);
+      return rightVisits - leftVisits || componentNodes[left][0].localeCompare(componentNodes[right][0]);
     });
-    const stepKind: MacroStateKind = step.phase === 'INITIALIZE' || step.phase === 'ROLL'
-        ? (routeStepNumber === 1 ? 'MAGIC_1_MOD' : 'MAGIC_2_MOD')
-        : step.phase === 'PROMOTE'
-          ? 'RARE_2_MOD'
-        : hasHarvestMechanic
-            ? 'HARVEST_REFORGE'
-            : step.phase === 'RECOVER'
-              ? 'RECOVERY_RESET'
-              : 'RARE_3_MOD';
+    const rowHeight = computedHeight / (componentIds.length + 1);
+    componentIds.forEach((componentId, rowIndex) => {
+      const nodeIds = componentNodes[componentId];
+      const centerX = columns === 1
+        ? computedWidth / 2
+        : 130 + rank * ((computedWidth - 260) / Math.max(1, columns - 1));
+      const centerY = rowHeight * (rowIndex + 1);
+      const cyclic = nodeIds.length > 1 || selfLoops.has(nodeIds[0]);
+      positionedComponents.push({ id: componentId, nodeIds, rank, centerX, centerY, cyclic });
+      if (nodeIds.length === 1) {
+        positions.set(nodeIds[0], { x: centerX, y: centerY });
+        return;
+      }
+      const ringRadius = Math.max(72, Math.min(125, 46 + nodeIds.length * 12));
+      nodeIds.forEach((nodeId, nodeIndex) => {
+        const angle = -Math.PI / 2 + nodeIndex * Math.PI * 2 / nodeIds.length;
+        positions.set(nodeId, {
+          x: centerX + Math.cos(angle) * ringRadius,
+          y: centerY + Math.sin(angle) * ringRadius,
+        });
+      });
+    });
+  }
+  return { components: positionedComponents, positionByNodeId: positions, width: computedWidth, height: computedHeight };
+}
 
-    const stepNode: VisualizationNode = {
-      id: stepNodeId,
-      label: compactStepLabel(step),
-      sublabel: targetTexts[0],
-      fullLabel: fullTitle,
-      stepNumber: routeStepNumber,
-      kind: stepKind,
-      x: stepX,
-      y: stepY,
-      radius: 18,
-      glowIntensity: 0.75,
+function macroKind(node: PolicyFlowSummary['nodes'][number]): MacroStateKind {
+  if (node.terminal) return 'TERMINAL_SUCCESS';
+  if (node.selectedActionId === 'restart_reacquire' || node.selectedActionId === 'scouring_orb') return 'RECOVERY_RESET';
+  if (node.selectedActionId?.startsWith('harvest_reforge_')) return 'HARVEST_REFORGE';
+  if (node.scope === 'ACQUISITION' || node.selectedActionId === 'fracturing_orb') return 'FRACTURE_FAMILY';
+  const affixes = (node.prefixCount ?? 0) + (node.suffixCount ?? 0);
+  if (node.rarity === 'normal') return 'CLEAN_BASE';
+  if (node.rarity === 'magic') return affixes <= 1 ? 'MAGIC_1_MOD' : 'MAGIC_2_MOD';
+  if (affixes <= 2) return 'RARE_2_MOD';
+  if (affixes === 3) return 'RARE_3_MOD';
+  return 'RARE_4_MOD';
+}
+
+function branchLabel(
+  edge: PolicyFlowEdge,
+  source: PolicyFlowSummary['nodes'][number] | undefined,
+  target: PolicyFlowSummary['nodes'][number] | undefined,
+): string {
+  const probability = `${(edge.conditionalProbability * 100).toFixed(edge.conditionalProbability >= 0.1 ? 1 : 2)}%`;
+  const sourceLabel = source?.label ?? edge.actionName;
+  if (edge.sourceNodeId === edge.targetNodeId) return `${sourceLabel} repeat · ${probability}`;
+  return `${sourceLabel} → ${target?.label ?? 'Next policy state'} · ${probability}`;
+}
+
+function deterministicPolicyOrder(flow: PolicyFlowSummary): string[] {
+  const visited = new Set<string>();
+  const queue = [...flow.startNodeIds];
+  const result: string[] = [];
+  while (queue.length > 0) {
+    const nodeId = queue.shift()!;
+    if (visited.has(nodeId)) continue;
+    visited.add(nodeId);
+    result.push(nodeId);
+    const outgoing = flow.edges
+      .filter((edge) => edge.sourceNodeId === nodeId)
+      .sort((left, right) => right.expectedFlow - left.expectedFlow || left.targetNodeId.localeCompare(right.targetNodeId));
+    for (const edge of outgoing) {
+      if (!visited.has(edge.targetNodeId)) queue.push(edge.targetNodeId);
+    }
+  }
+  for (const node of flow.nodes) {
+    if (!visited.has(node.id)) result.push(node.id);
+  }
+  return result;
+}
+
+/** Deterministic, cycle-aware layout of the exact selected-policy flow summary. */
+export function buildVisualizationGraph(
+  flow: PolicyFlowSummary,
+  options: GraphBuildOptions = {},
+): VisualizationGraph {
+  const layoutStarted = now();
+  const seed = options.seed ?? `${flow.sourceBundleId}:${flow.sourcePolicyFingerprint ?? 'policy'}`;
+  const acquisitionContext = options.acquisitionContext ?? { kind: 'OTHER' };
+  const layout = componentLayout(flow, options.width ?? 1000, options.height ?? 620);
+  const descriptorById = new Map((options.modifierDescriptors ?? []).map((descriptor) => [descriptor.modId, descriptor]));
+  const maximumVisits = Math.max(1e-12, ...flow.nodes.map((node) => node.expectedVisits));
+  const visitScale = Math.log1p(maximumVisits);
+  const orderedIds = deterministicPolicyOrder(flow);
+  const stepById = new Map(orderedIds.map((nodeId, index) => [nodeId, index + 1]));
+  const nodes: VisualizationNode[] = flow.nodes.map((node) => {
+    const position = layout.positionByNodeId.get(node.id) ?? { x: 100, y: layout.height / 2 };
+    const normalizedVisits = visitScale > 0 ? Math.log1p(node.expectedVisits) / visitScale : 0;
+    const technicalModifiers = [...new Set([...node.matchedTargetModIds, ...node.fracturedTargetModIds])]
+      .flatMap((modId) => descriptorById.get(modId) ?? []);
+    return {
+      id: node.id,
+      label: node.label,
+      sublabel: node.stateSummary,
+      fullLabel: node.terminal ? 'Goal: selected target satisfied' : `${node.label} — ${node.stateSummary}`,
+      stepNumber: stepById.get(node.id),
+      kind: macroKind(node),
+      x: position.x,
+      y: position.y,
+      radius: node.terminal ? 25 : 16 + normalizedVisits * 6,
+      glowIntensity: Math.max(0.18, normalizedVisits),
       isSelectedRoute: true,
       isDominated: false,
-      isUnresolved: false,
-      occupancyWeight: Math.max(0.3, 1.0 - ((routeStepNumber - 1) * 0.15)),
+      isUnresolved: flow.status !== 'CERTIFIED',
+      occupancyWeight: node.occupancyShare,
       details: {
-        title: fullTitle,
-        phase: step.phase,
-        instruction: playerText(step.instruction, 'primary'),
-        actions: step.actionNames.map((action) => playerText(action, 'primary')),
-        targetTexts,
-        expectedPhysicalActions: step.expectedPhysicalActions,
-        estimatedManualTimeMs: step.estimatedManualTimeMs,
-        recoveryTargetStepId: step.recoveryTargetStepId,
-        routeStatus: 'Selected policy route',
-        technicalModifiers: targetDescriptors,
+        title: node.terminal ? 'Target complete' : node.stateSummary,
+        phase: node.scope,
+        instruction: node.terminal
+          ? 'The selected policy reaches the requested target.'
+          : `When the item is in this state class, the selected action is ${node.selectedActionName ?? node.label}.`,
+        actions: node.selectedActionName ? [node.selectedActionName] : [],
+        targetTexts: technicalModifiers.map((descriptor) => descriptor.primaryText),
+        expectedVisits: node.expectedVisits,
+        occupancyShare: node.occupancyShare,
+        exactStateCount: node.exactStateCount,
+        rarity: node.rarity,
+        matchedTargetModIds: [...node.matchedTargetModIds],
+        fracturedTargetModIds: [...node.fracturedTargetModIds],
+        representativeState: node.representativeState,
+        representativeStateKey: node.representativeStateKey,
+        routeStatus: node.terminal
+          ? 'Selected policy terminal success'
+          : node.recoveryLike
+            ? 'Selected recovery policy state'
+            : 'Exact selected-policy macro state',
+        technicalModifiers,
       },
     };
-    nodes.push(stepNode);
-    selectedRouteNodeIds.push(stepNodeId);
-
-    // Forward Step Edge
-    const edgeId = `edge_${prevNodeId}_to_${stepNodeId}`;
-    const edge: VisualizationEdge = {
-      id: edgeId,
-      source: prevNodeId,
-      target: stepNodeId,
-      actionLabel: playerText(step.actionNames?.[0] ?? step.title),
-      probability: 1.0 / routeStepNumber,
-      expectedVisits: step.expectedPhysicalActions ? Math.max(1, step.expectedPhysicalActions / (totalSteps || 1)) : 1,
+  });
+  const maximumFlow = Math.max(1e-12, ...flow.edges.map((edge) => edge.expectedFlow));
+  const flowScale = Math.log1p(maximumFlow);
+  const outgoingIndex = new Map<string, number>();
+  const edges: VisualizationEdge[] = flow.edges.map((edge) => {
+    const source = nodes.find((node) => node.id === edge.sourceNodeId);
+    const target = nodes.find((node) => node.id === edge.targetNodeId);
+    const sameNode = edge.sourceNodeId === edge.targetNodeId;
+    const branchIndex = outgoingIndex.get(edge.sourceNodeId) ?? 0;
+    outgoingIndex.set(edge.sourceNodeId, branchIndex + 1);
+    const flowImportance = flowScale > 0 ? Math.log1p(edge.expectedFlow) / flowScale : 0;
+    const backwards = Boolean(source && target && target.x <= source.x);
+    const recovery = edge.outcomeKind === 'RECOVERY' || edge.outcomeKind === 'REACQUIRE';
+    const curvature = sameNode
+      ? (branchIndex % 2 === 0 ? 0.72 : -0.72)
+      : recovery || backwards
+        ? (branchIndex % 2 === 0 ? 0.34 : -0.34)
+        : (branchIndex % 2 === 0 ? -0.12 : 0.12);
+    const sourceX = source?.x ?? 0;
+    const sourceY = source?.y ?? 0;
+    const targetX = target?.x ?? sourceX;
+    const targetY = target?.y ?? sourceY;
+    const midX = (sourceX + targetX) / 2;
+    const midY = (sourceY + targetY) / 2;
+    const dx = targetX - sourceX;
+    const dy = targetY - sourceY;
+    const distance = Math.hypot(dx, dy);
+    const controlX = sameNode ? sourceX + (branchIndex % 2 === 0 ? 86 : -86) : midX + (-dy / (distance || 1)) * distance * curvature;
+    const controlY = sameNode ? sourceY - 104 : midY + (dx / (distance || 1)) * distance * curvature;
+    return {
+      id: edge.id,
+      source: edge.sourceNodeId,
+      target: edge.targetNodeId,
+      actionLabel: branchLabel(
+        edge,
+        flow.nodes.find((node) => node.id === edge.sourceNodeId),
+        flow.nodes.find((node) => node.id === edge.targetNodeId),
+      ),
+      probability: edge.conditionalProbability,
+      expectedVisits: edge.expectedFlow,
+      exactTransitionCount: edge.exactTransitionCount,
+      outcomeKind: edge.outcomeKind,
+      nextSelectedActionId: edge.nextSelectedActionId,
+      nextSelectedActionName: edge.nextSelectedActionName,
+      representativeOutcome: edge.representativeOutcome,
+      representativeState: edge.representativeState,
+      evidenceKind: edge.evidenceKind,
       isSelectedRoute: true,
       isDominated: false,
-      isUnresolved: false,
-      curvature: (routeStepNumber % 2 === 1 ? -0.15 : 0.15),
+      isUnresolved: flow.status !== 'CERTIFIED',
+      isRecovery: recovery,
+      curvature,
+      controlX,
+      controlY,
+      width: 1.25 + Math.sqrt(Math.max(0, flowImportance)) * 4.75,
+      opacity: Math.min(0.98, 0.2 + edge.conditionalProbability * 0.48 + flowImportance * 0.3),
+      flowImportance,
     };
-    edges.push(edge);
-    selectedRouteEdgeIds.push(edgeId);
-
-    // Recovery Loop if step misses and resets
-    if (step.recoveryTargetStepId !== undefined) {
-      const recEdgeId = `edge_recovery_${stepNodeId}`;
-      edges.push({
-        id: recEdgeId,
-        source: stepNodeId,
-        target: startNodeId,
-        actionLabel: 'Miss -> Recovery Loop',
-        probability: 0.5,
-        expectedVisits: 0.5,
-        isSelectedRoute: true,
-        isDominated: false,
-        isUnresolved: false,
-        curvature: 0.35,
+  });
+  const events: VisualizationEvent[] = [];
+  for (const startNodeId of flow.startNodeIds) {
+    events.push({ type: 'POLICY_ENTRY', timestampMs: 0, description: 'Entered the exact selected policy.', activeNodeId: startNodeId });
+  }
+  for (const node of flow.nodes) {
+    const outgoing = flow.edges.filter((edge) => edge.sourceNodeId === node.id);
+    if (outgoing.length > 1) {
+      events.push({
+        type: 'BRANCH_SPLIT',
+        timestampMs: events.length * 250 + 250,
+        description: `${node.label} splits into ${outgoing.length} evidence-derived outcome classes.`,
+        activeNodeId: node.id,
       });
     }
-
-    prevNodeId = stepNodeId;
-  });
-
-  // 3. Terminal Target Node
-  const terminalNodeId = 'node_terminal_target';
-  const terminalNode: VisualizationNode = {
-    id: terminalNodeId,
-    label: isCertified ? 'Goal' : 'Unresolved Target',
-    sublabel: isCertified ? 'Target certified' : 'Proof limit',
-    fullLabel: isCertified ? 'Target complete' : 'Unresolved target',
-    kind: isCertified ? 'TERMINAL_SUCCESS' : 'UNRESOLVED_FRONTIER',
-    x: 90 + (routeNodeCount - 1) * routeSpacing,
-    y: centerY,
-    radius: 25,
-    glowIntensity: isCertified ? 1.0 : 0.4,
-    isSelectedRoute: isCertified,
-    isDominated: false,
-    isUnresolved: !isCertified,
-    occupancyWeight: 1.0,
-    details: {
-      title: isCertified ? 'Target complete' : 'Unresolved target',
-      phase: 'SUCCESS',
-      actions: [],
-      targetTexts: descriptors.map((descriptor) => descriptor.primaryText),
-      routeStatus: isCertified ? 'Selected route terminal' : 'Unresolved frontier',
-      technicalModifiers: descriptors,
-    },
-  };
-  nodes.push(terminalNode);
-  if (isCertified) {
-    selectedRouteNodeIds.push(terminalNodeId);
   }
-
-  // Edge to Terminal Node
-  const finalEdgeId = `edge_${prevNodeId}_to_${terminalNodeId}`;
-  const finalEdge: VisualizationEdge = {
-    id: finalEdgeId,
-    source: prevNodeId,
-    target: terminalNodeId,
-    actionLabel: isCertified ? 'Finish / Target Achieved' : 'Continuation Search',
-    probability: 1.0,
-    expectedVisits: 1.0,
-    isSelectedRoute: isCertified,
-    isDominated: false,
-    isUnresolved: !isCertified,
-    curvature: 0.05,
-  };
-  edges.push(finalEdge);
-  if (isCertified) {
-    selectedRouteEdgeIds.push(finalEdgeId);
+  for (const edge of flow.edges.filter((candidate) => candidate.outcomeKind === 'RECOVERY' || candidate.outcomeKind === 'REACQUIRE')) {
+    events.push({
+      type: 'RECOVERY_LOOP',
+      timestampMs: events.length * 250 + 250,
+      description: `${edge.actionName} follows the actual selected-policy recovery destination.`,
+      activeEdgeId: edge.id,
+    });
   }
-
-  events.push({
-    type: 'INCUMBENT_UPDATE',
-    timestampMs: 500,
-    description: isCertified
-      ? `Winning crafting route resolved (${recommendedRoute?.name ?? 'Clean Base'}).`
-      : 'Search frontier reached allocated state budget.',
-    activeNodeId: terminalNodeId,
-  });
-
-  // 4. Alternative & Dominated Starting Methods from Portfolio
-  let visibleAlternativeIndex = 0;
-  methodPortfolio.forEach((family, fIdx) => {
-    if (family.spec.kind === 'OPEN') return;
-    const isWinner = family.status === 'SELECTED_WINNER';
-    if (isWinner) return; // Already modeled in main chain
-
-    const altNodeId = `node_alt_${family.spec.id || fIdx}`;
-    const isSameSelectedPolicy = family.status === 'SAME_AS_SELECTED';
-    const isDominated = family.status === 'DOMINATED' || family.status === 'MORE_EXPENSIVE';
-    const isUnresolved = family.status === 'UNRESOLVED_AT_BUDGET';
-    const targetDescriptor = family.spec.targetFractureModId
-      ? descriptorById.get(family.spec.targetFractureModId)
-      : undefined;
-    const familyLabel = targetDescriptor && family.spec.kind === 'SELF_FRACTURE'
-      ? `Self-fracture ${targetDescriptor.compactText}`
-      : targetDescriptor && family.spec.kind === 'SELF_FRACTURE_HARVEST'
-        ? `Fracture ${targetDescriptor.compactText} + Harvest`
-        : playerText(family.spec.name);
-    const column = visibleAlternativeIndex % alternativeColumns;
-    const row = Math.floor(visibleAlternativeIndex / alternativeColumns);
-    const laneWidth = (width - 240) / alternativeColumns;
-    visibleAlternativeIndex += 1;
-
-    const altNode: VisualizationNode = {
-      id: altNodeId,
-      label: familyLabel,
-      sublabel: isSameSelectedPolicy
-        ? 'Same selected policy'
-        : isUnresolved ? 'Unresolved' : isDominated ? 'Dominated' : 'Alternative',
-      fullLabel: familyLabel,
-      kind: family.spec.kind === 'SELF_FRACTURE' ? 'FRACTURE_FAMILY' : family.spec.kind === 'HARVEST' ? 'HARVEST_REFORGE' : 'DOMINATED_BRANCH',
-      x: 120 + laneWidth * (column + 0.5),
-      y: 430 + row * 115,
-      radius: 15,
-      glowIntensity: 0.25,
-      isSelectedRoute: false,
-      isDominated,
-      isUnresolved,
-      occupancyWeight: 0.15,
-      details: {
-        title: familyLabel,
-        phase: family.spec.kind,
-        instruction: playerText(family.spec.description, 'primary'),
-        actions: [],
-        targetTexts: targetDescriptor ? [targetDescriptor.primaryText] : [],
-        routeStatus: isSameSelectedPolicy
-          ? 'Independently found the same selected policy'
-          : isUnresolved ? 'Unresolved at budget' : isDominated ? 'Dominated alternative' : 'Explored alternative',
-        technicalModifiers: targetDescriptor ? [targetDescriptor] : [],
-      },
-    };
-    nodes.push(altNode);
-
-    // Edge from start to alternative
-    edges.push({
-      id: `edge_start_to_${altNodeId}`,
-      source: startNodeId,
-      target: altNodeId,
-      actionLabel: familyLabel,
-      probability: 0.2,
-      expectedVisits: 0.2,
-      isSelectedRoute: false,
-      isDominated: true,
-      isUnresolved,
-      curvature: 0.35,
-    });
-
-    // Edge from alternative to terminal
-    edges.push({
-      id: `edge_${altNodeId}_to_terminal`,
-      source: altNodeId,
-      target: terminalNodeId,
-      actionLabel: 'Alternative Path',
-      probability: 0.2,
-      expectedVisits: 0.2,
-      isSelectedRoute: false,
-      isDominated: true,
-      isUnresolved,
-      curvature: -0.25,
-    });
-  });
-
   events.push({
     type: 'SEARCH_COMPLETE',
-    timestampMs: 1000,
-    description: `Visualization graph constructed with ${nodes.length} macro states and ${edges.length} transitions.`,
+    timestampMs: events.length * 250 + 250,
+    description: `${nodes.length} macro states and ${edges.length} exact-flow branches rendered.`,
   });
-
-  // Calculate tight bounds
   let minX = Infinity;
   let minY = Infinity;
   let maxX = -Infinity;
   let maxY = -Infinity;
-
-  nodes.forEach((n) => {
-    minX = Math.min(minX, n.x - n.radius - 40);
-    minY = Math.min(minY, n.y - n.radius - 40);
-    maxX = Math.max(maxX, n.x + n.radius + 40);
-    maxY = Math.max(maxY, n.y + n.radius + 40);
-  });
-
+  for (const node of nodes) {
+    minX = Math.min(minX, node.x - node.radius - 90);
+    minY = Math.min(minY, node.y - node.radius - 100);
+    maxX = Math.max(maxX, node.x + node.radius + 90);
+    maxY = Math.max(maxY, node.y + node.radius + 100);
+  }
+  const particleBudget = Math.min(120, Math.max(edges.length, 24 + edges.length * 2));
   return {
     nodes,
     edges,
     events,
     seed,
-    layoutVersion: '2V.1',
+    layoutVersion: 'SELECTED_POLICY_SCC_LAYOUT_V1',
+    policyFlowVersion: flow.version,
+    policyFlowStatus: flow.status,
+    sourceBundleId: flow.sourceBundleId,
+    sourcePolicyFingerprint: flow.sourcePolicyFingerprint,
     acquisitionContext,
-    selectedRouteNodeIds,
-    selectedRouteEdgeIds,
+    selectedRouteNodeIds: orderedIds,
+    selectedRouteEdgeIds: edges.map((edge) => edge.id),
+    recoveryEdgeIds: [...flow.recoveryEdges],
+    topology: flow.topology,
+    performance: { layoutMs: Math.max(0, now() - layoutStarted), particleBudget },
     bounds: {
-      minX: Math.max(0, minX),
-      minY: Math.max(0, minY),
-      maxX: Math.max(width, maxX),
-      maxY: Math.max(height, maxY),
-      width: Math.max(width, maxX - minX),
-      height: Math.max(height, maxY - minY),
+      minX: Number.isFinite(minX) ? minX : 0,
+      minY: Number.isFinite(minY) ? minY : 0,
+      maxX: Number.isFinite(maxX) ? maxX : layout.width,
+      maxY: Number.isFinite(maxY) ? maxY : layout.height,
+      width: layout.width,
+      height: layout.height,
     },
   };
 }

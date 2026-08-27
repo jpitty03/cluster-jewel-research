@@ -1,7 +1,7 @@
 PHASE 2Y — PROOF EFFICIENCY, BUDGET TELEMETRY, AND POLICY EQUIVALENCE DIAGNOSTIC
 
 Y2/Y3/Y4 — exact field admissibility, strength, and tranche telemetry
-elapsed=28195ms; route=Self-fracture Unspeakable Gifts; U=1648.171c; status=PROVISIONAL_RESOLVED
+elapsed=28201ms; route=Self-fracture Unspeakable Gifts; U=1648.171c; status=PROVISIONAL_RESOLVED
 Clean Base: old=0.042c; relaxed=0.591c; combined=0.591c; full L=10.591c; full U=104403.275c; debt=1637.580c
 Dark Ideation: old=0.040c; relaxed=0.591c; combined=0.591c; full L=309.191c; full U=unresolvedc; debt=1338.980c
 Unspeakable Gifts: old=6.192c; relaxed=0.121c; combined=6.192c; full L=314.792c; full U=1648.171c; debt=1333.379c
@@ -16,8 +16,8 @@ wall witness: requested=1ms; used=3ms; stop=WALL_TIME
 state witness: requested=1; used=1; stop=STATE_CAP
 
 Y5 — identical-input scheduler A/B
-reference: elapsed=12434ms; U=2421.260c; best L=10.041c; gap=2411.219c; no-change=1
-Phase 2Y: elapsed=12416ms; U=1648.171c; best L=10.591c; gap=1637.580c; no-change=0
+reference: elapsed=12468ms; U=2421.260c; best L=10.041c; gap=2411.219c; no-change=1
+Phase 2Y: elapsed=11946ms; U=1648.171c; best L=10.591c; gap=1637.580c; no-change=0
 
 Y11/Y12/Y13 — canonical equivalence and player route identity
 selected=family_open/policy-d0e874d9; same=family_conventional/policy-d0e874d9

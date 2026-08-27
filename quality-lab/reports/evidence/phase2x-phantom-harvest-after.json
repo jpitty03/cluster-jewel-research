@@ -156,6 +156,6 @@
     "retainedUnknownActionIds": [
       "phase2x_unknown_positive_action"
     ],
-    "selectedHarvestNodeCount": 0
+    "policyFlowUnknownActionCount": 0
   }
 }

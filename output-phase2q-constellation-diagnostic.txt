@@ -1,10 +1,10 @@
 PHASE 2Q — CONSTELLATION SERIALIZED-GRAPH REGRESSION (VISUAL CERTIFICATION SUPERSEDED BY PHASE 2T PLAYWRIGHT)
 
 Q1 — Graph topology from a real optimizer result
-PASS: 14 unique nodes and 20 real endpoint-valid edges.
+PASS: 10 unique nodes and 53 real endpoint-valid edges.
 
 Q2 — Selected-route and accessibility serialization
-PASS: 7 selected-route nodes and every node has a discoverable label.
+PASS: 10 selected-route nodes and every node has a discoverable label.
 
 Q3 — Deterministic layout seed
 PASS: identical optimizer input and seed serialize identical graph nodes, edges, events, and bounds.

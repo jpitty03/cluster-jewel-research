@@ -47,6 +47,7 @@ export const WORKER_CAPTURE_INIT_SCRIPT = String.raw`
     expectedCostChaos: result.expectedCostChaos,
     alternatives: (result.alternatives ?? []).map(compactRoute),
     expectedActionUsage: result.expectedActionUsage,
+    policyFlow: result.policyFlow,
     presentation: result.presentation,
     internalConsistency: result.internalConsistency,
     acquisition: result.acquisition && ({

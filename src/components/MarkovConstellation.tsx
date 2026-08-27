@@ -20,6 +20,7 @@ export interface MarkovConstellationProps {
   isLive?: boolean;
   deterministicMode?: boolean;
   onNodeClick?: (node: VisualizationNode) => void;
+  onEdgeClick?: (edge: VisualizationEdge) => void;
   className?: string;
 }
 
@@ -68,6 +69,7 @@ interface PointerGesture {
   startPanY: number;
   moved: boolean;
   targetNodeId?: string;
+  targetEdgeId?: string;
 }
 
 const ZOOM_MIN = 0.35;
@@ -135,17 +137,10 @@ function edgePoint(
   const source = graph.nodes.find((node) => node.id === edge.source);
   const target = graph.nodes.find((node) => node.id === edge.target);
   if (!source || !target) return { x: 0, y: 0 };
-  const midX = (source.x + target.x) / 2;
-  const midY = (source.y + target.y) / 2;
-  const dx = target.x - source.x;
-  const dy = target.y - source.y;
-  const distance = Math.hypot(dx, dy);
-  const controlX = midX + (-dy / (distance || 1)) * distance * edge.curvature;
-  const controlY = midY + (dx / (distance || 1)) * distance * edge.curvature;
   const u = 1 - t;
   return {
-    x: u * u * source.x + 2 * u * t * controlX + t * t * target.x,
-    y: u * u * source.y + 2 * u * t * controlY + t * t * target.y,
+    x: u * u * source.x + 2 * u * t * edge.controlX + t * t * target.x,
+    y: u * u * source.y + 2 * u * t * edge.controlY + t * t * target.y,
   };
 }
 
@@ -266,6 +261,7 @@ export const MarkovConstellation: React.FC<MarkovConstellationProps> = ({
   isLive: _isLive = false,
   deterministicMode = false,
   onNodeClick,
+  onEdgeClick,
   className = '',
 }) => {
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
@@ -282,12 +278,14 @@ export const MarkovConstellation: React.FC<MarkovConstellationProps> = ({
   const [mode, setMode] = useState<'REPLAY' | 'EXPLORER' | 'SCREENSAVER'>('REPLAY');
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [selectedNodeId, setSelectedNodeId] = useState<string | null>(null);
+  const [selectedEdgeId, setSelectedEdgeId] = useState<string | null>(null);
   const [hoveredNodeId, setHoveredNodeId] = useState<string | null>(null);
   const [reducedMotion, setReducedMotion] = useState(false);
   const [replayStepIndex, setReplayStepIndex] = useState(0);
   const [isPanning, setIsPanning] = useState(false);
   const [controlsVisible, setControlsVisible] = useState(true);
   const [advancedLabels, setAdvancedLabels] = useState(false);
+  const [particleCount, setParticleCount] = useState(0);
   const [viewportSize, setViewportSize] = useState({ width, height });
   const [camera, setCamera] = useState<ConstellationCamera>({
     panX: 0,
@@ -298,9 +296,10 @@ export const MarkovConstellation: React.FC<MarkovConstellationProps> = ({
   });
 
   const graphIdentity = useMemo(() =>
-    `${graph.seed}|${graph.layoutVersion}|${graph.nodes.map((node) => node.id).join('|')}`,
+    `${graph.seed}|${graph.layoutVersion}|${graph.topology.fingerprint}|${graph.nodes.map((node) => node.id).join('|')}`,
   [graph]);
   const selectedNode = graph.nodes.find((node) => node.id === selectedNodeId) ?? null;
+  const selectedEdge = graph.edges.find((edge) => edge.id === selectedEdgeId) ?? null;
   const activeReplayNodeId = mode === 'REPLAY' && graph.selectedRouteNodeIds.length > 0
     ? graph.selectedRouteNodeIds[replayStepIndex % graph.selectedRouteNodeIds.length]
     : null;
@@ -365,6 +364,7 @@ export const MarkovConstellation: React.FC<MarkovConstellationProps> = ({
       baseFitMode: 'SELECTED_ROUTE',
     });
     setSelectedNodeId(null);
+    setSelectedEdgeId(null);
     setHoveredNodeId(null);
     setReplayStepIndex(0);
   }, [graphIdentity]);
@@ -395,23 +395,40 @@ export const MarkovConstellation: React.FC<MarkovConstellationProps> = ({
 
   useEffect(() => {
     const wisps: VisualizationWisp[] = [];
+    const weights = graph.edges.map((edge) => Math.sqrt(Math.max(0, edge.expectedVisits)));
+    const totalWeight = weights.reduce((sum, weight) => sum + weight, 0);
+    let remainingBudget = graph.performance.particleBudget;
     graph.edges.forEach((edge, edgeIndex) => {
-      const count = edge.isSelectedRoute ? 3 : edge.isDominated ? 1 : 2;
+      const proportional = totalWeight > 0
+        ? Math.round(weights[edgeIndex] / totalWeight * graph.performance.particleBudget)
+        : 0;
+      const count = Math.min(remainingBudget, Math.max(1, proportional));
+      remainingBudget -= count;
       for (let index = 0; index < count; index += 1) {
+        const color = edge.outcomeKind === 'SUCCESS'
+          ? '#34d399'
+          : edge.outcomeKind === 'REACQUIRE'
+            ? '#c084fc'
+            : edge.outcomeKind === 'RECOVERY'
+              ? '#fb923c'
+              : edge.outcomeKind === 'REPEAT'
+                ? '#facc15'
+                : '#38bdf8';
         wisps.push({
           id: `wisp_${edge.id}_${index}`,
           edgeId: edge.id,
           sourceNodeId: edge.source,
           targetNodeId: edge.target,
           progress: (index / count + edgeIndex * 0.19) % 1,
-          speed: (0.0003 + edge.expectedVisits * 0.0001) * (edge.isSelectedRoute ? 1.4 : 0.8),
-          size: edge.isSelectedRoute ? 3.5 : 2.2,
-          opacity: edge.isSelectedRoute ? 0.95 : 0.45,
-          color: edge.isSelectedRoute ? '#38bdf8' : edge.isDominated ? '#94a3b8' : '#f59e0b',
+          speed: 0.00028 + edge.flowImportance * 0.00034,
+          size: 2.2 + edge.flowImportance * 1.8,
+          opacity: Math.min(1, 0.45 + edge.probability * 0.5),
+          color,
         });
       }
     });
     wispsRef.current = wisps;
+    setParticleCount(wisps.length);
   }, [graph]);
 
   useEffect(() => {
@@ -469,35 +486,25 @@ export const MarkovConstellation: React.FC<MarkovConstellationProps> = ({
         const source = graph.nodes.find((node) => node.id === edge.source);
         const target = graph.nodes.find((node) => node.id === edge.target);
         if (!source || !target) continue;
-        const midX = (source.x + target.x) / 2;
-        const midY = (source.y + target.y) / 2;
-        const dx = target.x - source.x;
-        const dy = target.y - source.y;
-        const distance = Math.hypot(dx, dy);
-        const controlX = midX + (-dy / (distance || 1)) * distance * edge.curvature;
-        const controlY = midY + (dx / (distance || 1)) * distance * edge.curvature;
         context.beginPath();
         context.moveTo(source.x, source.y);
-        context.quadraticCurveTo(controlX, controlY, target.x, target.y);
+        context.quadraticCurveTo(edge.controlX, edge.controlY, target.x, target.y);
         const replayEdge = activeReplayNodeId !== null && edge.source === activeReplayNodeId;
-        if (edge.isSelectedRoute) {
-          context.strokeStyle = replayEdge ? 'rgba(125, 211, 252, 0.7)' : 'rgba(56, 189, 248, 0.32)';
-          context.lineWidth = replayEdge ? 7 : 5;
-          context.stroke();
-          context.strokeStyle = replayEdge ? '#ffffff' : '#38bdf8';
-          context.lineWidth = replayEdge ? 3.3 : 2.1;
-          context.stroke();
-        } else if (edge.isDominated) {
-          context.strokeStyle = 'rgba(148, 163, 184, 0.18)';
-          context.lineWidth = 1;
-          context.setLineDash([5, 5]);
-          context.stroke();
-          context.setLineDash([]);
-        } else {
-          context.strokeStyle = 'rgba(245, 158, 11, 0.42)';
-          context.lineWidth = 1.5;
-          context.stroke();
-        }
+        const edgeColor = edge.outcomeKind === 'SUCCESS'
+          ? '52, 211, 153'
+          : edge.outcomeKind === 'REACQUIRE'
+            ? '192, 132, 252'
+            : edge.outcomeKind === 'RECOVERY'
+              ? '251, 146, 60'
+              : edge.outcomeKind === 'REPEAT'
+                ? '250, 204, 21'
+                : '56, 189, 248';
+        context.strokeStyle = `rgba(${edgeColor}, ${Math.min(0.72, edge.opacity * 0.7)})`;
+        context.lineWidth = edge.width + (replayEdge ? 3 : 1.5);
+        context.stroke();
+        context.strokeStyle = replayEdge ? '#ffffff' : `rgba(${edgeColor}, ${edge.opacity})`;
+        context.lineWidth = edge.width * (replayEdge ? 0.68 : 0.5);
+        context.stroke();
       }
 
       if (!reducedMotion) {
@@ -509,10 +516,12 @@ export const MarkovConstellation: React.FC<MarkovConstellationProps> = ({
           glow.addColorStop(0, wisp.color);
           glow.addColorStop(0.5, `${wisp.color}66`);
           glow.addColorStop(1, 'transparent');
+          context.globalAlpha = wisp.opacity;
           context.fillStyle = glow;
           context.beginPath();
           context.arc(position.x, position.y, wisp.size * 3, 0, Math.PI * 2);
           context.fill();
+          context.globalAlpha = 1;
         }
       }
 
@@ -520,7 +529,8 @@ export const MarkovConstellation: React.FC<MarkovConstellationProps> = ({
         const isHovered = hoveredNodeId === node.id;
         const isSelected = selectedNodeId === node.id;
         const isActive = activeReplayNodeId === node.id;
-        const glowRadius = node.radius * (isActive ? 3.2 : isHovered ? 2.8 : 2.2);
+        const glowRadius = node.radius * (1.8 + node.glowIntensity * 1.2) *
+          (isActive ? 1.25 : isHovered ? 1.12 : 1);
         const glow = context.createRadialGradient(node.x, node.y, node.radius * 0.5, node.x, node.y, glowRadius);
         if (node.kind === 'TERMINAL_SUCCESS') {
           glow.addColorStop(0, 'rgba(52, 211, 153, 0.85)');
@@ -637,8 +647,15 @@ export const MarkovConstellation: React.FC<MarkovConstellationProps> = ({
 
   const selectNode = useCallback((node: VisualizationNode | undefined) => {
     setSelectedNodeId(node?.id ?? null);
+    setSelectedEdgeId(null);
     if (node) onNodeClick?.(node);
   }, [onNodeClick]);
+
+  const selectEdge = useCallback((edge: VisualizationEdge | undefined) => {
+    setSelectedEdgeId(edge?.id ?? null);
+    setSelectedNodeId(null);
+    if (edge) onEdgeClick?.(edge);
+  }, [onEdgeClick]);
 
   const handlePointerDown = (event: React.PointerEvent<HTMLDivElement>) => {
     if (event.pointerType === 'mouse' && event.button !== 0) return;
@@ -653,6 +670,7 @@ export const MarkovConstellation: React.FC<MarkovConstellationProps> = ({
       startPanY: camera.panY,
       moved: false,
       targetNodeId: (event.target as HTMLElement).closest<HTMLElement>('[data-node-id]')?.dataset.nodeId,
+      targetEdgeId: (event.target as HTMLElement).closest<HTMLElement>('[data-edge-id]')?.dataset.edgeId,
     };
   };
 
@@ -685,10 +703,14 @@ export const MarkovConstellation: React.FC<MarkovConstellationProps> = ({
     const gesture = pointerGestureRef.current;
     if (!gesture || gesture.pointerId !== event.pointerId) return;
     if (allowClick && !gesture.moved) {
+      const targetedEdge = gesture.targetEdgeId
+        ? graph.edges.find((edge) => edge.id === gesture.targetEdgeId)
+        : undefined;
       const targetedNode = gesture.targetNodeId
         ? graph.nodes.find((node) => node.id === gesture.targetNodeId)
         : hitNode(event.clientX, event.clientY);
-      selectNode(targetedNode);
+      if (targetedEdge) selectEdge(targetedEdge);
+      else selectNode(targetedNode);
     }
     pointerGestureRef.current = null;
     setIsPanning(false);
@@ -740,6 +762,7 @@ export const MarkovConstellation: React.FC<MarkovConstellationProps> = ({
       case 'A': fitAll(); break;
       case 'Escape':
         setSelectedNodeId(null);
+        setSelectedEdgeId(null);
         // Preserve the browser's native Escape behavior so fullscreen can exit.
         handled = false;
         break;
@@ -770,20 +793,15 @@ export const MarkovConstellation: React.FC<MarkovConstellationProps> = ({
   ), [activeReplayNodeId, camera, graph, hoveredNodeId, selectedNodeId, transform, viewportSize]);
 
   const visibleEdgeLabels = useMemo(() => {
-    const activeRouteIndex = activeReplayNodeId === null
-      ? -1
-      : graph.selectedRouteNodeIds.indexOf(activeReplayNodeId);
-    const nextReplayNodeId = activeRouteIndex >= 0
-      ? graph.selectedRouteNodeIds[activeRouteIndex + 1]
-      : undefined;
     const candidates = graph.edges
       .filter((edge) => advancedLabels || (
-        edge.source === activeReplayNodeId && edge.target === nextReplayNodeId
+        edge.source === activeReplayNodeId || edge.id === selectedEdgeId
       ))
       .sort((left, right) => {
-        const leftReplay = left.source === activeReplayNodeId && left.target === nextReplayNodeId;
-        const rightReplay = right.source === activeReplayNodeId && right.target === nextReplayNodeId;
-        return Number(rightReplay) - Number(leftReplay) || left.id.localeCompare(right.id);
+        const leftSelected = left.id === selectedEdgeId;
+        const rightSelected = right.id === selectedEdgeId;
+        return Number(rightSelected) - Number(leftSelected) ||
+          right.expectedVisits - left.expectedVisits || left.id.localeCompare(right.id);
       });
     const occupied: Array<Pick<LabelLayout, 'left' | 'top' | 'width' | 'height'>> = [
       ...labelLayouts,
@@ -822,10 +840,16 @@ export const MarkovConstellation: React.FC<MarkovConstellationProps> = ({
       placed.push({ edge, ...available });
     }
     return placed;
-  }, [advancedLabels, activeReplayNodeId, graph, labelLayouts, transform, viewportSize]);
+  }, [advancedLabels, activeReplayNodeId, graph, labelLayouts, selectedEdgeId, transform, viewportSize]);
 
   const incomingEdges = selectedNode ? graph.edges.filter((edge) => edge.target === selectedNode.id) : [];
   const outgoingEdges = selectedNode ? graph.edges.filter((edge) => edge.source === selectedNode.id) : [];
+  const selectedEdgeSource = selectedEdge
+    ? graph.nodes.find((node) => node.id === selectedEdge.source)
+    : undefined;
+  const selectedEdgeTarget = selectedEdge
+    ? graph.nodes.find((node) => node.id === selectedEdge.target)
+    : undefined;
 
   return (
     <div
@@ -841,6 +865,18 @@ export const MarkovConstellation: React.FC<MarkovConstellationProps> = ({
       data-camera-min-zoom={ZOOM_MIN}
       data-camera-max-zoom={ZOOM_MAX}
       data-graph-identity={graphIdentity}
+      data-policy-flow-version={graph.policyFlowVersion}
+      data-policy-flow-status={graph.policyFlowStatus}
+      data-source-bundle-id={graph.sourceBundleId}
+      data-source-policy-fingerprint={graph.sourcePolicyFingerprint}
+      data-topology-fingerprint={graph.topology.fingerprint}
+      data-node-count={graph.topology.nodeCount}
+      data-edge-count={graph.topology.edgeCount}
+      data-scc-count={graph.topology.stronglyConnectedComponentCount}
+      data-branch-node-count={graph.topology.branchNodeCount}
+      data-recovery-edge-count={graph.topology.recoveryEdgeCount}
+      data-particle-count={particleCount}
+      data-layout-ms={graph.performance.layoutMs.toFixed(3)}
       data-selected-route-node-ids={graph.selectedRouteNodeIds.join(',')}
       data-selected-route-edge-ids={graph.selectedRouteEdgeIds.join(',')}
       data-terminal-node-count={graph.nodes.filter((node) =>
@@ -911,7 +947,33 @@ export const MarkovConstellation: React.FC<MarkovConstellationProps> = ({
           aria-label="Markov Constellation state transition diagram"
         />
 
-        <div className="constellation-label-layer" aria-label="Constellation nodes">
+        <div className="constellation-label-layer" aria-label="Constellation policy states and branches">
+          {graph.edges.map((edge) => {
+            const point = edgePoint(graph, edge, 0.5);
+            const diameter = Math.max(28, edge.width * transform.scale * 3 + 16);
+            return (
+              <button
+                type="button"
+                tabIndex={-1}
+                key={`${edge.id}-anchor`}
+                className="constellation-edge-anchor"
+                style={{
+                  left: point.x * transform.scale + transform.offsetX - diameter / 2,
+                  top: point.y * transform.scale + transform.offsetY - diameter / 2,
+                  width: diameter,
+                  height: diameter,
+                }}
+                data-edge-id={edge.id}
+                data-edge-anchor={edge.id}
+                data-conditional-probability={edge.probability.toPrecision(12)}
+                data-expected-flow={edge.expectedVisits.toPrecision(12)}
+                onClick={(event) => {
+                  if (event.detail === 0) selectEdge(edge);
+                }}
+                aria-label={`Select branch ${edge.actionLabel}`}
+              />
+            );
+          })}
           {graph.nodes.map((node) => {
             const diameter = Math.max(32, node.radius * transform.scale * 2 + 12);
             return (
@@ -961,7 +1023,20 @@ export const MarkovConstellation: React.FC<MarkovConstellationProps> = ({
             </button>
           ))}
           {visibleEdgeLabels.map(({ edge, left, top, width: labelWidth, height: labelHeight }) => (
-            <span className="constellation-edge-label" key={edge.id} style={{ left, top, width: labelWidth, height: labelHeight }} data-edge-id={edge.id}>{edge.actionLabel}</span>
+            <button
+              type="button"
+              className={`constellation-edge-label ${edge.isRecovery ? 'recovery-edge' : ''} ${edge.id === selectedEdgeId ? 'selected' : ''}`}
+              key={edge.id}
+              style={{ left, top, width: labelWidth, height: labelHeight }}
+              data-edge-id={edge.id}
+              data-conditional-probability={edge.probability.toPrecision(12)}
+              data-expected-flow={edge.expectedVisits.toPrecision(12)}
+              data-outcome-kind={edge.outcomeKind}
+              onClick={(event) => {
+                if (event.detail === 0) selectEdge(edge);
+              }}
+              aria-label={`Select branch ${edge.actionLabel}`}
+            >{edge.actionLabel}</button>
           ))}
         </div>
 
@@ -975,11 +1050,13 @@ export const MarkovConstellation: React.FC<MarkovConstellationProps> = ({
               <ul className="node-target-list">{selectedNode.details.targetTexts.map((target) => <li key={target}>{target}</li>)}</ul>
             )}
             <dl className="node-stats">
-              {selectedNode.details.phase && <><dt>Phase</dt><dd>{selectedNode.details.phase}</dd></>}
+              {selectedNode.details.phase && <><dt>Policy scope</dt><dd>{selectedNode.details.phase}</dd></>}
+              {selectedNode.details.rarity && <><dt>Rarity</dt><dd>{selectedNode.details.rarity}</dd></>}
+              <dt>Selected action</dt><dd>{selectedNode.details.actions[0] ?? 'Terminal success'}</dd>
+              <dt>Expected visits per craft</dt><dd>{selectedNode.details.expectedVisits.toFixed(4)}</dd>
+              <dt>Occupancy share</dt><dd>{(selectedNode.details.occupancyShare * 100).toFixed(2)}%</dd>
+              <dt>Exact states represented</dt><dd>{selectedNode.details.exactStateCount}</dd>
               <dt>Route status</dt><dd>{selectedNode.details.routeStatus}</dd>
-              {selectedNode.details.expectedPhysicalActions !== undefined && <><dt>Expected actions</dt><dd>{selectedNode.details.expectedPhysicalActions.toFixed(2)}</dd></>}
-              {selectedNode.details.estimatedManualTimeMs !== undefined && <><dt>Estimated time</dt><dd>{(selectedNode.details.estimatedManualTimeMs / 1000).toFixed(1)}s</dd></>}
-              {selectedNode.details.recoveryTargetStepId && <><dt>Recovery target</dt><dd>{selectedNode.details.recoveryTargetStepId}</dd></>}
               <dt>Incoming</dt>
               <dd>{incomingEdges.length > 0
                 ? <ul className="node-transition-list">{incomingEdges.map((edge) => <li key={edge.id}>{edge.actionLabel}</li>)}</ul>
@@ -999,7 +1076,42 @@ export const MarkovConstellation: React.FC<MarkovConstellationProps> = ({
                 {selectedNode.details.technicalModifiers.map((descriptor) => <code key={descriptor.modId}>{descriptor.technicalText}</code>)}
               </details>
             )}
+            <details className="node-technical-details">
+              <summary>Technical policy evidence</summary>
+              <code>matched target IDs: {selectedNode.details.matchedTargetModIds.join(', ') || 'none'}</code>
+              <code>fractured target IDs: {selectedNode.details.fracturedTargetModIds.join(', ') || 'none'}</code>
+              {selectedNode.details.representativeState && <code>representative: {selectedNode.details.representativeState}</code>}
+              {selectedNode.details.representativeStateKey && <code>state key: {selectedNode.details.representativeStateKey}</code>}
+            </details>
             <button className="close-detail-btn" onClick={() => setSelectedNodeId(null)} aria-label="Close selected node details">×</button>
+          </aside>
+        )}
+
+        {selectedEdge && (
+          <aside className="node-detail-overlay edge-detail-overlay" aria-label="Selected constellation edge details" data-selected-edge-id={selectedEdge.id}>
+            <div className="node-detail-heading">
+              <span>{selectedEdge.outcomeKind.replace(/_/g, ' ')}</span>
+              <h4>{selectedEdgeSource?.label ?? selectedEdge.actionLabel} → {selectedEdgeTarget?.label ?? 'Next state'}</h4>
+            </div>
+            <dl className="node-stats">
+              <dt>Selected action</dt><dd>{selectedEdgeSource?.details.actions[0] ?? selectedEdge.actionLabel}</dd>
+              <dt>Occupancy-weighted policy-flow probability</dt><dd>{(selectedEdge.probability * 100).toFixed(3)}%</dd>
+              <dt>Expected traversals per craft</dt><dd>{selectedEdge.expectedVisits.toFixed(5)}</dd>
+              <dt>Outcome group</dt><dd>{selectedEdge.outcomeKind.toLowerCase()}</dd>
+              <dt>Source state</dt><dd>{selectedEdgeSource?.details.title ?? selectedEdge.source}</dd>
+              <dt>Destination state</dt><dd>{selectedEdgeTarget?.details.title ?? selectedEdge.target}</dd>
+              <dt>Next selected action</dt><dd>{selectedEdge.nextSelectedActionName ?? (selectedEdgeTarget?.kind === 'TERMINAL_SUCCESS' ? 'Goal' : 'None')}</dd>
+            </dl>
+            {selectedEdge.representativeOutcome && <p>{selectedEdge.representativeOutcome}</p>}
+            <details className="node-technical-details">
+              <summary>Technical transition evidence</summary>
+              <code>edge: {selectedEdge.id}</code>
+              <code>exact transitions: {selectedEdge.exactTransitionCount}</code>
+              <code>evidence: {selectedEdge.evidenceKind}</code>
+              {selectedEdge.nextSelectedActionId && <code>next action ID: {selectedEdge.nextSelectedActionId}</code>}
+              {selectedEdge.representativeState && <code>representative destination: {selectedEdge.representativeState}</code>}
+            </details>
+            <button className="close-detail-btn" onClick={() => setSelectedEdgeId(null)} aria-label="Close selected edge details">×</button>
           </aside>
         )}
       </div>
@@ -1008,7 +1120,7 @@ export const MarkovConstellation: React.FC<MarkovConstellationProps> = ({
         <div
           ref={routeRailRef}
           className="constellation-node-access-list constellation-route-rail"
-          aria-label="Selected route steps"
+          aria-label="Selected policy states"
           data-testid="constellation-route-rail"
         >
           {graph.selectedRouteNodeIds.map((nodeId, index) => {
@@ -1049,6 +1161,7 @@ export const MarkovConstellation: React.FC<MarkovConstellationProps> = ({
       <div className="sr-only" aria-live="polite">
         Camera {camera.fitMode.toLowerCase().replace('_', ' ')}, zoom {camera.zoom.toFixed(2)}.
         {selectedNode ? ` Selected ${selectedNode.fullLabel}.` : ''}
+        {selectedEdge ? ` Selected branch ${selectedEdge.actionLabel}.` : ''}
       </div>
     </div>
   );
