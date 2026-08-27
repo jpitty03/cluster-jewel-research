@@ -126,6 +126,12 @@ export const WORKER_CAPTURE_INIT_SCRIPT = String.raw`
       policyEquivalenceFingerprint: family.policyEquivalenceFingerprint,
       equivalentToSelectedPolicy: family.equivalentToSelectedPolicy,
       policyEquivalenceEvidence: family.policyEquivalenceEvidence,
+      incumbentSource: family.incumbentSource,
+      familySearchStatus: family.familySearchStatus,
+      fullRouteActionEvidence: family.fullRouteActionEvidence,
+      requiredActionEvidenceChecks: family.requiredActionEvidenceChecks,
+      selectedOpenPolicyAdmissibility: family.selectedOpenPolicyAdmissibility,
+      knownPolicyAdmissibility: family.knownPolicyAdmissibility,
     })),
     paretoAlternatives: (result.paretoAlternatives ?? []).map((entry) => ({
       ...entry,
@@ -144,6 +150,7 @@ export const WORKER_CAPTURE_INIT_SCRIPT = String.raw`
     },
     policyRefinement: result.policyRefinement,
     search: result.search,
+    requestPolicyRegistry: result.requestPolicyRegistry,
   });
   const compactCompletedResults = () => {
     for (const event of events) {

@@ -1,0 +1,216 @@
+{
+  "schemaVersion": "PHASE3A_QUALITY_REPORT_V1",
+  "runId": "2026-08-27T21-45-54-525Z",
+  "suite": "TARGETED",
+  "requestedGateIds": [
+    "C-core-budget-isolation"
+  ],
+  "selectedGateIds": [
+    "C-core-budget-isolation"
+  ],
+  "startedAt": "2026-08-27T21:45:54.525Z",
+  "finishedAt": "2026-08-27T21:46:52.896Z",
+  "status": "PASSED",
+  "identity": {
+    "applicationSourceBuildHash": "app-a946cd172e7873b8f29b",
+    "fixtureCorpusVersion": "Phase3C-Frozen-Browser-Corpus-1",
+    "fixtureCorpusHash": "corpus-b9aedc966f617dd79f9d",
+    "priceSnapshotIdentity": "prices-086bbb3ef86a6b63",
+    "browserVersion": "151.0.7922.34",
+    "harnessVersion": "PHASE3A_QUALITY_LAB_V1",
+    "compatibilityHash": "compatible-16956412409e443353204abf"
+  },
+  "scheduling": {
+    "processLevelShards": [
+      "C"
+    ],
+    "browserLightParallelism": 2,
+    "solverHeavyConcurrency": 1,
+    "longSoakAutomatic": false,
+    "shardPlan": [
+      {
+        "shard": "C",
+        "gateIds": [
+          "C-core-budget-isolation"
+        ],
+        "mode": "SERIAL_SOLVER_HEAVY"
+      }
+    ]
+  },
+  "counts": {
+    "passed": 1,
+    "failed": 0,
+    "resumed": 0,
+    "skipped": 0,
+    "total": 1
+  },
+  "results": [
+    {
+      "id": "C-core-budget-isolation",
+      "title": "Fresh real Workers preserve the frozen core snapshot across Compare Methods false/true",
+      "phase": "3D",
+      "shard": "C",
+      "tags": [
+        "phase3d",
+        "worker",
+        "solver",
+        "proof",
+        "budget",
+        "method-family"
+      ],
+      "costClass": "SOLVER_HEAVY",
+      "status": "PASS",
+      "passed": true,
+      "startedAt": "2026-08-27T21:45:55.517Z",
+      "finishedAt": "2026-08-27T21:46:52.777Z",
+      "durationMs": 57261,
+      "details": {
+        "mode": "EXACT_CORE_STATE_SET",
+        "disabledSnapshot": {
+          "version": "CORE_RECOMMENDATION_SNAPSHOT_PHASE3D_V1",
+          "compareMethodFamiliesRequested": false,
+          "coreEnvelope": {
+            "deadlineFraction": 0.85,
+            "deadlineAtRequestMs": 24650,
+            "allocatedWallTimeMs": 24650
+          },
+          "selectedExecutableUChaos": 1459.7923662160783,
+          "candidateExecutableUChaos": [
+            {
+              "candidateId": "candidate_0",
+              "fullRouteUChaos": 4767.73126396295
+            },
+            {
+              "candidateId": "candidate_1",
+              "fullRouteUChaos": 1459.7923662160783
+            },
+            {
+              "candidateId": "candidate_2",
+              "fullRouteUChaos": 1636.3811154830044
+            },
+            {
+              "candidateId": "candidate_3",
+              "fullRouteUChaos": 1636.3811154829793
+            }
+          ],
+          "retainedStateFingerprint": "states-d6d23c8a",
+          "statesExpanded": 13336,
+          "retainedStates": 21944,
+          "stopReason": "HOST_RESERVE",
+          "canonicalPolicyFingerprint": "core-c8da05a5"
+        },
+        "enabledSnapshot": {
+          "version": "CORE_RECOMMENDATION_SNAPSHOT_PHASE3D_V1",
+          "compareMethodFamiliesRequested": true,
+          "coreEnvelope": {
+            "deadlineFraction": 0.85,
+            "deadlineAtRequestMs": 24650,
+            "allocatedWallTimeMs": 24650
+          },
+          "selectedExecutableUChaos": 1459.7923662160783,
+          "candidateExecutableUChaos": [
+            {
+              "candidateId": "candidate_0",
+              "fullRouteUChaos": 4767.73126396295
+            },
+            {
+              "candidateId": "candidate_1",
+              "fullRouteUChaos": 1459.7923662160783
+            },
+            {
+              "candidateId": "candidate_2",
+              "fullRouteUChaos": 1636.3811154830044
+            },
+            {
+              "candidateId": "candidate_3",
+              "fullRouteUChaos": 1636.3811154829793
+            }
+          ],
+          "retainedStateFingerprint": "states-d6d23c8a",
+          "statesExpanded": 13336,
+          "retainedStates": 21944,
+          "stopReason": "HOST_RESERVE",
+          "canonicalPolicyFingerprint": "core-c8da05a5"
+        },
+        "disabledFinalU": 1459.7923662158182,
+        "enabledFinalU": 1459.7923662158182,
+        "freshWorkerProtocol": [
+          "PROGRESS",
+          "PROGRESS",
+          "PROGRESS",
+          "PROGRESS",
+          "PROGRESS",
+          "PROGRESS",
+          "PROGRESS",
+          "PROGRESS",
+          "PROGRESS",
+          "PROGRESS",
+          "PROGRESS",
+          "PROGRESS",
+          "PROGRESS",
+          "PROGRESS",
+          "PROGRESS",
+          "PROGRESS",
+          "PROGRESS",
+          "PROGRESS",
+          "PROGRESS",
+          "PROGRESS",
+          "PROGRESS",
+          "PROGRESS",
+          "PROGRESS",
+          "PROGRESS",
+          "PROGRESS",
+          "PROGRESS",
+          "COMPLETE",
+          "RESULT"
+        ],
+        "artifact": "quality-lab\\reports\\evidence\\phase3d-core-budget-worker-ab.json"
+      },
+      "executionIdentity": {
+        "applicationSourceBuildHash": "app-a946cd172e7873b8f29b",
+        "gateIdVersion": "C-core-budget-isolation@1",
+        "fixtureCorpusVersion": "Phase3C-Frozen-Browser-Corpus-1",
+        "fixtureInputHash": "fixture-c0956dc4af1bc5d29323",
+        "priceSnapshotIdentity": "prices-086bbb3ef86a6b63",
+        "browserVersion": "151.0.7922.34",
+        "harnessVersion": "PHASE3A_QUALITY_LAB_V1",
+        "compatibilityHash": "compatible-16956412409e443353204abf"
+      }
+    }
+  ],
+  "runtime": {
+    "totalWallMs": 58370,
+    "summedGateMs": 57261,
+    "appStartupMs": 351,
+    "browserStartupMs": 85,
+    "solverHeavyMs": 57261,
+    "visualInteractionMs": 0,
+    "harnessOverheadMs": 508,
+    "categoryTotalsMs": {
+      "phase3d": 57261,
+      "worker": 57261,
+      "solver": 57261,
+      "proof": 57261,
+      "budget": 57261,
+      "method-family": 57261
+    },
+    "slowestGates": [
+      {
+        "id": "C-core-budget-isolation",
+        "durationMs": 57261,
+        "status": "PASS"
+      }
+    ]
+  },
+  "runtimeErrors": {
+    "console": [],
+    "page": [],
+    "network": []
+  },
+  "artifacts": {
+    "phase3dCoreBudgetWorkerAb": "quality-lab\\reports\\evidence\\phase3d-core-budget-worker-ab.json",
+    "runReport": "quality-lab\\artifacts\\phase3a-2026-08-27T21-45-54-525Z\\report.json",
+    "stableReport": "quality-lab\\reports\\phase3d-targeted-budget-isolation.json",
+    "summary": "quality-lab\\reports\\phase3d-targeted-budget-isolation.md"
+  }
+}

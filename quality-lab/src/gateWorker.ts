@@ -159,11 +159,17 @@ function loadFrozenPolicyFlow(
   return { metadata, flow };
 }
 
-function frozenFlowWorkerOverride(flow: JsonRecord): string {
+function frozenFlowWorkerOverride(
+  flow: JsonRecord,
+  acquisitionContext?: JsonRecord,
+): string {
   const serializedFlow = JSON.stringify(flow).replaceAll('<', '\\u003c');
+  const serializedAcquisitionContext = JSON.stringify(acquisitionContext ?? null)
+    .replaceAll('<', '\\u003c');
   return String.raw`
 (() => {
   const FrozenFlow = ${serializedFlow};
+  const FrozenAcquisitionContext = ${serializedAcquisitionContext};
   const InnerWorker = window.Worker;
   class QualityLabFrozenFlowWorker extends EventTarget {
     constructor(...args) {
@@ -175,7 +181,16 @@ function frozenFlowWorkerOverride(flow: JsonRecord): string {
       this.inner.addEventListener('message', (event) => {
         let data = event.data;
         if (data?.type === 'RESULT' && data.result) {
-          data = { ...data, result: { ...data.result, policyFlow: FrozenFlow } };
+          data = {
+            ...data,
+            result: {
+              ...data.result,
+              policyFlow: FrozenFlow,
+              presentation: FrozenAcquisitionContext
+                ? { ...data.result.presentation, acquisitionContext: FrozenAcquisitionContext }
+                : data.result.presentation,
+            },
+          };
         }
         const forwarded = new MessageEvent('message', { data });
         this.dispatchEvent(forwarded);
@@ -204,7 +219,11 @@ function frozenFlowWorkerOverride(flow: JsonRecord): string {
 async function withPage<T>(
   ctx: GateWorkerContext,
   operation: (page: Page, context: BrowserContext) => Promise<T>,
-  options: { frozenFlow?: JsonRecord; viewport?: { width: number; height: number } } = {},
+  options: {
+    frozenFlow?: JsonRecord;
+    frozenAcquisitionContext?: JsonRecord;
+    viewport?: { width: number; height: number };
+  } = {},
 ): Promise<T> {
   const context = await ctx.browser.newContext({
     viewport: options.viewport ?? { width: 1280, height: 960 },
@@ -214,7 +233,11 @@ async function withPage<T>(
   });
   await context.grantPermissions(['clipboard-read', 'clipboard-write'], { origin: ctx.appUrl.slice(0, -1) });
   await context.addInitScript({ content: WORKER_CAPTURE_INIT_SCRIPT });
-  if (options.frozenFlow) await context.addInitScript({ content: frozenFlowWorkerOverride(options.frozenFlow) });
+  if (options.frozenFlow) {
+    await context.addInitScript({
+      content: frozenFlowWorkerOverride(options.frozenFlow, options.frozenAcquisitionContext),
+    });
+  }
   await context.tracing.start({ screenshots: true, snapshots: true, sources: false });
   const page = await context.newPage();
   page.setDefaultTimeout(10_000);
@@ -389,6 +412,49 @@ async function compareMethodsIndependently(
   return waitForWorkerResult(page, offset, maxWallTimeMs + 8_000);
 }
 
+/** Run a comparison request in a brand-new module Worker/service session. */
+async function runFreshWorkerComparison(
+  page: Page,
+  maxWallTimeMs: number,
+): Promise<JsonRecord> {
+  const events = await workerEvents(page);
+  const spawn = [...events].reverse().find((event) =>
+    event.kind === 'WORKER_SPAWN' && typeof event.scriptUrl === 'string'
+  );
+  const posted = [...events].reverse().find((event) =>
+    event.kind === 'POST_MESSAGE_TO_WORKER' && event.payload?.type === 'OPTIMIZE'
+  );
+  assert(spawn?.scriptUrl, 'Fresh Worker A/B could not recover the built module Worker URL');
+  assert(posted?.payload, 'Fresh Worker A/B could not recover the canonical request payload');
+  const spawnRecord = spawn as unknown as JsonRecord;
+  const offset = await workerEventCount(page);
+  await page.evaluate(({
+    scriptUrl,
+    options,
+    payload,
+  }: {
+    scriptUrl: string;
+    options: WorkerOptions;
+    payload: JsonRecord;
+  }) => {
+    const request = JSON.parse(JSON.stringify(payload)) as {
+      type: 'OPTIMIZE';
+      requestId: string;
+      input: Record<string, unknown>;
+    };
+    request.requestId = `phase3d_fresh_${Date.now()}`;
+    request.input = { ...request.input, compareMethodFamilies: true };
+    const worker = new Worker(scriptUrl, options as WorkerOptions);
+    (window as Window & { __PHASE3D_FRESH_WORKER__?: Worker }).__PHASE3D_FRESH_WORKER__ = worker;
+    worker.postMessage(request);
+  }, {
+    scriptUrl: spawn.scriptUrl,
+    options: (spawnRecord.options ?? { type: 'module' }) as WorkerOptions,
+    payload: posted.payload,
+  });
+  return waitForWorkerResult(page, offset, maxWallTimeMs + 8_000);
+}
+
 function selectedPolicyFlow(result: JsonRecord, label: string): JsonRecord {
   const flow = jsonRecord(result.policyFlow, `${label} selected-policy flow`);
   assert.equal(flow.version, 'SELECTED_POLICY_FLOW_V1');
@@ -449,6 +515,82 @@ function assertCanonicalAccounting(result: JsonRecord): JsonRecord {
     downstreamCostChaos: downstream,
     fullRouteCostChaos: full,
   };
+}
+
+async function constellationFitGeometry(page: Page): Promise<JsonRecord> {
+  return page.getByTestId('markov-constellation-container').evaluate((container) => {
+    const viewport = container.querySelector('.constellation-viewport')!.getBoundingClientRect();
+    const nodeLabels = [...container.querySelectorAll<HTMLElement>('.constellation-node-label')]
+      .map((element) => ({
+        element,
+        rect: element.getBoundingClientRect(),
+      }))
+      .filter(({ rect }) => rect.width > 0 && rect.height > 0);
+    const scopeHeaders = [...container.querySelectorAll<HTMLElement>('.constellation-scope-header')]
+      .map((element) => ({ element, rect: element.getBoundingClientRect() }))
+      .filter(({ rect }) => rect.width > 0 && rect.height > 0);
+    const handoffLabels = [...container.querySelectorAll<HTMLElement>(
+      '.constellation-edge-label.scope-handoff-edge',
+    )]
+      .map((element) => ({ element, rect: element.getBoundingClientRect() }))
+      .filter(({ rect }) => rect.width > 0 && rect.height > 0);
+    const checked = [...nodeLabels, ...scopeHeaders, ...handoffLabels];
+    const outside = checked.filter(({ rect }) =>
+      rect.left < viewport.left - 1 || rect.right > viewport.right + 1 ||
+      rect.top < viewport.top - 1 || rect.bottom > viewport.bottom + 1
+    ).map(({ element }) =>
+      element.getAttribute('data-node-id') ??
+      element.getAttribute('data-edge-id') ??
+      element.getAttribute('data-scope') ??
+      element.className
+    );
+    let collisionCount = 0;
+    for (let left = 0; left < nodeLabels.length; left++) {
+      for (let right = left + 1; right < nodeLabels.length; right++) {
+        const a = nodeLabels[left].rect;
+        const b = nodeLabels[right].rect;
+        if (a.left < b.right && a.right > b.left && a.top < b.bottom && a.bottom > b.top) {
+          collisionCount++;
+        }
+      }
+    }
+    const goalIds = [...container.querySelectorAll<HTMLElement>(
+      '[data-node-anchor][data-semantic-band="GOAL"]',
+    )].map((element) => element.dataset.nodeId);
+    const visibleGoalLabels = goalIds.filter((id) =>
+      id && nodeLabels.some(({ element }) => element.dataset.nodeId === id)
+    );
+    const occupied = [...container.querySelectorAll<HTMLElement>(
+      '[data-node-anchor], .constellation-node-label',
+    )]
+      .map((element) => ({ element, rect: element.getBoundingClientRect() }))
+      .filter(({ rect }) => rect.width > 0 && rect.height > 0);
+    const occupiedTop = occupied.length > 0
+      ? Math.min(...occupied.map(({ rect }) => rect.top))
+      : viewport.top;
+    const occupiedBottom = occupied.length > 0
+      ? Math.max(...occupied.map(({ rect }) => rect.bottom))
+      : viewport.bottom;
+    return {
+      viewport: {
+        left: viewport.left,
+        top: viewport.top,
+        right: viewport.right,
+        bottom: viewport.bottom,
+        width: viewport.width,
+        height: viewport.height,
+      },
+      nodeLabelCount: nodeLabels.length,
+      scopeHeaderCount: scopeHeaders.length,
+      handoffLabelCount: handoffLabels.length,
+      outside,
+      collisionCount,
+      goalCount: goalIds.length,
+      visibleGoalLabelCount: visibleGoalLabels.length,
+      topGap: occupiedTop - viewport.top,
+      bottomGap: viewport.bottom - occupiedBottom,
+    };
+  });
 }
 
 function assertTarget(result: JsonRecord, input: FixtureRecord): void {
@@ -761,7 +903,7 @@ async function runGateOperation(ctx: GateWorkerContext): Promise<unknown> {
         };
       });
 
-    case 'policy-family-admissibility':
+    case 'full-route-policy-evidence':
       return withPage(ctx, async (page) => {
         const input = fixture('phase3c_primordial_renewal_rotten_claws');
         await optimizedFixture(page, ctx.appUrl, input);
@@ -772,164 +914,309 @@ async function runGateOperation(ctx: GateWorkerContext): Promise<unknown> {
         assertTarget(result, input);
         const families = arrayValue(result.methodPortfolio, 'Phase 3C method portfolio')
           .map((entry) => jsonRecord(entry, 'Phase 3C method family'));
-        const open = families.find((family) =>
-          jsonRecord(family.spec, 'Open spec').kind === 'OPEN'
-        );
         const conventional = families.find((family) =>
           jsonRecord(family.spec, 'Conventional spec').kind === 'CONVENTIONAL'
         );
-        assert(open, 'Real Worker omitted Open family');
         assert(conventional, 'Real Worker omitted Conventional family');
-        const openU = numberValue(open.fullRouteU, 'Open executable U');
-        const conventionalU = numberValue(
-          conventional.fullRouteU,
-          'Conventional executable U',
+        const primordialFracture = families.find((candidate) => {
+          const spec = jsonRecord(candidate.spec, 'fracture spec');
+          return spec.kind === 'SELF_FRACTURE' && String(spec.name).includes('Primordial Bond');
+        });
+        assert(primordialFracture, 'Real Worker omitted Self-fracture Primordial Bond');
+        const fullEvidence = jsonRecord(
+          primordialFracture.fullRouteActionEvidence,
+          'Primordial full-route evidence',
         );
-        const audit = jsonRecord(
-          conventional.knownPolicyAdmissibility,
-          'Conventional known-policy audit',
+        const evidenceEntries = arrayValue(fullEvidence.entries, 'full-route evidence entries')
+          .map((entry) => jsonRecord(entry, 'full-route evidence entry'));
+        assert(evidenceEntries.length > 0);
+        assert(evidenceEntries.every((entry) =>
+          entry.physicalAcquisitionIdentity === fullEvidence.physicalAcquisitionIdentity &&
+          entry.policySessionIdentity === fullEvidence.policySessionIdentity &&
+          entry.sourcePolicyFingerprint === fullEvidence.sourcePolicyFingerprint
+        ), 'Full-route action evidence identity does not reconcile');
+        const fractureEntry = evidenceEntries.find((entry) =>
+          entry.actionId === 'fracturing_orb' && entry.scope === 'ACQUISITION' &&
+          numberValue(entry.expectedCount, 'Fracturing Orb count') > 0
         );
-        assert.equal(audit.admissible, true, `Conventional rejected Open policy: ${
-          JSON.stringify(audit.failures)
-        }`);
-        const knownU = numberValue(
-          conventional.revalidatedKnownPolicyCostChaos,
-          'revalidated known executable U',
+        assert(fractureEntry, 'Acquisition evidence omitted positive Fracturing Orb use');
+        const fractureChecks = arrayValue(
+          primordialFracture.requiredActionEvidenceChecks,
+          'Primordial required-action checks',
+        ).map((entry) => jsonRecord(entry, 'required-action check'));
+        const fractureCheck = fractureChecks.find((entry) => entry.actionId === 'fracturing_orb');
+        assert(fractureCheck);
+        assert.equal(fractureCheck.requiredScope, 'ACQUISITION');
+        assert.equal(fractureCheck.observed, true);
+        if (primordialFracture.equivalentToSelectedPolicy === true) {
+          assert.equal(primordialFracture.status, 'SAME_AS_SELECTED');
+          const audit = jsonRecord(
+            primordialFracture.selectedOpenPolicyAdmissibility,
+            'equivalent selected-policy audit',
+          );
+          const failures = arrayValue(audit.failures, 'equivalent audit failures')
+            .map((failure) => jsonRecord(failure, 'equivalent audit failure'));
+          assert(!failures.some((failure) =>
+            failure.code === 'REQUIRED_ACTION_NOT_OBSERVED' &&
+            failure.actionId === 'fracturing_orb'
+          ), 'Same selected policy still says acquisition Fracturing Orb was not observed');
+        }
+        const acquisitionContext = jsonRecord(
+          jsonRecord(result.presentation, 'presentation').acquisitionContext,
+          'acquisition context',
         );
-        assert(conventionalU <= knownU + 0.05,
-          `Conventional ${conventionalU}c regressed above known ${knownU}c`);
-        const selectedOpenAudit = jsonRecord(
-          conventional.selectedOpenPolicyAdmissibility,
-          'selected Open policy audit',
-        );
-        const selectedOpenU = numberValue(
-          conventional.selectedOpenPolicyCostChaos,
-          'selected Open policy U',
-        );
-        if (selectedOpenAudit.admissible === true) {
-          assert(conventionalU <= selectedOpenU + 0.05,
-            `Conventional ${conventionalU}c regressed above admissible selected Open ${selectedOpenU}c`);
-        } else {
-          const failures = arrayValue(
-            selectedOpenAudit.failures,
-            'selected Open rejection failures',
-          ).map((failure) => jsonRecord(failure, 'selected Open rejection'));
-          assert(failures.length > 0, 'Selected Open rejection has no exact reason');
+        if (acquisitionContext.kind === 'SELF_FRACTURE') {
+          const audit = jsonRecord(
+            conventional.selectedOpenPolicyAdmissibility,
+            'Conventional selected-policy negative control',
+          );
+          assert.equal(audit.admissible, false);
+          const failures = arrayValue(audit.failures, 'Conventional failures')
+            .map((failure) => jsonRecord(failure, 'Conventional failure'));
           assert(failures.some((failure) =>
             failure.code === 'ACQUISITION_KIND_MISMATCH' ||
             failure.code === 'ACQUISITION_IDENTITY_MISMATCH' ||
-            failure.code === 'ACTION_NOT_ALLOWED' ||
-            failure.code === 'ACTION_FORBIDDEN'
-          ), `Selected Open rejection is not constraint-specific: ${JSON.stringify(failures)}`);
-        }
-        assert(
-          conventional.incumbentSource === 'ADMISSIBLE_KNOWN_POLICY' ||
-            conventional.incumbentSource === 'IMPROVED_FROM_KNOWN_POLICY',
-          'Known incumbent provenance is absent',
-        );
-        assert.equal(conventional.familySearchStatus, 'BEST_FOUND_UNPROVEN');
-        const parity = jsonRecord(audit.sourceParity, 'fixed-policy source parity');
-        assert(numberValue(parity.costDifferenceChaos, 'cost parity') <= 0.05);
-        assert(numberValue(parity.actionDifference, 'action parity') <= 1e-5);
-        assert(numberValue(parity.timeDifferenceMs, 'time parity') <= 1e-3);
-        const evaluation = jsonRecord(audit.evaluation, 'fixed-policy evaluation');
-        assert.equal(evaluation.proper, true);
-        assert.equal(evaluation.costReconciled, true);
-        assertNear(numberValue(evaluation.terminalAbsorptionProbability, 'absorption'), 1,
-          'fixed-policy absorption', 1e-6);
-        const conventionalCard = page.locator(
-          '[data-method-family-id="family_conventional"]',
-        );
-        await conventionalCard.waitFor();
-        assert.equal(await conventionalCard.getAttribute('data-known-policy-admissible'), 'true');
-        assert.equal(
-          await conventionalCard.getAttribute('data-selected-open-policy-admissible'),
-          String(selectedOpenAudit.admissible),
-        );
-        assert.match(
-          String(await conventionalCard.getAttribute('data-incumbent-source')),
-          /ADMISSIBLE_KNOWN_POLICY|IMPROVED_FROM_KNOWN_POLICY/,
-        );
-        assert.equal(
-          await conventionalCard.getAttribute('data-family-search-status'),
-          'BEST_FOUND_UNPROVEN',
-        );
-        const cardText = await conventionalCard.innerText();
-        assert.match(cardText, /Policy execution status/i);
-        assert.match(cardText, /Family search status/i);
-        assert.match(cardText, /family optimum not proven/i);
-        assert.match(cardText, /Selected Open policy in this family/);
-        const sameFingerprint = open.policyEquivalenceFingerprint ===
-          conventional.policyEquivalenceFingerprint;
-        if (sameFingerprint && conventional.equivalentToSelectedPolicy === true) {
-          assert.equal(conventional.status, 'SAME_AS_SELECTED');
-          assert.match(cardText, /Same selected policy/i);
+            failure.code === 'ACQUISITION_COST_MISMATCH'
+          ));
+        } else {
+          const audit = jsonRecord(
+            primordialFracture.knownPolicyAdmissibility,
+            'clean-to-self-fracture negative control',
+          );
+          assert.equal(audit.admissible, false);
+          const failures = arrayValue(audit.failures, 'self-fracture failures')
+            .map((failure) => jsonRecord(failure, 'self-fracture failure'));
+          assert(failures.some((failure) =>
+            failure.code === 'ACQUISITION_KIND_MISMATCH' ||
+            failure.code === 'ACQUISITION_IDENTITY_MISMATCH' ||
+            failure.code === 'ACQUISITION_COST_MISMATCH'
+          ));
         }
         const harvestControls = families.filter((family) =>
           jsonRecord(family.spec, 'family spec').kind === 'HARVEST'
         );
         assert(harvestControls.length > 0);
-        assert(harvestControls.every((family) =>
-          jsonRecord(
-            family.selectedOpenPolicyAdmissibility ?? family.knownPolicyAdmissibility,
-            'Harvest audit',
-          ).admissible === false
+        assert(harvestControls.every((candidate) =>
+          arrayValue(
+            jsonRecord(candidate.spec, 'Harvest spec').requiredActionEvidence,
+            'Harvest requirements',
+          ).every((requirement) =>
+            jsonRecord(requirement, 'Harvest requirement').scope === 'DOWNSTREAM'
+          )
         ));
-        const fractureControls = families.filter((family) =>
-          jsonRecord(family.spec, 'fracture spec').kind === 'SELF_FRACTURE'
+        assert(harvestControls.some((candidate) => {
+          const rawAudit = candidate.selectedOpenPolicyAdmissibility ??
+            candidate.knownPolicyAdmissibility;
+          if (!rawAudit) return false;
+          const audit = jsonRecord(rawAudit, 'Harvest negative-control audit');
+          return audit.admissible === false &&
+            arrayValue(audit.failures, 'Harvest failures').some((failure) =>
+              jsonRecord(failure, 'Harvest failure').code === 'REQUIRED_ACTION_NOT_OBSERVED'
+            );
+        }), 'No downstream Harvest negative control was exercised');
+        const combinedControls = families.filter((candidate) =>
+          jsonRecord(candidate.spec, 'combined spec').kind === 'SELF_FRACTURE_HARVEST'
         );
-        assert(fractureControls.length > 0);
-        assert(fractureControls.every((family) =>
-          jsonRecord(family.knownPolicyAdmissibility, 'fracture audit').admissible === false
-        ));
+        assert(combinedControls.length > 0);
+        assert(combinedControls.every((candidate) => {
+          const requirements = arrayValue(
+            jsonRecord(candidate.spec, 'combined spec').requiredActionEvidence,
+            'combined requirements',
+          ).map((requirement) => jsonRecord(requirement, 'combined requirement'));
+          return requirements.some((requirement) =>
+            requirement.actionId === 'fracturing_orb' && requirement.scope === 'ACQUISITION'
+          ) && requirements.some((requirement) =>
+            String(requirement.actionId).startsWith('harvest_reforge_') &&
+            requirement.scope === 'DOWNSTREAM'
+          );
+        }));
+        const primordialCard = page.locator(
+          `[data-method-family-id="${String(jsonRecord(primordialFracture.spec, 'Primordial spec').id)}"]`,
+        );
+        await primordialCard.waitFor();
+        assert.match(
+          String(await primordialCard.getAttribute('data-required-action-evidence')),
+          /fracturing_orb:ACQUISITION:true/,
+        );
+        const cardText = await primordialCard.innerText();
+        assert.match(cardText, /Policy execution status/i);
+        assert.match(cardText, /Family search status/i);
+        assert.match(cardText, /fracturing_orb @ acquisition: observed/i);
+        if (primordialFracture.equivalentToSelectedPolicy === true) {
+          assert.match(cardText, /Same selected policy/i);
+          assert.doesNotMatch(cardText, /required action not observed.*fracturing/i);
+        }
         mkdirSync(stableEvidenceDirectory, { recursive: true });
         const artifactPath = join(
           stableEvidenceDirectory,
-          'phase3c-policy-family-browser.json',
+          'phase3d-full-route-policy-evidence-browser.json',
         );
         writeFileSync(artifactPath, `${JSON.stringify({
           input,
           selected: result.recommended,
-          open,
           conventional,
-          familyMatrix: families.map((family) => ({
-            id: jsonRecord(family.spec, 'matrix spec').id,
-            kind: jsonRecord(family.spec, 'matrix spec').kind,
-            admissible: family.selectedOpenPolicyAdmissibility
-              ? jsonRecord(family.selectedOpenPolicyAdmissibility, 'matrix audit').admissible
-              : undefined,
-            incumbentSource: family.incumbentSource,
-            familySearchStatus: family.familySearchStatus,
-            fullRouteU: family.fullRouteU,
-          })),
+          primordialFracture,
+          harvestControls: harvestControls.map((candidate) => candidate.spec),
+          combinedControls: combinedControls.map((candidate) => candidate.spec),
         }, null, 2)}\n`, 'utf8');
         const screenshotPath = join(
           stableEvidenceDirectory,
-          'phase3c-policy-family-desktop.png',
+          'phase3d-full-route-policy-evidence-desktop.png',
         );
         await page.screenshot({ path: screenshotPath, fullPage: true });
-        ctx.artifacts.phase3cPolicyFamilyBrowser = relative(repositoryRoot, artifactPath);
-        ctx.artifacts.phase3cPolicyFamilyScreenshot = relative(
+        ctx.artifacts.phase3dPolicyEvidenceBrowser = relative(repositoryRoot, artifactPath);
+        ctx.artifacts.phase3dPolicyEvidenceScreenshot = relative(
           repositoryRoot,
           screenshotPath,
         );
         return {
-          openU,
-          selectedOpenU,
-          selectedOpenAdmissible: selectedOpenAudit.admissible,
-          selectedOpenFailures: selectedOpenAudit.failures,
-          conventionalU,
-          knownU,
-          admissible: audit.admissible,
-          transitionsRegenerated: audit.transitionsRegenerated,
-          transitionOutcomesCompared: audit.transitionOutcomesCompared,
-          incumbentSource: conventional.incumbentSource,
-          familySearchStatus: conventional.familySearchStatus,
-          sameFingerprint,
-          equivalentToSelectedPolicy: conventional.equivalentToSelectedPolicy,
+          selectedAcquisitionKind: acquisitionContext.kind,
+          primordialFamilyId: jsonRecord(primordialFracture.spec, 'Primordial spec').id,
+          primordialStatus: primordialFracture.status,
+          equivalentToSelectedPolicy: primordialFracture.equivalentToSelectedPolicy,
+          fractureCheck,
+          evidenceEntries: evidenceEntries.length,
+          harvestFamilies: harvestControls.length,
+          combinedFamilies: combinedControls.length,
           accounting: assertCanonicalAccounting(result),
-          artifact: ctx.artifacts.phase3cPolicyFamilyBrowser,
-          screenshot: ctx.artifacts.phase3cPolicyFamilyScreenshot,
+          artifact: ctx.artifacts.phase3dPolicyEvidenceBrowser,
+          screenshot: ctx.artifacts.phase3dPolicyEvidenceScreenshot,
+        };
+      }, { viewport: { width: 1440, height: 900 } });
+
+    case 'core-budget-isolation':
+      return withPage(ctx, async (page) => {
+        const input = fixture('phase3c_primordial_renewal_rotten_claws');
+        const disabled = await optimizedFixture(page, ctx.appUrl, input);
+        const disabledSearch = jsonRecord(disabled.search, 'comparison-disabled search');
+        const disabledSnapshot = jsonRecord(
+          disabledSearch.coreRecommendationSnapshot,
+          'comparison-disabled core snapshot',
+        );
+        assert.equal(disabledSnapshot.compareMethodFamiliesRequested, false);
+        const enabled = await runFreshWorkerComparison(page, input.searchBudget.maxWallTimeMs);
+        const enabledSearch = jsonRecord(enabled.search, 'comparison-enabled search');
+        const enabledSnapshot = jsonRecord(
+          enabledSearch.coreRecommendationSnapshot,
+          'comparison-enabled core snapshot',
+        );
+        assert.equal(enabledSnapshot.compareMethodFamiliesRequested, true);
+        assert.deepEqual(
+          enabledSnapshot.coreEnvelope,
+          disabledSnapshot.coreEnvelope,
+          'Compare Methods changed the core deadline envelope',
+        );
+        assert.equal(
+          numberValue(
+            jsonRecord(enabledSnapshot.coreEnvelope, 'enabled core envelope').deadlineFraction,
+            'enabled core fraction',
+          ),
+          0.85,
+        );
+        const exactWork = enabledSnapshot.statesExpanded === disabledSnapshot.statesExpanded &&
+          enabledSnapshot.retainedStates === disabledSnapshot.retainedStates &&
+          enabledSnapshot.retainedStateFingerprint === disabledSnapshot.retainedStateFingerprint;
+        if (exactWork) {
+          assert.deepEqual(
+            enabledSnapshot.candidateExecutableUChaos,
+            disabledSnapshot.candidateExecutableUChaos,
+          );
+          assert.equal(
+            enabledSnapshot.selectedExecutableUChaos,
+            disabledSnapshot.selectedExecutableUChaos,
+          );
+          assert.equal(enabledSnapshot.stopReason, disabledSnapshot.stopReason);
+          assert.equal(
+            enabledSnapshot.canonicalPolicyFingerprint,
+            disabledSnapshot.canonicalPolicyFingerprint,
+          );
+        } else {
+          assert(
+            numberValue(enabledSnapshot.statesExpanded, 'enabled core states') >=
+              numberValue(disabledSnapshot.statesExpanded, 'disabled core states'),
+            'Family-enabled fresh Worker expanded fewer core states',
+          );
+          assert(
+            numberValue(enabledSnapshot.selectedExecutableUChaos, 'enabled core U') <=
+              numberValue(disabledSnapshot.selectedExecutableUChaos, 'disabled core U') + 0.05,
+            'Family-enabled fresh Worker regressed the core executable U',
+          );
+          const enabledCandidates = new Map(
+            arrayValue(enabledSnapshot.candidateExecutableUChaos, 'enabled core candidates')
+              .map((entry) => jsonRecord(entry, 'enabled core candidate'))
+              .map((entry) => [String(entry.candidateId), numberValue(entry.fullRouteUChaos, 'enabled candidate U')]),
+          );
+          for (const rawCandidate of arrayValue(
+            disabledSnapshot.candidateExecutableUChaos,
+            'disabled core candidates',
+          )) {
+            const candidate = jsonRecord(rawCandidate, 'disabled core candidate');
+            assert(
+              (enabledCandidates.get(String(candidate.candidateId)) ?? Infinity) <=
+                numberValue(candidate.fullRouteUChaos, 'disabled candidate U') + 0.05,
+              `Family-enabled core regressed ${String(candidate.candidateId)}`,
+            );
+          }
+        }
+        for (const [label, result, core] of [
+          ['disabled', disabled, disabledSnapshot],
+          ['enabled', enabled, enabledSnapshot],
+        ] as const) {
+          const ledger = jsonRecord(
+            jsonRecord(
+              jsonRecord(result.search, `${label} search`).requestBudget,
+              `${label} request budget`,
+            ).ledger,
+            `${label} request ledger`,
+          );
+          assert.equal(ledger.reconciled, true);
+          assert.equal(ledger.clock, 'PERFORMANCE_NOW_MONOTONIC_REQUEST_RELATIVE');
+          assert(numberValue(ledger.unclassifiedMs, `${label} unclassified time`) <= 2);
+          assert.equal(
+            numberValue(ledger.coreDeadlineFraction, `${label} core fraction`),
+            0.85,
+          );
+          const finalCost = numberValue(result.expectedCostChaos, `${label} final U`);
+          assert(finalCost <= numberValue(core.selectedExecutableUChaos, `${label} frozen core U`) + 0.05,
+            `${label} enrichment worsened the frozen core incumbent`);
+          const registry = jsonRecord(result.requestPolicyRegistry, `${label} policy registry`);
+          assert.equal(registry.monotone, true);
+        }
+        const currentEvents = await workerEvents(page);
+        const freshTerminalTypes = currentEvents
+          .filter((event) => String(event.payload?.requestId).startsWith('phase3d_fresh_'))
+          .filter((event) => event.kind === 'MESSAGE_FROM_WORKER')
+          .map((event) => event.payload?.type);
+        assert(freshTerminalTypes.includes('PROGRESS'));
+        assert(freshTerminalTypes.includes('COMPLETE'));
+        assert(freshTerminalTypes.includes('RESULT'));
+        mkdirSync(stableEvidenceDirectory, { recursive: true });
+        const artifactPath = join(stableEvidenceDirectory, 'phase3d-core-budget-worker-ab.json');
+        writeFileSync(artifactPath, `${JSON.stringify({
+          input,
+          mode: exactWork ? 'EXACT_CORE_STATE_SET' : 'STRONGER_MONOTONE_CORE',
+          disabled: {
+            snapshot: disabledSnapshot,
+            ledger: jsonRecord(jsonRecord(disabledSearch.requestBudget, 'disabled budget').ledger, 'disabled ledger'),
+            finalU: disabled.expectedCostChaos,
+          },
+          enabled: {
+            snapshot: enabledSnapshot,
+            ledger: jsonRecord(jsonRecord(enabledSearch.requestBudget, 'enabled budget').ledger, 'enabled ledger'),
+            finalU: enabled.expectedCostChaos,
+            registry: enabled.requestPolicyRegistry,
+          },
+          freshWorkerProtocol: freshTerminalTypes,
+        }, null, 2)}\n`, 'utf8');
+        ctx.artifacts.phase3dCoreBudgetWorkerAb = relative(repositoryRoot, artifactPath);
+        return {
+          mode: exactWork ? 'EXACT_CORE_STATE_SET' : 'STRONGER_MONOTONE_CORE',
+          disabledSnapshot,
+          enabledSnapshot,
+          disabledFinalU: disabled.expectedCostChaos,
+          enabledFinalU: enabled.expectedCostChaos,
+          freshWorkerProtocol: freshTerminalTypes,
+          artifact: ctx.artifacts.phase3dCoreBudgetWorkerAb,
         };
       }, { viewport: { width: 1440, height: 900 } });
 
@@ -1159,6 +1446,163 @@ async function runGateOperation(ctx: GateWorkerContext): Promise<unknown> {
         frozenFlow: frozen.flow,
         viewport: { width: 1440, height: 900 },
       });
+    }
+
+    case 'constellation-scope-fit': {
+      const field = loadFrozenPolicyFlow('policy-flow-phase3d-field-v1.json');
+      const stress = loadFrozenPolicyFlow('policy-flow-phase3c-large-v1.json');
+      const fieldObservation = await withPage(ctx, async (page) => {
+        await optimizedFixture(page, ctx.appUrl, fixture('cheap_one_mod'));
+        const container = page.getByTestId('markov-constellation-container');
+        await container.waitFor();
+        await container.scrollIntoViewIfNeeded();
+        assert.equal(
+          await container.getAttribute('data-topology-fingerprint'),
+          field.metadata.topologyFingerprint,
+        );
+        assert.equal(Number(await container.getAttribute('data-node-count')), 23);
+        assert.equal(await container.getAttribute('data-acquisition-kind'), 'SELF_FRACTURE');
+        assert.equal(await container.getAttribute('data-label-aware-fit'), 'true');
+        assert(Number(await container.getAttribute('data-acquisition-scope-node-count')) > 0);
+        assert(Number(await container.getAttribute('data-downstream-scope-node-count')) > 0);
+        assert(Number(await container.getAttribute('data-certified-handoff-edge-count')) > 0);
+        const acquisitionNodes = container.locator(
+          '[data-node-anchor][data-policy-scope="ACQUISITION"]',
+        );
+        const downstreamNodes = container.locator(
+          '[data-node-anchor][data-policy-scope="DOWNSTREAM"]',
+        );
+        assert(await acquisitionNodes.count() > 0);
+        assert(await downstreamNodes.count() > 0);
+        const acquisitionProgress = await acquisitionNodes.evaluateAll((nodes) =>
+          nodes.map((node) => node.getAttribute('data-progress-label'))
+        );
+        const downstreamProgress = await downstreamNodes.evaluateAll((nodes) =>
+          nodes.map((node) => node.getAttribute('data-progress-label'))
+        );
+        assert(acquisitionProgress.every((label) =>
+          label?.startsWith('Prep target') || label?.startsWith('Fracture prep complete')
+        ));
+        assert(acquisitionProgress.every((label) => !label?.startsWith('Final targets')));
+        assert(downstreamProgress.every((label) =>
+          label?.startsWith('Final targets') || label === 'Final target complete'
+        ));
+        const headers = container.locator('.constellation-scope-header');
+        assert.equal(await headers.count(), 2);
+        assert.match(await headers.nth(0).innerText(), /SELF-FRACTURE PREPARATION|FINAL CRAFTING/);
+        assert.match(await headers.nth(1).innerText(), /SELF-FRACTURE PREPARATION|FINAL CRAFTING/);
+        const handoffs = container.locator(
+          '[data-edge-anchor][data-edge-routing="SCOPE_HANDOFF"][data-scope-handoff="true"]',
+        );
+        assert.equal(
+          await handoffs.count(),
+          Number(await container.getAttribute('data-certified-handoff-edge-count')),
+        );
+        const handoffLabel = container.locator('.constellation-edge-label.scope-handoff-edge');
+        await handoffLabel.first().waitFor();
+        assert.match(await handoffLabel.first().innerText(), /Certified acquisition.*final crafting/i);
+        await handoffs.first().focus();
+        await page.keyboard.press('Enter');
+        const edgeDetail = page.getByLabel('Selected constellation edge details');
+        await edgeDetail.waitFor();
+        assert.match(await edgeDetail.innerText(), /CERTIFIED ACQUISITION HANDOFF/);
+        assert.match(String(await edgeDetail.textContent()), /CERTIFIED_SCOPE_HANDOFF/);
+        await edgeDetail.getByRole('button', { name: 'Close selected edge details' }).click();
+        await page.getByRole('button', { name: 'Fit All' }).click();
+        await page.waitForTimeout(100);
+        const desktopGeometry = await constellationFitGeometry(page);
+        assert.deepEqual(desktopGeometry.outside, [], '23-node Fit All clipped a default label');
+        assert.equal(desktopGeometry.collisionCount, 0, '23-node default labels overlap');
+        assert(numberValue(desktopGeometry.visibleGoalLabelCount, 'visible Goal labels') >= 1);
+        assert(Math.abs(
+          numberValue(desktopGeometry.topGap, 'top occupied gap') -
+          numberValue(desktopGeometry.bottomGap, 'bottom occupied gap')
+        ) <= 190, '23-node graph is not reasonably vertically centered');
+        mkdirSync(stableEvidenceDirectory, { recursive: true });
+        const desktopPath = join(stableEvidenceDirectory, 'phase3d-constellation-scope-1440x900.png');
+        await page.screenshot({ path: desktopPath, fullPage: true });
+
+        await page.setViewportSize({ width: 1920, height: 1080 });
+        await page.getByRole('button', { name: 'Fit All' }).click();
+        await page.waitForTimeout(100);
+        const wideGeometry = await constellationFitGeometry(page);
+        assert.deepEqual(wideGeometry.outside, [], 'Wide Fit All clipped a default label');
+        assert.equal(wideGeometry.collisionCount, 0);
+        const widePath = join(stableEvidenceDirectory, 'phase3d-constellation-scope-1920x1080.png');
+        await page.screenshot({ path: widePath, fullPage: true });
+
+        await page.setViewportSize({ width: 390, height: 844 });
+        await page.getByRole('button', { name: 'Fit All' }).click();
+        await page.waitForTimeout(100);
+        const mobileGeometry = await page.evaluate(() => ({
+          viewport: document.documentElement.clientWidth,
+          documentWidth: document.documentElement.scrollWidth,
+          bodyWidth: document.body.scrollWidth,
+        }));
+        assert(numberValue(mobileGeometry.documentWidth, 'mobile document width') <=
+          numberValue(mobileGeometry.viewport, 'mobile viewport width') + 1);
+        assert(numberValue(mobileGeometry.bodyWidth, 'mobile body width') <=
+          numberValue(mobileGeometry.viewport, 'mobile viewport width') + 1);
+        const mobileFit = await constellationFitGeometry(page);
+        assert.deepEqual(mobileFit.outside, [], 'Mobile Fit All clipped scope/header labels');
+        const zoomBefore = Number(await container.getAttribute('data-camera-zoom'));
+        await page.getByRole('button', { name: 'Zoom constellation in' }).click();
+        assert(Number(await container.getAttribute('data-camera-zoom')) > zoomBefore);
+        const mobilePath = join(stableEvidenceDirectory, 'phase3d-constellation-scope-390x844.png');
+        await page.screenshot({ path: mobilePath, fullPage: true });
+        ctx.artifacts.phase3dConstellationScopeDesktop = relative(repositoryRoot, desktopPath);
+        ctx.artifacts.phase3dConstellationScopeWide = relative(repositoryRoot, widePath);
+        ctx.artifacts.phase3dConstellationScopeMobile = relative(repositoryRoot, mobilePath);
+        return {
+          topologyFingerprint: field.metadata.topologyFingerprint,
+          acquisitionProgress,
+          downstreamProgress,
+          handoffCount: await handoffs.count(),
+          desktopGeometry,
+          wideGeometry,
+          mobileGeometry,
+          mobileFit,
+          screenshots: {
+            desktop: ctx.artifacts.phase3dConstellationScopeDesktop,
+            wide: ctx.artifacts.phase3dConstellationScopeWide,
+            mobile: ctx.artifacts.phase3dConstellationScopeMobile,
+          },
+        };
+      }, {
+        frozenFlow: field.flow,
+        frozenAcquisitionContext: { kind: 'SELF_FRACTURE' },
+        viewport: { width: 1440, height: 900 },
+      });
+
+      const stressObservation = await withPage(ctx, async (page) => {
+        await optimizedFixture(page, ctx.appUrl, fixture('cheap_one_mod'));
+        const container = page.getByTestId('markov-constellation-container');
+        await container.waitFor();
+        await container.scrollIntoViewIfNeeded();
+        assert.equal(
+          await container.getAttribute('data-topology-fingerprint'),
+          stress.metadata.topologyFingerprint,
+        );
+        assert(Number(await container.getAttribute('data-node-count')) >= 40);
+        assert.equal(await container.getAttribute('data-label-aware-fit'), 'true');
+        assert(Number(await container.getAttribute('data-large-scc-node-count')) >= 40);
+        await page.getByRole('button', { name: 'Fit All' }).click();
+        await page.waitForTimeout(100);
+        const geometry = await constellationFitGeometry(page);
+        assert.deepEqual(geometry.outside, [], '40+ node Fit All clipped a default label');
+        assert.equal(geometry.collisionCount, 0, '40+ node default labels overlap');
+        assert(numberValue(geometry.visibleGoalLabelCount, 'stress visible Goal labels') >= 1);
+        return {
+          topologyFingerprint: stress.metadata.topologyFingerprint,
+          nodeCount: Number(await container.getAttribute('data-node-count')),
+          largeSccNodeCount: Number(await container.getAttribute('data-large-scc-node-count')),
+          geometry,
+        };
+      }, {
+        frozenFlow: stress.flow,
+        viewport: { width: 1440, height: 900 },
+      });
+      return { field: fieldObservation, stress: stressObservation };
     }
 
     case 'real-policy-flow-differential':

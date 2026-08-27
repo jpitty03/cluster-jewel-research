@@ -1,45 +1,33 @@
 {
   "schemaVersion": "PHASE3A_QUALITY_REPORT_V1",
-  "runId": "2026-08-27T21-51-34-657Z",
-  "suite": "RELEASE",
+  "runId": "2026-08-27T21-47-54-750Z",
+  "suite": "DEV",
   "requestedGateIds": [
     "A-clean-worker-canonical",
-    "A-proof-accounting-no-fallback",
-    "A-cancel-replace-recover",
     "B-self-fracture-policy",
     "B-fractured-magic-alter-price-reversal",
     "B-harvest-objective-policy",
     "C-full-route-policy-evidence",
     "C-core-budget-isolation",
-    "C-cluster-handoff",
-    "C-share-export-roundtrip",
-    "C-responsive-accessibility",
     "D-constellation-large-scc-layout",
     "D-constellation-scope-fit",
     "D-real-policy-flow-differential",
-    "D-frozen-policy-flow-renderer",
-    "D-constellation-interaction-short-replay"
+    "D-frozen-policy-flow-renderer"
   ],
   "selectedGateIds": [
     "A-clean-worker-canonical",
-    "A-proof-accounting-no-fallback",
-    "A-cancel-replace-recover",
     "B-self-fracture-policy",
     "B-fractured-magic-alter-price-reversal",
     "B-harvest-objective-policy",
     "C-full-route-policy-evidence",
     "C-core-budget-isolation",
-    "C-cluster-handoff",
-    "C-share-export-roundtrip",
-    "C-responsive-accessibility",
     "D-constellation-large-scc-layout",
     "D-constellation-scope-fit",
     "D-real-policy-flow-differential",
-    "D-frozen-policy-flow-renderer",
-    "D-constellation-interaction-short-replay"
+    "D-frozen-policy-flow-renderer"
   ],
-  "startedAt": "2026-08-27T21:51:34.658Z",
-  "finishedAt": "2026-08-27T21:55:28.127Z",
+  "startedAt": "2026-08-27T21:47:54.751Z",
+  "finishedAt": "2026-08-27T21:51:28.967Z",
   "status": "PASSED",
   "identity": {
     "applicationSourceBuildHash": "app-a946cd172e7873b8f29b",
@@ -64,9 +52,7 @@
       {
         "shard": "A",
         "gateIds": [
-          "A-clean-worker-canonical",
-          "A-proof-accounting-no-fallback",
-          "A-cancel-replace-recover"
+          "A-clean-worker-canonical"
         ],
         "mode": "PARALLEL_BROWSER_LIGHT"
       },
@@ -83,10 +69,7 @@
         "shard": "C",
         "gateIds": [
           "C-full-route-policy-evidence",
-          "C-core-budget-isolation",
-          "C-cluster-handoff",
-          "C-share-export-roundtrip",
-          "C-responsive-accessibility"
+          "C-core-budget-isolation"
         ],
         "mode": "SERIAL_SOLVER_HEAVY"
       },
@@ -96,19 +79,18 @@
           "D-constellation-large-scc-layout",
           "D-constellation-scope-fit",
           "D-real-policy-flow-differential",
-          "D-frozen-policy-flow-renderer",
-          "D-constellation-interaction-short-replay"
+          "D-frozen-policy-flow-renderer"
         ],
         "mode": "PARALLEL_BROWSER_LIGHT"
       }
     ]
   },
   "counts": {
-    "passed": 16,
+    "passed": 10,
     "failed": 0,
     "resumed": 0,
     "skipped": 0,
-    "total": 16
+    "total": 10
   },
   "results": [
     {
@@ -125,9 +107,9 @@
       "costClass": "FAST",
       "status": "PASS",
       "passed": true,
-      "startedAt": "2026-08-27T21:51:35.907Z",
-      "finishedAt": "2026-08-27T21:51:38.415Z",
-      "durationMs": 2507,
+      "startedAt": "2026-08-27T21:47:55.772Z",
+      "finishedAt": "2026-08-27T21:47:58.158Z",
+      "durationMs": 2386,
       "details": {
         "fixture": "cheap_one_mod",
         "protocol": {
@@ -169,79 +151,6 @@
       }
     },
     {
-      "id": "A-proof-accounting-no-fallback",
-      "title": "Canonical accounting, proof surfaces, and strict no-fallback startup",
-      "phase": "3A",
-      "shard": "A",
-      "tags": [
-        "worker",
-        "solver",
-        "proof"
-      ],
-      "costClass": "FAST",
-      "status": "PASS",
-      "passed": true,
-      "startedAt": "2026-08-27T21:51:38.415Z",
-      "finishedAt": "2026-08-27T21:51:40.410Z",
-      "durationMs": 1995,
-      "details": {
-        "accounting": {
-          "selectedBundleId": "core:clean-open-policy",
-          "maximumDifferenceChaos": 8.881784197001252e-16,
-          "acquisitionCostChaos": 2,
-          "downstreamCostChaos": 4.368169699999769,
-          "fullRouteCostChaos": 6.368169699999769
-        },
-        "proofStatus": "UNCONSTRAINED_RESOLVED",
-        "noFallback": {
-          "appRejected": true,
-          "browserRejected": true
-        }
-      },
-      "executionIdentity": {
-        "applicationSourceBuildHash": "app-a946cd172e7873b8f29b",
-        "gateIdVersion": "A-proof-accounting-no-fallback@1",
-        "fixtureCorpusVersion": "Phase3C-Frozen-Browser-Corpus-1",
-        "fixtureInputHash": "fixture-a8a605222b9c93d082e9",
-        "priceSnapshotIdentity": "prices-086bbb3ef86a6b63",
-        "browserVersion": "151.0.7922.34",
-        "harnessVersion": "PHASE3A_QUALITY_LAB_V1",
-        "compatibilityHash": "compatible-16956412409e443353204abf"
-      }
-    },
-    {
-      "id": "A-cancel-replace-recover",
-      "title": "Cancellation replaces the Worker and a clean request recovers",
-      "phase": "3A",
-      "shard": "A",
-      "tags": [
-        "worker",
-        "solver",
-        "cancellation"
-      ],
-      "costClass": "MEDIUM",
-      "status": "PASS",
-      "passed": true,
-      "startedAt": "2026-08-27T21:51:40.410Z",
-      "finishedAt": "2026-08-27T21:51:42.822Z",
-      "durationMs": 2412,
-      "details": {
-        "terminated": true,
-        "replacementSpawned": true,
-        "recovered": "BEST_RESOLVED_ACQUISITION_SAFE"
-      },
-      "executionIdentity": {
-        "applicationSourceBuildHash": "app-a946cd172e7873b8f29b",
-        "gateIdVersion": "A-cancel-replace-recover@1",
-        "fixtureCorpusVersion": "Phase3C-Frozen-Browser-Corpus-1",
-        "fixtureInputHash": "fixture-41b8cfceeef9062a5af9",
-        "priceSnapshotIdentity": "prices-086bbb3ef86a6b63",
-        "browserVersion": "151.0.7922.34",
-        "harnessVersion": "PHASE3A_QUALITY_LAB_V1",
-        "compatibilityHash": "compatible-16956412409e443353204abf"
-      }
-    },
-    {
       "id": "B-self-fracture-policy",
       "title": "Real self-fracture route preserves Scour to fractured-Magic Augment and reacquire semantics",
       "phase": "3B",
@@ -258,9 +167,9 @@
       "costClass": "SOLVER_HEAVY",
       "status": "PASS",
       "passed": true,
-      "startedAt": "2026-08-27T21:52:08.145Z",
-      "finishedAt": "2026-08-27T21:52:35.215Z",
-      "durationMs": 27070,
+      "startedAt": "2026-08-27T21:48:15.711Z",
+      "finishedAt": "2026-08-27T21:48:42.749Z",
+      "durationMs": 27038,
       "details": {
         "conserved": {
           "nodes": 18,
@@ -377,9 +286,9 @@
       "costClass": "SOLVER_HEAVY",
       "status": "PASS",
       "passed": true,
-      "startedAt": "2026-08-27T21:52:35.215Z",
-      "finishedAt": "2026-08-27T21:53:04.270Z",
-      "durationMs": 29055,
+      "startedAt": "2026-08-27T21:48:42.749Z",
+      "finishedAt": "2026-08-27T21:49:11.899Z",
+      "durationMs": 29149,
       "details": {
         "route": {
           "recommendationStatus": "PROVISIONAL_RESOLVED",
@@ -471,9 +380,9 @@
       "costClass": "SOLVER_HEAVY",
       "status": "PASS",
       "passed": true,
-      "startedAt": "2026-08-27T21:53:04.270Z",
-      "finishedAt": "2026-08-27T21:53:26.397Z",
-      "durationMs": 22127,
+      "startedAt": "2026-08-27T21:49:11.899Z",
+      "finishedAt": "2026-08-27T21:49:32.826Z",
+      "durationMs": 20928,
       "details": {
         "objective": {
           "kind": "FEWEST_ACTIONS_WITHIN_COST",
@@ -524,9 +433,9 @@
       "costClass": "SOLVER_HEAVY",
       "status": "PASS",
       "passed": true,
-      "startedAt": "2026-08-27T21:53:27.522Z",
-      "finishedAt": "2026-08-27T21:54:25.375Z",
-      "durationMs": 57852,
+      "startedAt": "2026-08-27T21:49:33.942Z",
+      "finishedAt": "2026-08-27T21:50:31.903Z",
+      "durationMs": 57961,
       "details": {
         "selectedAcquisitionKind": "SELF_FRACTURE",
         "primordialFamilyId": "family_fracture_Primordial Bond",
@@ -584,9 +493,9 @@
       "costClass": "SOLVER_HEAVY",
       "status": "PASS",
       "passed": true,
-      "startedAt": "2026-08-27T21:54:25.375Z",
-      "finishedAt": "2026-08-27T21:55:22.172Z",
-      "durationMs": 56797,
+      "startedAt": "2026-08-27T21:50:31.903Z",
+      "finishedAt": "2026-08-27T21:51:28.844Z",
+      "durationMs": 56941,
       "details": {
         "mode": "STRONGER_MONOTONE_CORE",
         "disabledSnapshot": {
@@ -616,9 +525,9 @@
               "fullRouteUChaos": 1636.3811154829793
             }
           ],
-          "retainedStateFingerprint": "states-55c48116",
-          "statesExpanded": 11669,
-          "retainedStates": 20277,
+          "retainedStateFingerprint": "states-d6d23c8a",
+          "statesExpanded": 13336,
+          "retainedStates": 21793,
           "stopReason": "HOST_RESERVE",
           "canonicalPolicyFingerprint": "core-c8da05a5"
         },
@@ -701,112 +610,6 @@
       }
     },
     {
-      "id": "C-cluster-handoff",
-      "title": "Cluster Jewels group handoff retains SKU controls without auto-search",
-      "phase": "3A",
-      "shard": "C",
-      "tags": [
-        "handoff",
-        "responsive",
-        "accessibility"
-      ],
-      "costClass": "FAST",
-      "status": "PASS",
-      "passed": true,
-      "startedAt": "2026-08-27T21:55:22.172Z",
-      "finishedAt": "2026-08-27T21:55:23.180Z",
-      "durationMs": 1008,
-      "details": {
-        "passiveChoice": "8",
-        "targetIds": [],
-        "automaticSearch": false,
-        "focusedBanner": true
-      },
-      "executionIdentity": {
-        "applicationSourceBuildHash": "app-a946cd172e7873b8f29b",
-        "gateIdVersion": "C-cluster-handoff@1",
-        "fixtureCorpusVersion": "Phase3C-Frozen-Browser-Corpus-1",
-        "fixtureInputHash": "fixture-4f53cda18c2baa0c0354",
-        "priceSnapshotIdentity": "prices-086bbb3ef86a6b63",
-        "browserVersion": "151.0.7922.34",
-        "harnessVersion": "PHASE3A_QUALITY_LAB_V1",
-        "compatibilityHash": "compatible-16956412409e443353204abf"
-      }
-    },
-    {
-      "id": "C-share-export-roundtrip",
-      "title": "Export and share round-trip retain exact target and canonical summary",
-      "phase": "3A",
-      "shard": "C",
-      "tags": [
-        "worker",
-        "handoff",
-        "share-export",
-        "proof"
-      ],
-      "costClass": "FAST",
-      "status": "PASS",
-      "passed": true,
-      "startedAt": "2026-08-27T21:55:23.180Z",
-      "finishedAt": "2026-08-27T21:55:25.573Z",
-      "durationMs": 2393,
-      "details": {
-        "exportVersion": "2Y.1",
-        "shareHashLength": 4355,
-        "targetIds": [
-          "AfflictionJewelSmallPassivesGrantES3"
-        ],
-        "policyFlowExported": true
-      },
-      "executionIdentity": {
-        "applicationSourceBuildHash": "app-a946cd172e7873b8f29b",
-        "gateIdVersion": "C-share-export-roundtrip@1",
-        "fixtureCorpusVersion": "Phase3C-Frozen-Browser-Corpus-1",
-        "fixtureInputHash": "fixture-a8a605222b9c93d082e9",
-        "priceSnapshotIdentity": "prices-086bbb3ef86a6b63",
-        "browserVersion": "151.0.7922.34",
-        "harnessVersion": "PHASE3A_QUALITY_LAB_V1",
-        "compatibilityHash": "compatible-16956412409e443353204abf"
-      }
-    },
-    {
-      "id": "C-responsive-accessibility",
-      "title": "Desktop/mobile responsive and keyboard-accessibility smoke",
-      "phase": "3A",
-      "shard": "C",
-      "tags": [
-        "responsive",
-        "accessibility",
-        "visual",
-        "constellation"
-      ],
-      "costClass": "FAST",
-      "status": "PASS",
-      "passed": true,
-      "startedAt": "2026-08-27T21:55:25.573Z",
-      "finishedAt": "2026-08-27T21:55:27.990Z",
-      "durationMs": 2418,
-      "details": {
-        "geometry": {
-          "viewport": 390,
-          "documentWidth": 390,
-          "bodyWidth": 390
-        },
-        "keyboardNodeFocus": true,
-        "screenshot": "quality-lab\\artifacts\\phase3a-2026-08-27T21-51-34-657Z\\shard-C\\phase3a-responsive-mobile.png"
-      },
-      "executionIdentity": {
-        "applicationSourceBuildHash": "app-a946cd172e7873b8f29b",
-        "gateIdVersion": "C-responsive-accessibility@1",
-        "fixtureCorpusVersion": "Phase3C-Frozen-Browser-Corpus-1",
-        "fixtureInputHash": "fixture-a8a605222b9c93d082e9",
-        "priceSnapshotIdentity": "prices-086bbb3ef86a6b63",
-        "browserVersion": "151.0.7922.34",
-        "harnessVersion": "PHASE3A_QUALITY_LAB_V1",
-        "compatibilityHash": "compatible-16956412409e443353204abf"
-      }
-    },
-    {
       "id": "D-constellation-large-scc-layout",
       "title": "Frozen real field-class cyclic policy uses readable semantic SCC layout",
       "phase": "3C",
@@ -821,9 +624,9 @@
       "costClass": "FAST",
       "status": "PASS",
       "passed": true,
-      "startedAt": "2026-08-27T21:51:35.706Z",
-      "finishedAt": "2026-08-27T21:51:42.208Z",
-      "durationMs": 6502,
+      "startedAt": "2026-08-27T21:47:55.819Z",
+      "finishedAt": "2026-08-27T21:48:01.879Z",
+      "durationMs": 6060,
       "details": {
         "topologyFingerprint": "topology-3c852336",
         "nodeCount": 43,
@@ -891,9 +694,9 @@
       "costClass": "FAST",
       "status": "PASS",
       "passed": true,
-      "startedAt": "2026-08-27T21:51:42.208Z",
-      "finishedAt": "2026-08-27T21:51:50.523Z",
-      "durationMs": 8315,
+      "startedAt": "2026-08-27T21:48:01.880Z",
+      "finishedAt": "2026-08-27T21:48:10.550Z",
+      "durationMs": 8670,
       "details": {
         "field": {
           "topologyFingerprint": "topology-b6fb87a1",
@@ -977,15 +780,15 @@
               "width": 300.390625,
               "height": 430
             },
-            "nodeLabelCount": 11,
+            "nodeLabelCount": 10,
             "scopeHeaderCount": 2,
             "handoffLabelCount": 1,
             "outside": [],
             "collisionCount": 0,
             "goalCount": 1,
             "visibleGoalLabelCount": 1,
-            "topGap": 123.0625,
-            "bottomGap": 124.125
+            "topGap": 128.984375,
+            "bottomGap": 116.53125
           },
           "screenshots": {
             "desktop": "quality-lab\\reports\\evidence\\phase3d-constellation-scope-1440x900.png",
@@ -1044,9 +847,9 @@
       "costClass": "FAST",
       "status": "PASS",
       "passed": true,
-      "startedAt": "2026-08-27T21:51:50.523Z",
-      "finishedAt": "2026-08-27T21:51:52.404Z",
-      "durationMs": 1881,
+      "startedAt": "2026-08-27T21:48:10.550Z",
+      "finishedAt": "2026-08-27T21:48:12.540Z",
+      "durationMs": 1990,
       "details": {
         "sourceAppCommit": "df49b94ecca555671d8c78268d3149c2b8c84c7b",
         "normalizedSummarySha256": "12c4d104b9fd3f9c43499995e024d05df4fb9de90b9b0e72ca4233a8564d0746",
@@ -1082,9 +885,9 @@
       "costClass": "FAST",
       "status": "PASS",
       "passed": true,
-      "startedAt": "2026-08-27T21:51:52.404Z",
-      "finishedAt": "2026-08-27T21:51:54.500Z",
-      "durationMs": 2096,
+      "startedAt": "2026-08-27T21:48:12.540Z",
+      "finishedAt": "2026-08-27T21:48:14.593Z",
+      "durationMs": 2053,
       "details": {
         "certificationScope": "RENDERER_INTERACTION_ONLY",
         "topologyFingerprint": "topology-4481a40d",
@@ -1102,122 +905,84 @@
         "harnessVersion": "PHASE3A_QUALITY_LAB_V1",
         "compatibilityHash": "compatible-16956412409e443353204abf"
       }
-    },
-    {
-      "id": "D-constellation-interaction-short-replay",
-      "title": "Branch explanation, keyboard camera, and bounded short replay",
-      "phase": "3A",
-      "shard": "D",
-      "tags": [
-        "constellation",
-        "visual",
-        "responsive",
-        "accessibility"
-      ],
-      "costClass": "MEDIUM",
-      "status": "PASS",
-      "passed": true,
-      "startedAt": "2026-08-27T21:51:54.500Z",
-      "finishedAt": "2026-08-27T21:52:07.082Z",
-      "durationMs": 12582,
-      "details": {
-        "selectedEdge": "flow_downstream_7a37989d",
-        "keyboardCamera": true,
-        "replayMs": 10000,
-        "particles": 52,
-        "scrollDelta": 0,
-        "memoryDeltaBytes": 0
-      },
-      "executionIdentity": {
-        "applicationSourceBuildHash": "app-a946cd172e7873b8f29b",
-        "gateIdVersion": "D-constellation-interaction-short-replay@1",
-        "fixtureCorpusVersion": "Phase3C-Frozen-Browser-Corpus-1",
-        "fixtureInputHash": "fixture-a8a605222b9c93d082e9",
-        "priceSnapshotIdentity": "prices-086bbb3ef86a6b63",
-        "browserVersion": "151.0.7922.34",
-        "harnessVersion": "PHASE3A_QUALITY_LAB_V1",
-        "compatibilityHash": "compatible-16956412409e443353204abf"
-      }
     }
   ],
   "runtime": {
-    "totalWallMs": 233469,
-    "summedGateMs": 237010,
-    "appStartupMs": 1580,
-    "browserStartupMs": 417,
-    "solverHeavyMs": 192901,
-    "visualInteractionMs": 90927,
-    "harnessOverheadMs": 2384,
+    "totalWallMs": 214217,
+    "summedGateMs": 213176,
+    "appStartupMs": 1399,
+    "browserStartupMs": 399,
+    "solverHeavyMs": 192017,
+    "visualInteractionMs": 74960,
+    "harnessOverheadMs": 2139,
     "categoryTotalsMs": {
-      "worker": 204089,
-      "solver": 201696,
-      "proof": 201677,
-      "clean": 2507,
-      "cancellation": 2412,
-      "phase3b": 56125,
-      "fracture": 113977,
-      "handoff": 30471,
-      "constellation": 89919,
-      "visual": 62849,
-      "objectives": 22127,
-      "harvest": 79979,
-      "phase3d": 122964,
-      "phase3c": 64354,
-      "method-family": 114649,
-      "budget": 56797,
-      "responsive": 30825,
-      "accessibility": 32921,
-      "share-export": 2393
+      "worker": 196393,
+      "solver": 196393,
+      "proof": 196393,
+      "clean": 2386,
+      "phase3b": 56187,
+      "fracture": 114148,
+      "handoff": 27038,
+      "constellation": 74960,
+      "visual": 47922,
+      "objectives": 20928,
+      "harvest": 78889,
+      "phase3d": 123572,
+      "phase3c": 64021,
+      "method-family": 114902,
+      "budget": 56941,
+      "responsive": 14730,
+      "accessibility": 16783
     },
     "slowestGates": [
       {
         "id": "C-full-route-policy-evidence",
-        "durationMs": 57852,
+        "durationMs": 57961,
         "status": "PASS"
       },
       {
         "id": "C-core-budget-isolation",
-        "durationMs": 56797,
+        "durationMs": 56941,
         "status": "PASS"
       },
       {
         "id": "B-fractured-magic-alter-price-reversal",
-        "durationMs": 29055,
+        "durationMs": 29149,
         "status": "PASS"
       },
       {
         "id": "B-self-fracture-policy",
-        "durationMs": 27070,
+        "durationMs": 27038,
         "status": "PASS"
       },
       {
         "id": "B-harvest-objective-policy",
-        "durationMs": 22127,
-        "status": "PASS"
-      },
-      {
-        "id": "D-constellation-interaction-short-replay",
-        "durationMs": 12582,
+        "durationMs": 20928,
         "status": "PASS"
       },
       {
         "id": "D-constellation-scope-fit",
-        "durationMs": 8315,
+        "durationMs": 8670,
         "status": "PASS"
       },
       {
         "id": "D-constellation-large-scc-layout",
-        "durationMs": 6502,
+        "durationMs": 6060,
         "status": "PASS"
       },
       {
         "id": "A-clean-worker-canonical",
-        "durationMs": 2507,
+        "durationMs": 2386,
         "status": "PASS"
       },
       {
-        "id": "C-responsive-accessibility",
-        "durationMs": 2418,
+        "id": "D-frozen-policy-flow-renderer",
+        "durationMs": 2053,
+        "status": "PASS"
+      },
+      {
+        "id": "D-real-policy-flow-differential",
+        "durationMs": 1990,
         "status": "PASS"
       }
     ]
@@ -1240,10 +1005,8 @@
     "phase3dPolicyEvidenceBrowser": "quality-lab\\reports\\evidence\\phase3d-full-route-policy-evidence-browser.json",
     "phase3dPolicyEvidenceScreenshot": "quality-lab\\reports\\evidence\\phase3d-full-route-policy-evidence-desktop.png",
     "phase3dCoreBudgetWorkerAb": "quality-lab\\reports\\evidence\\phase3d-core-budget-worker-ab.json",
-    "phase3aShareExport": "quality-lab\\artifacts\\phase3a-2026-08-27T21-51-34-657Z\\shard-C\\phase3a-share-export.json",
-    "phase3aResponsiveMobile": "quality-lab\\artifacts\\phase3a-2026-08-27T21-51-34-657Z\\shard-C\\phase3a-responsive-mobile.png",
-    "runReport": "quality-lab\\artifacts\\phase3a-2026-08-27T21-51-34-657Z\\report.json",
-    "stableReport": "quality-lab\\reports\\phase3d-release-gate.json",
-    "summary": "quality-lab\\reports\\phase3d-release-gate.md"
+    "runReport": "quality-lab\\artifacts\\phase3a-2026-08-27T21-47-54-750Z\\report.json",
+    "stableReport": "quality-lab\\reports\\phase3d-dev-gate.json",
+    "summary": "quality-lab\\reports\\phase3d-dev-gate.md"
   }
 }

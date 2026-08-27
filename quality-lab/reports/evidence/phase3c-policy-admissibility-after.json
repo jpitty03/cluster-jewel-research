@@ -1,8 +1,8 @@
 {
   "phase": "3C",
   "kind": "POST_REPAIR_REPRODUCTION",
-  "generatedAt": "2026-08-27T19:22:27.963Z",
-  "elapsedMs": 28175,
+  "generatedAt": "2026-08-27T22:03:56.126Z",
+  "elapsedMs": 28226,
   "request": {
     "baseType": "Large Cluster Jewel",
     "clusterType": "Minions deal 10% increased Damage",
@@ -107,7 +107,7 @@
     "intent": "RECOMMEND",
     "statesExpanded": 1336,
     "cumulativeExpansionWork": 1336,
-    "elapsedMs": 3114,
+    "elapsedMs": 3334,
     "expansionRounds": 2,
     "maxStates": 5000,
     "maxWallTimeMs": 30000,
@@ -118,9 +118,9 @@
     "roundBudgetExhausted": false,
     "budgetExhausted": false,
     "returnedAtBudget": false,
-    "timeToFirstCompletedRoundMs": 1764,
-    "timeToFirstCertifiedPolicyMs": 1764,
-    "timeToFirstUsefulRecommendationMs": 1764,
+    "timeToFirstCompletedRoundMs": 1924,
+    "timeToFirstCertifiedPolicyMs": 1925,
+    "timeToFirstUsefulRecommendationMs": 1925,
     "expansionMode": "PERSISTENT_EXTENDED",
     "repeatedStatesExpanded": 0,
     "seedStatesExpanded": 1,
@@ -190,14 +190,14 @@
         "round": 1,
         "upperBoundChaos": 53.49605093026165,
         "statesExpanded": 1336,
-        "elapsedMs": 1764,
+        "elapsedMs": 1925,
         "phase": "FIRST_CERTIFIED"
       },
       {
         "round": 2,
         "upperBoundChaos": 53.49605093026165,
         "statesExpanded": 1336,
-        "elapsedMs": 3114,
+        "elapsedMs": 3334,
         "phase": "REFINEMENT"
       }
     ],
@@ -210,20 +210,20 @@
     "hostGuardDeadlineMs": 30250,
     "shutdownReserveMs": 1000,
     "hostGuardTriggered": false,
-    "timeToFirstUsefulExecutableRecommendationMs": 1764,
+    "timeToFirstUsefulExecutableRecommendationMs": 1925,
     "stageTimingMs": {
-      "seedResultMs": 0,
-      "transitionGenerationMs": 14,
-      "graphAggregationAndSetupMs": 110,
-      "bellmanMs": 2841,
-      "candidateClassificationAndTrustMs": 125,
+      "seedResultMs": 1,
+      "transitionGenerationMs": 27,
+      "graphAggregationAndSetupMs": 137,
+      "bellmanMs": 2977,
+      "candidateClassificationAndTrustMs": 163,
       "absorptionMs": 8,
-      "occupancyMs": 0,
-      "competitiveFrontierCollectionMs": 5,
-      "resultAssemblyMs": 3,
-      "repeatedRoundWorkMs": 1764,
-      "unattributedOrInterruptedMs": 8,
-      "serializationMs": 6
+      "occupancyMs": 2,
+      "competitiveFrontierCollectionMs": 8,
+      "resultAssemblyMs": 4,
+      "repeatedRoundWorkMs": 1923,
+      "unattributedOrInterruptedMs": 7,
+      "serializationMs": 7.261399999999412
     },
     "sessionReuse": {
       "status": "COLD",
@@ -232,13 +232,13 @@
       "retainedTransitionDistributions": 0,
       "scope": "FRACTURE_DOWNSTREAM"
     },
-    "totalElapsedMs": 28166,
+    "totalElapsedMs": 28215,
     "workScopes": {
-      "portfolioTotalStatesExpanded": 18336,
-      "portfolioRetainedStates": 9672,
+      "portfolioTotalStatesExpanded": 10002,
+      "portfolioRetainedStates": 8156,
       "selectedPolicyGraphStates": 1336,
       "acquisitionSynthesisStates": 1667,
-      "methodFamilyStates": 2474,
+      "methodFamilyStates": 1676,
       "proofBoundStates": 0
     },
     "harvestActionScope": {
@@ -277,8 +277,7 @@
     },
     "requestStopReason": "WALL_TIME",
     "secondaryStopReasons": [
-      "STATE_CAP",
-      "NO_PRODUCTIVE_PROOF_WORK"
+      "STATE_CAP"
     ],
     "requestBudget": {
       "semantics": "UP_TO_CAPS",
@@ -289,22 +288,21 @@
         "maxExpansionRounds": 3
       },
       "used": {
-        "statesExpanded": 3334,
-        "retainedStates": 12146,
-        "elapsedMs": 28166,
+        "statesExpanded": 1818,
+        "retainedStates": 9832,
+        "elapsedMs": 28215,
         "expansionRounds": 2,
-        "transitionsGenerated": 99303,
-        "transitionsReused": 6742
+        "transitionsGenerated": 63418,
+        "transitionsReused": 931
       },
       "stop": {
         "primary": "WALL_TIME",
         "secondary": [
-          "STATE_CAP",
-          "NO_PRODUCTIVE_PROOF_WORK"
+          "STATE_CAP"
         ],
         "evidence": [
           "requested up to 5,000 states / 30000ms / 3 rounds",
-          "used 3,334 expanded; 12,146 retained; 28166ms elapsed",
+          "used 1,818 expanded; 9,832 retained; 28215ms elapsed",
           "selected graph limits: state=false; wall=false; round=false",
           "Expanded states is the request high-water distinct-state graph; retained totals and stage allocations include independent reusable scopes and are intentionally non-additive.",
           "3 acquisition candidate(s) and 0 objective family/families retain proof debt."
@@ -312,64 +310,188 @@
       },
       "allocations": {
         "cleanRoute": {
-          "statesExpanded": 3334,
-          "retainedStates": 3334,
-          "wallTimeMs": 4007,
-          "transitionsGenerated": 17250,
-          "transitionsReused": 232,
-          "transitionGenerationMs": 35,
-          "bellmanMs": 2506,
-          "occupancyMs": 2
-        },
-        "fractureAcquisition": {
-          "statesExpanded": 1669,
-          "retainedStates": 1669,
-          "wallTimeMs": 3855,
-          "transitionsGenerated": 20073,
-          "transitionsReused": 657,
-          "transitionGenerationMs": 27,
-          "bellmanMs": 1086,
-          "occupancyMs": 1
-        },
-        "fractureDownstream": {
-          "statesExpanded": 4670,
-          "retainedStates": 4670,
-          "wallTimeMs": 7121,
-          "transitionsGenerated": 21497,
-          "transitionsReused": 244,
-          "transitionGenerationMs": 49,
-          "bellmanMs": 5347,
-          "occupancyMs": 2
-        },
-        "lowerBoundProbes": {
           "statesExpanded": 1667,
           "retainedStates": 1667,
-          "wallTimeMs": 1395,
-          "transitionsGenerated": 5758,
-          "transitionsReused": 5369,
-          "transitionGenerationMs": 11,
-          "bellmanMs": 77,
+          "wallTimeMs": 4002,
+          "transitionsGenerated": 10586,
+          "transitionsReused": 232,
+          "transitionGenerationMs": 30,
+          "bellmanMs": 106,
+          "occupancyMs": 0
+        },
+        "fractureAcquisition": {
+          "statesExpanded": 3335,
+          "retainedStates": 3335,
+          "wallTimeMs": 8088,
+          "transitionsGenerated": 20073,
+          "transitionsReused": 657,
+          "transitionGenerationMs": 66,
+          "bellmanMs": 4110,
+          "occupancyMs": 4
+        },
+        "fractureDownstream": {
+          "statesExpanded": 4821,
+          "retainedStates": 4821,
+          "wallTimeMs": 15338,
+          "transitionsGenerated": 20588,
+          "transitionsReused": 261,
+          "transitionGenerationMs": 75,
+          "bellmanMs": 7409,
+          "occupancyMs": 3
+        },
+        "lowerBoundProbes": {
+          "statesExpanded": 0,
+          "retainedStates": 0,
+          "wallTimeMs": 0,
+          "transitionsGenerated": 0,
+          "transitionsReused": 0,
+          "transitionGenerationMs": 0,
+          "bellmanMs": 0,
           "occupancyMs": 0
         },
         "bellmanAndOccupancy": {
-          "bellmanMs": 9351,
-          "occupancyMs": 3
+          "bellmanMs": 14496,
+          "occupancyMs": 9
         },
         "methodFamilyComparison": {
-          "statesExpanded": 17474,
-          "retainedStates": 4140,
-          "wallTimeMs": 14201,
-          "transitionsGenerated": 47728,
-          "transitionsReused": 460,
-          "transitionGenerationMs": 160,
+          "statesExpanded": 6676,
+          "retainedStates": 1676,
+          "wallTimeMs": 3501.547699999999,
+          "transitionsGenerated": 18510,
+          "transitionsReused": 1,
+          "transitionGenerationMs": 65,
           "bellmanMs": 0,
           "occupancyMs": 0
         },
         "serializationAndPresentationReserve": {
-          "usedMs": 6,
+          "usedMs": 7.261399999999412,
           "reservedMs": 1000
         }
+      },
+      "ledger": {
+        "version": "REQUEST_BUDGET_LEDGER_PHASE3D_V1",
+        "clock": "PERFORMANCE_NOW_MONOTONIC_REQUEST_RELATIVE",
+        "requestedWallTimeMs": 30000,
+        "engineDeadlineMs": 29000,
+        "coreDeadlineAtRequestMs": 24650,
+        "coreDeadlineFraction": 0.85,
+        "hostSerializationReserveMs": 1000,
+        "hostReserveEnteredAtRequestMs": 24679.035799999998,
+        "entries": [
+          {
+            "stage": "CORE_PORTFOLIO_SEARCH",
+            "accounting": "EXCLUSIVE",
+            "startedAtRequestMs": 0,
+            "finishedAtRequestMs": 24679.035799999998,
+            "usedWallTimeMs": 24679.035799999998,
+            "statesExpanded": 5002,
+            "retainedStates": 8156,
+            "stopReason": "HOST_RESERVE",
+            "remainingRequestMsAtStart": 30000,
+            "remainingRequestMsAtFinish": 5320.964200000002
+          },
+          {
+            "stage": "METHOD_FAMILY_SEARCH",
+            "accounting": "EXCLUSIVE",
+            "startedAtRequestMs": 24679.035799999998,
+            "finishedAtRequestMs": 28180.5837,
+            "usedWallTimeMs": 3482.0392999999967,
+            "statesExpanded": 6676,
+            "retainedStates": 1676,
+            "remainingRequestMsAtStart": 5320.964200000002,
+            "remainingRequestMsAtFinish": 1819.4163000000008
+          },
+          {
+            "stage": "POLICY_ADMISSIBILITY_REVALIDATION",
+            "accounting": "EXCLUSIVE",
+            "startedAtRequestMs": 24679.035799999998,
+            "finishedAtRequestMs": 28180.5837,
+            "usedWallTimeMs": 19.50840000000244,
+            "statesExpanded": 0,
+            "retainedStates": 0,
+            "remainingRequestMsAtStart": 5320.964200000002,
+            "remainingRequestMsAtFinish": 1819.4163000000008
+          },
+          {
+            "stage": "POLICY_EQUIVALENCE_PRESENTATION",
+            "accounting": "EXCLUSIVE",
+            "startedAtRequestMs": 28180.5837,
+            "finishedAtRequestMs": 28207.3023,
+            "usedWallTimeMs": 26.71860000000015,
+            "statesExpanded": 0,
+            "retainedStates": 0,
+            "remainingRequestMsAtStart": 1819.4163000000008,
+            "remainingRequestMsAtFinish": 1792.6977000000006
+          },
+          {
+            "stage": "HOST_SERIALIZATION_RESERVE",
+            "accounting": "EXCLUSIVE",
+            "startedAtRequestMs": 28207.305,
+            "finishedAtRequestMs": 28214.5854,
+            "usedWallTimeMs": 7.261399999999412,
+            "statesExpanded": 0,
+            "retainedStates": 0,
+            "remainingRequestMsAtStart": 1792.6949999999997,
+            "remainingRequestMsAtFinish": 1785.4146
+          },
+          {
+            "stage": "ACQUISITION_SYNTHESIS",
+            "accounting": "NESTED_CORE_DETAIL",
+            "startedAtRequestMs": 4062.6486000000004,
+            "finishedAtRequestMs": 23527.8704,
+            "usedWallTimeMs": 8088,
+            "statesExpanded": 3335,
+            "retainedStates": 3335,
+            "remainingRequestMsAtStart": 25937.3514,
+            "remainingRequestMsAtFinish": 6472.1296
+          },
+          {
+            "stage": "PROOF_BOUND_WORK",
+            "accounting": "NESTED_CORE_DETAIL",
+            "startedAtRequestMs": 0,
+            "finishedAtRequestMs": 0,
+            "usedWallTimeMs": 0,
+            "statesExpanded": 0,
+            "retainedStates": 0,
+            "remainingRequestMsAtStart": 30000,
+            "remainingRequestMsAtFinish": 30000
+          }
+        ],
+        "exclusiveAccountedMs": 28214.563499999997,
+        "unclassifiedMs": 0.021900000003370224,
+        "reconciled": true,
+        "explanation": [
+          "Core envelope is 85% of the engine deadline and is independent of compareMethodFamilies=true.",
+          "Core stopped at 5,002 expanded states with HOST_RESERVE.",
+          "Acquisition synthesis and proof-bound rows are measured nested details and are not added to exclusive request time.",
+          "Family search excludes separately timed policy-admissibility revalidation."
+        ]
       }
+    },
+    "coreRecommendationSnapshot": {
+      "version": "CORE_RECOMMENDATION_SNAPSHOT_PHASE3D_V1",
+      "compareMethodFamiliesRequested": true,
+      "coreEnvelope": {
+        "deadlineFraction": 0.85,
+        "deadlineAtRequestMs": 24650,
+        "allocatedWallTimeMs": 24650
+      },
+      "selectedExecutableUChaos": 1459.7923662160783,
+      "candidateExecutableUChaos": [
+        {
+          "candidateId": "candidate_1",
+          "fullRouteUChaos": 1459.7923662160783
+        },
+        {
+          "candidateId": "candidate_2",
+          "fullRouteUChaos": 1636.3811154830044
+        }
+      ],
+      "retainedStateFingerprint": "states-c233b212",
+      "statesExpanded": 5002,
+      "retainedStates": 8156,
+      "stopReason": "HOST_RESERVE",
+      "canonicalPolicyFingerprint": "core-c8da05a5"
     }
   },
   "policyFlowTopology": {
@@ -403,65 +525,66 @@
       "badge": "Open search",
       "forcedAcquisitionType": "OPEN"
     },
-    "status": "MORE_EXPENSIVE",
+    "status": "DOMINATED",
     "evaluationSource": "INDEPENDENT_SOLVE",
     "incumbentSource": "INDEPENDENT_DISCOVERY",
     "familySearchStatus": "BEST_FOUND_UNPROVEN",
     "route": {
-      "actionId": "acquire_candidate_0_clean-base_0",
-      "name": "Start clean base",
-      "acquisitionCandidateId": "candidate_0",
-      "acquisitionMethodId": "clean-base_0",
-      "expectedTotalCostChaos": 4767.731263962971,
-      "lowerBoundChaos": 40.14397503191489,
-      "incumbentUpperBoundChaos": 4767.731263962971,
-      "optimalityGapChaos": 4727.587288931056,
+      "actionId": "acquire_candidate_1_self-fracture_executable",
+      "name": "Start self-fracture: Primordial Bond",
+      "acquisitionCandidateId": "candidate_1",
+      "acquisitionMethodId": "self-fracture_executable",
+      "expectedTotalCostChaos": 1459.7923662160783,
+      "lowerBoundChaos": 340.41913,
+      "incumbentUpperBoundChaos": 1459.7923662160783,
+      "optimalityGapChaos": 1119.3732362160783,
       "status": "RESOLVED",
       "couldBeatResolvedIncumbent": false,
       "metrics": {
-        "expectedChaosCost": 4767.731263962971,
-        "expectedPhysicalActions": 35645.51554742855,
-        "estimatedManualTimeMs": 14258206.21897142,
-        "objectiveScore": 4767.731263962971,
+        "expectedChaosCost": 1459.7923662160783,
+        "expectedPhysicalActions": 740.8471930308776,
+        "estimatedManualTimeMs": 314538.8772123303,
+        "objectiveScore": 1459.7923662158387,
         "effortConfidence": "DEFAULT_APPROXIMATE"
       },
       "acquisitionMetrics": {
-        "expectedChaosCost": 40,
-        "expectedPhysicalActions": 0,
-        "estimatedManualTimeMs": 0,
-        "objectiveScore": 40,
+        "expectedChaosCost": 1406.2963152858167,
+        "expectedPhysicalActions": 426.60106382934487,
+        "estimatedManualTimeMs": 188840.4255317186,
+        "objectiveScore": 1406.2963152858167,
         "effortConfidence": "DEFAULT_APPROXIMATE"
       },
       "downstreamMetrics": {
-        "expectedChaosCost": 4727.731263962971,
-        "expectedPhysicalActions": 35645.51554742855,
-        "estimatedManualTimeMs": 14258206.21897142,
-        "objectiveScore": 4727.731263438594,
+        "expectedChaosCost": 53.49605093026165,
+        "expectedPhysicalActions": 314.2461292015328,
+        "estimatedManualTimeMs": 125698.45168061172,
+        "objectiveScore": 53.496050930021994,
         "effortConfidence": "DEFAULT_APPROXIMATE"
       }
     },
-    "fullRouteL": 40.14397503191489,
-    "fullRouteU": 4767.731263962971,
+    "fullRouteL": 340.41913,
+    "fullRouteU": 1459.7923662160783,
     "proof": {
       "selectedPolicyStatus": "FULLY RESOLVED / PROPER / ABSORBING / COST-RECONCILED",
       "proofLevel": "BEST FULLY RESOLVED POLICY FOUND",
-      "onPolicyReachableStates": 415,
+      "onPolicyReachableStates": 360,
       "onPolicyTerminalStates": 15,
       "onPolicyUnresolvedTransitions": 0,
-      "terminalAbsorptionProbability": 0.9999999980241998,
+      "terminalAbsorptionProbability": 0.9999999990147179,
       "proper": true,
       "fullyResolved": true,
       "bellmanConverged": true,
       "occupancyConverged": true,
       "costReconciled": true,
-      "reconciliationDifferenceChaos": 5.243555278866552e-7
+      "reconciliationDifferenceChaos": 2.396589593445242e-10
     },
     "onPolicyActionIds": [
       "alteration_orb",
       "augmentation_orb",
-      "clean_base_initial",
       "exalted_orb",
+      "fracturing_orb",
       "regal_orb",
+      "restart_reacquire",
       "scouring_orb",
       "transmutation_orb"
     ],
@@ -469,74 +592,43 @@
       {
         "actionId": "alteration_orb",
         "actionName": "Orb of Alteration",
-        "expectedCount": 35043.578236178895,
-        "expectedCostChaos": 4681.822052353502
-      },
-      {
-        "actionId": "clean_base_initial",
-        "actionName": "Initial clean cluster jewel base",
-        "expectedCount": 1,
-        "expectedCostChaos": 40
-      },
-      {
-        "actionId": "augmentation_orb",
-        "actionName": "Orb of Augmentation",
-        "expectedCount": 529.4267566801163,
-        "expectedCostChaos": 20.864708480763387
+        "expectedCount": 193.388459708237,
+        "expectedCostChaos": 25.836698217020462
       },
       {
         "actionId": "exalted_orb",
         "actionName": "Exalted Orb Slam",
-        "expectedCount": 11.632847748846748,
-        "expectedCostChaos": 13.610431866150691
+        "expectedCount": 11.63284774832936,
+        "expectedCostChaos": 13.610431865545353
       },
       {
         "actionId": "scouring_orb",
         "actionName": "Orb of Scouring",
-        "expectedCount": 19.625902273506394,
-        "expectedCostChaos": 10.580323915647316
+        "expectedCount": 19.62590227263375,
+        "expectedCostChaos": 10.580323915176912
+      },
+      {
+        "actionId": "augmentation_orb",
+        "actionName": "Orb of Augmentation",
+        "expectedCount": 68.97301719969307,
+        "expectedCostChaos": 2.718226607839904
       },
       {
         "actionId": "regal_orb",
         "actionName": "Regal Orb",
-        "expectedCount": 20.625902273557184,
-        "expectedCostChaos": 0.7503703247120104
-      },
-      {
-        "actionId": "transmutation_orb",
-        "actionName": "Orb of Transmutation",
-        "expectedCount": 20.62590227350724,
-        "expectedCostChaos": 0.10337702219481829
+        "expectedCount": 20.625902272636196,
+        "expectedCostChaos": 0.7503703246785048
       }
     ],
     "retainedStates": 1336,
     "transitionDistributionsGenerated": 4247,
     "budget": {
       "maxStates": 5000,
-      "maxWallTimeMs": 6513,
+      "maxWallTimeMs": 8000,
       "maxExpansionRounds": 3,
-      "elapsedMs": 3114
+      "elapsedMs": 3334
     },
-    "policyEquivalenceFingerprint": "policy-9e41c4f9",
-    "policyEquivalenceEvidence": {
-      "version": "CANONICAL_POLICY_EQUIVALENCE_V1",
-      "physicalAcquisitionIdentity": "{\"state\":\"Large Cluster Jewel|Minions deal 10% increased Damage|84|8|normal|influenced=false|synthesised=false|acquisitionMenu=false|methodFamilyActionEvidence=\",\"kind\":\"CLEAN\",\"method\":\"clean-base\",\"synthesisTerminalSemantics\":\"CLEAN_BASE\"}",
-      "normalizedPolicyDecisionCount": 400,
-      "requiredActionEvidence": [
-        "alteration_orb",
-        "augmentation_orb",
-        "clean_base_initial",
-        "exalted_orb",
-        "regal_orb",
-        "scouring_orb",
-        "transmutation_orb"
-      ],
-      "recoveryDecisionCount": 152,
-      "terminalStateCount": 0,
-      "usageTolerance": 0.000001
-    },
-    "equivalentToSelectedPolicy": false,
-    "explanation": "This resolved eligible policy is dominated by the selected policy for the requested objective and its tie-breakers."
+    "explanation": "This summary does not add a distinct resolved policy to the canonical candidate set."
   },
   "conventional": {
     "id": "family_conventional",
@@ -564,18 +656,15 @@
       ],
       "forcedAcquisitionType": "CLEAN"
     },
-    "status": "MORE_EXPENSIVE",
+    "status": "UNRESOLVED_AT_BUDGET",
     "evaluationSource": "INDEPENDENT_SOLVE",
-    "incumbentSource": "ADMISSIBLE_KNOWN_POLICY",
-    "familySearchStatus": "BEST_FOUND_UNPROVEN",
-    "knownPolicyCostChaos": 4767.73126396295,
-    "revalidatedKnownPolicyCostChaos": 4767.7312611739435,
+    "familySearchStatus": "UNRESOLVED",
     "selectedOpenPolicyCostChaos": 1459.7923662160783,
     "selectedOpenPolicyAdmissibility": {
-      "version": "POLICY_ADMISSIBILITY_PHASE3C_V1",
+      "version": "POLICY_ADMISSIBILITY_PHASE3D_V2",
       "admissible": false,
       "familyId": "family_conventional",
-      "sourcePolicyFingerprint": "selected-dbb616c0",
+      "sourcePolicyFingerprint": "selected-3303df08",
       "sourceAcquisitionKind": "SELF_FRACTURE",
       "sourceAcquisitionCostChaos": 1406.2963152858167,
       "familyAcquisitionCostChaos": 40,
@@ -590,6 +679,158 @@
       "transitionsRegenerated": 0,
       "transitionOutcomesCompared": 0,
       "maximumTransitionProbabilityDifference": 0,
+      "requiredActionEvidenceChecks": [],
+      "fullRouteActionEvidence": {
+        "version": "FULL_ROUTE_ACTION_EVIDENCE_V1",
+        "physicalAcquisitionIdentity": "Large Cluster Jewel|Minions deal 10% increased Damage|84|8|magic|influenced=false|synthesised=false|acquisitionMenu=false|methodFamilyActionEvidence=|Suffix:Primordial Bond:1:F:",
+        "policySessionIdentity": "phase2j-4ae46f61",
+        "sourcePolicyFingerprint": "selected-3303df08",
+        "entries": [
+          {
+            "actionId": "fracturing_orb",
+            "actionName": "Fracturing Orb",
+            "expectedCount": 3.9999999999958504,
+            "expectedCostChaos": 1194.3999999987611,
+            "scope": "ACQUISITION",
+            "evidenceSource": "ACQUISITION_SYNTHESIS_POLICY",
+            "physicalAcquisitionIdentity": "Large Cluster Jewel|Minions deal 10% increased Damage|84|8|magic|influenced=false|synthesised=false|acquisitionMenu=false|methodFamilyActionEvidence=|Suffix:Primordial Bond:1:F:",
+            "policySessionIdentity": "phase2j-4ae46f61",
+            "sourcePolicyFingerprint": "selected-3303df08"
+          },
+          {
+            "actionId": "restart_reacquire",
+            "actionName": "Abandon attempt and reacquire a clean base",
+            "expectedCount": 2.999999999996883,
+            "expectedCostChaos": 119.99999999987531,
+            "scope": "ACQUISITION",
+            "evidenceSource": "ACQUISITION_SYNTHESIS_POLICY",
+            "physicalAcquisitionIdentity": "Large Cluster Jewel|Minions deal 10% increased Damage|84|8|magic|influenced=false|synthesised=false|acquisitionMenu=false|methodFamilyActionEvidence=|Suffix:Primordial Bond:1:F:",
+            "policySessionIdentity": "phase2j-4ae46f61",
+            "sourcePolicyFingerprint": "selected-3303df08"
+          },
+          {
+            "actionId": "alteration_orb",
+            "actionName": "Orb of Alteration",
+            "expectedCount": 323.68085106349344,
+            "expectedCostChaos": 43.24376170208261,
+            "scope": "ACQUISITION",
+            "evidenceSource": "ACQUISITION_SYNTHESIS_POLICY",
+            "physicalAcquisitionIdentity": "Large Cluster Jewel|Minions deal 10% increased Damage|84|8|magic|influenced=false|synthesised=false|acquisitionMenu=false|methodFamilyActionEvidence=|Suffix:Primordial Bond:1:F:",
+            "policySessionIdentity": "phase2j-4ae46f61",
+            "sourcePolicyFingerprint": "selected-3303df08"
+          },
+          {
+            "actionId": "exalted_orb",
+            "actionName": "Exalted Orb Slam",
+            "expectedCount": 3.999999999995821,
+            "expectedCostChaos": 4.67999999999511,
+            "scope": "ACQUISITION",
+            "evidenceSource": "ACQUISITION_SYNTHESIS_POLICY",
+            "physicalAcquisitionIdentity": "Large Cluster Jewel|Minions deal 10% increased Damage|84|8|magic|influenced=false|synthesised=false|acquisitionMenu=false|methodFamilyActionEvidence=|Suffix:Primordial Bond:1:F:",
+            "policySessionIdentity": "phase2j-4ae46f61",
+            "sourcePolicyFingerprint": "selected-3303df08"
+          },
+          {
+            "actionId": "augmentation_orb",
+            "actionName": "Orb of Augmentation",
+            "expectedCount": 82.9202127658712,
+            "expectedCostChaos": 3.2678855851029853,
+            "scope": "ACQUISITION",
+            "evidenceSource": "ACQUISITION_SYNTHESIS_POLICY",
+            "physicalAcquisitionIdentity": "Large Cluster Jewel|Minions deal 10% increased Damage|84|8|magic|influenced=false|synthesised=false|acquisitionMenu=false|methodFamilyActionEvidence=|Suffix:Primordial Bond:1:F:",
+            "policySessionIdentity": "phase2j-4ae46f61",
+            "sourcePolicyFingerprint": "selected-3303df08"
+          },
+          {
+            "actionId": "scouring_orb",
+            "actionName": "Orb of Scouring",
+            "expectedCount": 0.9999999999989615,
+            "expectedCostChaos": 0.5390999999994401,
+            "scope": "ACQUISITION",
+            "evidenceSource": "ACQUISITION_SYNTHESIS_POLICY",
+            "physicalAcquisitionIdentity": "Large Cluster Jewel|Minions deal 10% increased Damage|84|8|magic|influenced=false|synthesised=false|acquisitionMenu=false|methodFamilyActionEvidence=|Suffix:Primordial Bond:1:F:",
+            "policySessionIdentity": "phase2j-4ae46f61",
+            "sourcePolicyFingerprint": "selected-3303df08"
+          },
+          {
+            "actionId": "regal_orb",
+            "actionName": "Regal Orb",
+            "expectedCount": 3.9999999999958216,
+            "expectedCostChaos": 0.145519999999848,
+            "scope": "ACQUISITION",
+            "evidenceSource": "ACQUISITION_SYNTHESIS_POLICY",
+            "physicalAcquisitionIdentity": "Large Cluster Jewel|Minions deal 10% increased Damage|84|8|magic|influenced=false|synthesised=false|acquisitionMenu=false|methodFamilyActionEvidence=|Suffix:Primordial Bond:1:F:",
+            "policySessionIdentity": "phase2j-4ae46f61",
+            "sourcePolicyFingerprint": "selected-3303df08"
+          },
+          {
+            "actionId": "transmutation_orb",
+            "actionName": "Orb of Transmutation",
+            "expectedCount": 3.999999999996871,
+            "expectedCostChaos": 0.020047999999984318,
+            "scope": "ACQUISITION",
+            "evidenceSource": "ACQUISITION_SYNTHESIS_POLICY",
+            "physicalAcquisitionIdentity": "Large Cluster Jewel|Minions deal 10% increased Damage|84|8|magic|influenced=false|synthesised=false|acquisitionMenu=false|methodFamilyActionEvidence=|Suffix:Primordial Bond:1:F:",
+            "policySessionIdentity": "phase2j-4ae46f61",
+            "sourcePolicyFingerprint": "selected-3303df08"
+          },
+          {
+            "actionId": "alteration_orb",
+            "actionName": "Orb of Alteration",
+            "expectedCount": 193.388459708237,
+            "expectedCostChaos": 25.836698217020462,
+            "scope": "DOWNSTREAM",
+            "evidenceSource": "DOWNSTREAM_SELECTED_POLICY",
+            "physicalAcquisitionIdentity": "Large Cluster Jewel|Minions deal 10% increased Damage|84|8|magic|influenced=false|synthesised=false|acquisitionMenu=false|methodFamilyActionEvidence=|Suffix:Primordial Bond:1:F:",
+            "policySessionIdentity": "phase2j-4ae46f61",
+            "sourcePolicyFingerprint": "selected-3303df08"
+          },
+          {
+            "actionId": "exalted_orb",
+            "actionName": "Exalted Orb Slam",
+            "expectedCount": 11.63284774832936,
+            "expectedCostChaos": 13.610431865545353,
+            "scope": "DOWNSTREAM",
+            "evidenceSource": "DOWNSTREAM_SELECTED_POLICY",
+            "physicalAcquisitionIdentity": "Large Cluster Jewel|Minions deal 10% increased Damage|84|8|magic|influenced=false|synthesised=false|acquisitionMenu=false|methodFamilyActionEvidence=|Suffix:Primordial Bond:1:F:",
+            "policySessionIdentity": "phase2j-4ae46f61",
+            "sourcePolicyFingerprint": "selected-3303df08"
+          },
+          {
+            "actionId": "scouring_orb",
+            "actionName": "Orb of Scouring",
+            "expectedCount": 19.62590227263375,
+            "expectedCostChaos": 10.580323915176912,
+            "scope": "DOWNSTREAM",
+            "evidenceSource": "DOWNSTREAM_SELECTED_POLICY",
+            "physicalAcquisitionIdentity": "Large Cluster Jewel|Minions deal 10% increased Damage|84|8|magic|influenced=false|synthesised=false|acquisitionMenu=false|methodFamilyActionEvidence=|Suffix:Primordial Bond:1:F:",
+            "policySessionIdentity": "phase2j-4ae46f61",
+            "sourcePolicyFingerprint": "selected-3303df08"
+          },
+          {
+            "actionId": "augmentation_orb",
+            "actionName": "Orb of Augmentation",
+            "expectedCount": 68.97301719969307,
+            "expectedCostChaos": 2.718226607839904,
+            "scope": "DOWNSTREAM",
+            "evidenceSource": "DOWNSTREAM_SELECTED_POLICY",
+            "physicalAcquisitionIdentity": "Large Cluster Jewel|Minions deal 10% increased Damage|84|8|magic|influenced=false|synthesised=false|acquisitionMenu=false|methodFamilyActionEvidence=|Suffix:Primordial Bond:1:F:",
+            "policySessionIdentity": "phase2j-4ae46f61",
+            "sourcePolicyFingerprint": "selected-3303df08"
+          },
+          {
+            "actionId": "regal_orb",
+            "actionName": "Regal Orb",
+            "expectedCount": 20.625902272636196,
+            "expectedCostChaos": 0.7503703246785048,
+            "scope": "DOWNSTREAM",
+            "evidenceSource": "DOWNSTREAM_SELECTED_POLICY",
+            "physicalAcquisitionIdentity": "Large Cluster Jewel|Minions deal 10% increased Damage|84|8|magic|influenced=false|synthesised=false|acquisitionMenu=false|methodFamilyActionEvidence=|Suffix:Primordial Bond:1:F:",
+            "policySessionIdentity": "phase2j-4ae46f61",
+            "sourcePolicyFingerprint": "selected-3303df08"
+          }
+        ]
+      },
       "failures": [
         {
           "code": "ACQUISITION_KIND_MISMATCH",
@@ -611,521 +852,32 @@
         }
       ]
     },
-    "knownPolicyAdmissibility": {
-      "version": "POLICY_ADMISSIBILITY_PHASE3C_V1",
-      "admissible": true,
-      "familyId": "family_conventional",
-      "sourcePolicyFingerprint": "selected-a0abab86",
-      "sourceAcquisitionKind": "CLEAN",
-      "sourceAcquisitionCostChaos": 40,
-      "familyAcquisitionCostChaos": 40,
-      "selectedPolicyDecisionCount": 400,
-      "selectedPhysicalActionIds": [
-        "alteration_orb",
-        "augmentation_orb",
-        "exalted_orb",
-        "regal_orb",
-        "scouring_orb",
-        "transmutation_orb"
-      ],
-      "transitionsRegenerated": 400,
-      "transitionOutcomesCompared": 54185,
-      "maximumTransitionProbabilityDifference": 0,
-      "failures": [],
-      "evaluation": {
-        "startKey": "Large Cluster Jewel:Minions deal 10% increased Damage:84:8:flags(influenced=false,synthesised=false,acquisitionMenu=false,methodFamilyActionEvidence=):normal|P:[]|S:[]",
-        "reachableStateCount": 415,
-        "reachableNonTerminalStateCount": 400,
-        "reachableTerminalStateCount": 15,
-        "unresolvedTransitionCount": 0,
-        "probabilityRowsReconciled": true,
-        "maximumProbabilityRowDifference": 1.5543122344752192e-15,
-        "totalExpectedCostChaos": 4727.7312611739435,
-        "expectedPhysicalActions": 35645.515548847296,
-        "estimatedManualTimeMs": 14258206.219538897,
-        "terminalAbsorptionProbability": 1.0000000000891556,
-        "proper": true,
-        "valueConverged": true,
-        "occupancyConverged": true,
-        "costReconciled": true,
-        "reconciliationDifferenceChaos": 0.0000029772227208013646,
-        "valueIterations": 6,
-        "occupancyIterations": 6,
-        "expectedVisitsByStateKey": {},
-        "valuesByStateKey": {},
-        "expectedActionUsage": [
-          {
-            "actionId": "alteration_orb",
-            "actionName": "Orb of Alteration",
-            "expectedCount": 35043.57823757385,
-            "expectedCostChaos": 4681.82205253987
-          },
-          {
-            "actionId": "augmentation_orb",
-            "actionName": "Orb of Augmentation",
-            "expectedCount": 529.4267567011905,
-            "expectedCostChaos": 20.864708481593922
-          },
-          {
-            "actionId": "exalted_orb",
-            "actionName": "Exalted Orb Slam",
-            "expectedCount": 11.632847749309795,
-            "expectedCostChaos": 13.610431866692453
-          },
-          {
-            "actionId": "scouring_orb",
-            "actionName": "Orb of Scouring",
-            "expectedCount": 19.62590227428927,
-            "expectedCostChaos": 10.580323916069357
-          },
-          {
-            "actionId": "regal_orb",
-            "actionName": "Regal Orb",
-            "expectedCount": 20.625902274377083,
-            "expectedCostChaos": 0.7503703247418383
-          },
-          {
-            "actionId": "transmutation_orb",
-            "actionName": "Orb of Transmutation",
-            "expectedCount": 20.62590227428997,
-            "expectedCostChaos": 0.10337702219874133
-          }
-        ]
-      },
-      "sourceParity": {
-        "expectedDownstreamCostChaos": 4727.73126396295,
-        "revalidatedDownstreamCostChaos": 4727.7312611739435,
-        "costDifferenceChaos": 0.0000027890064302482642,
-        "expectedPhysicalActions": 35645.51554742855,
-        "revalidatedPhysicalActions": 35645.515548847296,
-        "actionDifference": 0.0000014187462511472404,
-        "expectedManualTimeMs": 14258206.21897142,
-        "revalidatedManualTimeMs": 14258206.219538897,
-        "timeDifferenceMs": 0.0005674771964550018
-      }
-    },
-    "searchDivergence": {
-      "knownRetainedStates": 3334,
-      "independentRetainedStates": 1667,
-      "retainedStatesOnlyInKnown": 2811,
-      "retainedStatesOnlyInIndependent": 1144,
-      "commonRetainedStates": 523,
-      "knownOnPolicyStatesMissingFromIndependentGraph": 231,
-      "commonOnPolicyStatesWithDifferentActions": 1,
-      "knownSelectedActionsMissingFromIndependentGraph": 0,
-      "rankedDivergences": [
-        {
-          "stateKey": "Large Cluster Jewel:Minions deal 10% increased Damage:84:8:flags(influenced=false,synthesised=false,acquisitionMenu=false,methodFamilyActionEvidence=):magic|P:[groups(AfflictionJewelSmallPassivesGrantArmour)]|S:[]",
-          "state": {
-            "rarity": "magic",
-            "affixCount": 1,
-            "matchedTargetCount": 0,
-            "targetCount": 3
-          },
-          "occupancyUnderKnownPolicy": 1013.8069816437692,
-          "occupancyUnderIndependentPolicy": 0,
-          "knownSelectedActionId": "alteration_orb",
-          "knownActionQInKnownGraph": 4727.859851438595,
-          "reason": "STATE_NOT_DISCOVERED"
-        },
-        {
-          "stateKey": "Large Cluster Jewel:Minions deal 10% increased Damage:84:8:flags(influenced=false,synthesised=false,acquisitionMenu=false,methodFamilyActionEvidence=):magic|P:[groups(AfflictionJewelSmallPassivesGrantDamage)]|S:[]",
-          "state": {
-            "rarity": "magic",
-            "affixCount": 1,
-            "matchedTargetCount": 0,
-            "targetCount": 3
-          },
-          "occupancyUnderKnownPolicy": 1013.8069816437692,
-          "occupancyUnderIndependentPolicy": 0,
-          "knownSelectedActionId": "alteration_orb",
-          "knownActionQInKnownGraph": 4727.859851438595,
-          "reason": "STATE_NOT_DISCOVERED"
-        },
-        {
-          "stateKey": "Large Cluster Jewel:Minions deal 10% increased Damage:84:8:flags(influenced=false,synthesised=false,acquisitionMenu=false,methodFamilyActionEvidence=):magic|P:[groups(AfflictionJewelSmallPassivesGrantES)]|S:[]",
-          "state": {
-            "rarity": "magic",
-            "affixCount": 1,
-            "matchedTargetCount": 0,
-            "targetCount": 3
-          },
-          "occupancyUnderKnownPolicy": 1013.8069816437692,
-          "occupancyUnderIndependentPolicy": 0,
-          "knownSelectedActionId": "alteration_orb",
-          "knownActionQInKnownGraph": 4727.859851438595,
-          "reason": "STATE_NOT_DISCOVERED"
-        },
-        {
-          "stateKey": "Large Cluster Jewel:Minions deal 10% increased Damage:84:8:flags(influenced=false,synthesised=false,acquisitionMenu=false,methodFamilyActionEvidence=):magic|P:[groups(AfflictionJewelSmallPassivesGrantEvasion)]|S:[]",
-          "state": {
-            "rarity": "magic",
-            "affixCount": 1,
-            "matchedTargetCount": 0,
-            "targetCount": 3
-          },
-          "occupancyUnderKnownPolicy": 1013.8069816437692,
-          "occupancyUnderIndependentPolicy": 0,
-          "knownSelectedActionId": "alteration_orb",
-          "knownActionQInKnownGraph": 4727.859851438595,
-          "reason": "STATE_NOT_DISCOVERED"
-        },
-        {
-          "stateKey": "Large Cluster Jewel:Minions deal 10% increased Damage:84:8:flags(influenced=false,synthesised=false,acquisitionMenu=false,methodFamilyActionEvidence=):magic|P:[groups(AfflictionJewelSmallPassivesGrantLife)]|S:[]",
-          "state": {
-            "rarity": "magic",
-            "affixCount": 1,
-            "matchedTargetCount": 0,
-            "targetCount": 3
-          },
-          "occupancyUnderKnownPolicy": 1013.8069816437692,
-          "occupancyUnderIndependentPolicy": 0,
-          "knownSelectedActionId": "alteration_orb",
-          "knownActionQInKnownGraph": 4727.859851438595,
-          "reason": "STATE_NOT_DISCOVERED"
-        },
-        {
-          "stateKey": "Large Cluster Jewel:Minions deal 10% increased Damage:84:8:flags(influenced=false,synthesised=false,acquisitionMenu=false,methodFamilyActionEvidence=):magic|P:[groups(AfflictionJewelSmallPassivesGrantMana)]|S:[]",
-          "state": {
-            "rarity": "magic",
-            "affixCount": 1,
-            "matchedTargetCount": 0,
-            "targetCount": 3
-          },
-          "occupancyUnderKnownPolicy": 1013.8069816437692,
-          "occupancyUnderIndependentPolicy": 0,
-          "knownSelectedActionId": "alteration_orb",
-          "knownActionQInKnownGraph": 4727.859851438595,
-          "reason": "STATE_NOT_DISCOVERED"
-        },
-        {
-          "stateKey": "Large Cluster Jewel:Minions deal 10% increased Damage:84:8:flags(influenced=false,synthesised=false,acquisitionMenu=false,methodFamilyActionEvidence=):magic|P:[groups(Feasting Fiends)]|S:[]",
-          "state": {
-            "rarity": "magic",
-            "affixCount": 1,
-            "matchedTargetCount": 0,
-            "targetCount": 3
-          },
-          "occupancyUnderKnownPolicy": 844.8391513698078,
-          "occupancyUnderIndependentPolicy": 0,
-          "knownSelectedActionId": "alteration_orb",
-          "knownActionQInKnownGraph": 4727.859851438595,
-          "reason": "STATE_NOT_DISCOVERED"
-        },
-        {
-          "stateKey": "Large Cluster Jewel:Minions deal 10% increased Damage:84:8:flags(influenced=false,synthesised=false,acquisitionMenu=false,methodFamilyActionEvidence=):magic|P:[]|S:[groups(AfflictionJewelSmallPassivesGrantChaosRes)]",
-          "state": {
-            "rarity": "magic",
-            "affixCount": 1,
-            "matchedTargetCount": 0,
-            "targetCount": 3
-          },
-          "occupancyUnderKnownPolicy": 683.0245595439095,
-          "occupancyUnderIndependentPolicy": 0,
-          "knownSelectedActionId": "alteration_orb",
-          "knownActionQInKnownGraph": 4727.859851438595,
-          "reason": "STATE_NOT_DISCOVERED"
-        },
-        {
-          "stateKey": "Large Cluster Jewel:Minions deal 10% increased Damage:84:8:flags(influenced=false,synthesised=false,acquisitionMenu=false,methodFamilyActionEvidence=):magic|P:[]|S:[groups(AfflictionJewelSmallPassivesGrantColdRes)]",
-          "state": {
-            "rarity": "magic",
-            "affixCount": 1,
-            "matchedTargetCount": 0,
-            "targetCount": 3
-          },
-          "occupancyUnderKnownPolicy": 683.0245595439095,
-          "occupancyUnderIndependentPolicy": 0,
-          "knownSelectedActionId": "alteration_orb",
-          "knownActionQInKnownGraph": 4727.859851438595,
-          "reason": "STATE_NOT_DISCOVERED"
-        },
-        {
-          "stateKey": "Large Cluster Jewel:Minions deal 10% increased Damage:84:8:flags(influenced=false,synthesised=false,acquisitionMenu=false,methodFamilyActionEvidence=):magic|P:[]|S:[groups(AfflictionJewelSmallPassivesGrantDex)]",
-          "state": {
-            "rarity": "magic",
-            "affixCount": 1,
-            "matchedTargetCount": 0,
-            "targetCount": 3
-          },
-          "occupancyUnderKnownPolicy": 683.0245595439095,
-          "occupancyUnderIndependentPolicy": 0,
-          "knownSelectedActionId": "alteration_orb",
-          "knownActionQInKnownGraph": 4727.859851438595,
-          "reason": "STATE_NOT_DISCOVERED"
-        },
-        {
-          "stateKey": "Large Cluster Jewel:Minions deal 10% increased Damage:84:8:flags(influenced=false,synthesised=false,acquisitionMenu=false,methodFamilyActionEvidence=):magic|P:[]|S:[groups(AfflictionJewelSmallPassivesGrantElementalRes)]",
-          "state": {
-            "rarity": "magic",
-            "affixCount": 1,
-            "matchedTargetCount": 0,
-            "targetCount": 3
-          },
-          "occupancyUnderKnownPolicy": 683.0245595439095,
-          "occupancyUnderIndependentPolicy": 0,
-          "knownSelectedActionId": "alteration_orb",
-          "knownActionQInKnownGraph": 4727.859851438595,
-          "reason": "STATE_NOT_DISCOVERED"
-        },
-        {
-          "stateKey": "Large Cluster Jewel:Minions deal 10% increased Damage:84:8:flags(influenced=false,synthesised=false,acquisitionMenu=false,methodFamilyActionEvidence=):magic|P:[]|S:[groups(AfflictionJewelSmallPassivesGrantFireRes)]",
-          "state": {
-            "rarity": "magic",
-            "affixCount": 1,
-            "matchedTargetCount": 0,
-            "targetCount": 3
-          },
-          "occupancyUnderKnownPolicy": 683.0245595439095,
-          "occupancyUnderIndependentPolicy": 0,
-          "knownSelectedActionId": "alteration_orb",
-          "knownActionQInKnownGraph": 4727.859851438595,
-          "reason": "STATE_NOT_DISCOVERED"
-        },
-        {
-          "stateKey": "Large Cluster Jewel:Minions deal 10% increased Damage:84:8:flags(influenced=false,synthesised=false,acquisitionMenu=false,methodFamilyActionEvidence=):magic|P:[]|S:[groups(AfflictionJewelSmallPassivesGrantInt)]",
-          "state": {
-            "rarity": "magic",
-            "affixCount": 1,
-            "matchedTargetCount": 0,
-            "targetCount": 3
-          },
-          "occupancyUnderKnownPolicy": 683.0245595439095,
-          "occupancyUnderIndependentPolicy": 0,
-          "knownSelectedActionId": "alteration_orb",
-          "knownActionQInKnownGraph": 4727.859851438595,
-          "reason": "STATE_NOT_DISCOVERED"
-        },
-        {
-          "stateKey": "Large Cluster Jewel:Minions deal 10% increased Damage:84:8:flags(influenced=false,synthesised=false,acquisitionMenu=false,methodFamilyActionEvidence=):magic|P:[]|S:[groups(AfflictionJewelSmallPassivesGrantLifeRegen)]",
-          "state": {
-            "rarity": "magic",
-            "affixCount": 1,
-            "matchedTargetCount": 0,
-            "targetCount": 3
-          },
-          "occupancyUnderKnownPolicy": 683.0245595439095,
-          "occupancyUnderIndependentPolicy": 0,
-          "knownSelectedActionId": "alteration_orb",
-          "knownActionQInKnownGraph": 4727.859851438595,
-          "reason": "STATE_NOT_DISCOVERED"
-        },
-        {
-          "stateKey": "Large Cluster Jewel:Minions deal 10% increased Damage:84:8:flags(influenced=false,synthesised=false,acquisitionMenu=false,methodFamilyActionEvidence=):magic|P:[]|S:[groups(AfflictionJewelSmallPassivesGrantManaRegen)]",
-          "state": {
-            "rarity": "magic",
-            "affixCount": 1,
-            "matchedTargetCount": 0,
-            "targetCount": 3
-          },
-          "occupancyUnderKnownPolicy": 683.0245595439095,
-          "occupancyUnderIndependentPolicy": 0,
-          "knownSelectedActionId": "alteration_orb",
-          "knownActionQInKnownGraph": 4727.859851438595,
-          "reason": "STATE_NOT_DISCOVERED"
-        },
-        {
-          "stateKey": "Large Cluster Jewel:Minions deal 10% increased Damage:84:8:flags(influenced=false,synthesised=false,acquisitionMenu=false,methodFamilyActionEvidence=):magic|P:[]|S:[groups(AfflictionJewelSmallPassivesGrantStr)]",
-          "state": {
-            "rarity": "magic",
-            "affixCount": 1,
-            "matchedTargetCount": 0,
-            "targetCount": 3
-          },
-          "occupancyUnderKnownPolicy": 683.0245595439095,
-          "occupancyUnderIndependentPolicy": 0,
-          "knownSelectedActionId": "alteration_orb",
-          "knownActionQInKnownGraph": 4727.859851438595,
-          "reason": "STATE_NOT_DISCOVERED"
-        },
-        {
-          "stateKey": "Large Cluster Jewel:Minions deal 10% increased Damage:84:8:flags(influenced=false,synthesised=false,acquisitionMenu=false,methodFamilyActionEvidence=):magic|P:[groups(AfflictionJewelSmallPassivesHaveIncreasedEffect)]|S:[]",
-          "state": {
-            "rarity": "magic",
-            "affixCount": 1,
-            "matchedTargetCount": 0,
-            "targetCount": 3
-          },
-          "occupancyUnderKnownPolicy": 675.8713210958462,
-          "occupancyUnderIndependentPolicy": 0,
-          "knownSelectedActionId": "alteration_orb",
-          "knownActionQInKnownGraph": 4727.859851438595,
-          "reason": "STATE_NOT_DISCOVERED"
-        },
-        {
-          "stateKey": "Large Cluster Jewel:Minions deal 10% increased Damage:84:8:flags(influenced=false,synthesised=false,acquisitionMenu=false,methodFamilyActionEvidence=):magic|P:[]|S:[groups(Call to the Slaughter)]",
-          "state": {
-            "rarity": "magic",
-            "affixCount": 1,
-            "matchedTargetCount": 0,
-            "targetCount": 3
-          },
-          "occupancyUnderKnownPolicy": 569.1871329532579,
-          "occupancyUnderIndependentPolicy": 0,
-          "knownSelectedActionId": "alteration_orb",
-          "knownActionQInKnownGraph": 4727.859851438595,
-          "reason": "STATE_NOT_DISCOVERED"
-        },
-        {
-          "stateKey": "Large Cluster Jewel:Minions deal 10% increased Damage:84:8:flags(influenced=false,synthesised=false,acquisitionMenu=false,methodFamilyActionEvidence=):magic|P:[]|S:[groups(Added Small Passive Skills also grant: Minions have #% increased Attack and Cast Speed)]",
-          "state": {
-            "rarity": "magic",
-            "affixCount": 1,
-            "matchedTargetCount": 0,
-            "targetCount": 3
-          },
-          "occupancyUnderKnownPolicy": 540.727776305595,
-          "occupancyUnderIndependentPolicy": 0,
-          "knownSelectedActionId": "alteration_orb",
-          "knownActionQInKnownGraph": 4727.859851438595,
-          "reason": "STATE_NOT_DISCOVERED"
-        },
-        {
-          "stateKey": "Large Cluster Jewel:Minions deal 10% increased Damage:84:8:flags(influenced=false,synthesised=false,acquisitionMenu=false,methodFamilyActionEvidence=):magic|P:[groups(Renewal):id(Renewal):t1:name(Renewal):target(1)]|S:[]",
-          "state": {
-            "rarity": "magic",
-            "affixCount": 1,
-            "matchedTargetCount": 1,
-            "targetCount": 3
-          },
-          "occupancyUnderKnownPolicy": 422.4195756849039,
-          "occupancyUnderIndependentPolicy": 0,
-          "knownSelectedActionId": "augmentation_orb",
-          "knownActionQInKnownGraph": 4725.1144459068555,
-          "reason": "STATE_NOT_DISCOVERED"
-        }
-      ]
-    },
-    "route": {
-      "actionId": "method:family_conventional:known-policy",
-      "name": "Start clean base",
-      "acquisitionCandidateId": "candidate_0",
-      "acquisitionMethodId": "clean-base_0",
-      "expectedTotalCostChaos": 4767.731263962971,
-      "lowerBoundChaos": 40,
-      "incumbentUpperBoundChaos": 4767.731263962971,
-      "optimalityGapChaos": 4727.731263962971,
-      "status": "RESOLVED",
-      "couldBeatResolvedIncumbent": false,
-      "metrics": {
-        "expectedChaosCost": 4767.731263962971,
-        "expectedPhysicalActions": 35645.51554742855,
-        "estimatedManualTimeMs": 14258206.21897142,
-        "objectiveScore": 4767.731263962971,
-        "effortConfidence": "DEFAULT_APPROXIMATE"
-      },
-      "acquisitionMetrics": {
-        "expectedChaosCost": 40,
-        "expectedPhysicalActions": 0,
-        "estimatedManualTimeMs": 0,
-        "objectiveScore": 40,
-        "effortConfidence": "DEFAULT_APPROXIMATE"
-      },
-      "downstreamMetrics": {
-        "expectedChaosCost": 4727.731263962971,
-        "expectedPhysicalActions": 35645.51554742855,
-        "estimatedManualTimeMs": 14258206.21897142,
-        "objectiveScore": 4727.731263438594,
-        "effortConfidence": "DEFAULT_APPROXIMATE"
-      }
-    },
-    "fullRouteL": 40,
-    "fullRouteU": 4767.731263962971,
+    "fullRouteL": 40.14397503191489,
     "proof": {
-      "selectedPolicyStatus": "FULLY RESOLVED / PROPER / ABSORBING / COST-RECONCILED",
-      "proofLevel": "BEST FULLY RESOLVED POLICY FOUND",
-      "onPolicyReachableStates": 415,
-      "onPolicyTerminalStates": 15,
-      "onPolicyUnresolvedTransitions": 0,
-      "terminalAbsorptionProbability": 0.9999999980241998,
-      "proper": true,
-      "fullyResolved": true,
-      "bellmanConverged": true,
+      "selectedPolicyStatus": "NOT CERTIFIED",
+      "proofLevel": "NO FULLY RESOLVED POLICY FOUND",
+      "onPolicyReachableStates": 1,
+      "onPolicyTerminalStates": 0,
+      "onPolicyUnresolvedTransitions": 1,
+      "terminalAbsorptionProbability": 0,
+      "proper": false,
+      "fullyResolved": false,
+      "bellmanConverged": false,
       "occupancyConverged": true,
-      "costReconciled": true,
-      "reconciliationDifferenceChaos": 5.243555278866552e-7
+      "costReconciled": false
     },
     "onPolicyActionIds": [
-      "alteration_orb",
-      "augmentation_orb",
-      "clean_base_initial",
-      "exalted_orb",
-      "regal_orb",
-      "scouring_orb",
-      "transmutation_orb"
+      "clean_base_initial"
     ],
-    "expectedActionUsage": [
-      {
-        "actionId": "alteration_orb",
-        "actionName": "Orb of Alteration",
-        "expectedCount": 35043.578236178895,
-        "expectedCostChaos": 4681.822052353502
-      },
-      {
-        "actionId": "clean_base_initial",
-        "actionName": "Initial clean cluster jewel base",
-        "expectedCount": 1,
-        "expectedCostChaos": 40
-      },
-      {
-        "actionId": "augmentation_orb",
-        "actionName": "Orb of Augmentation",
-        "expectedCount": 529.4267566801163,
-        "expectedCostChaos": 20.864708480763387
-      },
-      {
-        "actionId": "exalted_orb",
-        "actionName": "Exalted Orb Slam",
-        "expectedCount": 11.632847748846748,
-        "expectedCostChaos": 13.610431866150691
-      },
-      {
-        "actionId": "scouring_orb",
-        "actionName": "Orb of Scouring",
-        "expectedCount": 19.625902273506394,
-        "expectedCostChaos": 10.580323915647316
-      },
-      {
-        "actionId": "regal_orb",
-        "actionName": "Regal Orb",
-        "expectedCount": 20.625902273557184,
-        "expectedCostChaos": 0.7503703247120104
-      },
-      {
-        "actionId": "transmutation_orb",
-        "actionName": "Orb of Transmutation",
-        "expectedCount": 20.62590227350724,
-        "expectedCostChaos": 0.10337702219481829
-      }
-    ],
+    "expectedActionUsage": [],
     "retainedStates": 1667,
-    "transitionDistributionsGenerated": 7005,
+    "transitionDistributionsGenerated": 3513,
     "budget": {
       "maxStates": 5000,
-      "maxWallTimeMs": 1677,
+      "maxWallTimeMs": 241,
       "maxExpansionRounds": 3,
-      "elapsedMs": 1681
+      "elapsedMs": 204
     },
-    "policyEquivalenceFingerprint": "policy-9e41c4f9",
-    "policyEquivalenceEvidence": {
-      "version": "CANONICAL_POLICY_EQUIVALENCE_V1",
-      "physicalAcquisitionIdentity": "{\"state\":\"Large Cluster Jewel|Minions deal 10% increased Damage|84|8|normal|influenced=false|synthesised=false|acquisitionMenu=false|methodFamilyActionEvidence=\",\"kind\":\"CLEAN\",\"method\":\"clean-base\",\"synthesisTerminalSemantics\":\"CLEAN_BASE\"}",
-      "normalizedPolicyDecisionCount": 400,
-      "requiredActionEvidence": [
-        "alteration_orb",
-        "augmentation_orb",
-        "clean_base_initial",
-        "exalted_orb",
-        "regal_orb",
-        "scouring_orb",
-        "transmutation_orb"
-      ],
-      "recoveryDecisionCount": 152,
-      "terminalStateCount": 0,
-      "usageTolerance": 0.000001
-    },
-    "equivalentToSelectedPolicy": false,
-    "explanation": "This resolved eligible policy is dominated by the selected policy for the requested objective and its tie-breakers."
-  },
-  "differenceChaos": 0
+    "explanation": "This family remains unresolved and could still qualify for the requested objective."
+  }
 }

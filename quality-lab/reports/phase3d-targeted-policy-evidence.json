@@ -1,0 +1,149 @@
+{
+  "schemaVersion": "PHASE3A_QUALITY_REPORT_V1",
+  "runId": "2026-08-27T21-44-49-855Z",
+  "suite": "TARGETED",
+  "requestedGateIds": [
+    "C-full-route-policy-evidence"
+  ],
+  "selectedGateIds": [
+    "C-full-route-policy-evidence"
+  ],
+  "startedAt": "2026-08-27T21:44:49.855Z",
+  "finishedAt": "2026-08-27T21:45:48.863Z",
+  "status": "PASSED",
+  "identity": {
+    "applicationSourceBuildHash": "app-a946cd172e7873b8f29b",
+    "fixtureCorpusVersion": "Phase3C-Frozen-Browser-Corpus-1",
+    "fixtureCorpusHash": "corpus-b9aedc966f617dd79f9d",
+    "priceSnapshotIdentity": "prices-086bbb3ef86a6b63",
+    "browserVersion": "151.0.7922.34",
+    "harnessVersion": "PHASE3A_QUALITY_LAB_V1",
+    "compatibilityHash": "compatible-16956412409e443353204abf"
+  },
+  "scheduling": {
+    "processLevelShards": [
+      "C"
+    ],
+    "browserLightParallelism": 2,
+    "solverHeavyConcurrency": 1,
+    "longSoakAutomatic": false,
+    "shardPlan": [
+      {
+        "shard": "C",
+        "gateIds": [
+          "C-full-route-policy-evidence"
+        ],
+        "mode": "SERIAL_SOLVER_HEAVY"
+      }
+    ]
+  },
+  "counts": {
+    "passed": 1,
+    "failed": 0,
+    "resumed": 0,
+    "skipped": 0,
+    "total": 1
+  },
+  "results": [
+    {
+      "id": "C-full-route-policy-evidence",
+      "title": "Real field Worker reconciles stage-aware full-route evidence and constrained-family admissibility",
+      "phase": "3D",
+      "shard": "C",
+      "tags": [
+        "phase3d",
+        "phase3c",
+        "worker",
+        "solver",
+        "proof",
+        "method-family",
+        "fracture",
+        "harvest"
+      ],
+      "costClass": "SOLVER_HEAVY",
+      "status": "PASS",
+      "passed": true,
+      "startedAt": "2026-08-27T21:44:50.880Z",
+      "finishedAt": "2026-08-27T21:45:48.745Z",
+      "durationMs": 57864,
+      "details": {
+        "selectedAcquisitionKind": "SELF_FRACTURE",
+        "primordialFamilyId": "family_fracture_Primordial Bond",
+        "primordialStatus": "SAME_AS_SELECTED",
+        "equivalentToSelectedPolicy": true,
+        "fractureCheck": {
+          "actionId": "fracturing_orb",
+          "requiredScope": "ACQUISITION",
+          "observed": true,
+          "observedExpectedCount": 3.9999999999958504,
+          "observedScopes": [
+            "ACQUISITION"
+          ],
+          "evidenceSources": [
+            "ACQUISITION_SYNTHESIS_POLICY"
+          ]
+        },
+        "evidenceEntries": 13,
+        "harvestFamilies": 3,
+        "combinedFamilies": 9,
+        "accounting": {
+          "selectedBundleId": "core:open-selected-policy",
+          "maximumDifferenceChaos": 1.4779288903810084e-11,
+          "acquisitionCostChaos": 1406.2963152858165,
+          "downstreamCostChaos": 53.496050930001616,
+          "fullRouteCostChaos": 1459.7923662158182
+        },
+        "artifact": "quality-lab\\reports\\evidence\\phase3d-full-route-policy-evidence-browser.json",
+        "screenshot": "quality-lab\\reports\\evidence\\phase3d-full-route-policy-evidence-desktop.png"
+      },
+      "executionIdentity": {
+        "applicationSourceBuildHash": "app-a946cd172e7873b8f29b",
+        "gateIdVersion": "C-full-route-policy-evidence@1",
+        "fixtureCorpusVersion": "Phase3C-Frozen-Browser-Corpus-1",
+        "fixtureInputHash": "fixture-c0956dc4af1bc5d29323",
+        "priceSnapshotIdentity": "prices-086bbb3ef86a6b63",
+        "browserVersion": "151.0.7922.34",
+        "harnessVersion": "PHASE3A_QUALITY_LAB_V1",
+        "compatibilityHash": "compatible-16956412409e443353204abf"
+      }
+    }
+  ],
+  "runtime": {
+    "totalWallMs": 59007,
+    "summedGateMs": 57864,
+    "appStartupMs": 352,
+    "browserStartupMs": 139,
+    "solverHeavyMs": 57864,
+    "visualInteractionMs": 0,
+    "harnessOverheadMs": 571,
+    "categoryTotalsMs": {
+      "phase3d": 57864,
+      "phase3c": 57864,
+      "worker": 57864,
+      "solver": 57864,
+      "proof": 57864,
+      "method-family": 57864,
+      "fracture": 57864,
+      "harvest": 57864
+    },
+    "slowestGates": [
+      {
+        "id": "C-full-route-policy-evidence",
+        "durationMs": 57864,
+        "status": "PASS"
+      }
+    ]
+  },
+  "runtimeErrors": {
+    "console": [],
+    "page": [],
+    "network": []
+  },
+  "artifacts": {
+    "phase3dPolicyEvidenceBrowser": "quality-lab\\reports\\evidence\\phase3d-full-route-policy-evidence-browser.json",
+    "phase3dPolicyEvidenceScreenshot": "quality-lab\\reports\\evidence\\phase3d-full-route-policy-evidence-desktop.png",
+    "runReport": "quality-lab\\artifacts\\phase3a-2026-08-27T21-44-49-855Z\\report.json",
+    "stableReport": "quality-lab\\reports\\phase3d-targeted-policy-evidence.json",
+    "summary": "quality-lab\\reports\\phase3d-targeted-policy-evidence.md"
+  }
+}

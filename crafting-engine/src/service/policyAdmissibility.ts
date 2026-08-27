@@ -1,7 +1,12 @@
 import type { ActionEffortProfile, SolverContext } from '../domain/CraftAction.ts';
 import type { ItemState } from '../domain/ItemState.ts';
 import { normalizeItemState } from '../domain/ItemState.ts';
-import type { MethodFamilySpec } from '../domain/MethodFamily.ts';
+import type {
+  FullRouteActionEvidence,
+  MethodFamilySpec,
+  RequiredActionEvidenceCheck,
+  RequiredActionEvidenceSpec,
+} from '../domain/MethodFamily.ts';
 import type { TargetDefinition } from '../domain/TargetDefinition.ts';
 import {
   getAllTargetModRequirements,
@@ -21,7 +26,7 @@ import {
   type OnPolicyRuleResult,
 } from '../solver/genericSearch.ts';
 
-export const POLICY_ADMISSIBILITY_VERSION = 'POLICY_ADMISSIBILITY_PHASE3C_V1';
+export const POLICY_ADMISSIBILITY_VERSION = 'POLICY_ADMISSIBILITY_PHASE3D_V2';
 export const POLICY_ADMISSIBILITY_TOLERANCE = 1e-8;
 
 export type PolicyAcquisitionKind = 'CLEAN' | 'SELF_FRACTURE';
@@ -32,6 +37,10 @@ export type PolicyAdmissibilityFailureCode =
   | 'ACQUISITION_COST_MISMATCH'
   | 'MECHANICS_SESSION_MISMATCH'
   | 'TARGET_IDENTITY_MISMATCH'
+  | 'ACTION_EVIDENCE_IDENTITY_MISMATCH'
+  | 'ACTION_EVIDENCE_SESSION_MISMATCH'
+  | 'ACTION_EVIDENCE_POLICY_MISMATCH'
+  | 'ACTION_EVIDENCE_INVALID'
   | 'REQUIRED_ACTION_NOT_OBSERVED'
   | 'ACTION_NOT_ALLOWED'
   | 'ACTION_FORBIDDEN'
@@ -71,6 +80,8 @@ export interface PolicyAdmissibilityResult {
   transitionsRegenerated: number;
   transitionOutcomesCompared: number;
   maximumTransitionProbabilityDifference: number;
+  requiredActionEvidenceChecks: RequiredActionEvidenceCheck[];
+  fullRouteActionEvidence: FullRouteActionEvidence;
   failures: PolicyAdmissibilityFailure[];
   evaluation?: FixedPolicyGraphEvaluation;
   sourceParity?: {
@@ -166,6 +177,42 @@ function stateContext(state: ItemState, target: TargetDefinition): PolicyDiverge
   };
 }
 
+export function requiredActionEvidenceSpecs(
+  family: MethodFamilySpec,
+): RequiredActionEvidenceSpec[] {
+  if (family.requiredActionEvidence) {
+    return family.requiredActionEvidence.map((requirement) => ({ ...requirement }));
+  }
+  return (family.requiredActionIds ?? []).map((actionId) => ({
+    actionId,
+    scope: 'DOWNSTREAM' as const,
+  }));
+}
+
+export function checkRequiredActionEvidence(
+  family: MethodFamilySpec,
+  evidence: FullRouteActionEvidence,
+): RequiredActionEvidenceCheck[] {
+  return requiredActionEvidenceSpecs(family).map((requirement) => {
+    const observed = evidence.entries.filter((entry) =>
+      entry.actionId === requirement.actionId &&
+      entry.expectedCount > POLICY_ADMISSIBILITY_TOLERANCE &&
+      (requirement.scope === 'FULL_ROUTE' || entry.scope === requirement.scope)
+    );
+    return {
+      actionId: requirement.actionId,
+      requiredScope: requirement.scope,
+      observed: observed.length > 0,
+      observedExpectedCount: observed.reduce(
+        (sum, entry) => sum + entry.expectedCount,
+        0,
+      ),
+      observedScopes: [...new Set(observed.map((entry) => entry.scope))].sort(),
+      evidenceSources: [...new Set(observed.map((entry) => entry.evidenceSource))].sort(),
+    };
+  });
+}
+
 export function comparePolicySearchDivergence(
   known: GenericSearchResult,
   independent: GenericSearchResult,
@@ -258,6 +305,7 @@ export function auditPolicyAdmissibility(options: {
   expectedDownstreamPhysicalActions: number;
   expectedDownstreamManualTimeMs: number;
   sourcePolicyFingerprint?: string;
+  fullRouteActionEvidence: FullRouteActionEvidence;
   effortProfile?: Partial<ActionEffortProfile>;
   deadlineMs?: number;
 }): PolicyAdmissibilityResult {
@@ -266,11 +314,10 @@ export function auditPolicyAdmissibility(options: {
     .filter((rule) => rule.state.flags?.acquisitionMenu !== true)
     .filter((rule) => !rule.selectedActionId.startsWith('acquire_'))
     .map((rule) => rule.selectedActionId))].sort();
-  const positiveSourceActionIds = new Set(options.sourceResult.onPolicyRules
-    .filter((rule) => rule.expectedVisits > POLICY_ADMISSIBILITY_TOLERANCE)
-    .filter((rule) => rule.state.flags?.acquisitionMenu !== true)
-    .filter((rule) => !rule.selectedActionId.startsWith('acquire_'))
-    .map((rule) => rule.selectedActionId));
+  const requiredActionEvidenceChecks = checkRequiredActionEvidence(
+    options.family,
+    options.fullRouteActionEvidence,
+  );
   const fail = (failure: PolicyAdmissibilityFailure): void => {
     failures.push(failure);
   };
@@ -321,13 +368,69 @@ export function auditPolicyAdmissibility(options: {
       message: 'Source and family target/terminal semantics differ.',
     });
   }
-  const requiredActionIds = options.family.requiredActionIds ?? [];
-  for (const requiredActionId of requiredActionIds) {
-    if (!positiveSourceActionIds.has(requiredActionId)) {
+  if (
+    options.fullRouteActionEvidence.physicalAcquisitionIdentity !==
+      options.sourceAcquisitionIdentity ||
+    options.fullRouteActionEvidence.entries.some((entry) =>
+      entry.physicalAcquisitionIdentity !== options.sourceAcquisitionIdentity
+    )
+  ) {
+    fail({
+      code: 'ACTION_EVIDENCE_IDENTITY_MISMATCH',
+      message: 'Full-route action evidence does not belong to the audited physical acquisition.',
+      expected: options.sourceAcquisitionIdentity,
+      actual: options.fullRouteActionEvidence.physicalAcquisitionIdentity,
+    });
+  }
+  if (
+    options.fullRouteActionEvidence.policySessionIdentity !==
+      options.sourceMechanicsSessionIdentity ||
+    options.fullRouteActionEvidence.entries.some((entry) =>
+      entry.policySessionIdentity !== options.sourceMechanicsSessionIdentity
+    )
+  ) {
+    fail({
+      code: 'ACTION_EVIDENCE_SESSION_MISMATCH',
+      message: 'Full-route action evidence belongs to a different mechanics/economics session.',
+      expected: options.sourceMechanicsSessionIdentity,
+      actual: options.fullRouteActionEvidence.policySessionIdentity,
+    });
+  }
+  if (
+    options.sourcePolicyFingerprint !== undefined &&
+    (options.fullRouteActionEvidence.sourcePolicyFingerprint !==
+      options.sourcePolicyFingerprint ||
+      options.fullRouteActionEvidence.entries.some((entry) =>
+        entry.sourcePolicyFingerprint !== options.sourcePolicyFingerprint
+      ))
+  ) {
+    fail({
+      code: 'ACTION_EVIDENCE_POLICY_MISMATCH',
+      message: 'Full-route action evidence belongs to a different selected policy.',
+      expected: options.sourcePolicyFingerprint,
+      actual: options.fullRouteActionEvidence.sourcePolicyFingerprint,
+    });
+  }
+  for (const entry of options.fullRouteActionEvidence.entries) {
+    if (
+      !entry.actionId || !entry.actionName ||
+      !Number.isFinite(entry.expectedCount) || entry.expectedCount < 0 ||
+      !Number.isFinite(entry.expectedCostChaos) || entry.expectedCostChaos < 0
+    ) {
+      fail({
+        code: 'ACTION_EVIDENCE_INVALID',
+        message: 'Full-route action evidence contains an invalid count, cost, or action identity.',
+        actionId: entry.actionId,
+      });
+    }
+  }
+  for (const check of requiredActionEvidenceChecks) {
+    if (!check.observed) {
       fail({
         code: 'REQUIRED_ACTION_NOT_OBSERVED',
-        message: `Required family action ${requiredActionId} is absent from the selected policy.`,
-        actionId: requiredActionId,
+        message: `Required family action ${check.actionId} is absent from positive ${check.requiredScope.toLowerCase()} evidence.`,
+        actionId: check.actionId,
+        expected: check.requiredScope,
       });
     }
   }
@@ -365,6 +468,11 @@ export function auditPolicyAdmissibility(options: {
     transitionsRegenerated: 0,
     transitionOutcomesCompared: 0,
     maximumTransitionProbabilityDifference: 0,
+    requiredActionEvidenceChecks,
+    fullRouteActionEvidence: {
+      ...options.fullRouteActionEvidence,
+      entries: options.fullRouteActionEvidence.entries.map((entry) => ({ ...entry })),
+    },
     failures,
   };
   if (failures.length > 0) return result;

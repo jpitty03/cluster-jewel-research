@@ -1,0 +1,503 @@
+{
+  "input": {
+    "id": "phase3c_primordial_renewal_rotten_claws",
+    "name": "Phase 3C Primordial Bond plus Renewal plus Rotten Claws field consistency",
+    "baseType": "Large Cluster Jewel",
+    "clusterType": "Minions deal 10% increased Damage",
+    "itemLevel": 84,
+    "passiveCount": 8,
+    "finalRarity": "rare",
+    "extraAffixes": "allow-extra",
+    "targetMods": [
+      "Primordial Bond",
+      "Renewal",
+      "Rotten Claws"
+    ],
+    "expectedSaleValueChaos": 1708,
+    "priceContext": {
+      "currencyRates": {
+        "chaos": 1,
+        "divine": 213.5,
+        "fracturing": 298.6,
+        "annul": 11.66,
+        "exalt": 1.17,
+        "scour": 0.5391,
+        "alteration": 0.1336,
+        "transmutation": 0.005012,
+        "augmentation": 0.03941,
+        "regal": 0.03638,
+        "wildLifeforce": 0.02377,
+        "vividLifeforce": 0.08208,
+        "primalLifeforce": 0.04085
+      },
+      "cleanBaseCostChaos": 40,
+      "cleanBasePriceSource": "manual",
+      "cleanBasePriceProvenance": "Phase 3C frozen Primordial Bond + Renewal + Rotten Claws field fixture"
+    },
+    "searchBudget": {
+      "maxStates": 5000,
+      "maxWallTimeMs": 30000,
+      "maxExpansionRounds": 3
+    }
+  },
+  "mode": "STRONGER_MONOTONE_CORE",
+  "disabled": {
+    "snapshot": {
+      "version": "CORE_RECOMMENDATION_SNAPSHOT_PHASE3D_V1",
+      "compareMethodFamiliesRequested": false,
+      "coreEnvelope": {
+        "deadlineFraction": 0.85,
+        "deadlineAtRequestMs": 24650,
+        "allocatedWallTimeMs": 24650
+      },
+      "selectedExecutableUChaos": 1459.7923662160783,
+      "candidateExecutableUChaos": [
+        {
+          "candidateId": "candidate_0",
+          "fullRouteUChaos": 4767.73126396295
+        },
+        {
+          "candidateId": "candidate_1",
+          "fullRouteUChaos": 1459.7923662160783
+        },
+        {
+          "candidateId": "candidate_2",
+          "fullRouteUChaos": 1636.3811154830044
+        },
+        {
+          "candidateId": "candidate_3",
+          "fullRouteUChaos": 1636.3811154829793
+        }
+      ],
+      "retainedStateFingerprint": "states-55c48116",
+      "statesExpanded": 11669,
+      "retainedStates": 20277,
+      "stopReason": "HOST_RESERVE",
+      "canonicalPolicyFingerprint": "core-c8da05a5"
+    },
+    "ledger": {
+      "version": "REQUEST_BUDGET_LEDGER_PHASE3D_V1",
+      "clock": "PERFORMANCE_NOW_MONOTONIC_REQUEST_RELATIVE",
+      "requestedWallTimeMs": 30000,
+      "engineDeadlineMs": 29000,
+      "coreDeadlineAtRequestMs": 24650,
+      "coreDeadlineFraction": 0.85,
+      "hostSerializationReserveMs": 1000,
+      "hostReserveEnteredAtRequestMs": 24675.800000190735,
+      "entries": [
+        {
+          "stage": "CORE_PORTFOLIO_SEARCH",
+          "accounting": "EXCLUSIVE",
+          "startedAtRequestMs": 0,
+          "finishedAtRequestMs": 24675.800000190735,
+          "usedWallTimeMs": 24675.800000190735,
+          "statesExpanded": 11669,
+          "retainedStates": 20277,
+          "stopReason": "HOST_RESERVE",
+          "remainingRequestMsAtStart": 30000,
+          "remainingRequestMsAtFinish": 5324.199999809265
+        },
+        {
+          "stage": "METHOD_FAMILY_SEARCH",
+          "accounting": "EXCLUSIVE",
+          "startedAtRequestMs": 24675.800000190735,
+          "finishedAtRequestMs": 24693.400000095367,
+          "usedWallTimeMs": 9.099999904632568,
+          "statesExpanded": 0,
+          "retainedStates": 0,
+          "remainingRequestMsAtStart": 5324.199999809265,
+          "remainingRequestMsAtFinish": 5306.599999904633
+        },
+        {
+          "stage": "POLICY_ADMISSIBILITY_REVALIDATION",
+          "accounting": "EXCLUSIVE",
+          "startedAtRequestMs": 24675.800000190735,
+          "finishedAtRequestMs": 24693.400000095367,
+          "usedWallTimeMs": 8.5,
+          "statesExpanded": 0,
+          "retainedStates": 0,
+          "remainingRequestMsAtStart": 5324.199999809265,
+          "remainingRequestMsAtFinish": 5306.599999904633
+        },
+        {
+          "stage": "POLICY_EQUIVALENCE_PRESENTATION",
+          "accounting": "EXCLUSIVE",
+          "startedAtRequestMs": 24693.400000095367,
+          "finishedAtRequestMs": 24719.10000014305,
+          "usedWallTimeMs": 25.700000047683716,
+          "statesExpanded": 0,
+          "retainedStates": 0,
+          "remainingRequestMsAtStart": 5306.599999904633,
+          "remainingRequestMsAtFinish": 5280.899999856949
+        },
+        {
+          "stage": "HOST_SERIALIZATION_RESERVE",
+          "accounting": "EXCLUSIVE",
+          "startedAtRequestMs": 24719.10000014305,
+          "finishedAtRequestMs": 24727.5,
+          "usedWallTimeMs": 8.399999856948853,
+          "statesExpanded": 0,
+          "retainedStates": 0,
+          "remainingRequestMsAtStart": 5280.899999856949,
+          "remainingRequestMsAtFinish": 5272.5
+        },
+        {
+          "stage": "ACQUISITION_SYNTHESIS",
+          "accounting": "NESTED_CORE_DETAIL",
+          "startedAtRequestMs": 4037.9000000953674,
+          "finishedAtRequestMs": 13934.200000047684,
+          "usedWallTimeMs": 6527,
+          "statesExpanded": 8335,
+          "retainedStates": 8335,
+          "remainingRequestMsAtStart": 25962.099999904633,
+          "remainingRequestMsAtFinish": 16065.799999952316
+        },
+        {
+          "stage": "PROOF_BOUND_WORK",
+          "accounting": "NESTED_CORE_DETAIL",
+          "startedAtRequestMs": 15671.5,
+          "finishedAtRequestMs": 21579.300000190735,
+          "usedWallTimeMs": 5907,
+          "statesExpanded": 3636,
+          "retainedStates": 3636,
+          "remainingRequestMsAtStart": 14328.5,
+          "remainingRequestMsAtFinish": 8420.699999809265
+        }
+      ],
+      "exclusiveAccountedMs": 24727.5,
+      "unclassifiedMs": 0,
+      "reconciled": true,
+      "explanation": [
+        "Core envelope is 85% of the engine deadline and is independent of compareMethodFamilies=false.",
+        "Core stopped at 11,669 expanded states with HOST_RESERVE.",
+        "Acquisition synthesis and proof-bound rows are measured nested details and are not added to exclusive request time.",
+        "Family search excludes separately timed policy-admissibility revalidation."
+      ]
+    },
+    "finalU": 1459.7923662158182
+  },
+  "enabled": {
+    "snapshot": {
+      "version": "CORE_RECOMMENDATION_SNAPSHOT_PHASE3D_V1",
+      "compareMethodFamiliesRequested": true,
+      "coreEnvelope": {
+        "deadlineFraction": 0.85,
+        "deadlineAtRequestMs": 24650,
+        "allocatedWallTimeMs": 24650
+      },
+      "selectedExecutableUChaos": 1459.7923662160783,
+      "candidateExecutableUChaos": [
+        {
+          "candidateId": "candidate_0",
+          "fullRouteUChaos": 4767.73126396295
+        },
+        {
+          "candidateId": "candidate_1",
+          "fullRouteUChaos": 1459.7923662160783
+        },
+        {
+          "candidateId": "candidate_2",
+          "fullRouteUChaos": 1636.3811154830044
+        },
+        {
+          "candidateId": "candidate_3",
+          "fullRouteUChaos": 1636.3811154829793
+        }
+      ],
+      "retainedStateFingerprint": "states-d6d23c8a",
+      "statesExpanded": 13336,
+      "retainedStates": 21944,
+      "stopReason": "HOST_RESERVE",
+      "canonicalPolicyFingerprint": "core-c8da05a5"
+    },
+    "ledger": {
+      "version": "REQUEST_BUDGET_LEDGER_PHASE3D_V1",
+      "clock": "PERFORMANCE_NOW_MONOTONIC_REQUEST_RELATIVE",
+      "requestedWallTimeMs": 30000,
+      "engineDeadlineMs": 29000,
+      "coreDeadlineAtRequestMs": 24650,
+      "coreDeadlineFraction": 0.85,
+      "hostSerializationReserveMs": 1000,
+      "hostReserveEnteredAtRequestMs": 24674.699999809265,
+      "entries": [
+        {
+          "stage": "CORE_PORTFOLIO_SEARCH",
+          "accounting": "EXCLUSIVE",
+          "startedAtRequestMs": 0,
+          "finishedAtRequestMs": 24674.699999809265,
+          "usedWallTimeMs": 24674.699999809265,
+          "statesExpanded": 13336,
+          "retainedStates": 21944,
+          "stopReason": "HOST_RESERVE",
+          "remainingRequestMsAtStart": 30000,
+          "remainingRequestMsAtFinish": 5325.300000190735
+        },
+        {
+          "stage": "METHOD_FAMILY_SEARCH",
+          "accounting": "EXCLUSIVE",
+          "startedAtRequestMs": 24674.699999809265,
+          "finishedAtRequestMs": 28186,
+          "usedWallTimeMs": 3205.9000005722046,
+          "statesExpanded": 375,
+          "retainedStates": 291,
+          "remainingRequestMsAtStart": 5325.300000190735,
+          "remainingRequestMsAtFinish": 1814
+        },
+        {
+          "stage": "POLICY_ADMISSIBILITY_REVALIDATION",
+          "accounting": "EXCLUSIVE",
+          "startedAtRequestMs": 24674.699999809265,
+          "finishedAtRequestMs": 28186,
+          "usedWallTimeMs": 305.3999996185303,
+          "statesExpanded": 0,
+          "retainedStates": 0,
+          "remainingRequestMsAtStart": 5325.300000190735,
+          "remainingRequestMsAtFinish": 1814
+        },
+        {
+          "stage": "POLICY_EQUIVALENCE_PRESENTATION",
+          "accounting": "EXCLUSIVE",
+          "startedAtRequestMs": 28186,
+          "finishedAtRequestMs": 28219.39999985695,
+          "usedWallTimeMs": 33.39999985694885,
+          "statesExpanded": 0,
+          "retainedStates": 0,
+          "remainingRequestMsAtStart": 1814,
+          "remainingRequestMsAtFinish": 1780.6000001430511
+        },
+        {
+          "stage": "HOST_SERIALIZATION_RESERVE",
+          "accounting": "EXCLUSIVE",
+          "startedAtRequestMs": 28219.5,
+          "finishedAtRequestMs": 28228.5,
+          "usedWallTimeMs": 9,
+          "statesExpanded": 0,
+          "retainedStates": 0,
+          "remainingRequestMsAtStart": 1780.5,
+          "remainingRequestMsAtFinish": 1771.5
+        },
+        {
+          "stage": "ACQUISITION_SYNTHESIS",
+          "accounting": "NESTED_CORE_DETAIL",
+          "startedAtRequestMs": 4040.5,
+          "finishedAtRequestMs": 13033.099999904633,
+          "usedWallTimeMs": 5769,
+          "statesExpanded": 10002,
+          "retainedStates": 10002,
+          "remainingRequestMsAtStart": 25959.5,
+          "remainingRequestMsAtFinish": 16966.900000095367
+        },
+        {
+          "stage": "PROOF_BOUND_WORK",
+          "accounting": "NESTED_CORE_DETAIL",
+          "startedAtRequestMs": 15015.599999904633,
+          "finishedAtRequestMs": 20606.39999985695,
+          "usedWallTimeMs": 5590,
+          "statesExpanded": 3636,
+          "retainedStates": 3636,
+          "remainingRequestMsAtStart": 14984.400000095367,
+          "remainingRequestMsAtFinish": 9393.600000143051
+        }
+      ],
+      "exclusiveAccountedMs": 28228.39999985695,
+      "unclassifiedMs": 0.10000014305114746,
+      "reconciled": true,
+      "explanation": [
+        "Core envelope is 85% of the engine deadline and is independent of compareMethodFamilies=true.",
+        "Core stopped at 13,336 expanded states with HOST_RESERVE.",
+        "Acquisition synthesis and proof-bound rows are measured nested details and are not added to exclusive request time.",
+        "Family search excludes separately timed policy-admissibility revalidation."
+      ]
+    },
+    "finalU": 1459.7923662158182,
+    "registry": {
+      "version": "REQUEST_POLICY_REGISTRY_PHASE3D_V1",
+      "registeredPolicyCount": 7,
+      "familyIncumbents": [
+        {
+          "familyId": "family_conventional",
+          "bundleId": "bundle:family_conventional:known-policy",
+          "fullRouteUChaos": 4767.731263962971,
+          "identity": {
+            "targetIdentity": "phase2j-2aa2618e",
+            "mechanicsSessionIdentity": "phase2j-4ae46f61",
+            "economicsEffortIdentity": "phase2j-c4a68b0e",
+            "physicalAcquisitionIdentity": "{\"state\":\"Large Cluster Jewel|Minions deal 10% increased Damage|84|8|normal|influenced=false|synthesised=false|acquisitionMenu=false|methodFamilyActionEvidence=\",\"kind\":\"CLEAN\",\"method\":\"clean-base\",\"synthesisTerminalSemantics\":\"CLEAN_BASE\"}",
+            "acquisitionKind": "CLEAN",
+            "canonicalPolicyFingerprint": "policy-9e41c4f9"
+          },
+          "validationSource": "FAMILY_ADMISSIBILITY_REVALIDATION"
+        },
+        {
+          "familyId": "family_fracture_Primordial Bond",
+          "bundleId": "bundle:family_fracture_Primordial Bond:known-policy",
+          "fullRouteUChaos": 1459.7923662158182,
+          "identity": {
+            "targetIdentity": "phase2j-2aa2618e",
+            "mechanicsSessionIdentity": "phase2j-4ae46f61",
+            "economicsEffortIdentity": "phase2j-c4a68b0e",
+            "physicalAcquisitionIdentity": "{\"state\":\"Large Cluster Jewel|Minions deal 10% increased Damage|84|8|magic|influenced=false|synthesised=false|acquisitionMenu=false|methodFamilyActionEvidence=|Suffix:Primordial Bond:1:F:\",\"kind\":\"SELF_FRACTURE\",\"method\":\"self-fracture_executable\",\"synthesisTerminalSemantics\":\"Terminal when the requested modifier is present AND fractured, and no unmatched removable explicit affix remains, so the resulting physical state is a legal reusable starting base for downstream crafting.\"}",
+            "acquisitionKind": "SELF_FRACTURE",
+            "canonicalPolicyFingerprint": "policy-b8fc0f29"
+          },
+          "validationSource": "FAMILY_ADMISSIBILITY_REVALIDATION"
+        },
+        {
+          "familyId": "family_fracture_Renewal",
+          "bundleId": "bundle:family_fracture_Renewal:independent",
+          "fullRouteUChaos": 1636.3811154830041,
+          "identity": {
+            "targetIdentity": "phase2j-2aa2618e",
+            "mechanicsSessionIdentity": "phase2j-4ae46f61",
+            "economicsEffortIdentity": "phase2j-c4a68b0e",
+            "physicalAcquisitionIdentity": "{\"state\":\"Large Cluster Jewel|Minions deal 10% increased Damage|84|8|magic|influenced=false|synthesised=false|acquisitionMenu=false|methodFamilyActionEvidence=|Prefix:Renewal:1:F:\",\"kind\":\"SELF_FRACTURE\",\"method\":\"self-fracture_executable\",\"synthesisTerminalSemantics\":\"Terminal when the requested modifier is present AND fractured, and no unmatched removable explicit affix remains, so the resulting physical state is a legal reusable starting base for downstream crafting.\"}",
+            "acquisitionKind": "SELF_FRACTURE",
+            "canonicalPolicyFingerprint": "policy-71928620"
+          },
+          "validationSource": "SOLVER_CERTIFICATION"
+        },
+        {
+          "familyId": "family_fracture_Rotten Claws",
+          "bundleId": "bundle:family_fracture_Rotten Claws:independent",
+          "fullRouteUChaos": 1636.3811154829789,
+          "identity": {
+            "targetIdentity": "phase2j-2aa2618e",
+            "mechanicsSessionIdentity": "phase2j-4ae46f61",
+            "economicsEffortIdentity": "phase2j-c4a68b0e",
+            "physicalAcquisitionIdentity": "{\"state\":\"Large Cluster Jewel|Minions deal 10% increased Damage|84|8|magic|influenced=false|synthesised=false|acquisitionMenu=false|methodFamilyActionEvidence=|Prefix:Rotten Claws:1:F:\",\"kind\":\"SELF_FRACTURE\",\"method\":\"self-fracture_executable\",\"synthesisTerminalSemantics\":\"Terminal when the requested modifier is present AND fractured, and no unmatched removable explicit affix remains, so the resulting physical state is a legal reusable starting base for downstream crafting.\"}",
+            "acquisitionKind": "SELF_FRACTURE",
+            "canonicalPolicyFingerprint": "policy-75ceb6b8"
+          },
+          "validationSource": "SOLVER_CERTIFICATION"
+        },
+        {
+          "familyId": "family_harvest_life",
+          "bundleId": "bundle:family_harvest_life:independent",
+          "fullRouteUChaos": 7745.628943129042,
+          "identity": {
+            "targetIdentity": "phase2j-2aa2618e",
+            "mechanicsSessionIdentity": "phase2j-4ae46f61",
+            "economicsEffortIdentity": "phase2j-c4a68b0e",
+            "physicalAcquisitionIdentity": "{\"state\":\"Large Cluster Jewel|Minions deal 10% increased Damage|84|8|normal|influenced=false|synthesised=false|acquisitionMenu=false|methodFamilyActionEvidence=\",\"kind\":\"CLEAN\",\"method\":\"clean-base\",\"synthesisTerminalSemantics\":\"CLEAN_BASE\"}",
+            "acquisitionKind": "CLEAN",
+            "canonicalPolicyFingerprint": "policy-e3d3ceec"
+          },
+          "validationSource": "SOLVER_CERTIFICATION"
+        },
+        {
+          "familyId": "family_open",
+          "bundleId": "core:open-selected-policy",
+          "fullRouteUChaos": 1459.7923662158182,
+          "identity": {
+            "targetIdentity": "phase2j-2aa2618e",
+            "mechanicsSessionIdentity": "phase2j-4ae46f61",
+            "economicsEffortIdentity": "phase2j-c4a68b0e",
+            "physicalAcquisitionIdentity": "{\"state\":\"Large Cluster Jewel|Minions deal 10% increased Damage|84|8|magic|influenced=false|synthesised=false|acquisitionMenu=false|methodFamilyActionEvidence=|Suffix:Primordial Bond:1:F:\",\"kind\":\"SELF_FRACTURE\",\"method\":\"self-fracture_executable\",\"synthesisTerminalSemantics\":\"Terminal when the requested modifier is present AND fractured, and no unmatched removable explicit affix remains, so the resulting physical state is a legal reusable starting base for downstream crafting.\"}",
+            "acquisitionKind": "SELF_FRACTURE",
+            "canonicalPolicyFingerprint": "policy-b8fc0f29"
+          },
+          "validationSource": "SOLVER_CERTIFICATION"
+        }
+      ],
+      "events": [
+        {
+          "familyId": "family_open",
+          "bundleId": "core:open-selected-policy",
+          "policyFingerprint": "policy-b8fc0f29",
+          "candidateUChaos": 1459.7923662158182,
+          "resultingFamilyUChaos": 1459.7923662158182,
+          "outcome": "INITIAL_INCUMBENT"
+        },
+        {
+          "familyId": "family_open",
+          "bundleId": "core:clean-open-policy",
+          "policyFingerprint": "policy-9e41c4f9",
+          "candidateUChaos": 4767.731263962971,
+          "previousFamilyUChaos": 1459.7923662158182,
+          "resultingFamilyUChaos": 1459.7923662158182,
+          "outcome": "RETAINED_BETTER_INCUMBENT"
+        },
+        {
+          "familyId": "family_conventional",
+          "bundleId": "bundle:family_conventional:known-policy",
+          "policyFingerprint": "policy-9e41c4f9",
+          "candidateUChaos": 4767.731263962971,
+          "resultingFamilyUChaos": 4767.731263962971,
+          "outcome": "INITIAL_INCUMBENT"
+        },
+        {
+          "familyId": "family_harvest_life",
+          "bundleId": "bundle:family_harvest_life:independent",
+          "policyFingerprint": "policy-e3d3ceec",
+          "candidateUChaos": 7745.628943129042,
+          "resultingFamilyUChaos": 7745.628943129042,
+          "outcome": "INITIAL_INCUMBENT"
+        },
+        {
+          "familyId": "family_fracture_Primordial Bond",
+          "bundleId": "bundle:family_fracture_Primordial Bond:independent",
+          "policyFingerprint": "policy-b8fc0f29",
+          "candidateUChaos": 1459.7923662160777,
+          "resultingFamilyUChaos": 1459.7923662160777,
+          "outcome": "INITIAL_INCUMBENT"
+        },
+        {
+          "familyId": "family_fracture_Primordial Bond",
+          "bundleId": "bundle:family_fracture_Primordial Bond:known-policy",
+          "policyFingerprint": "policy-b8fc0f29",
+          "candidateUChaos": 1459.7923662158182,
+          "previousFamilyUChaos": 1459.7923662160777,
+          "resultingFamilyUChaos": 1459.7923662158182,
+          "outcome": "IMPROVED_INCUMBENT"
+        },
+        {
+          "familyId": "family_fracture_Renewal",
+          "bundleId": "bundle:family_fracture_Renewal:independent",
+          "policyFingerprint": "policy-71928620",
+          "candidateUChaos": 1636.3811154830041,
+          "resultingFamilyUChaos": 1636.3811154830041,
+          "outcome": "INITIAL_INCUMBENT"
+        },
+        {
+          "familyId": "family_fracture_Rotten Claws",
+          "bundleId": "bundle:family_fracture_Rotten Claws:independent",
+          "policyFingerprint": "policy-75ceb6b8",
+          "candidateUChaos": 1636.3811154829789,
+          "resultingFamilyUChaos": 1636.3811154829789,
+          "outcome": "INITIAL_INCUMBENT"
+        }
+      ],
+      "monotone": true
+    }
+  },
+  "freshWorkerProtocol": [
+    "PROGRESS",
+    "PROGRESS",
+    "PROGRESS",
+    "PROGRESS",
+    "PROGRESS",
+    "PROGRESS",
+    "PROGRESS",
+    "PROGRESS",
+    "PROGRESS",
+    "PROGRESS",
+    "PROGRESS",
+    "PROGRESS",
+    "PROGRESS",
+    "PROGRESS",
+    "PROGRESS",
+    "PROGRESS",
+    "PROGRESS",
+    "PROGRESS",
+    "PROGRESS",
+    "PROGRESS",
+    "PROGRESS",
+    "PROGRESS",
+    "PROGRESS",
+    "PROGRESS",
+    "PROGRESS",
+    "PROGRESS",
+    "COMPLETE",
+    "RESULT"
+  ]
+}

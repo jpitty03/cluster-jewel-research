@@ -1,6 +1,7 @@
 import type {
   PolicyFlowEdge,
   PolicyFlowOutcomeKind,
+  PolicyFlowScope,
   PolicyFlowSummary,
   PolicyFlowTopology,
 } from './PolicyFlow.ts';
@@ -37,6 +38,9 @@ export interface VisualizationNode {
   occupancyWeight: number;
   semanticBand: VisualizationSemanticBand;
   recoveryLane: boolean;
+  scope: PolicyFlowScope;
+  scopeLabel: string;
+  progressLabel: string;
   details: {
     title: string;
     phase?: string;
@@ -52,6 +56,7 @@ export interface VisualizationNode {
     representativeState?: string;
     representativeStateKey?: string;
     routeStatus: string;
+    technicalStateSummary: string;
     technicalModifiers: ModifierDisplayDescriptor[];
   };
 }
@@ -80,7 +85,8 @@ export interface VisualizationEdge {
   width: number;
   opacity: number;
   flowImportance: number;
-  routing: 'PROGRESS' | 'BACK_EDGE' | 'RECOVERY_CORRIDOR' | 'SELF_LOOP';
+  routing: 'PROGRESS' | 'BACK_EDGE' | 'RECOVERY_CORRIDOR' | 'SELF_LOOP' | 'SCOPE_HANDOFF';
+  isScopeHandoff: boolean;
 }
 
 export interface VisualizationWisp {
@@ -123,6 +129,7 @@ export interface VisualizationGraph {
     particleBudget: number;
   };
   layoutEvidence: VisualizationLayoutEvidence;
+  scopeEvidence: VisualizationScopeEvidence;
   bounds: {
     minX: number;
     minY: number;
@@ -152,6 +159,20 @@ export interface VisualizationLayoutEvidence {
   minimumNodeCenterDistance: number;
   recoveryCorridorEdgeCount: number;
   defaultChronologicalOrdinals: false;
+  labelAwareFit: true;
+  fitMarginsPx: { left: number; right: number; top: number; bottom: number };
+}
+
+export interface VisualizationScopeEvidence {
+  acquisitionNodeIds: string[];
+  downstreamNodeIds: string[];
+  handoffEdgeIds: string[];
+  acquisitionHeader: string;
+  downstreamHeader: string;
+  acquisitionCenterX?: number;
+  downstreamCenterX?: number;
+  headerY: number;
+  boundaryX?: number;
 }
 
 export interface VisualizationAcquisitionContext {
@@ -276,7 +297,8 @@ function componentLayout(flow: PolicyFlowSummary, width: number, height: number)
   width: number;
   height: number;
   evidence: Omit<VisualizationLayoutEvidence,
-    'mode' | 'recoveryCorridorEdgeCount' | 'defaultChronologicalOrdinals'>;
+    'mode' | 'recoveryCorridorEdgeCount' | 'defaultChronologicalOrdinals' |
+    'labelAwareFit' | 'fitMarginsPx'>;
 } {
   const nodeById = new Map(flow.nodes.map((node) => [node.id, node]));
   const componentNodes = tarjan(flow.nodes.map((node) => node.id), flow.edges);
@@ -590,6 +612,30 @@ function deterministicPolicyOrder(flow: PolicyFlowSummary): string[] {
   return result;
 }
 
+function scopeTargetCount(node: PolicyFlowSummary['nodes'][number]): number {
+  const legacy = /\b\d+\/(\d+) targets\b/.exec(node.stateSummary);
+  return legacy ? Number(legacy[1]) : Math.max(1, node.matchedTargetModIds.length);
+}
+
+function scopeProgressLabel(node: PolicyFlowSummary['nodes'][number]): string {
+  if (node.terminal) return 'Final target complete';
+  const targetCount = scopeTargetCount(node);
+  const matched = node.matchedTargetModIds.length;
+  const rarity = node.rarity
+    ? `${node.rarity[0].toUpperCase()}${node.rarity.slice(1)}`
+    : 'State';
+  const fractured = node.fracturedTargetModIds.length > 0
+    ? ` · ${node.fracturedTargetModIds.length} fractured`
+    : '';
+  if (node.scope === 'ACQUISITION') {
+    const progress = matched >= targetCount && node.fracturedTargetModIds.length > 0
+      ? `Fracture prep complete - ${matched}/${targetCount} prep target`
+      : `Prep target ${matched}/${targetCount}`;
+    return `${progress} - ${rarity}${fractured}`;
+  }
+  return `Final targets ${matched}/${targetCount} - ${rarity}${fractured}`;
+}
+
 /** Deterministic, cycle-aware layout of the exact selected-policy flow summary. */
 export function buildVisualizationGraph(
   flow: PolicyFlowSummary,
@@ -609,11 +655,19 @@ export function buildVisualizationGraph(
     const normalizedVisits = visitScale > 0 ? Math.log1p(node.expectedVisits) / visitScale : 0;
     const technicalModifiers = [...new Set([...node.matchedTargetModIds, ...node.fracturedTargetModIds])]
       .flatMap((modId) => descriptorById.get(modId) ?? []);
+    const progressLabel = scopeProgressLabel(node);
+    const scopeLabel = node.scope === 'ACQUISITION'
+      ? acquisitionContext.kind === 'SELF_FRACTURE'
+        ? 'Self-fracture preparation'
+        : 'Acquisition preparation'
+      : 'Final crafting';
     return {
       id: node.id,
       label: node.label,
-      sublabel: `${node.stateSummary}${node.recoveryLike ? ' · recovery' : ''}`,
-      fullLabel: node.terminal ? 'Goal: selected target satisfied' : `${node.label} — ${node.stateSummary}`,
+      sublabel: `${progressLabel}${node.recoveryLike ? ' - recovery' : ''}`,
+      fullLabel: node.terminal
+        ? 'Goal: final-craft target satisfied'
+        : `${scopeLabel}: ${node.label} - ${progressLabel}`,
       stepNumber: stepById.get(node.id),
       kind: macroKind(node),
       x: position.x,
@@ -626,9 +680,12 @@ export function buildVisualizationGraph(
       occupancyWeight: node.occupancyShare,
       semanticBand: semanticBand(node).name,
       recoveryLane: node.recoveryLike,
+      scope: node.scope,
+      scopeLabel,
+      progressLabel,
       details: {
-        title: node.terminal ? 'Target complete' : node.stateSummary,
-        phase: node.scope,
+        title: node.terminal ? 'Final target complete' : progressLabel,
+        phase: scopeLabel,
         instruction: node.terminal
           ? 'The selected policy reaches the requested target.'
           : `When the item is in this state class, the selected action is ${node.selectedActionName ?? node.label}.`,
@@ -643,10 +700,11 @@ export function buildVisualizationGraph(
         representativeState: node.representativeState,
         representativeStateKey: node.representativeStateKey,
         routeStatus: node.terminal
-          ? 'Selected policy terminal success'
+          ? 'Selected policy final-craft success'
           : node.recoveryLike
             ? 'Selected recovery policy state'
             : 'Exact selected-policy macro state',
+        technicalStateSummary: node.stateSummary,
         technicalModifiers,
       },
     };
@@ -666,9 +724,12 @@ export function buildVisualizationGraph(
     const backwards = Boolean(source && target && target.x <= source.x);
     const recovery = recoveryEdgeIds.has(edge.id) ||
       edge.outcomeKind === 'RECOVERY' || edge.outcomeKind === 'REACQUIRE';
+    const isScopeHandoff = edge.evidenceKind === 'CERTIFIED_SCOPE_HANDOFF';
     const routing: VisualizationEdge['routing'] = sameNode
       ? 'SELF_LOOP'
-      : recovery
+      : isScopeHandoff
+        ? 'SCOPE_HANDOFF'
+        : recovery
         ? 'RECOVERY_CORRIDOR'
         : backwards
           ? 'BACK_EDGE'
@@ -691,23 +752,24 @@ export function buildVisualizationGraph(
     const recoveryCorridorY = layout.height - 68 - recoveryLane * 30;
     const controlX = sameNode
       ? sourceX + (branchIndex % 2 === 0 ? 86 : -86)
-      : recovery
+      : recovery && !isScopeHandoff
         ? midX
         : midX + (-dy / (distance || 1)) * distance * curvature;
     const controlY = sameNode
       ? sourceY - 104
-      : recovery
+      : recovery && !isScopeHandoff
         ? recoveryCorridorY * 2 - midY
         : midY + (dx / (distance || 1)) * distance * curvature;
+    const sourceFlowNode = flow.nodes.find((node) => node.id === edge.sourceNodeId);
+    const targetFlowNode = flow.nodes.find((node) => node.id === edge.targetNodeId);
+    const ordinaryLabel = branchLabel(edge, sourceFlowNode, targetFlowNode);
     return {
       id: edge.id,
       source: edge.sourceNodeId,
       target: edge.targetNodeId,
-      actionLabel: branchLabel(
-        edge,
-        flow.nodes.find((node) => node.id === edge.sourceNodeId),
-        flow.nodes.find((node) => node.id === edge.targetNodeId),
-      ),
+      actionLabel: isScopeHandoff
+        ? `${edge.actionName} - certified acquisition -> final crafting - ${(edge.conditionalProbability * 100).toFixed(1)}%`
+        : ordinaryLabel,
       probability: edge.conditionalProbability,
       expectedVisits: edge.expectedFlow,
       exactTransitionCount: edge.exactTransitionCount,
@@ -728,6 +790,7 @@ export function buildVisualizationGraph(
       opacity: Math.min(0.98, 0.2 + edge.conditionalProbability * 0.48 + flowImportance * 0.3),
       flowImportance,
       routing,
+      isScopeHandoff,
     };
   });
   const events: VisualizationEvent[] = [];
@@ -758,15 +821,48 @@ export function buildVisualizationGraph(
     timestampMs: events.length * 250 + 250,
     description: `${nodes.length} macro states and ${edges.length} exact-flow branches rendered.`,
   });
+  const acquisitionNodes = nodes.filter((node) => node.scope === 'ACQUISITION');
+  const downstreamNodes = nodes.filter((node) => node.scope === 'DOWNSTREAM');
+  const meanX = (values: VisualizationNode[]) => values.length > 0
+    ? values.reduce((sum, node) => sum + node.x, 0) / values.length
+    : undefined;
+  const acquisitionCenterX = meanX(acquisitionNodes);
+  const downstreamCenterX = meanX(downstreamNodes);
+  const minimumNodeY = nodes.length > 0 ? Math.min(...nodes.map((node) => node.y - node.radius)) : 0;
+  const headerY = minimumNodeY - 62;
+  const acquisitionRight = acquisitionNodes.length > 0
+    ? Math.max(...acquisitionNodes.map((node) => node.x + node.radius))
+    : undefined;
+  const downstreamLeft = downstreamNodes.length > 0
+    ? Math.min(...downstreamNodes.map((node) => node.x - node.radius))
+    : undefined;
+  const boundaryX = acquisitionRight !== undefined && downstreamLeft !== undefined
+    ? (acquisitionRight + downstreamLeft) / 2
+    : acquisitionCenterX !== undefined && downstreamCenterX !== undefined
+      ? (acquisitionCenterX + downstreamCenterX) / 2
+      : undefined;
+  const scopeEvidence: VisualizationScopeEvidence = {
+    acquisitionNodeIds: acquisitionNodes.map((node) => node.id),
+    downstreamNodeIds: downstreamNodes.map((node) => node.id),
+    handoffEdgeIds: edges.filter((edge) => edge.isScopeHandoff).map((edge) => edge.id),
+    acquisitionHeader: acquisitionContext.kind === 'SELF_FRACTURE'
+      ? 'SELF-FRACTURE PREPARATION'
+      : 'ACQUISITION PREPARATION',
+    downstreamHeader: 'FINAL CRAFTING',
+    acquisitionCenterX,
+    downstreamCenterX,
+    headerY,
+    boundaryX,
+  };
   let minX = Infinity;
   let minY = Infinity;
   let maxX = -Infinity;
   let maxY = -Infinity;
   for (const node of nodes) {
-    minX = Math.min(minX, node.x - node.radius - 90);
-    minY = Math.min(minY, node.y - node.radius - 100);
-    maxX = Math.max(maxX, node.x + node.radius + 90);
-    maxY = Math.max(maxY, node.y + node.radius + 100);
+    minX = Math.min(minX, node.x - node.radius - 12);
+    minY = Math.min(minY, node.y - node.radius - 12);
+    maxX = Math.max(maxX, node.x + node.radius + 12);
+    maxY = Math.max(maxY, node.y + node.radius + 12);
   }
   for (const edge of edges) {
     const source = nodes.find((node) => node.id === edge.source);
@@ -778,6 +874,9 @@ export function buildVisualizationGraph(
     minY = Math.min(minY, middleY - 40);
     maxX = Math.max(maxX, middleX + 40);
     maxY = Math.max(maxY, middleY + 40);
+  }
+  if (acquisitionNodes.length > 0 || downstreamNodes.length > 0) {
+    minY = Math.min(minY, headerY - 18);
   }
   const particleBudget = Math.min(120, Math.max(edges.length, 24 + edges.length * 2));
   return {
@@ -803,7 +902,10 @@ export function buildVisualizationGraph(
         edge.routing === 'RECOVERY_CORRIDOR'
       ).length,
       defaultChronologicalOrdinals: false,
+      labelAwareFit: true,
+      fitMarginsPx: { left: 176, right: 176, top: 84, bottom: 82 },
     },
+    scopeEvidence,
     bounds: {
       minX: Number.isFinite(minX) ? minX : 0,
       minY: Number.isFinite(minY) ? minY : 0,

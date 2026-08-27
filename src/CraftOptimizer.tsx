@@ -1261,6 +1261,9 @@ export function CraftOptimizer({ seed = null, onBackToClusterJewels }: CraftOpti
         presentation: res.presentation,
         policyFlow: res.policyFlow,
         fullRouteUsage: res.fullRouteUsage,
+        requestBudget: res.search.requestBudget,
+        coreRecommendationSnapshot: res.search.coreRecommendationSnapshot,
+        requestPolicyRegistry: res.requestPolicyRegistry,
         shoppingListCurrencies: res.expectedCurrencies,
         harvestComparison: res.harvestComparison,
         methodFamilies: res.methodPortfolio?.map((family) => ({
@@ -1275,6 +1278,8 @@ export function CraftOptimizer({ seed = null, onBackToClusterJewels }: CraftOpti
           selectedOpenPolicyCostChaos: family.selectedOpenPolicyCostChaos,
           selectedOpenPolicyAdmissibility: family.selectedOpenPolicyAdmissibility,
           knownPolicyAdmissibility: family.knownPolicyAdmissibility,
+          fullRouteActionEvidence: family.fullRouteActionEvidence,
+          requiredActionEvidenceChecks: family.requiredActionEvidenceChecks,
           acquisitionStatus: family.acquisitionStatus,
           downstreamStatus: family.downstreamStatus,
           fullRouteStatus: family.fullRouteStatus,
@@ -2174,6 +2179,11 @@ export function CraftOptimizer({ seed = null, onBackToClusterJewels }: CraftOpti
                       data-family-search-status={method.familySearchStatus}
                       data-known-policy-admissible={method.knownPolicyAdmissibility?.admissible}
                       data-selected-open-policy-admissible={method.selectedOpenPolicyAdmissibility?.admissible}
+                      data-required-action-evidence={method.requiredActionEvidenceChecks
+                        ?.map((check) =>
+                          `${check.actionId}:${check.requiredScope}:${check.observed}`
+                        )
+                        .join(',')}
                       data-objective-eligibility={method.objectiveEligibility}
                       data-required-action-observed={method.requiredActionObservedOnPolicy}
                       data-duplicate-of={method.duplicateOfMethodFamilyId}
@@ -2275,11 +2285,18 @@ export function CraftOptimizer({ seed = null, onBackToClusterJewels }: CraftOpti
                         <div><dt>Acquisition</dt><dd>{method.acquisitionStatus} · L {chaos(method.acquisitionL)} · U {chaos(method.acquisitionU)}</dd></div>
                         <div><dt>Downstream</dt><dd>{method.downstreamStatus} · L {chaos(method.downstreamL)} · U {chaos(method.downstreamU)}</dd></div>
                         <div><dt>Full route</dt><dd>{method.fullRouteStatus} · L {chaos(method.fullRouteL)} · U {chaos(method.fullRouteU)}</dd></div>
-                        <div><dt>Required action evidence</dt><dd>{method.spec.requiredActionIds?.length
-                          ? method.requiredActionObservedOnPolicy
-                            ? `observed (${method.spec.requiredActionIds.join(', ')})`
-                            : `not observed (${method.spec.requiredActionIds.join(', ')})`
-                          : 'not required'}</dd></div>
+                        <div><dt>Required action evidence</dt><dd>{method.requiredActionEvidenceChecks?.length
+                          ? method.requiredActionEvidenceChecks.map((check) =>
+                              `${check.actionId} @ ${check.requiredScope.toLowerCase()}: ` +
+                              (check.observed
+                                ? `observed (${check.observedExpectedCount.toFixed(4)} expected)`
+                                : 'not observed')
+                            ).join(' · ')
+                          : method.spec.requiredActionEvidence?.length
+                            ? method.spec.requiredActionEvidence.map((requirement) =>
+                                `${requirement.actionId} @ ${requirement.scope.toLowerCase()}: not evaluated`
+                              ).join(' · ')
+                            : 'not required'}</dd></div>
                         {method.policyHealth && <>
                           <div><dt>Policy execution status</dt><dd>{method.policyHealth.selectedPolicyStatus}</dd></div>
                           <div><dt>Family search status</dt><dd>{method.familySearchStatus === 'OPTIMAL_PROVEN'

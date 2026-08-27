@@ -3612,6 +3612,35 @@ td a {
   pointer-events: none;
 }
 
+.constellation-scope-header {
+  position: absolute;
+  z-index: 2;
+  max-width: min(230px, 42vw);
+  padding: 0.3rem 0.65rem;
+  transform: translate(-50%, -50%);
+  border: 1px solid rgba(148, 163, 184, 0.35);
+  border-radius: 999px;
+  background: rgba(3, 7, 18, 0.88);
+  box-shadow: 0 3px 14px rgba(0, 0, 0, 0.55);
+  color: #cbd5e1;
+  font-size: 10.5px;
+  font-weight: 750;
+  letter-spacing: 0.11em;
+  line-height: 1.2;
+  text-align: center;
+  white-space: nowrap;
+}
+
+.constellation-scope-header.acquisition-scope {
+  border-color: rgba(192, 132, 252, 0.66);
+  color: #e9d5ff;
+}
+
+.constellation-scope-header.downstream-scope {
+  border-color: rgba(56, 189, 248, 0.66);
+  color: #bae6fd;
+}
+
 .constellation-node-label {
   position: absolute;
   box-sizing: border-box;
@@ -3674,6 +3703,11 @@ td a {
 .constellation-node-label.selected-route {
   border-color: rgba(125, 211, 252, 0.82);
   background: rgba(7, 18, 35, 0.94);
+}
+
+.constellation-node-label.selected-route[data-policy-scope='ACQUISITION'] {
+  border-color: rgba(216, 180, 254, 0.84);
+  background: rgba(29, 10, 48, 0.94);
 }
 
 .constellation-node-label.replay-active {
@@ -3757,6 +3791,15 @@ td a {
 .constellation-edge-label.recovery-edge {
   border-color: rgba(251, 146, 60, 0.72);
   color: #fed7aa;
+}
+
+.constellation-edge-label.scope-handoff-edge {
+  z-index: 3;
+  border-color: rgba(45, 212, 191, 0.9);
+  background: rgba(6, 32, 37, 0.96);
+  box-shadow: 0 0 14px rgba(45, 212, 191, 0.22);
+  color: #99f6e4;
+  font-weight: 700;
 }
 
 .constellation-edge-label.selected,
@@ -4243,5 +4286,14 @@ td a {
 
   .constellation-route-rail button {
     max-width: 7.5rem;
+  }
+
+  .constellation-scope-header {
+    max-width: 44vw;
+    padding: 0.24rem 0.42rem;
+    overflow: hidden;
+    font-size: 8.5px;
+    letter-spacing: 0.06em;
+    text-overflow: ellipsis;
   }
 }

@@ -41,6 +41,8 @@ interface ViewportTransform {
   offsetY: number;
   centerGraphX: number;
   centerGraphY: number;
+  centerViewportX: number;
+  centerViewportY: number;
   baseScale: number;
 }
 
@@ -115,25 +117,36 @@ function calculateTransform(
   const bounds = graphBounds(graph, baseMode);
   const graphWidth = Math.max(1, bounds.maxX - bounds.minX);
   const graphHeight = Math.max(1, bounds.maxY - bounds.minY);
-  const padding = displayWidth < 500 ? 22 : 38;
+  const marginFactor = displayWidth < 600 ? 0.34 : displayWidth < 900 ? 0.65 : 1;
+  const configuredMargins = graph.layoutEvidence.fitMarginsPx;
+  const leftMargin = Math.min(configuredMargins.left * marginFactor, displayWidth * 0.22);
+  const rightMargin = Math.min(configuredMargins.right * marginFactor, displayWidth * 0.22);
+  const topMargin = Math.min(configuredMargins.top * marginFactor, displayHeight * 0.18);
+  const bottomMargin = Math.min(configuredMargins.bottom * marginFactor, displayHeight * 0.18);
+  const availableWidth = Math.max(1, displayWidth - leftMargin - rightMargin);
+  const availableHeight = Math.max(1, displayHeight - topMargin - bottomMargin);
   const baseScale = clamp(
     Math.min(
-      Math.max(1, displayWidth - padding * 2) / graphWidth,
-      Math.max(1, displayHeight - padding * 2) / graphHeight,
+      availableWidth / graphWidth,
+      availableHeight / graphHeight,
     ),
-    0.28,
+    0.08,
     2.5,
   );
   const scale = baseScale * camera.zoom;
   const centerGraphX = (bounds.minX + bounds.maxX) / 2;
   const centerGraphY = (bounds.minY + bounds.maxY) / 2;
+  const centerViewportX = leftMargin + availableWidth / 2;
+  const centerViewportY = topMargin + availableHeight / 2;
   return {
     scale,
     baseScale,
     centerGraphX,
     centerGraphY,
-    offsetX: displayWidth / 2 + camera.panX - centerGraphX * scale,
-    offsetY: displayHeight / 2 + camera.panY - centerGraphY * scale,
+    centerViewportX,
+    centerViewportY,
+    offsetX: centerViewportX + camera.panX - centerGraphX * scale,
+    offsetY: centerViewportY + camera.panY - centerGraphY * scale,
   };
 }
 
@@ -413,7 +426,9 @@ export const MarkovConstellation: React.FC<MarkovConstellationProps> = ({
       const count = Math.min(remainingBudget, Math.max(1, proportional));
       remainingBudget -= count;
       for (let index = 0; index < count; index += 1) {
-        const color = edge.outcomeKind === 'SUCCESS'
+        const color = edge.isScopeHandoff
+          ? '#2dd4bf'
+          : edge.outcomeKind === 'SUCCESS'
           ? '#34d399'
           : edge.outcomeKind === 'REACQUIRE'
             ? '#c084fc'
@@ -490,6 +505,17 @@ export const MarkovConstellation: React.FC<MarkovConstellationProps> = ({
       context.save();
       context.translate(transform.offsetX, transform.offsetY);
       context.scale(transform.scale, transform.scale);
+      if (graph.scopeEvidence.boundaryX !== undefined && graph.scopeEvidence.handoffEdgeIds.length > 0) {
+        context.save();
+        context.beginPath();
+        context.setLineDash([9, 12]);
+        context.moveTo(graph.scopeEvidence.boundaryX, graph.scopeEvidence.headerY + 24);
+        context.lineTo(graph.scopeEvidence.boundaryX, graph.bounds.maxY);
+        context.strokeStyle = 'rgba(45, 212, 191, 0.24)';
+        context.lineWidth = 1.4 / transform.scale;
+        context.stroke();
+        context.restore();
+      }
       for (const edge of graph.edges) {
         const source = graph.nodes.find((node) => node.id === edge.source);
         const target = graph.nodes.find((node) => node.id === edge.target);
@@ -498,7 +524,9 @@ export const MarkovConstellation: React.FC<MarkovConstellationProps> = ({
         context.moveTo(source.x, source.y);
         context.quadraticCurveTo(edge.controlX, edge.controlY, target.x, target.y);
         const replayEdge = activeReplayNodeId !== null && edge.source === activeReplayNodeId;
-        const edgeColor = edge.outcomeKind === 'SUCCESS'
+        const edgeColor = edge.isScopeHandoff
+          ? '45, 212, 191'
+          : edge.outcomeKind === 'SUCCESS'
           ? '52, 211, 153'
           : edge.outcomeKind === 'REACQUIRE'
             ? '192, 132, 252'
@@ -508,7 +536,7 @@ export const MarkovConstellation: React.FC<MarkovConstellationProps> = ({
                 ? '250, 204, 21'
                 : '56, 189, 248';
         context.strokeStyle = `rgba(${edgeColor}, ${Math.min(0.72, edge.opacity * 0.7)})`;
-        context.lineWidth = edge.width + (replayEdge ? 3 : 1.5);
+        context.lineWidth = edge.width + (replayEdge ? 3 : edge.isScopeHandoff ? 2.5 : 1.5);
         context.stroke();
         context.strokeStyle = replayEdge ? '#ffffff' : `rgba(${edgeColor}, ${edge.opacity})`;
         context.lineWidth = edge.width * (replayEdge ? 0.68 : 0.5);
@@ -544,8 +572,13 @@ export const MarkovConstellation: React.FC<MarkovConstellationProps> = ({
           glow.addColorStop(0, 'rgba(52, 211, 153, 0.85)');
           glow.addColorStop(0.65, 'rgba(52, 211, 153, 0.2)');
         } else if (node.isSelectedRoute) {
-          glow.addColorStop(0, isActive ? 'rgba(255, 255, 255, 0.95)' : 'rgba(56, 189, 248, 0.72)');
-          glow.addColorStop(0.65, 'rgba(56, 189, 248, 0.18)');
+          const acquisitionNode = node.scope === 'ACQUISITION';
+          glow.addColorStop(0, isActive
+            ? 'rgba(255, 255, 255, 0.95)'
+            : acquisitionNode ? 'rgba(192, 132, 252, 0.76)' : 'rgba(56, 189, 248, 0.72)');
+          glow.addColorStop(0.65, acquisitionNode
+            ? 'rgba(192, 132, 252, 0.2)'
+            : 'rgba(56, 189, 248, 0.18)');
         } else if (node.isDominated) {
           glow.addColorStop(0, 'rgba(100, 116, 139, 0.32)');
           glow.addColorStop(0.65, 'rgba(100, 116, 139, 0.08)');
@@ -561,7 +594,7 @@ export const MarkovConstellation: React.FC<MarkovConstellationProps> = ({
         context.fillStyle = node.kind === 'TERMINAL_SUCCESS'
           ? '#059669'
           : node.isSelectedRoute
-            ? '#0284c7'
+            ? node.scope === 'ACQUISITION' ? '#7e22ce' : '#0284c7'
             : node.isDominated
               ? '#334155'
               : '#d97706';
@@ -570,7 +603,9 @@ export const MarkovConstellation: React.FC<MarkovConstellationProps> = ({
         context.fill();
         context.strokeStyle = isSelected || isHovered || isActive
           ? '#ffffff'
-          : node.isSelectedRoute ? '#7dd3fc' : '#94a3b8';
+          : node.isSelectedRoute
+            ? node.scope === 'ACQUISITION' ? '#d8b4fe' : '#7dd3fc'
+            : '#94a3b8';
         context.lineWidth = isSelected || isActive ? 3.5 : isHovered ? 2.5 : 1.5;
         context.stroke();
       }
@@ -630,8 +665,8 @@ export const MarkovConstellation: React.FC<MarkovConstellationProps> = ({
       const graphY = (pointY - oldTransform.offsetY) / oldTransform.scale;
       const nextScale = oldTransform.baseScale * nextZoom;
       return {
-        panX: pointX - viewportSize.width / 2 - (graphX - oldTransform.centerGraphX) * nextScale,
-        panY: pointY - viewportSize.height / 2 - (graphY - oldTransform.centerGraphY) * nextScale,
+        panX: pointX - oldTransform.centerViewportX - (graphX - oldTransform.centerGraphX) * nextScale,
+        panY: pointY - oldTransform.centerViewportY - (graphY - oldTransform.centerGraphY) * nextScale,
         zoom: nextZoom,
         fitMode: 'MANUAL',
         baseFitMode: current.fitMode === 'MANUAL' ? current.baseFitMode : current.fitMode,
@@ -803,12 +838,13 @@ export const MarkovConstellation: React.FC<MarkovConstellationProps> = ({
   const visibleEdgeLabels = useMemo(() => {
     const candidates = graph.edges
       .filter((edge) => advancedLabels || (
-        edge.source === activeReplayNodeId || edge.id === selectedEdgeId
+        edge.isScopeHandoff || edge.source === activeReplayNodeId || edge.id === selectedEdgeId
       ))
       .sort((left, right) => {
         const leftSelected = left.id === selectedEdgeId;
         const rightSelected = right.id === selectedEdgeId;
         return Number(rightSelected) - Number(leftSelected) ||
+          Number(right.isScopeHandoff) - Number(left.isScopeHandoff) ||
           right.expectedVisits - left.expectedVisits || left.id.localeCompare(right.id);
       });
     const occupied: Array<Pick<LabelLayout, 'left' | 'top' | 'width' | 'height'>> = [
@@ -842,7 +878,7 @@ export const MarkovConstellation: React.FC<MarkovConstellationProps> = ({
       }));
       const available = positions.find((position) =>
         !occupied.some((existing) => rectanglesIntersect(position, existing))
-      );
+      ) ?? (edge.isScopeHandoff ? positions[0] : undefined);
       if (!available) continue;
       occupied.push(available);
       placed.push({ edge, ...available });
@@ -894,6 +930,11 @@ export const MarkovConstellation: React.FC<MarkovConstellationProps> = ({
       data-minimum-node-distance={graph.layoutEvidence.minimumNodeCenterDistance.toFixed(3)}
       data-recovery-corridor-edge-count={graph.layoutEvidence.recoveryCorridorEdgeCount}
       data-default-chronological-ordinals={graph.layoutEvidence.defaultChronologicalOrdinals}
+      data-label-aware-fit={graph.layoutEvidence.labelAwareFit}
+      data-fit-margins={`${graph.layoutEvidence.fitMarginsPx.left},${graph.layoutEvidence.fitMarginsPx.right},${graph.layoutEvidence.fitMarginsPx.top},${graph.layoutEvidence.fitMarginsPx.bottom}`}
+      data-acquisition-scope-node-count={graph.scopeEvidence.acquisitionNodeIds.length}
+      data-downstream-scope-node-count={graph.scopeEvidence.downstreamNodeIds.length}
+      data-certified-handoff-edge-count={graph.scopeEvidence.handoffEdgeIds.length}
       data-selected-route-node-ids={graph.selectedRouteNodeIds.join(',')}
       data-selected-route-edge-ids={graph.selectedRouteEdgeIds.join(',')}
       data-terminal-node-count={graph.nodes.filter((node) =>
@@ -965,6 +1006,26 @@ export const MarkovConstellation: React.FC<MarkovConstellationProps> = ({
         />
 
         <div className="constellation-label-layer" aria-label="Constellation policy states and branches">
+          {graph.scopeEvidence.acquisitionCenterX !== undefined && graph.scopeEvidence.acquisitionNodeIds.length > 0 && (
+            <div
+              className="constellation-scope-header acquisition-scope"
+              data-scope="ACQUISITION"
+              style={{
+                left: graph.scopeEvidence.acquisitionCenterX * transform.scale + transform.offsetX,
+                top: graph.scopeEvidence.headerY * transform.scale + transform.offsetY,
+              }}
+            >{graph.scopeEvidence.acquisitionHeader}</div>
+          )}
+          {graph.scopeEvidence.downstreamCenterX !== undefined && graph.scopeEvidence.downstreamNodeIds.length > 0 && (
+            <div
+              className="constellation-scope-header downstream-scope"
+              data-scope="DOWNSTREAM"
+              style={{
+                left: graph.scopeEvidence.downstreamCenterX * transform.scale + transform.offsetX,
+                top: graph.scopeEvidence.headerY * transform.scale + transform.offsetY,
+              }}
+            >{graph.scopeEvidence.downstreamHeader}</div>
+          )}
           {graph.edges.map((edge) => {
             const point = edgePoint(graph, edge, 0.5);
             const diameter = Math.max(28, edge.width * transform.scale * 3 + 16);
@@ -985,6 +1046,7 @@ export const MarkovConstellation: React.FC<MarkovConstellationProps> = ({
                 data-conditional-probability={edge.probability.toPrecision(12)}
                 data-expected-flow={edge.expectedVisits.toPrecision(12)}
                 data-edge-routing={edge.routing}
+                data-scope-handoff={edge.isScopeHandoff}
                 onClick={(event) => {
                   if (event.detail === 0) selectEdge(edge);
                 }}
@@ -1011,6 +1073,8 @@ export const MarkovConstellation: React.FC<MarkovConstellationProps> = ({
                 data-node-y={node.y.toFixed(3)}
                 data-semantic-band={node.semanticBand}
                 data-recovery-lane={node.recoveryLane}
+                data-policy-scope={node.scope}
+                data-progress-label={node.progressLabel}
                 onFocus={() => setHoveredNodeId(node.id)}
                 onBlur={() => setHoveredNodeId(null)}
                 onClick={(event) => {
@@ -1028,6 +1092,8 @@ export const MarkovConstellation: React.FC<MarkovConstellationProps> = ({
               style={{ left: layout.left, top: layout.top, width: layout.width, height: layout.height }}
               data-node-id={layout.node.id}
               data-step-number={layout.node.stepNumber}
+              data-policy-scope={layout.node.scope}
+              data-progress-label={layout.node.progressLabel}
               data-label-priority={labelPriority(layout.node, selectedNodeId, hoveredNodeId, activeReplayNodeId)}
               onFocus={() => setHoveredNodeId(layout.node.id)}
               onBlur={() => setHoveredNodeId(null)}
@@ -1050,7 +1116,7 @@ export const MarkovConstellation: React.FC<MarkovConstellationProps> = ({
           {visibleEdgeLabels.map(({ edge, left, top, width: labelWidth, height: labelHeight }) => (
             <button
               type="button"
-              className={`constellation-edge-label ${edge.isRecovery ? 'recovery-edge' : ''} ${edge.id === selectedEdgeId ? 'selected' : ''}`}
+              className={`constellation-edge-label ${edge.isRecovery ? 'recovery-edge' : ''} ${edge.isScopeHandoff ? 'scope-handoff-edge' : ''} ${edge.id === selectedEdgeId ? 'selected' : ''}`}
               key={edge.id}
               style={{ left, top, width: labelWidth, height: labelHeight }}
               data-edge-id={edge.id}
@@ -1058,6 +1124,7 @@ export const MarkovConstellation: React.FC<MarkovConstellationProps> = ({
               data-expected-flow={edge.expectedVisits.toPrecision(12)}
               data-outcome-kind={edge.outcomeKind}
               data-edge-routing={edge.routing}
+              data-scope-handoff={edge.isScopeHandoff}
               onClick={(event) => {
                 if (event.detail === 0) selectEdge(edge);
               }}
@@ -1079,6 +1146,7 @@ export const MarkovConstellation: React.FC<MarkovConstellationProps> = ({
             )}
             <dl className="node-stats">
               {selectedNode.details.phase && <><dt>Policy scope</dt><dd>{selectedNode.details.phase}</dd></>}
+              <dt>Scope progress</dt><dd>{selectedNode.progressLabel}</dd>
               {selectedNode.details.rarity && <><dt>Rarity</dt><dd>{selectedNode.details.rarity}</dd></>}
               <dt>Selected action</dt><dd>{selectedNode.details.actions[0] ?? 'Terminal success'}</dd>
               <dt>Expected visits per craft</dt><dd>{selectedNode.details.expectedVisits.toFixed(4)}</dd>
@@ -1108,6 +1176,7 @@ export const MarkovConstellation: React.FC<MarkovConstellationProps> = ({
               <summary>Technical policy evidence</summary>
               <code>matched target IDs: {selectedNode.details.matchedTargetModIds.join(', ') || 'none'}</code>
               <code>fractured target IDs: {selectedNode.details.fracturedTargetModIds.join(', ') || 'none'}</code>
+              <code>technical state: {selectedNode.details.technicalStateSummary}</code>
               {selectedNode.details.representativeState && <code>representative: {selectedNode.details.representativeState}</code>}
               {selectedNode.details.representativeStateKey && <code>state key: {selectedNode.details.representativeStateKey}</code>}
             </details>
@@ -1118,7 +1187,9 @@ export const MarkovConstellation: React.FC<MarkovConstellationProps> = ({
         {selectedEdge && (
           <aside className="node-detail-overlay edge-detail-overlay" aria-label="Selected constellation edge details" data-selected-edge-id={selectedEdge.id}>
             <div className="node-detail-heading">
-              <span>{selectedEdge.outcomeKind.replace(/_/g, ' ')}</span>
+              <span>{selectedEdge.isScopeHandoff
+                ? 'CERTIFIED ACQUISITION HANDOFF'
+                : selectedEdge.outcomeKind.replace(/_/g, ' ')}</span>
               <h4>{selectedEdgeSource?.label ?? selectedEdge.actionLabel} → {selectedEdgeTarget?.label ?? 'Next state'}</h4>
             </div>
             <dl className="node-stats">
@@ -1126,6 +1197,7 @@ export const MarkovConstellation: React.FC<MarkovConstellationProps> = ({
               <dt>Occupancy-weighted policy-flow probability</dt><dd>{(selectedEdge.probability * 100).toFixed(3)}%</dd>
               <dt>Expected traversals per craft</dt><dd>{selectedEdge.expectedVisits.toFixed(5)}</dd>
               <dt>Outcome group</dt><dd>{selectedEdge.outcomeKind.toLowerCase()}</dd>
+              {selectedEdge.isScopeHandoff && <><dt>Scope transition</dt><dd>Certified acquisition evidence to final-craft policy</dd></>}
               <dt>Source state</dt><dd>{selectedEdgeSource?.details.title ?? selectedEdge.source}</dd>
               <dt>Destination state</dt><dd>{selectedEdgeTarget?.details.title ?? selectedEdge.target}</dd>
               <dt>Next selected action</dt><dd>{selectedEdge.nextSelectedActionName ?? (selectedEdgeTarget?.kind === 'TERMINAL_SUCCESS' ? 'Goal' : 'None')}</dd>
@@ -1154,7 +1226,7 @@ export const MarkovConstellation: React.FC<MarkovConstellationProps> = ({
           {graph.selectedRouteNodeIds.map((nodeId, index) => {
             const node = graph.nodes.find((candidate) => candidate.id === nodeId);
             if (!node) return null;
-            const compactLabel = node.details.phase === 'ACQUIRE'
+            const compactLabel = node.scope === 'ACQUISITION'
               && graph.acquisitionContext.kind === 'SELF_FRACTURE'
               ? 'Fracture'
               : node.label;

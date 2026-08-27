@@ -14,13 +14,13 @@ PINNED CONTROLLED ENGINE FIXTURE (NOT CLAIMED AS RECOVERED SCREENSHOT METADATA)
 
 J-H1 HARVEST ANALYTICAL / MC / EXTERNAL OBSERVATION
   Harvest Reforge Defences: external=0.297719% (98/32917; Wilson95=[0.244380%, 0.362656%]); analytical=0.317341%; MC=0.306000% (918/300000); absoluteDiff=0.019623%; relativeDiff=6.591%
-  analytical outcomes after proof-safe internal aggregation=204642; analytical generation=3240ms; MC=2783ms; mechanicsConfidence=APPROXIMATE / EXTERNALLY CLOSE
+  analytical outcomes after proof-safe internal aggregation=204642; analytical generation=4110ms; MC=3381ms; mechanicsConfidence=APPROXIMATE / EXTERNALLY CLOSE
   weights were read from the eligible committed pool; external data was not used as a mechanics input
 
 J-H2 CONVENTIONAL CONDITIONAL STAGES
-  Alter stage advances on either T1 target: external=3.526961% (1507/42728; Wilson95=[3.356195%, 3.706083%]); analytical=3.599424%; MC=3.594000% (10782/300000); absoluteDiff=0.072463%; relativeDiff=2.055%
-  Regal completes second target | Alter advanced: external=0.928998% (14/1507; Wilson95=[0.554187%, 1.553345%]); analytical=1.146339%; MC=1.001669% (108/10782); absoluteDiff=0.217341%; relativeDiff=23.395%
-  Exalt completes second target | controlled Regal miss mixture: external=1.990710% (30/1507; Wilson95=[1.397948%, 2.827608%]); analytical=1.233526%; MC=1.292861% (138/10674); absoluteDiff=0.757184%; relativeDiff=38.036%
+  Alter stage advances on either T1 target: external=3.526961% (1507/42728; Wilson95=[3.356195%, 3.706083%]); analytical=3.599424%; MC=3.621000% (10863/300000); absoluteDiff=0.072463%; relativeDiff=2.055%
+  Regal completes second target | Alter advanced: external=0.928998% (14/1507; Wilson95=[0.554187%, 1.553345%]); analytical=1.146339%; MC=1.251956% (136/10863); absoluteDiff=0.217341%; relativeDiff=23.395%
+  Exalt completes second target | controlled Regal miss mixture: external=1.990710% (30/1507; Wilson95=[1.397948%, 2.827608%]); analytical=1.233526%; MC=1.146639% (123/10727); absoluteDiff=0.757184%; relativeDiff=38.036%
   external Passed-row mixture semantics are preserved as conditional observations; the engine Exalt comparison is explicitly its controlled Regal-miss mixture, not a fabricated product of screenshot rows
   Scour and Transmute external 1477/1477 rows are recovery/action accounting; engine legality/probability=1 when invoked by the finite policy
 
@@ -34,8 +34,8 @@ J-H3 IDENTICAL-PRICE ECONOMICS / J10 LIFEFORCE CROSSOVER
   strategy switch is the minimum Bellman repeat-policy Q-value; no Harvest-specific winner/crossover branch exists
 
 J11 DEFENSIVE TWO-MOD RUNTIME / DUPLICATE WORK PROFILE
-  Harvest distribution first generation=3449ms; same post-reset mechanical state reuse=1ms; reused=true; retained outcomes=204642
-  product optimizer status=BEST_RESOLVED_ACQUISITION_SAFE; U=235.684630c; elapsed=8704ms; stageTiming={"seedResultMs":4,"transitionGenerationMs":86,"graphAggregationAndSetupMs":850,"bellmanMs":6927,"candidateClassificationAndTrustMs":385,"absorptionMs":47,"occupancyMs":15,"competitiveFrontierCollectionMs":33,"resultAssemblyMs":8,"repeatedRoundWorkMs":2928,"unattributedOrInterruptedMs":93,"serializationMs":21}; states=5000; transitions generated/reused=17193/412; first policy=2934ms; first acquisition-safe=2934ms
+  Harvest distribution first generation=4292ms; same post-reset mechanical state reuse=0ms; reused=true; retained outcomes=204642
+  product optimizer status=PROVISIONAL_RESOLVED; U=1553.799139c; elapsed=25147ms; stageTiming={"seedResultMs":1,"transitionGenerationMs":38,"graphAggregationAndSetupMs":282,"bellmanMs":5679,"candidateClassificationAndTrustMs":146,"absorptionMs":26,"occupancyMs":14,"competitiveFrontierCollectionMs":14,"resultAssemblyMs":7,"repeatedRoundWorkMs":276,"unattributedOrInterruptedMs":1798,"serializationMs":33.947699999996985}; states=3189; transitions generated/reused=9605/17; first policy=6213ms; first acquisition-safe=6213ms
   observed user reference=roughly ten minutes; controlled product request now returns inside the 30-second host guard without reducing mechanics fidelity
 
 CONSTRAINT AUDIT

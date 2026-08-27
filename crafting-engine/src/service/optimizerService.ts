@@ -70,6 +70,7 @@ import {
 } from './optimizerValidation.ts';
 import { getSearchRuntimeBudget, type SearchIntent } from './searchRuntime.ts';
 import type {
+  FullRouteActionEvidence,
   MethodFamilyKind,
   MethodFamilyEvaluationSource,
   MethodFamilyStageStatus,
@@ -87,9 +88,15 @@ import {
 } from '../solver/repeatableRerollCertification.ts';
 import {
   auditPolicyAdmissibility,
+  checkRequiredActionEvidence,
   comparePolicySearchDivergence,
   type PolicyAcquisitionKind,
 } from './policyAdmissibility.ts';
+import {
+  RequestLocalExecutablePolicyRegistry,
+  type ExecutablePolicyValidationSource,
+  type RequestPolicyRegistrySummary,
+} from './requestPolicyRegistry.ts';
 
 export type {
   ActionCostVector,
@@ -490,6 +497,8 @@ export interface AcquisitionPortfolioProofTranche {
   upperBoundAfterChaos?: number;
   outcome: 'RESOLVED' | 'LOWER_BOUND_IMPROVED' | 'UPPER_BOUND_IMPROVED' | 'DOMINATED' | 'NO_PROOF_CHANGE';
   wallTimeMs?: number;
+  startedAtRequestMs?: number;
+  finishedAtRequestMs?: number;
   statesExpandedBefore?: number;
   statesExpandedAfter?: number;
   transitionDistributionsReusedBefore?: number;
@@ -741,6 +750,62 @@ export interface OptimizationRequestBudgetTelemetry {
     methodFamilyComparison: OptimizationBudgetAllocation;
     serializationAndPresentationReserve: { usedMs: number; reservedMs: number };
   };
+  ledger?: OptimizationRequestBudgetLedger;
+}
+
+export type OptimizationBudgetLedgerStage =
+  | 'CORE_PORTFOLIO_SEARCH'
+  | 'ACQUISITION_SYNTHESIS'
+  | 'METHOD_FAMILY_SEARCH'
+  | 'POLICY_ADMISSIBILITY_REVALIDATION'
+  | 'POLICY_EQUIVALENCE_PRESENTATION'
+  | 'PROOF_BOUND_WORK'
+  | 'HOST_SERIALIZATION_RESERVE';
+
+export interface OptimizationBudgetLedgerEntry {
+  stage: OptimizationBudgetLedgerStage;
+  accounting: 'EXCLUSIVE' | 'NESTED_CORE_DETAIL';
+  startedAtRequestMs: number;
+  finishedAtRequestMs: number;
+  usedWallTimeMs: number;
+  remainingRequestMsAtStart: number;
+  remainingRequestMsAtFinish: number;
+  statesExpanded: number;
+  retainedStates: number;
+  stopReason?: OptimizationRequestStopReason;
+}
+
+export interface CoreRecommendationSnapshot {
+  version: 'CORE_RECOMMENDATION_SNAPSHOT_PHASE3D_V1';
+  compareMethodFamiliesRequested: boolean;
+  coreEnvelope: {
+    deadlineFraction: number;
+    deadlineAtRequestMs: number;
+    allocatedWallTimeMs: number;
+  };
+  selectedExecutableUChaos?: number;
+  candidateExecutableUChaos: Array<{ candidateId: string; fullRouteUChaos: number }>;
+  retainedStateFingerprint: string;
+  statesExpanded: number;
+  retainedStates: number;
+  stopReason: OptimizationRequestStopReason;
+  canonicalPolicyFingerprint: string;
+}
+
+export interface OptimizationRequestBudgetLedger {
+  version: 'REQUEST_BUDGET_LEDGER_PHASE3D_V1';
+  clock: 'PERFORMANCE_NOW_MONOTONIC_REQUEST_RELATIVE';
+  requestedWallTimeMs: number;
+  engineDeadlineMs: number;
+  coreDeadlineAtRequestMs: number;
+  coreDeadlineFraction: number;
+  hostSerializationReserveMs: number;
+  hostReserveEnteredAtRequestMs?: number;
+  entries: OptimizationBudgetLedgerEntry[];
+  exclusiveAccountedMs: number;
+  unclassifiedMs: number;
+  reconciled: boolean;
+  explanation: string[];
 }
 
 export interface OptimizationSearchSummary {
@@ -813,6 +878,7 @@ export interface OptimizationSearchSummary {
   requestStopReason: OptimizationRequestStopReason;
   secondaryStopReasons: OptimizationRequestStopReason[];
   requestBudget: OptimizationRequestBudgetTelemetry;
+  coreRecommendationSnapshot?: CoreRecommendationSnapshot;
 }
 
 export type OptimizationWarningCategory =
@@ -871,6 +937,7 @@ export interface OptimizeCraftResult {
   objective?: OptimizationObjectiveSpec;
   costCeilingChaos?: number;
   methodPortfolio?: MethodFamilyResult[];
+  requestPolicyRegistry?: RequestPolicyRegistrySummary;
   internalConsistency: InternalResultConsistency;
   presentation: CanonicalResultPresentation;
   warningDetails: OptimizationWarning[];
@@ -1216,12 +1283,87 @@ interface KnownMethodPolicyCandidate {
   downstreamCostChaos: number;
   downstreamPhysicalActions: number;
   downstreamManualTimeMs: number;
+  acquisitionSynthesis?: AcquisitionSynthesisSummary;
   actionEvidence: string[];
+  policyFingerprint: string;
+  fullRouteActionEvidence: FullRouteActionEvidence;
 }
 
 interface MethodPortfolioBuildOutput {
   families: MethodFamilyResult[];
   resolvedPolicies: ResolvedMethodPolicySource[];
+  timing: {
+    policyAdmissibilityRevalidationMs: number;
+  };
+}
+
+function selectedPolicyFingerprint(
+  result: GenericSearchResult,
+  acquisitionSynthesis?: AcquisitionSynthesisSummary,
+): string {
+  return `selected-${hashIdentity(JSON.stringify(
+    {
+      acquisition: acquisitionSynthesis?.policy?.map((rule) => [
+        rule.stateKey,
+        rule.selectedActionId,
+      ]).sort() ?? [],
+      downstream: result.onPolicyRules
+        .filter((rule) => rule.state.flags?.acquisitionMenu !== true)
+        .map((rule) => [
+          getPhysicalStateSignature(rule.state),
+          rule.selectedActionId,
+        ])
+        .sort(),
+    },
+  )).replace('phase2j-', '')}`;
+}
+
+function buildFullRouteActionEvidence(options: {
+  acquisitionKind: PolicyAcquisitionKind;
+  acquisitionCostChaos: number;
+  acquisitionSynthesis?: AcquisitionSynthesisSummary;
+  downstreamResult: GenericSearchResult;
+  physicalAcquisitionIdentity: string;
+  policySessionIdentity: string;
+  sourcePolicyFingerprint: string;
+}): FullRouteActionEvidence {
+  const shared = {
+    physicalAcquisitionIdentity: options.physicalAcquisitionIdentity,
+    policySessionIdentity: options.policySessionIdentity,
+    sourcePolicyFingerprint: options.sourcePolicyFingerprint,
+  };
+  const acquisitionEntries = options.acquisitionKind === 'CLEAN'
+    ? [{
+        actionId: 'clean_base_initial',
+        actionName: 'Initial clean base acquisition',
+        scope: 'ACQUISITION' as const,
+        expectedCount: 1,
+        expectedCostChaos: options.acquisitionCostChaos,
+        evidenceSource: 'CLEAN_ACQUISITION' as const,
+        ...shared,
+      }]
+    : (options.acquisitionSynthesis?.expectedActionUsage ?? [])
+        .filter((usage) => usage.expectedCount > 1e-9)
+        .map((usage) => ({
+          ...usage,
+          scope: 'ACQUISITION' as const,
+          evidenceSource: 'ACQUISITION_SYNTHESIS_POLICY' as const,
+          ...shared,
+        }));
+  const downstreamEntries = options.downstreamResult.expectedActionUsage
+    .filter((usage) => !usage.actionId.startsWith('acquire_'))
+    .filter((usage) => usage.expectedCount > 1e-9)
+    .map((usage) => ({
+      ...usage,
+      scope: 'DOWNSTREAM' as const,
+      evidenceSource: 'DOWNSTREAM_SELECTED_POLICY' as const,
+      ...shared,
+    }));
+  return {
+    version: 'FULL_ROUTE_ACTION_EVIDENCE_V1',
+    ...shared,
+    entries: [...acquisitionEntries, ...downstreamEntries],
+  };
 }
 
 function methodFamilyStatus(
@@ -1357,6 +1499,16 @@ function buildMethodPortfolio(context: MethodPortfolioBuildContext): MethodPortf
   } = context;
   const results: MethodFamilyResult[] = [];
   const resolvedPolicies: ResolvedMethodPolicySource[] = [];
+  let policyAdmissibilityRevalidationMs = 0;
+  const timedAdmissibilityAudit = (
+    run: () => ReturnType<typeof auditPolicyAdmissibility>,
+  ): ReturnType<typeof auditPolicyAdmissibility> => {
+    const started = globalThis.performance?.now?.() ?? Date.now();
+    const audit = run();
+    policyAdmissibilityRevalidationMs +=
+      (globalThis.performance?.now?.() ?? Date.now()) - started;
+    return audit;
+  };
   const compare = input.compareMethodFamilies === true ||
     (input.objective?.kind ?? 'CHEAPEST_CHAOS') !== 'CHEAPEST_CHAOS';
   const selectedEvidence = acquisition.portfolioProof.candidateEvidence.find(
@@ -1431,6 +1583,7 @@ function buildMethodPortfolio(context: MethodPortfolioBuildContext): MethodPortf
     let downstreamStartState: ItemState;
     let acquisitionPhysicalActions = 0;
     let acquisitionManualTimeMs = 0;
+    const acquisitionSynthesis = synthesisSummaries.get(candidateIndex);
     if (startsAtAcquisitionMenu) {
       const action = openResult.graphBuild.nodes.get(startKey)?.actions.get(acquisitionActionId!);
       const destination = action?.transitions.find((transition) =>
@@ -1443,17 +1596,27 @@ function buildMethodPortfolio(context: MethodPortfolioBuildContext): MethodPortf
       acquisitionManualTimeMs = action.costVector.estimatedManualTimeMs;
       downstreamStartState = destination.nextState;
     } else {
-      const synthesis = synthesisSummaries.get(candidateIndex);
       acquisitionCostChaos = acquisitionStart.fracturedRequirement === undefined
         ? cleanEvidence.costChaos
-        : synthesis?.expectedCostChaos ?? Infinity;
+        : acquisitionSynthesis?.expectedCostChaos ?? Infinity;
       downstreamStartState = openResult.startingState;
     }
     if (!Number.isFinite(acquisitionCostChaos)) return undefined;
-    const actionEvidence = [...new Set(openResult.expectedActionUsage
-      .filter((usage) => !usage.actionId.startsWith('acquire_'))
-      .filter((usage) => usage.expectedCount > 1e-9)
-      .map((usage) => usage.actionId))].sort();
+    const policyFingerprint = selectedPolicyFingerprint(openResult, acquisitionSynthesis);
+    const fullRouteActionEvidence = buildFullRouteActionEvidence({
+      acquisitionKind: acquisitionStart.fracturedRequirement === undefined
+        ? 'CLEAN'
+        : 'SELF_FRACTURE',
+      acquisitionCostChaos,
+      acquisitionSynthesis,
+      downstreamResult: openResult,
+      physicalAcquisitionIdentity: getPhysicalStateSignature(downstreamStartState),
+      policySessionIdentity: searchIdentityHash,
+      sourcePolicyFingerprint: policyFingerprint,
+    });
+    const actionEvidence = [...new Set(fullRouteActionEvidence.entries
+      .filter((entry) => entry.expectedCount > 1e-9)
+      .map((entry) => entry.actionId))].sort();
     const downstreamCostChaos = startsAtAcquisitionMenu
       ? openResult.totalExpectedCostChaos - acquisitionCostChaos
       : openResult.totalExpectedCostChaos;
@@ -1477,14 +1640,30 @@ function buildMethodPortfolio(context: MethodPortfolioBuildContext): MethodPortf
         0,
         (openResult.metrics?.estimatedManualTimeMs ?? 0) - acquisitionManualTimeMs,
       ),
+      acquisitionSynthesis,
       actionEvidence,
+      policyFingerprint,
+      fullRouteActionEvidence,
     } satisfies KnownMethodPolicyCandidate;
   })();
   const cleanKnownOpenPolicy: KnownMethodPolicyCandidate | undefined =
     selectedKnownOpenPolicy?.acquisitionKind === 'CLEAN'
       ? selectedKnownOpenPolicy
       : fastCleanResult && fastCleanRoute
-        ? {
+        ? (() => {
+            const policyFingerprint = selectedPolicyFingerprint(fastCleanResult);
+            const physicalAcquisitionIdentity = getPhysicalStateSignature(
+              fastCleanResult.startingState,
+            );
+            const fullRouteActionEvidence = buildFullRouteActionEvidence({
+              acquisitionKind: 'CLEAN',
+              acquisitionCostChaos: cleanEvidence.costChaos,
+              downstreamResult: fastCleanResult,
+              physicalAcquisitionIdentity,
+              policySessionIdentity: searchIdentityHash,
+              sourcePolicyFingerprint: policyFingerprint,
+            });
+            return {
             solverResult: fastCleanResult,
             route: fastCleanRoute,
             acquisitionCandidateId: `candidate_${starts.indexOf(cleanStart)}`,
@@ -1501,11 +1680,21 @@ function buildMethodPortfolio(context: MethodPortfolioBuildContext): MethodPortf
               fastCleanResult.metrics?.expectedPhysicalActions ?? 0,
             downstreamManualTimeMs:
               fastCleanResult.metrics?.estimatedManualTimeMs ?? 0,
-            actionEvidence: [...new Set(fastCleanResult.expectedActionUsage
-              .filter((usage) => usage.expectedCount > 1e-9)
-              .map((usage) => usage.actionId))].sort(),
-          }
+            acquisitionSynthesis: undefined,
+            actionEvidence: [...new Set(fullRouteActionEvidence.entries
+              .filter((entry) => entry.expectedCount > 1e-9)
+              .map((entry) => entry.actionId))].sort(),
+            policyFingerprint,
+            fullRouteActionEvidence,
+          } satisfies KnownMethodPolicyCandidate;
+          })()
         : undefined;
+
+  if (selectedKnownOpenPolicy) {
+    results[0].fullRouteActionEvidence = selectedKnownOpenPolicy.fullRouteActionEvidence;
+    results[0].requiredActionEvidenceChecks = [];
+    results[0].onPolicyActionIds = [...selectedKnownOpenPolicy.actionEvidence];
+  }
 
   const independentlyRunnableHarvestCount = enabledHarvestCrafts.filter((craft) => {
     const definition = HARVEST_CRAFT_DEFINITIONS[craft.tag];
@@ -1560,7 +1749,7 @@ function buildMethodPortfolio(context: MethodPortfolioBuildContext): MethodPortf
     ].filter((mechanic) => enabledIdSet.has(mechanic.id));
     const auditCandidate = (
       candidate: KnownMethodPolicyCandidate,
-    ) => auditPolicyAdmissibility({
+    ) => timedAdmissibilityAudit(() => auditPolicyAdmissibility({
           family: spec,
           context: { pool, priceBook },
           target: input.target,
@@ -1581,16 +1770,9 @@ function buildMethodPortfolio(context: MethodPortfolioBuildContext): MethodPortf
           expectedDownstreamPhysicalActions: candidate.downstreamPhysicalActions,
           expectedDownstreamManualTimeMs: candidate.downstreamManualTimeMs,
           effortProfile: input.effortProfile,
-          sourcePolicyFingerprint: `selected-${hashIdentity(JSON.stringify(
-            candidate.solverResult.onPolicyRules
-              .filter((rule) => rule.state.flags?.acquisitionMenu !== true)
-              .map((rule) => [
-                getPhysicalStateSignature(rule.state),
-                rule.selectedActionId,
-              ])
-              .sort(),
-          )).replace('phase2j-', '')}`,
-        });
+          sourcePolicyFingerprint: candidate.policyFingerprint,
+          fullRouteActionEvidence: candidate.fullRouteActionEvidence,
+        }));
     const knownPolicyAdmissibility = knownPolicy
       ? auditCandidate(knownPolicy)
       : undefined;
@@ -1823,6 +2005,7 @@ function buildMethodPortfolio(context: MethodPortfolioBuildContext): MethodPortf
         solverResult: knownPolicy.solverResult,
         acquisitionCandidateId: knownPolicy.acquisitionCandidateId,
         acquisitionMethodId: knownPolicy.acquisitionMethodId,
+        acquisitionSynthesis: knownPolicy.acquisitionSynthesis,
         actionEvidence: knownPolicy.actionEvidence,
       });
     }
@@ -1836,9 +2019,31 @@ function buildMethodPortfolio(context: MethodPortfolioBuildContext): MethodPortf
           .filter((entry) => !entry.actionId.startsWith('acquire_'))
           .map((entry) => ({ ...entry }))
       : usage;
-    const winnerActionIds = knownPolicyWon
-      ? knownPolicy.actionEvidence
-      : onPolicyActionIds;
+    const independentPolicyFingerprint = selectedPolicyFingerprint(
+      familyResult,
+      targetFractureIndex >= 0 ? synthesisSummaries.get(targetFractureIndex) : undefined,
+    );
+    const independentFullRouteActionEvidence = buildFullRouteActionEvidence({
+      acquisitionKind: targetFractureIndex >= 0 ? 'SELF_FRACTURE' : 'CLEAN',
+      acquisitionCostChaos,
+      acquisitionSynthesis: targetFractureIndex >= 0
+        ? synthesisSummaries.get(targetFractureIndex)
+        : undefined,
+      downstreamResult: familyResult,
+      physicalAcquisitionIdentity: getPhysicalStateSignature(startState),
+      policySessionIdentity: searchIdentityHash,
+      sourcePolicyFingerprint: independentPolicyFingerprint,
+    });
+    const winnerFullRouteActionEvidence = knownPolicyWon
+      ? knownPolicy.fullRouteActionEvidence
+      : independentFullRouteActionEvidence;
+    const winnerActionIds = [...new Set(winnerFullRouteActionEvidence.entries
+      .filter((entry) => entry.expectedCount > 1e-9)
+      .map((entry) => entry.actionId))].sort();
+    const requiredActionEvidenceChecks = checkRequiredActionEvidence(
+      spec,
+      winnerFullRouteActionEvidence,
+    );
     const winnerDownstreamUpper = knownPolicyWon && knownPolicyAdmissibility?.evaluation
       ? knownPolicyAdmissibility.evaluation.totalExpectedCostChaos
       : downstreamUpper;
@@ -1876,8 +2081,11 @@ function buildMethodPortfolio(context: MethodPortfolioBuildContext): MethodPortf
       fullRouteStatus: stageStatus(winnerFullRouteUpper, fullRouteLower),
       fullRouteL: fullRouteLower,
       fullRouteU: winnerFullRouteUpper,
-      requiredActionObservedOnPolicy: requiredActionIds.length === 0 ||
-        requiredActionIds.some((actionId) => winnerActionIds.includes(actionId)),
+      requiredActionObservedOnPolicy: requiredActionEvidenceChecks.every((check) =>
+        check.observed
+      ),
+      fullRouteActionEvidence: winnerFullRouteActionEvidence,
+      requiredActionEvidenceChecks,
       onPolicyActionIds: winnerActionIds,
       expectedActionUsage: winnerUsage,
       policyHealth: methodPolicyHealth(winnerResult),
@@ -2122,6 +2330,7 @@ function buildMethodPortfolio(context: MethodPortfolioBuildContext): MethodPortf
       badge: `Harvest ${craft.tag}`,
       allowedActionIds: ['transmutation_orb', 'regal_orb', craft.actionId],
       requiredActionIds: [craft.actionId],
+      requiredActionEvidence: [{ actionId: craft.actionId, scope: 'DOWNSTREAM' }],
       forbiddenActionIds: ['fracturing_orb'],
       forcedAcquisitionType: 'CLEAN',
     };
@@ -2211,13 +2420,14 @@ function buildMethodPortfolio(context: MethodPortfolioBuildContext): MethodPortf
       badge: `Fracture: ${modName}`,
       allowedActionIds: [...DEFAULT_ACQUISITION_SYNTHESIS_ACTION_IDS],
       requiredActionIds: ['fracturing_orb'],
+      requiredActionEvidence: [{ actionId: 'fracturing_orb', scope: 'ACQUISITION' }],
       forcedAcquisitionType: 'SELF_FRACTURE',
       targetFractureModId: requirement.modId,
       targetFractureModName: modName,
     };
     const auditFractureCandidate = (
       candidate: KnownMethodPolicyCandidate,
-    ) => auditPolicyAdmissibility({
+    ) => timedAdmissibilityAudit(() => auditPolicyAdmissibility({
           family: fractureSpec,
           context: { pool, priceBook },
           target: input.target,
@@ -2238,7 +2448,9 @@ function buildMethodPortfolio(context: MethodPortfolioBuildContext): MethodPortf
           expectedDownstreamPhysicalActions: candidate.downstreamPhysicalActions,
           expectedDownstreamManualTimeMs: candidate.downstreamManualTimeMs,
           effortProfile: input.effortProfile,
-        });
+          sourcePolicyFingerprint: candidate.policyFingerprint,
+          fullRouteActionEvidence: candidate.fullRouteActionEvidence,
+        }));
     const knownPolicyAdmissibility = cleanKnownOpenPolicy
       ? auditFractureCandidate(cleanKnownOpenPolicy)
       : undefined;
@@ -2248,7 +2460,8 @@ function buildMethodPortfolio(context: MethodPortfolioBuildContext): MethodPortf
         : selectedKnownOpenPolicy
           ? auditFractureCandidate(selectedKnownOpenPolicy)
           : undefined;
-    const route: RouteSummary | undefined = fullU === undefined || !synthesisCertified ? undefined : {
+    const independentRoute: RouteSummary | undefined =
+      fullU === undefined || !synthesisCertified ? undefined : {
       actionId: `method:family_fracture_${requirement.modId}`,
       name: recommended?.acquisitionCandidateId === `candidate_${index}`
         ? recommended.name
@@ -2273,22 +2486,105 @@ function buildMethodPortfolio(context: MethodPortfolioBuildContext): MethodPortf
         effortConfidence: proofRecord.downstream.metrics.effortConfidence,
       } : undefined,
     };
+    const revalidatedSelectedOpenPolicyCostChaos =
+      selectedOpenPolicyAdmissibility?.admissible &&
+      selectedOpenPolicyAdmissibility.evaluation &&
+      selectedKnownOpenPolicy?.acquisitionKind === 'SELF_FRACTURE'
+        ? selectedKnownOpenPolicy.acquisitionCostChaos +
+          selectedOpenPolicyAdmissibility.evaluation.totalExpectedCostChaos
+        : undefined;
+    const selectedPolicyRoute: RouteSummary | undefined =
+      revalidatedSelectedOpenPolicyCostChaos === undefined || !selectedKnownOpenPolicy
+        ? undefined
+        : {
+            ...selectedKnownOpenPolicy.route,
+            actionId: `method:family_fracture_${requirement.modId}:known-policy`,
+            name: fractureSpec.name,
+            expectedTotalCostChaos: revalidatedSelectedOpenPolicyCostChaos,
+            incumbentUpperBoundChaos: revalidatedSelectedOpenPolicyCostChaos,
+            lowerBoundChaos: Math.min(
+              revalidatedSelectedOpenPolicyCostChaos,
+              independentRoute?.lowerBoundChaos ?? acquisitionL ?? 0,
+            ),
+            optimalityGapChaos: Math.max(
+              0,
+              revalidatedSelectedOpenPolicyCostChaos - Math.min(
+                revalidatedSelectedOpenPolicyCostChaos,
+                independentRoute?.lowerBoundChaos ?? acquisitionL ?? 0,
+              ),
+            ),
+            status: 'RESOLVED',
+            metrics: selectedKnownOpenPolicy.route.metrics ? {
+              ...selectedKnownOpenPolicy.route.metrics,
+              expectedChaosCost: revalidatedSelectedOpenPolicyCostChaos,
+            } : undefined,
+          };
+    const independentImprovesSelected =
+      independentRoute?.expectedTotalCostChaos !== null &&
+      independentRoute?.expectedTotalCostChaos !== undefined &&
+      selectedPolicyRoute?.expectedTotalCostChaos !== null &&
+      selectedPolicyRoute?.expectedTotalCostChaos !== undefined &&
+      independentRoute.expectedTotalCostChaos <
+        selectedPolicyRoute.expectedTotalCostChaos -
+          CANONICAL_RECONCILIATION_TOLERANCE_CHAOS;
+    const route = independentImprovesSelected || !selectedPolicyRoute
+      ? independentRoute
+      : selectedPolicyRoute;
+    const incumbentSource = independentImprovesSelected
+      ? 'IMPROVED_FROM_KNOWN_POLICY' as const
+      : selectedPolicyRoute
+        ? 'ADMISSIBLE_KNOWN_POLICY' as const
+        : independentRoute
+          ? 'INDEPENDENT_DISCOVERY' as const
+          : undefined;
+    const selectedPolicyWon = route !== undefined && route === selectedPolicyRoute &&
+      selectedKnownOpenPolicy !== undefined;
+    const independentFullRouteActionEvidence = proofRecord?.downstream && certifiedSynthesis
+      ? buildFullRouteActionEvidence({
+          acquisitionKind: 'SELF_FRACTURE',
+          acquisitionCostChaos: certifiedSynthesis.expectedCostChaos,
+          acquisitionSynthesis: certifiedSynthesis,
+          downstreamResult: proofRecord.downstream,
+          physicalAcquisitionIdentity: getPhysicalStateSignature(start.state),
+          policySessionIdentity: searchIdentityHash,
+          sourcePolicyFingerprint: selectedPolicyFingerprint(
+            proofRecord.downstream,
+            certifiedSynthesis,
+          ),
+        })
+      : undefined;
+    const fractureFullRouteActionEvidence = selectedPolicyWon
+      ? selectedKnownOpenPolicy.fullRouteActionEvidence
+      : independentFullRouteActionEvidence;
+    const fractureRequiredActionEvidenceChecks = fractureFullRouteActionEvidence
+      ? checkRequiredActionEvidence(fractureSpec, fractureFullRouteActionEvidence)
+      : [];
     const comparison = methodFamilyStatus(route, recommended);
     const dominated = evidence?.status === 'DOMINATED';
-    if (
-      route && proofRecord?.downstream &&
-      synthesisCertified
-    ) {
+    if (independentRoute && proofRecord?.downstream && synthesisCertified) {
       resolvedPolicies.push({
-        id: `bundle:family_fracture_${requirement.modId}`,
+        id: `bundle:family_fracture_${requirement.modId}:independent`,
         familyId: `family_fracture_${requirement.modId}`,
         source: 'SELF_FRACTURE',
-        route,
+        route: independentRoute,
         solverResult: proofRecord.downstream,
         acquisitionCandidateId: `candidate_${index}`,
         acquisitionMethodId: 'self-fracture_executable',
         acquisitionSynthesis: certifiedSynthesis,
         actionEvidence: onPolicyActionIds,
+      });
+    }
+    if (selectedPolicyRoute && selectedKnownOpenPolicy) {
+      resolvedPolicies.push({
+        id: `bundle:family_fracture_${requirement.modId}:known-policy`,
+        familyId: `family_fracture_${requirement.modId}`,
+        source: 'SELF_FRACTURE',
+        route: selectedPolicyRoute,
+        solverResult: selectedKnownOpenPolicy.solverResult,
+        acquisitionCandidateId: selectedKnownOpenPolicy.acquisitionCandidateId,
+        acquisitionMethodId: selectedKnownOpenPolicy.acquisitionMethodId,
+        acquisitionSynthesis: selectedKnownOpenPolicy.acquisitionSynthesis,
+        actionEvidence: selectedKnownOpenPolicy.actionEvidence,
       });
     }
     results.push({
@@ -2298,14 +2594,17 @@ function buildMethodPortfolio(context: MethodPortfolioBuildContext): MethodPortf
       evaluationSource: synthesis || evidence?.retainedAcquisitionStates || evidence?.retainedDownstreamStates
         ? 'INDEPENDENT_SOLVE'
         : 'NOT_SEARCHED',
-      incumbentSource: route ? 'INDEPENDENT_DISCOVERY' : undefined,
-      familySearchStatus: route && proofRecord?.downstream?.optimalityProof.modeledActionOptimalityProven &&
+      incumbentSource,
+      familySearchStatus: route === independentRoute &&
+        proofRecord?.downstream?.optimalityProof.modeledActionOptimalityProven &&
         certifiedSynthesis?.proof?.modeledActionOptimalityProven
         ? 'OPTIMAL_PROVEN'
         : route
           ? 'BEST_FOUND_UNPROVEN'
           : 'UNRESOLVED',
-      knownPolicyCostChaos: cleanKnownOpenPolicy?.route.expectedTotalCostChaos ?? undefined,
+      independentFullRouteU: independentRoute?.expectedTotalCostChaos ?? undefined,
+      knownPolicyCostChaos: selectedKnownOpenPolicy?.route.expectedTotalCostChaos ?? undefined,
+      revalidatedKnownPolicyCostChaos: revalidatedSelectedOpenPolicyCostChaos,
       selectedOpenPolicyCostChaos:
         selectedKnownOpenPolicy?.route.expectedTotalCostChaos ?? undefined,
       selectedOpenPolicyAdmissibility,
@@ -2314,25 +2613,56 @@ function buildMethodPortfolio(context: MethodPortfolioBuildContext): MethodPortf
       acquisitionStatus: stageStatus(acquisitionU, acquisitionL, dominated && acquisitionU === undefined),
       acquisitionL,
       acquisitionU,
-      downstreamStatus: stageStatus(evidence?.downstreamUpperBoundChaos, evidence?.downstreamLowerBoundChaos, dominated),
+      downstreamStatus: stageStatus(
+        selectedPolicyWon
+          ? selectedOpenPolicyAdmissibility?.evaluation?.totalExpectedCostChaos
+          : evidence?.downstreamUpperBoundChaos,
+        evidence?.downstreamLowerBoundChaos,
+        dominated,
+      ),
       downstreamL: evidence?.downstreamLowerBoundChaos,
-      downstreamU: evidence?.downstreamUpperBoundChaos,
-      fullRouteStatus: stageStatus(evidence?.fullRouteUpperBoundChaos, evidence?.fullRouteLowerBoundChaos, dominated),
+      downstreamU: selectedPolicyWon
+        ? selectedOpenPolicyAdmissibility?.evaluation?.totalExpectedCostChaos
+        : evidence?.downstreamUpperBoundChaos,
+      fullRouteStatus: stageStatus(
+        route?.expectedTotalCostChaos ?? undefined,
+        evidence?.fullRouteLowerBoundChaos,
+        dominated,
+      ),
       fullRouteL: evidence?.fullRouteLowerBoundChaos,
-      fullRouteU: evidence?.fullRouteUpperBoundChaos,
-      requiredActionObservedOnPolicy: onPolicyActionIds.includes('fracturing_orb'),
-      onPolicyActionIds,
-      expectedActionUsage: allUsage.map((usage) => ({ ...usage })),
+      fullRouteU: route?.expectedTotalCostChaos ?? undefined,
+      requiredActionObservedOnPolicy: fractureRequiredActionEvidenceChecks.length > 0 &&
+        fractureRequiredActionEvidenceChecks.every((check) => check.observed),
+      fullRouteActionEvidence: fractureFullRouteActionEvidence,
+      requiredActionEvidenceChecks: fractureRequiredActionEvidenceChecks,
+      onPolicyActionIds: fractureFullRouteActionEvidence
+        ? [...new Set(fractureFullRouteActionEvidence.entries.map((entry) =>
+            entry.actionId
+          ))].sort()
+        : onPolicyActionIds,
+      expectedActionUsage: fractureFullRouteActionEvidence
+        ? fractureFullRouteActionEvidence.entries.map((entry) => ({
+            actionId: entry.actionId,
+            actionName: entry.actionName,
+            expectedCount: entry.expectedCount,
+            expectedCostChaos: entry.expectedCostChaos,
+          }))
+        : allUsage.map((usage) => ({ ...usage })),
+      policyHealth: methodPolicyHealth(
+        selectedPolicyWon ? selectedKnownOpenPolicy.solverResult : proofRecord?.downstream ?? openResult,
+      ),
       sessionIdentity: `${searchIdentityHash}:family_fracture_${requirement.modId}`,
       retainedStates: (evidence?.retainedAcquisitionStates ?? 0) + (evidence?.retainedDownstreamStates ?? 0),
       transitionDistributionsGenerated: (evidence?.acquisitionTransitionDistributionsGenerated ?? 0) +
         (evidence?.downstreamTransitionDistributionsGenerated ?? 0),
-      whyNotSelectedExplanation: synthesisCertified && evidence?.downstreamUpperBoundChaos === undefined
-        ? `Acquisition synthesis produced a finite executable upper bound at ${certifiedSynthesis.expectedCostChaos.toFixed(1)}c; the independent downstream/full-route solve remains unresolved.`
-        : route
-          ? comparison.status === 'SELECTED_WINNER'
+      whyNotSelectedExplanation: route
+        ? incumbentSource === 'ADMISSIBLE_KNOWN_POLICY'
+          ? 'The selected executable policy was revalidated inside this self-fracture family; family optimality remains unproven.'
+          : comparison.status === 'SELECTED_WINNER'
             ? 'The independently synthesized acquisition and downstream policy form the selected full route.'
             : `Acquisition and downstream policy resolved independently at ${fullU?.toFixed(1)}c full-route cost.`
+        : synthesisCertified && evidence?.downstreamUpperBoundChaos === undefined
+          ? `Acquisition synthesis produced a finite executable upper bound at ${certifiedSynthesis.expectedCostChaos.toFixed(1)}c; the independent downstream/full-route solve remains unresolved.`
           : dominated
             ? 'The family was dominated by an admissible full-route lower bound.'
             : 'Acquisition and downstream status are reported separately; the full route remains unresolved.',
@@ -2346,7 +2676,11 @@ function buildMethodPortfolio(context: MethodPortfolioBuildContext): MethodPortf
         description: 'Reuse the independently synthesized fractured acquisition, then require a tagged Harvest action in the downstream policy.',
         badge: `Fracture + Harvest ${craft.tag}`,
         allowedActionIds: ['regal_orb', craft.actionId],
-        requiredActionIds: [craft.actionId],
+        requiredActionIds: ['fracturing_orb', craft.actionId],
+        requiredActionEvidence: [
+          { actionId: 'fracturing_orb', scope: 'ACQUISITION' },
+          { actionId: craft.actionId, scope: 'DOWNSTREAM' },
+        ],
         forcedAcquisitionType: 'SELF_FRACTURE',
         targetFractureModId: requirement.modId,
         targetFractureModName: modName,
@@ -2426,6 +2760,7 @@ function buildMethodPortfolio(context: MethodPortfolioBuildContext): MethodPortf
       description: 'Chaos Orb transitions are not yet modeled with an executable distribution.',
       badge: 'Chaos',
       requiredActionIds: ['chaos_orb'],
+      requiredActionEvidence: [{ actionId: 'chaos_orb', scope: 'DOWNSTREAM' }],
     },
     status: 'NOT_MODELED',
     evaluationSource: 'NOT_SEARCHED',
@@ -2441,7 +2776,11 @@ function buildMethodPortfolio(context: MethodPortfolioBuildContext): MethodPortf
 
   // Equivalence is assigned only after canonical bundles exist. Scalar cost or
   // usage equality here is deliberately insufficient (Phase 2Y contract).
-  return { families: results, resolvedPolicies };
+  return {
+    families: results,
+    resolvedPolicies,
+    timing: { policyAdmissibilityRevalidationMs },
+  };
 }
 
 function buildHarvestComparisonSummary(options: {
@@ -3009,6 +3348,7 @@ interface ResolvedPolicyBundle {
   policyRules: PolicyRule[];
   policyExplanation: PolicyExplanationRule[];
   actionEvidence: string[];
+  fullRouteActionEvidence: FullRouteActionEvidence;
   consistency: InternalResultConsistency;
   policyEquivalenceFingerprint: string;
   policyEquivalenceEvidence: NonNullable<MethodFamilyResult['policyEquivalenceEvidence']>;
@@ -3292,6 +3632,7 @@ function createResolvedPolicyBundle(options: {
   cleanBaseCostChaos: number;
   target: TargetDefinition;
   objective: OptimizationObjectiveSpec;
+  policySessionIdentity: string;
 }): ResolvedPolicyBundle | undefined {
   if (
     options.acquisitionStart.fracturedRequirement !== undefined &&
@@ -3411,6 +3752,17 @@ function createResolvedPolicyBundle(options: {
     actionEvidence,
     target: options.target,
   });
+  const fullRouteActionEvidence = buildFullRouteActionEvidence({
+    acquisitionKind: options.acquisitionStart.fracturedRequirement === undefined
+      ? 'CLEAN'
+      : 'SELF_FRACTURE',
+    acquisitionCostChaos: fullRouteUsage.acquisitionCostChaos,
+    acquisitionSynthesis: options.acquisitionSynthesis,
+    downstreamResult: options.solverResult,
+    physicalAcquisitionIdentity: getPhysicalStateSignature(options.acquisitionStart.state),
+    policySessionIdentity: options.policySessionIdentity,
+    sourcePolicyFingerprint: policyEquivalence.fingerprint,
+  });
   return {
     id: options.id,
     familyId: options.familyId,
@@ -3426,6 +3778,7 @@ function createResolvedPolicyBundle(options: {
     policyRules,
     policyExplanation,
     actionEvidence,
+    fullRouteActionEvidence,
     consistency,
     policyEquivalenceFingerprint: policyEquivalence.fingerprint,
     policyEquivalenceEvidence: policyEquivalence.evidence,
@@ -3514,15 +3867,31 @@ export class OptimizerService {
     onProgress?: (snapshot: OptimizerProgressSnapshot) => void
   ): OptimizeCraftResult {
     const optimizationStarted = Date.now();
+    const optimizationClockStarted = globalThis.performance?.now?.() ?? Date.now();
+    const requestElapsedMonotonicMs = (): number =>
+      (globalThis.performance?.now?.() ?? Date.now()) - optimizationClockStarted;
+    const completedStageTiming = (
+      usedWallTimeMs: number,
+    ): Pick<AcquisitionPortfolioProofTranche,
+      'startedAtRequestMs' | 'finishedAtRequestMs'> => {
+      const finishedAtRequestMs = requestElapsedMonotonicMs();
+      return {
+        startedAtRequestMs: Math.max(0, finishedAtRequestMs - usedWallTimeMs),
+        finishedAtRequestMs,
+      };
+    };
     const validation = validateOptimizeCraftInput(this.repo, input);
     if (!validation.valid) throw new OptimizerInputValidationError(validation.errors);
     input = validation.normalizedInput;
     const runtimeBudget = getSearchRuntimeBudget(input.searchBudget?.maxWallTimeMs);
     const requestedObjective = input.objective ?? { kind: 'CHEAPEST_CHAOS' as const };
-    const objectiveNeedsUnifiedFamilies = requestedObjective.kind !== 'CHEAPEST_CHAOS' ||
-      input.compareMethodFamilies === true;
+    // Optional method comparison is strictly downstream of the core snapshot.
+    // Only an objective that intrinsically needs unified families may reserve a
+    // larger share for that required objective work.
+    const objectiveNeedsUnifiedFamilies = requestedObjective.kind !== 'CHEAPEST_CHAOS';
+    const coreSearchDeadlineFraction = objectiveNeedsUnifiedFamilies ? 0.48 : 0.85;
     const searchStopDeadline = optimizationStarted + Math.floor(
-      runtimeBudget.engineDeadlineMs * (objectiveNeedsUnifiedFamilies ? 0.48 : 0.85)
+      runtimeBudget.engineDeadlineMs * coreSearchDeadlineFraction
     );
     const absoluteCostCeiling = requestedObjective.maxExpectedCostChaos;
     const costLowerBoundExcludesCandidate = (
@@ -4192,6 +4561,7 @@ export class OptimizerService {
             ? 'LOWER_BOUND_IMPROVED'
             : 'NO_PROOF_CHANGE',
         wallTimeMs: fastCleanResult.searchSummary.elapsedMs,
+        ...completedStageTiming(fastCleanResult.searchSummary.elapsedMs),
         statesExpandedBefore: retainedCleanStates,
         statesExpandedAfter: searchSessionRecord.cleanDownstream.expansion.nodes.size,
         transitionDistributionsReusedBefore: reusedCleanTransitions,
@@ -4383,6 +4753,7 @@ export class OptimizerService {
             upperBoundAfterChaos: proofRecord.fullRouteUpperBoundChaos,
             outcome: improved ? 'LOWER_BOUND_IMPROVED' : 'NO_PROOF_CHANGE',
             wallTimeMs: boundResult.searchSummary.elapsedMs,
+            ...completedStageTiming(boundResult.searchSummary.elapsedMs),
             statesExpandedBefore: retainedStatesBefore,
             statesExpandedAfter: continuation.expansion.nodes.size,
             transitionDistributionsReusedBefore: reusedBefore,
@@ -4596,6 +4967,7 @@ export class OptimizerService {
                 ? 'LOWER_BOUND_IMPROVED'
                 : 'NO_PROOF_CHANGE',
             wallTimeMs: synthesis.search.elapsedMs,
+            ...completedStageTiming(synthesis.search.elapsedMs),
             statesExpandedBefore: retainedAcquisitionStatesBefore,
             statesExpandedAfter: acqSession.expansion.nodes.size,
             transitionDistributionsReusedBefore: reusedAcquisitionBefore,
@@ -4743,6 +5115,7 @@ export class OptimizerService {
                   ? 'UPPER_BOUND_IMPROVED'
                   : 'NO_PROOF_CHANGE',
               wallTimeMs: downstreamResult.searchSummary.elapsedMs,
+              ...completedStageTiming(downstreamResult.searchSummary.elapsedMs),
               statesExpandedBefore: retainedDownstreamStates,
               statesExpandedAfter: downSession.expansion.nodes.size,
               transitionDistributionsReusedBefore: reusedDownstreamBefore,
@@ -4960,6 +5333,7 @@ export class OptimizerService {
               upperBoundAfterChaos: proofRecord.fullRouteUpperBoundChaos,
               outcome,
               wallTimeMs: synthesis.search.elapsedMs,
+              ...completedStageTiming(synthesis.search.elapsedMs),
               statesExpandedBefore: retainedBefore,
               statesExpandedAfter: acqSession.expansion.nodes.size,
               transitionDistributionsReusedBefore: reusedBefore,
@@ -5111,6 +5485,7 @@ export class OptimizerService {
             upperBoundAfterChaos: proofRecord.fullRouteUpperBoundChaos,
             outcome,
             wallTimeMs: downstreamResult.searchSummary.elapsedMs,
+            ...completedStageTiming(downstreamResult.searchSummary.elapsedMs),
             statesExpandedBefore: retainedBefore,
             statesExpandedAfter: downSession.expansion.nodes.size,
             transitionDistributionsReusedBefore: reusedBefore,
@@ -6153,6 +6528,60 @@ export class OptimizerService {
         ? 'Every portfolio competitor is resolved or excluded by an admissible bound.'
         : `${acquisitionSelectionThreats.length} acquisition candidate(s) retain proof debt.`,
     ];
+    const coreRetainedStateKeys = [
+      ...searchSessionRecord.cleanDownstream.expansion.nodes.keys(),
+      ...[...searchSessionRecord.fractureAcquisitions.values()].flatMap((continuation) =>
+        [...continuation.expansion.nodes.keys()]
+      ),
+      ...[...searchSessionRecord.fractureDownstreams.values()].flatMap((continuation) =>
+        [...continuation.expansion.nodes.keys()]
+      ),
+      ...[...searchSessionRecord.fractureDownstreamBounds.values()].flatMap((record) =>
+        [...record.continuation.expansion.nodes.keys()]
+      ),
+    ];
+    const coreCanonicalPolicyFingerprint = `core-${hashIdentity(JSON.stringify({
+      acquisitionCandidateId: selectedParts.candidateId,
+      acquisitionMethodId: selectedParts.methodId,
+      acquisitionPolicy: selectedSynthesis?.policy?.map((rule) => [
+        rule.stateKey,
+        rule.selectedActionId,
+      ]).sort() ?? [],
+      downstreamPolicy: result.onPolicyRules
+        .filter((rule) => rule.state.flags?.acquisitionMenu !== true)
+        .map((rule) => [getPhysicalStateSignature(rule.state), rule.selectedActionId])
+        .sort(),
+    })).replace('phase2j-', '')}`;
+    const coreRecommendationSnapshot: CoreRecommendationSnapshot = {
+      version: 'CORE_RECOMMENDATION_SNAPSHOT_PHASE3D_V1',
+      compareMethodFamiliesRequested: input.compareMethodFamilies === true,
+      coreEnvelope: {
+        deadlineFraction: coreSearchDeadlineFraction,
+        deadlineAtRequestMs: Math.floor(
+          runtimeBudget.engineDeadlineMs * coreSearchDeadlineFraction
+        ),
+        allocatedWallTimeMs: Math.floor(
+          runtimeBudget.engineDeadlineMs * coreSearchDeadlineFraction
+        ),
+      },
+      selectedExecutableUChaos: expectedCostChaos ?? undefined,
+      candidateExecutableUChaos: portfolioProof.candidateEvidence
+        .flatMap((candidate) => candidate.fullRouteUpperBoundChaos === undefined
+          ? []
+          : [{
+              candidateId: candidate.candidateId,
+              fullRouteUChaos: candidate.fullRouteUpperBoundChaos,
+            }]
+        )
+        .sort((left, right) => left.candidateId.localeCompare(right.candidateId)),
+      retainedStateFingerprint: `states-${hashIdentity(JSON.stringify(
+        [...new Set(coreRetainedStateKeys)].sort(),
+      )).replace('phase2j-', '')}`,
+      statesExpanded: portfolioTotalStatesExpanded,
+      retainedStates: portfolioRetainedStates,
+      stopReason: requestStopReason,
+      canonicalPolicyFingerprint: coreCanonicalPolicyFingerprint,
+    };
     const outputWithoutCraftPlan: Omit<
       OptimizeCraftResult,
       'craftPlan' | 'methodPortfolio' | 'presentation' | 'fullRouteUsage' | 'harvestComparison'
@@ -6386,6 +6815,7 @@ export class OptimizerService {
             },
           },
         },
+        coreRecommendationSnapshot,
       },
       solver: {
         bellmanIterations: result.convergence.iterations +
@@ -6470,7 +6900,9 @@ export class OptimizerService {
     };
     const methodFamilyWorkBefore = snapshotMethodFamilyWork();
     const acquisitionDependencyWorkBefore = snapshotAcquisitionDependencyWork();
-    const methodFamilyComparisonStarted = Date.now();
+    const corePortfolioFinishedAtRequestMs = requestElapsedMonotonicMs();
+    const methodFamilyComparisonStartedAtRequestMs = corePortfolioFinishedAtRequestMs;
+    const methodFamilyComparisonStarted = globalThis.performance?.now?.() ?? Date.now();
     const methodPortfolioBuild = buildMethodPortfolio({
       pool,
       priceBook,
@@ -6491,12 +6923,58 @@ export class OptimizerService {
       searchIdentityHash,
       deadlineMs: optimizationStarted + Math.floor(runtimeBudget.engineDeadlineMs * 0.97),
     });
-    const methodFamilyComparisonElapsedMs = Date.now() - methodFamilyComparisonStarted;
+    const methodFamilyComparisonFinishedAtRequestMs = requestElapsedMonotonicMs();
+    const methodFamilyComparisonElapsedMs =
+      (globalThis.performance?.now?.() ?? Date.now()) - methodFamilyComparisonStarted;
+    const policyPresentationStartedAtRequestMs = methodFamilyComparisonFinishedAtRequestMs;
     const methodFamilyWorkAfter = snapshotMethodFamilyWork();
     const acquisitionDependencyWorkAfter = snapshotAcquisitionDependencyWork();
     const resolvedBundles: ResolvedPolicyBundle[] = [];
-    const appendBundle = (bundle: ResolvedPolicyBundle | undefined): void => {
-      if (bundle) resolvedBundles.push(bundle);
+    const requestPolicyRegistry =
+      new RequestLocalExecutablePolicyRegistry<ResolvedPolicyBundle>();
+    const registryTargetIdentity = hashIdentity(JSON.stringify(input.target));
+    const registryEconomicsEffortIdentity = hashIdentity(JSON.stringify({
+      cleanBaseEvidence: cleanEvidence,
+      currencyRates: sortedRecord({
+        ...DEFAULT_CURRENCY_RATES,
+        ...(input.prices?.currencyRates ?? {}),
+      }),
+      effortProfile: {
+        ...DEFAULT_ACTION_EFFORT_PROFILE,
+        ...(input.effortProfile ?? {}),
+      },
+    }));
+    const appendBundle = (
+      bundle: ResolvedPolicyBundle | undefined,
+      validationSource: ExecutablePolicyValidationSource = 'SOLVER_CERTIFICATION',
+    ): void => {
+      if (!bundle) return;
+      resolvedBundles.push(bundle);
+      const candidateIndex = Number(
+        /^candidate_(\d+)$/.exec(bundle.acquisitionCandidateId)?.[1]
+      );
+      const acquisitionStart = Number.isFinite(candidateIndex)
+        ? starts[candidateIndex]
+        : undefined;
+      if (!bundle.familyId || !acquisitionStart) return;
+      requestPolicyRegistry.register({
+        familyId: bundle.familyId,
+        bundleId: bundle.id,
+        fullRouteUChaos: bundle.fullRouteUsage.fullRouteCostChaos,
+        identity: {
+          targetIdentity: registryTargetIdentity,
+          mechanicsSessionIdentity: searchIdentityHash,
+          economicsEffortIdentity: registryEconomicsEffortIdentity,
+          physicalAcquisitionIdentity:
+            bundle.policyEquivalenceEvidence.physicalAcquisitionIdentity,
+          acquisitionKind: acquisitionStart.fracturedRequirement === undefined
+            ? 'CLEAN'
+            : 'SELF_FRACTURE',
+          canonicalPolicyFingerprint: bundle.policyEquivalenceFingerprint,
+        },
+        validationSource,
+        payload: bundle,
+      });
     };
 
     if (result.startingState.flags?.acquisitionMenu === true) {
@@ -6540,6 +7018,7 @@ export class OptimizerService {
           cleanBaseCostChaos: cleanEvidence.costChaos,
           target: input.target,
           objective,
+          policySessionIdentity: searchIdentityHash,
         }));
       }
     }
@@ -6556,6 +7035,7 @@ export class OptimizerService {
         cleanBaseCostChaos: cleanEvidence.costChaos,
         target: input.target,
         objective,
+        policySessionIdentity: searchIdentityHash,
       }));
     }
     for (const source of methodPortfolioBuild.resolvedPolicies) {
@@ -6574,7 +7054,10 @@ export class OptimizerService {
         cleanBaseCostChaos: cleanEvidence.costChaos,
         target: input.target,
         objective,
-      }));
+        policySessionIdentity: searchIdentityHash,
+      }), source.id.includes(':known-policy')
+        ? 'FAMILY_ADMISSIBILITY_REVALIDATION'
+        : 'SOLVER_CERTIFICATION');
     }
 
     const uniqueBundles = new Map<string, ResolvedPolicyBundle>();
@@ -6633,7 +7116,18 @@ export class OptimizerService {
           return byCost || byActions || byTime || left.id.localeCompare(right.id);
       }
     };
-    const selectedBundle = [...eligibleBundles].sort(compareBundles)[0];
+    let selectedBundle = [...eligibleBundles].sort(compareBundles)[0];
+    const frozenCoreBundle = resolvedBundles
+      .filter((bundle) => bundle.id.startsWith('core:'))
+      .filter((bundle) => costCeilingChaos === undefined ||
+        bundle.metrics.expectedChaosCost <= costCeilingChaos + 1e-9)
+      .sort(compareBundles)[0];
+    if (
+      frozenCoreBundle &&
+      (!selectedBundle || compareBundles(selectedBundle, frozenCoreBundle) > 0)
+    ) {
+      selectedBundle = frozenCoreBundle;
+    }
     const unresolvedRelevantFamilies = methodPortfolioBuild.families.filter((family) => {
       if (
         family.spec.kind === 'OPEN' || family.spec.kind === 'CHAOS_REFORGE' ||
@@ -6738,10 +7232,19 @@ export class OptimizerService {
         : familyBundles.filter((bundle) =>
             bundle.metrics.expectedChaosCost <= costCeilingChaos! + 1e-9
           );
+      const registeredFamilyIncumbent = requestPolicyRegistry.bestForFamily(family.spec.id);
+      const objectivePreferredFamilyBundle =
+        [...(eligibleFamilyBundles.length > 0 ? eligibleFamilyBundles : familyBundles)]
+          .sort(compareBundles)[0];
+      // For Cheapest, the request-local registry is the authoritative monotone
+      // executable U. Other objectives retain the same registry evidence while
+      // choosing by their declared action/time comparator.
+      const preferredFamilyBundle = objective.kind === 'CHEAPEST_CHAOS'
+        ? registeredFamilyIncumbent?.payload ?? objectivePreferredFamilyBundle
+        : objectivePreferredFamilyBundle;
       const familyBundle = family.spec.id === selectedFamilyId && selectedBundle
         ? familyBundles.find((bundle) => bundle.id === selectedBundle.id)
-        : [...(eligibleFamilyBundles.length > 0 ? eligibleFamilyBundles : familyBundles)]
-            .sort(compareBundles)[0];
+        : preferredFamilyBundle;
       if (!familyBundle) {
         if (
           family.status === 'DISABLED' || family.status === 'NOT_ELIGIBLE' ||
@@ -6841,7 +7344,10 @@ export class OptimizerService {
         expectedCount: usage.expectedCount,
         expectedCostChaos: usage.expectedCostChaos,
       }));
-      const requiredActionIds = family.spec.requiredActionIds ?? [];
+      const requiredActionEvidenceChecks = checkRequiredActionEvidence(
+        family.spec,
+        familyBundle.fullRouteActionEvidence,
+      );
       return {
         ...family,
         route: canonicalRoute,
@@ -6854,8 +7360,11 @@ export class OptimizerService {
         fullRouteStatus: 'RESOLVED',
         fullRouteL: fullRouteLowerBound,
         fullRouteU: fullRouteUpperBound,
-        requiredActionObservedOnPolicy: requiredActionIds.length === 0 ||
-          requiredActionIds.some((actionId) => familyBundle.actionEvidence.includes(actionId)),
+        requiredActionObservedOnPolicy: requiredActionEvidenceChecks.every((check) =>
+          check.observed
+        ),
+        fullRouteActionEvidence: familyBundle.fullRouteActionEvidence,
+        requiredActionEvidenceChecks,
         onPolicyActionIds: [...familyBundle.actionEvidence],
         expectedActionUsage: canonicalActionUsage,
         policyHealth: methodPolicyHealth(familyBundle.solverResult),
@@ -7021,7 +7530,7 @@ export class OptimizerService {
     const finalWallLimitObserved = finalRequestElapsedMs >=
       runtimeBudget.engineDeadlineMs * 0.9;
     const finalHostReserveObserved = !finalWallLimitObserved && !finalProofClosed &&
-      Date.now() >= searchStopDeadline - 500;
+      coreRecommendationSnapshot.stopReason === 'HOST_RESERVE';
     const finalStateLimitObserved = stateLimitObserved ||
       Math.max(finalPortfolioHighWaterStates, methodFamilyWorkAfter.highWaterStates) >=
         requestedMaxStates;
@@ -7031,13 +7540,7 @@ export class OptimizerService {
       ? 'PROOF_CLOSED'
       : finalWallLimitObserved
         ? 'WALL_TIME'
-        : finalHostReserveObserved
-          ? 'HOST_RESERVE'
-          : finalStateLimitObserved
-            ? 'STATE_CAP'
-            : finalRoundLimitObserved
-              ? 'ROUND_CAP'
-              : 'NO_PRODUCTIVE_PROOF_WORK';
+        : coreRecommendationSnapshot.stopReason;
     const finalObservedStopReasons: OptimizationRequestStopReason[] = [];
     if (finalWallLimitObserved) finalObservedStopReasons.push('WALL_TIME');
     if (finalHostReserveObserved) finalObservedStopReasons.push('HOST_RESERVE');
@@ -7174,6 +7677,7 @@ export class OptimizerService {
       ),
       craftPlan: finalCraftPlan,
       methodPortfolio,
+      requestPolicyRegistry: requestPolicyRegistry.summary(),
       harvestComparison,
       paretoAlternatives: finalParetoAlternatives,
       objectiveProofStatus,
@@ -7282,14 +7786,152 @@ export class OptimizerService {
           (selectedSolverResult?.reconciliation.isReconciled ?? false),
       },
     };
+    const policyPresentationFinishedAtRequestMs = requestElapsedMonotonicMs();
     // never become a frontend integration surprise.
-    const serializationStarted = Date.now();
+    const serializationStartedAtRequestMs = requestElapsedMonotonicMs();
+    const serializationStarted = globalThis.performance?.now?.() ?? Date.now();
     JSON.stringify(output);
-    output.search.stageTimingMs.serializationMs = Date.now() - serializationStarted;
+    output.search.stageTimingMs.serializationMs =
+      (globalThis.performance?.now?.() ?? Date.now()) - serializationStarted;
+    const serializationFinishedAtRequestMs = requestElapsedMonotonicMs();
     output.search.totalElapsedMs = Date.now() - optimizationStarted;
     output.search.requestBudget.used.elapsedMs = output.search.totalElapsedMs;
     output.search.requestBudget.allocations.serializationAndPresentationReserve.usedMs =
       output.search.stageTimingMs.serializationMs;
+    const remainingRequestMs = (atRequestMs: number): number => Math.max(
+      0,
+      runtimeBudget.requestedWallTimeMs - atRequestMs,
+    );
+    const ledgerEntry = (entry: Omit<OptimizationBudgetLedgerEntry,
+      'remainingRequestMsAtStart' | 'remainingRequestMsAtFinish'>):
+      OptimizationBudgetLedgerEntry => ({
+        ...entry,
+        remainingRequestMsAtStart: remainingRequestMs(entry.startedAtRequestMs),
+        remainingRequestMsAtFinish: remainingRequestMs(entry.finishedAtRequestMs),
+      });
+    const trancheSpan = (
+      predicate: (tranche: AcquisitionPortfolioProofTranche) => boolean,
+    ): { start: number; finish: number } => {
+      const matching = finalizedProofTranches.filter(predicate);
+      return {
+        start: matching.length > 0
+          ? Math.min(...matching.map((tranche) => tranche.startedAtRequestMs ?? 0))
+          : 0,
+        finish: matching.length > 0
+          ? Math.max(...matching.map((tranche) =>
+              tranche.finishedAtRequestMs ?? corePortfolioFinishedAtRequestMs
+            ))
+          : 0,
+      };
+    };
+    const acquisitionSpan = trancheSpan((tranche) => tranche.stage === 'ACQUISITION');
+    const proofBoundSpan = trancheSpan((tranche) => tranche.stage === 'DOWNSTREAM_BOUND');
+    const admissibilityMs = Math.min(
+      methodFamilyComparisonElapsedMs,
+      methodPortfolioBuild.timing.policyAdmissibilityRevalidationMs,
+    );
+    const ledgerEntries: OptimizationBudgetLedgerEntry[] = [
+      ledgerEntry({
+        stage: 'CORE_PORTFOLIO_SEARCH',
+        accounting: 'EXCLUSIVE',
+        startedAtRequestMs: 0,
+        finishedAtRequestMs: corePortfolioFinishedAtRequestMs,
+        usedWallTimeMs: corePortfolioFinishedAtRequestMs,
+        statesExpanded: coreRecommendationSnapshot.statesExpanded,
+        retainedStates: coreRecommendationSnapshot.retainedStates,
+        stopReason: coreRecommendationSnapshot.stopReason,
+      }),
+      ledgerEntry({
+        stage: 'METHOD_FAMILY_SEARCH',
+        accounting: 'EXCLUSIVE',
+        startedAtRequestMs: methodFamilyComparisonStartedAtRequestMs,
+        finishedAtRequestMs: methodFamilyComparisonFinishedAtRequestMs,
+        usedWallTimeMs: Math.max(0, methodFamilyComparisonElapsedMs - admissibilityMs),
+        statesExpanded: methodFamilyComparisonAllocation.statesExpanded,
+        retainedStates: methodFamilyComparisonAllocation.retainedStates,
+      }),
+      ledgerEntry({
+        stage: 'POLICY_ADMISSIBILITY_REVALIDATION',
+        accounting: 'EXCLUSIVE',
+        startedAtRequestMs: methodFamilyComparisonStartedAtRequestMs,
+        finishedAtRequestMs: methodFamilyComparisonFinishedAtRequestMs,
+        usedWallTimeMs: admissibilityMs,
+        statesExpanded: 0,
+        retainedStates: 0,
+      }),
+      ledgerEntry({
+        stage: 'POLICY_EQUIVALENCE_PRESENTATION',
+        accounting: 'EXCLUSIVE',
+        startedAtRequestMs: policyPresentationStartedAtRequestMs,
+        finishedAtRequestMs: policyPresentationFinishedAtRequestMs,
+        usedWallTimeMs: Math.max(
+          0,
+          policyPresentationFinishedAtRequestMs - policyPresentationStartedAtRequestMs,
+        ),
+        statesExpanded: 0,
+        retainedStates: 0,
+      }),
+      ledgerEntry({
+        stage: 'HOST_SERIALIZATION_RESERVE',
+        accounting: 'EXCLUSIVE',
+        startedAtRequestMs: serializationStartedAtRequestMs,
+        finishedAtRequestMs: serializationFinishedAtRequestMs,
+        usedWallTimeMs: output.search.stageTimingMs.serializationMs,
+        statesExpanded: 0,
+        retainedStates: 0,
+      }),
+      ledgerEntry({
+        stage: 'ACQUISITION_SYNTHESIS',
+        accounting: 'NESTED_CORE_DETAIL',
+        startedAtRequestMs: acquisitionSpan.start,
+        finishedAtRequestMs: acquisitionSpan.finish,
+        usedWallTimeMs: fractureAcquisitionAllocation.wallTimeMs,
+        statesExpanded: fractureAcquisitionAllocation.statesExpanded,
+        retainedStates: fractureAcquisitionAllocation.retainedStates,
+      }),
+      ledgerEntry({
+        stage: 'PROOF_BOUND_WORK',
+        accounting: 'NESTED_CORE_DETAIL',
+        startedAtRequestMs: proofBoundSpan.start,
+        finishedAtRequestMs: proofBoundSpan.finish,
+        usedWallTimeMs: lowerBoundProbeAllocation.wallTimeMs,
+        statesExpanded: lowerBoundProbeAllocation.statesExpanded,
+        retainedStates: lowerBoundProbeAllocation.retainedStates,
+      }),
+    ];
+    const exclusiveAccountedMs = ledgerEntries
+      .filter((entry) => entry.accounting === 'EXCLUSIVE')
+      .reduce((sum, entry) => sum + entry.usedWallTimeMs, 0);
+    const ledgerElapsedMs = serializationFinishedAtRequestMs;
+    const unclassifiedMs = Math.max(0, ledgerElapsedMs - exclusiveAccountedMs);
+    output.search.requestBudget.ledger = {
+      version: 'REQUEST_BUDGET_LEDGER_PHASE3D_V1',
+      clock: 'PERFORMANCE_NOW_MONOTONIC_REQUEST_RELATIVE',
+      requestedWallTimeMs: runtimeBudget.requestedWallTimeMs,
+      engineDeadlineMs: runtimeBudget.engineDeadlineMs,
+      coreDeadlineAtRequestMs: Math.floor(
+        runtimeBudget.engineDeadlineMs * coreSearchDeadlineFraction
+      ),
+      coreDeadlineFraction: coreSearchDeadlineFraction,
+      hostSerializationReserveMs: runtimeBudget.shutdownReserveMs,
+      hostReserveEnteredAtRequestMs:
+        coreRecommendationSnapshot.stopReason === 'HOST_RESERVE'
+          ? corePortfolioFinishedAtRequestMs
+          : undefined,
+      entries: ledgerEntries,
+      exclusiveAccountedMs,
+      unclassifiedMs,
+      reconciled: unclassifiedMs <= 2,
+      explanation: [
+        `Core envelope is ${Math.round(coreSearchDeadlineFraction * 100)}% of the engine deadline ` +
+          `and is independent of compareMethodFamilies=${input.compareMethodFamilies === true}.`,
+        `Core stopped at ${coreRecommendationSnapshot.statesExpanded.toLocaleString()} expanded ` +
+          `states with ${coreRecommendationSnapshot.stopReason}.`,
+        'Acquisition synthesis and proof-bound rows are measured nested details and are not ' +
+          'added to exclusive request time.',
+        'Family search excludes separately timed policy-admissibility revalidation.',
+      ],
+    };
     output.search.requestBudget.stop.evidence = [
       `requested up to ${output.search.requestBudget.requested.maxStates.toLocaleString()} states / ` +
         `${output.search.requestBudget.requested.maxWallTimeMs}ms / ` +

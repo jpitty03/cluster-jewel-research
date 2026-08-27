@@ -1,0 +1,2069 @@
+{
+  "input": {
+    "id": "phase3c_primordial_renewal_rotten_claws",
+    "name": "Phase 3C Primordial Bond plus Renewal plus Rotten Claws field consistency",
+    "baseType": "Large Cluster Jewel",
+    "clusterType": "Minions deal 10% increased Damage",
+    "itemLevel": 84,
+    "passiveCount": 8,
+    "finalRarity": "rare",
+    "extraAffixes": "allow-extra",
+    "targetMods": [
+      "Primordial Bond",
+      "Renewal",
+      "Rotten Claws"
+    ],
+    "expectedSaleValueChaos": 1708,
+    "priceContext": {
+      "currencyRates": {
+        "chaos": 1,
+        "divine": 213.5,
+        "fracturing": 298.6,
+        "annul": 11.66,
+        "exalt": 1.17,
+        "scour": 0.5391,
+        "alteration": 0.1336,
+        "transmutation": 0.005012,
+        "augmentation": 0.03941,
+        "regal": 0.03638,
+        "wildLifeforce": 0.02377,
+        "vividLifeforce": 0.08208,
+        "primalLifeforce": 0.04085
+      },
+      "cleanBaseCostChaos": 40,
+      "cleanBasePriceSource": "manual",
+      "cleanBasePriceProvenance": "Phase 3C frozen Primordial Bond + Renewal + Rotten Claws field fixture"
+    },
+    "searchBudget": {
+      "maxStates": 5000,
+      "maxWallTimeMs": 30000,
+      "maxExpansionRounds": 3
+    }
+  },
+  "selected": {
+    "actionId": "acquire_candidate_1_self-fracture_executable",
+    "name": "Self-fracture Primordial Bond",
+    "acquisitionCandidateId": "candidate_1",
+    "acquisitionMethodId": "self-fracture_executable",
+    "expectedTotalCostChaos": 1459.7923662158182,
+    "lowerBoundChaos": 1408.1154452858168,
+    "incumbentUpperBoundChaos": 1459.7923662158182,
+    "optimalityGapChaos": 51.67692093000437,
+    "status": "RESOLVED",
+    "couldBeatResolvedIncumbent": false,
+    "metrics": {
+      "expectedChaosCost": 1459.7923662158182,
+      "expectedPhysicalActions": 740.8471930293676,
+      "estimatedManualTimeMs": 314538.8772117272,
+      "objectiveScore": 1459.7923662158182,
+      "effortConfidence": "DEFAULT_APPROXIMATE"
+    }
+  },
+  "conventional": {
+    "spec": {
+      "id": "family_conventional",
+      "kind": "CONVENTIONAL",
+      "name": "Conventional Alt / Aug / Regal",
+      "description": "Clean-base rolling constrained to currency preparation, cleanup, promotion, and slams; Harvest and self-fracture are forbidden.",
+      "badge": "Alt + Regal",
+      "allowedActionIds": [
+        "transmutation_orb",
+        "alteration_orb",
+        "augmentation_orb",
+        "regal_orb",
+        "scouring_orb",
+        "annulment_orb",
+        "exalted_orb"
+      ],
+      "forbiddenActionIds": [
+        "fracturing_orb",
+        "harvest_reforge_life",
+        "harvest_reforge_attack",
+        "harvest_reforge_physical"
+      ],
+      "forcedAcquisitionType": "CLEAN"
+    },
+    "status": "MORE_EXPENSIVE",
+    "costDifferenceChaos": 3307.9388977471526,
+    "costDifferencePercent": 226.60338376218783,
+    "evaluationSource": "INDEPENDENT_SOLVE",
+    "incumbentSource": "ADMISSIBLE_KNOWN_POLICY",
+    "familySearchStatus": "BEST_FOUND_UNPROVEN",
+    "knownPolicyCostChaos": 4767.73126396295,
+    "revalidatedKnownPolicyCostChaos": 4767.7312611739435,
+    "selectedOpenPolicyCostChaos": 1459.7923662160783,
+    "selectedOpenPolicyAdmissibility": {
+      "version": "POLICY_ADMISSIBILITY_PHASE3D_V2",
+      "admissible": false,
+      "familyId": "family_conventional",
+      "sourcePolicyFingerprint": "selected-3303df08",
+      "sourceAcquisitionKind": "SELF_FRACTURE",
+      "sourceAcquisitionCostChaos": 1406.2963152858167,
+      "familyAcquisitionCostChaos": 40,
+      "selectedPolicyDecisionCount": 346,
+      "selectedPhysicalActionIds": [
+        "alteration_orb",
+        "augmentation_orb",
+        "exalted_orb",
+        "regal_orb",
+        "scouring_orb"
+      ],
+      "transitionsRegenerated": 0,
+      "transitionOutcomesCompared": 0,
+      "maximumTransitionProbabilityDifference": 0,
+      "requiredActionEvidenceChecks": [],
+      "fullRouteActionEvidence": {
+        "version": "FULL_ROUTE_ACTION_EVIDENCE_V1",
+        "physicalAcquisitionIdentity": "Large Cluster Jewel|Minions deal 10% increased Damage|84|8|magic|influenced=false|synthesised=false|acquisitionMenu=false|methodFamilyActionEvidence=|Suffix:Primordial Bond:1:F:",
+        "policySessionIdentity": "phase2j-4ae46f61",
+        "sourcePolicyFingerprint": "selected-3303df08",
+        "entries": [
+          {
+            "actionId": "fracturing_orb",
+            "actionName": "Fracturing Orb",
+            "expectedCount": 3.9999999999958504,
+            "expectedCostChaos": 1194.3999999987611,
+            "scope": "ACQUISITION",
+            "evidenceSource": "ACQUISITION_SYNTHESIS_POLICY",
+            "physicalAcquisitionIdentity": "Large Cluster Jewel|Minions deal 10% increased Damage|84|8|magic|influenced=false|synthesised=false|acquisitionMenu=false|methodFamilyActionEvidence=|Suffix:Primordial Bond:1:F:",
+            "policySessionIdentity": "phase2j-4ae46f61",
+            "sourcePolicyFingerprint": "selected-3303df08"
+          },
+          {
+            "actionId": "restart_reacquire",
+            "actionName": "Abandon attempt and reacquire a clean base",
+            "expectedCount": 2.999999999996883,
+            "expectedCostChaos": 119.99999999987531,
+            "scope": "ACQUISITION",
+            "evidenceSource": "ACQUISITION_SYNTHESIS_POLICY",
+            "physicalAcquisitionIdentity": "Large Cluster Jewel|Minions deal 10% increased Damage|84|8|magic|influenced=false|synthesised=false|acquisitionMenu=false|methodFamilyActionEvidence=|Suffix:Primordial Bond:1:F:",
+            "policySessionIdentity": "phase2j-4ae46f61",
+            "sourcePolicyFingerprint": "selected-3303df08"
+          },
+          {
+            "actionId": "alteration_orb",
+            "actionName": "Orb of Alteration",
+            "expectedCount": 323.68085106349344,
+            "expectedCostChaos": 43.24376170208261,
+            "scope": "ACQUISITION",
+            "evidenceSource": "ACQUISITION_SYNTHESIS_POLICY",
+            "physicalAcquisitionIdentity": "Large Cluster Jewel|Minions deal 10% increased Damage|84|8|magic|influenced=false|synthesised=false|acquisitionMenu=false|methodFamilyActionEvidence=|Suffix:Primordial Bond:1:F:",
+            "policySessionIdentity": "phase2j-4ae46f61",
+            "sourcePolicyFingerprint": "selected-3303df08"
+          },
+          {
+            "actionId": "exalted_orb",
+            "actionName": "Exalted Orb Slam",
+            "expectedCount": 3.999999999995821,
+            "expectedCostChaos": 4.67999999999511,
+            "scope": "ACQUISITION",
+            "evidenceSource": "ACQUISITION_SYNTHESIS_POLICY",
+            "physicalAcquisitionIdentity": "Large Cluster Jewel|Minions deal 10% increased Damage|84|8|magic|influenced=false|synthesised=false|acquisitionMenu=false|methodFamilyActionEvidence=|Suffix:Primordial Bond:1:F:",
+            "policySessionIdentity": "phase2j-4ae46f61",
+            "sourcePolicyFingerprint": "selected-3303df08"
+          },
+          {
+            "actionId": "augmentation_orb",
+            "actionName": "Orb of Augmentation",
+            "expectedCount": 82.9202127658712,
+            "expectedCostChaos": 3.2678855851029853,
+            "scope": "ACQUISITION",
+            "evidenceSource": "ACQUISITION_SYNTHESIS_POLICY",
+            "physicalAcquisitionIdentity": "Large Cluster Jewel|Minions deal 10% increased Damage|84|8|magic|influenced=false|synthesised=false|acquisitionMenu=false|methodFamilyActionEvidence=|Suffix:Primordial Bond:1:F:",
+            "policySessionIdentity": "phase2j-4ae46f61",
+            "sourcePolicyFingerprint": "selected-3303df08"
+          },
+          {
+            "actionId": "scouring_orb",
+            "actionName": "Orb of Scouring",
+            "expectedCount": 0.9999999999989615,
+            "expectedCostChaos": 0.5390999999994401,
+            "scope": "ACQUISITION",
+            "evidenceSource": "ACQUISITION_SYNTHESIS_POLICY",
+            "physicalAcquisitionIdentity": "Large Cluster Jewel|Minions deal 10% increased Damage|84|8|magic|influenced=false|synthesised=false|acquisitionMenu=false|methodFamilyActionEvidence=|Suffix:Primordial Bond:1:F:",
+            "policySessionIdentity": "phase2j-4ae46f61",
+            "sourcePolicyFingerprint": "selected-3303df08"
+          },
+          {
+            "actionId": "regal_orb",
+            "actionName": "Regal Orb",
+            "expectedCount": 3.9999999999958216,
+            "expectedCostChaos": 0.145519999999848,
+            "scope": "ACQUISITION",
+            "evidenceSource": "ACQUISITION_SYNTHESIS_POLICY",
+            "physicalAcquisitionIdentity": "Large Cluster Jewel|Minions deal 10% increased Damage|84|8|magic|influenced=false|synthesised=false|acquisitionMenu=false|methodFamilyActionEvidence=|Suffix:Primordial Bond:1:F:",
+            "policySessionIdentity": "phase2j-4ae46f61",
+            "sourcePolicyFingerprint": "selected-3303df08"
+          },
+          {
+            "actionId": "transmutation_orb",
+            "actionName": "Orb of Transmutation",
+            "expectedCount": 3.999999999996871,
+            "expectedCostChaos": 0.020047999999984318,
+            "scope": "ACQUISITION",
+            "evidenceSource": "ACQUISITION_SYNTHESIS_POLICY",
+            "physicalAcquisitionIdentity": "Large Cluster Jewel|Minions deal 10% increased Damage|84|8|magic|influenced=false|synthesised=false|acquisitionMenu=false|methodFamilyActionEvidence=|Suffix:Primordial Bond:1:F:",
+            "policySessionIdentity": "phase2j-4ae46f61",
+            "sourcePolicyFingerprint": "selected-3303df08"
+          },
+          {
+            "actionId": "alteration_orb",
+            "actionName": "Orb of Alteration",
+            "expectedCount": 193.388459707309,
+            "expectedCostChaos": 25.836698216896487,
+            "scope": "DOWNSTREAM",
+            "evidenceSource": "DOWNSTREAM_SELECTED_POLICY",
+            "physicalAcquisitionIdentity": "Large Cluster Jewel|Minions deal 10% increased Damage|84|8|magic|influenced=false|synthesised=false|acquisitionMenu=false|methodFamilyActionEvidence=|Suffix:Primordial Bond:1:F:",
+            "policySessionIdentity": "phase2j-4ae46f61",
+            "sourcePolicyFingerprint": "selected-3303df08"
+          },
+          {
+            "actionId": "exalted_orb",
+            "actionName": "Exalted Orb Slam",
+            "expectedCount": 11.632847748272178,
+            "expectedCostChaos": 13.61043186547845,
+            "scope": "DOWNSTREAM",
+            "evidenceSource": "DOWNSTREAM_SELECTED_POLICY",
+            "physicalAcquisitionIdentity": "Large Cluster Jewel|Minions deal 10% increased Damage|84|8|magic|influenced=false|synthesised=false|acquisitionMenu=false|methodFamilyActionEvidence=|Suffix:Primordial Bond:1:F:",
+            "policySessionIdentity": "phase2j-4ae46f61",
+            "sourcePolicyFingerprint": "selected-3303df08"
+          },
+          {
+            "actionId": "scouring_orb",
+            "actionName": "Orb of Scouring",
+            "expectedCount": 19.625902272537118,
+            "expectedCostChaos": 10.580323915124819,
+            "scope": "DOWNSTREAM",
+            "evidenceSource": "DOWNSTREAM_SELECTED_POLICY",
+            "physicalAcquisitionIdentity": "Large Cluster Jewel|Minions deal 10% increased Damage|84|8|magic|influenced=false|synthesised=false|acquisitionMenu=false|methodFamilyActionEvidence=|Suffix:Primordial Bond:1:F:",
+            "policySessionIdentity": "phase2j-4ae46f61",
+            "sourcePolicyFingerprint": "selected-3303df08"
+          },
+          {
+            "actionId": "augmentation_orb",
+            "actionName": "Orb of Augmentation",
+            "expectedCount": 68.97301719936435,
+            "expectedCostChaos": 2.7182266078269492,
+            "scope": "DOWNSTREAM",
+            "evidenceSource": "DOWNSTREAM_SELECTED_POLICY",
+            "physicalAcquisitionIdentity": "Large Cluster Jewel|Minions deal 10% increased Damage|84|8|magic|influenced=false|synthesised=false|acquisitionMenu=false|methodFamilyActionEvidence=|Suffix:Primordial Bond:1:F:",
+            "policySessionIdentity": "phase2j-4ae46f61",
+            "sourcePolicyFingerprint": "selected-3303df08"
+          },
+          {
+            "actionId": "regal_orb",
+            "actionName": "Regal Orb",
+            "expectedCount": 20.62590227253722,
+            "expectedCostChaos": 0.7503703246749042,
+            "scope": "DOWNSTREAM",
+            "evidenceSource": "DOWNSTREAM_SELECTED_POLICY",
+            "physicalAcquisitionIdentity": "Large Cluster Jewel|Minions deal 10% increased Damage|84|8|magic|influenced=false|synthesised=false|acquisitionMenu=false|methodFamilyActionEvidence=|Suffix:Primordial Bond:1:F:",
+            "policySessionIdentity": "phase2j-4ae46f61",
+            "sourcePolicyFingerprint": "selected-3303df08"
+          }
+        ]
+      },
+      "failures": [
+        {
+          "code": "ACQUISITION_KIND_MISMATCH",
+          "message": "Family requires CLEAN, source policy uses SELF_FRACTURE.",
+          "expected": "CLEAN",
+          "actual": "SELF_FRACTURE"
+        },
+        {
+          "code": "ACQUISITION_IDENTITY_MISMATCH",
+          "message": "The physical acquisition state does not match the family start state.",
+          "expected": "Large Cluster Jewel|Minions deal 10% increased Damage|84|8|normal|influenced=false|synthesised=false|acquisitionMenu=false|methodFamilyActionEvidence=",
+          "actual": "Large Cluster Jewel|Minions deal 10% increased Damage|84|8|magic|influenced=false|synthesised=false|acquisitionMenu=false|methodFamilyActionEvidence=|Suffix:Primordial Bond:1:F:"
+        },
+        {
+          "code": "ACQUISITION_COST_MISMATCH",
+          "message": "The family-context acquisition cost differs from the source policy.",
+          "expected": 40,
+          "actual": 1406.2963152858167
+        }
+      ]
+    },
+    "knownPolicyAdmissibility": {
+      "version": "POLICY_ADMISSIBILITY_PHASE3D_V2",
+      "admissible": true,
+      "familyId": "family_conventional",
+      "sourcePolicyFingerprint": "selected-b36335b1",
+      "sourceAcquisitionKind": "CLEAN",
+      "sourceAcquisitionCostChaos": 40,
+      "familyAcquisitionCostChaos": 40,
+      "selectedPolicyDecisionCount": 400,
+      "selectedPhysicalActionIds": [
+        "alteration_orb",
+        "augmentation_orb",
+        "exalted_orb",
+        "regal_orb",
+        "scouring_orb",
+        "transmutation_orb"
+      ],
+      "transitionsRegenerated": 400,
+      "transitionOutcomesCompared": 54185,
+      "maximumTransitionProbabilityDifference": 0,
+      "requiredActionEvidenceChecks": [],
+      "fullRouteActionEvidence": {
+        "version": "FULL_ROUTE_ACTION_EVIDENCE_V1",
+        "physicalAcquisitionIdentity": "Large Cluster Jewel|Minions deal 10% increased Damage|84|8|normal|influenced=false|synthesised=false|acquisitionMenu=false|methodFamilyActionEvidence=",
+        "policySessionIdentity": "phase2j-4ae46f61",
+        "sourcePolicyFingerprint": "selected-b36335b1",
+        "entries": [
+          {
+            "actionId": "clean_base_initial",
+            "actionName": "Initial clean base acquisition",
+            "scope": "ACQUISITION",
+            "expectedCount": 1,
+            "expectedCostChaos": 40,
+            "evidenceSource": "CLEAN_ACQUISITION",
+            "physicalAcquisitionIdentity": "Large Cluster Jewel|Minions deal 10% increased Damage|84|8|normal|influenced=false|synthesised=false|acquisitionMenu=false|methodFamilyActionEvidence=",
+            "policySessionIdentity": "phase2j-4ae46f61",
+            "sourcePolicyFingerprint": "selected-b36335b1"
+          },
+          {
+            "actionId": "alteration_orb",
+            "actionName": "Orb of Alteration",
+            "expectedCount": 35043.578236178895,
+            "expectedCostChaos": 4681.822052353502,
+            "scope": "DOWNSTREAM",
+            "evidenceSource": "DOWNSTREAM_SELECTED_POLICY",
+            "physicalAcquisitionIdentity": "Large Cluster Jewel|Minions deal 10% increased Damage|84|8|normal|influenced=false|synthesised=false|acquisitionMenu=false|methodFamilyActionEvidence=",
+            "policySessionIdentity": "phase2j-4ae46f61",
+            "sourcePolicyFingerprint": "selected-b36335b1"
+          },
+          {
+            "actionId": "augmentation_orb",
+            "actionName": "Orb of Augmentation",
+            "expectedCount": 529.4267566801163,
+            "expectedCostChaos": 20.864708480763387,
+            "scope": "DOWNSTREAM",
+            "evidenceSource": "DOWNSTREAM_SELECTED_POLICY",
+            "physicalAcquisitionIdentity": "Large Cluster Jewel|Minions deal 10% increased Damage|84|8|normal|influenced=false|synthesised=false|acquisitionMenu=false|methodFamilyActionEvidence=",
+            "policySessionIdentity": "phase2j-4ae46f61",
+            "sourcePolicyFingerprint": "selected-b36335b1"
+          },
+          {
+            "actionId": "exalted_orb",
+            "actionName": "Exalted Orb Slam",
+            "expectedCount": 11.632847748846748,
+            "expectedCostChaos": 13.610431866150691,
+            "scope": "DOWNSTREAM",
+            "evidenceSource": "DOWNSTREAM_SELECTED_POLICY",
+            "physicalAcquisitionIdentity": "Large Cluster Jewel|Minions deal 10% increased Damage|84|8|normal|influenced=false|synthesised=false|acquisitionMenu=false|methodFamilyActionEvidence=",
+            "policySessionIdentity": "phase2j-4ae46f61",
+            "sourcePolicyFingerprint": "selected-b36335b1"
+          },
+          {
+            "actionId": "scouring_orb",
+            "actionName": "Orb of Scouring",
+            "expectedCount": 19.625902273506394,
+            "expectedCostChaos": 10.580323915647316,
+            "scope": "DOWNSTREAM",
+            "evidenceSource": "DOWNSTREAM_SELECTED_POLICY",
+            "physicalAcquisitionIdentity": "Large Cluster Jewel|Minions deal 10% increased Damage|84|8|normal|influenced=false|synthesised=false|acquisitionMenu=false|methodFamilyActionEvidence=",
+            "policySessionIdentity": "phase2j-4ae46f61",
+            "sourcePolicyFingerprint": "selected-b36335b1"
+          },
+          {
+            "actionId": "regal_orb",
+            "actionName": "Regal Orb",
+            "expectedCount": 20.625902273557184,
+            "expectedCostChaos": 0.7503703247120104,
+            "scope": "DOWNSTREAM",
+            "evidenceSource": "DOWNSTREAM_SELECTED_POLICY",
+            "physicalAcquisitionIdentity": "Large Cluster Jewel|Minions deal 10% increased Damage|84|8|normal|influenced=false|synthesised=false|acquisitionMenu=false|methodFamilyActionEvidence=",
+            "policySessionIdentity": "phase2j-4ae46f61",
+            "sourcePolicyFingerprint": "selected-b36335b1"
+          },
+          {
+            "actionId": "transmutation_orb",
+            "actionName": "Orb of Transmutation",
+            "expectedCount": 20.62590227350724,
+            "expectedCostChaos": 0.10337702219481829,
+            "scope": "DOWNSTREAM",
+            "evidenceSource": "DOWNSTREAM_SELECTED_POLICY",
+            "physicalAcquisitionIdentity": "Large Cluster Jewel|Minions deal 10% increased Damage|84|8|normal|influenced=false|synthesised=false|acquisitionMenu=false|methodFamilyActionEvidence=",
+            "policySessionIdentity": "phase2j-4ae46f61",
+            "sourcePolicyFingerprint": "selected-b36335b1"
+          }
+        ]
+      },
+      "failures": [],
+      "evaluation": {
+        "startKey": "Large Cluster Jewel:Minions deal 10% increased Damage:84:8:flags(influenced=false,synthesised=false,acquisitionMenu=false,methodFamilyActionEvidence=):normal|P:[]|S:[]",
+        "reachableStateCount": 415,
+        "reachableNonTerminalStateCount": 400,
+        "reachableTerminalStateCount": 15,
+        "unresolvedTransitionCount": 0,
+        "probabilityRowsReconciled": true,
+        "maximumProbabilityRowDifference": 1.5543122344752192e-15,
+        "totalExpectedCostChaos": 4727.7312611739435,
+        "expectedPhysicalActions": 35645.515548847296,
+        "estimatedManualTimeMs": 14258206.219538897,
+        "terminalAbsorptionProbability": 1.0000000000891556,
+        "proper": true,
+        "valueConverged": true,
+        "occupancyConverged": true,
+        "costReconciled": true,
+        "reconciliationDifferenceChaos": 0.0000029772227208013646,
+        "valueIterations": 6,
+        "occupancyIterations": 6,
+        "expectedVisitsByStateKey": {},
+        "valuesByStateKey": {},
+        "expectedActionUsage": [
+          {
+            "actionId": "alteration_orb",
+            "actionName": "Orb of Alteration",
+            "expectedCount": 35043.57823757385,
+            "expectedCostChaos": 4681.82205253987
+          },
+          {
+            "actionId": "augmentation_orb",
+            "actionName": "Orb of Augmentation",
+            "expectedCount": 529.4267567011905,
+            "expectedCostChaos": 20.864708481593922
+          },
+          {
+            "actionId": "exalted_orb",
+            "actionName": "Exalted Orb Slam",
+            "expectedCount": 11.632847749309795,
+            "expectedCostChaos": 13.610431866692453
+          },
+          {
+            "actionId": "scouring_orb",
+            "actionName": "Orb of Scouring",
+            "expectedCount": 19.62590227428927,
+            "expectedCostChaos": 10.580323916069357
+          },
+          {
+            "actionId": "regal_orb",
+            "actionName": "Regal Orb",
+            "expectedCount": 20.625902274377083,
+            "expectedCostChaos": 0.7503703247418383
+          },
+          {
+            "actionId": "transmutation_orb",
+            "actionName": "Orb of Transmutation",
+            "expectedCount": 20.62590227428997,
+            "expectedCostChaos": 0.10337702219874133
+          }
+        ]
+      },
+      "sourceParity": {
+        "expectedDownstreamCostChaos": 4727.73126396295,
+        "revalidatedDownstreamCostChaos": 4727.7312611739435,
+        "costDifferenceChaos": 0.0000027890064302482642,
+        "expectedPhysicalActions": 35645.51554742855,
+        "revalidatedPhysicalActions": 35645.515548847296,
+        "actionDifference": 0.0000014187462511472404,
+        "expectedManualTimeMs": 14258206.21897142,
+        "revalidatedManualTimeMs": 14258206.219538897,
+        "timeDifferenceMs": 0.0005674771964550018
+      }
+    },
+    "searchDivergence": {
+      "knownRetainedStates": 5000,
+      "independentRetainedStates": 1,
+      "retainedStatesOnlyInKnown": 4999,
+      "retainedStatesOnlyInIndependent": 0,
+      "commonRetainedStates": 1,
+      "knownOnPolicyStatesMissingFromIndependentGraph": 399,
+      "commonOnPolicyStatesWithDifferentActions": 1,
+      "knownSelectedActionsMissingFromIndependentGraph": 0,
+      "rankedDivergences": [
+        {
+          "stateKey": "Large Cluster Jewel:Minions deal 10% increased Damage:84:8:flags(influenced=false,synthesised=false,acquisitionMenu=false,methodFamilyActionEvidence=):magic|P:[groups(AfflictionJewelSmallPassivesGrantArmour)]|S:[]",
+          "state": {
+            "rarity": "magic",
+            "affixCount": 1,
+            "matchedTargetCount": 0,
+            "targetCount": 3
+          },
+          "occupancyUnderKnownPolicy": 1013.8069816437692,
+          "occupancyUnderIndependentPolicy": 0,
+          "knownSelectedActionId": "alteration_orb",
+          "knownActionQInKnownGraph": 4727.859851537509,
+          "reason": "STATE_NOT_DISCOVERED"
+        },
+        {
+          "stateKey": "Large Cluster Jewel:Minions deal 10% increased Damage:84:8:flags(influenced=false,synthesised=false,acquisitionMenu=false,methodFamilyActionEvidence=):magic|P:[groups(AfflictionJewelSmallPassivesGrantDamage)]|S:[]",
+          "state": {
+            "rarity": "magic",
+            "affixCount": 1,
+            "matchedTargetCount": 0,
+            "targetCount": 3
+          },
+          "occupancyUnderKnownPolicy": 1013.8069816437692,
+          "occupancyUnderIndependentPolicy": 0,
+          "knownSelectedActionId": "alteration_orb",
+          "knownActionQInKnownGraph": 4727.859851537509,
+          "reason": "STATE_NOT_DISCOVERED"
+        },
+        {
+          "stateKey": "Large Cluster Jewel:Minions deal 10% increased Damage:84:8:flags(influenced=false,synthesised=false,acquisitionMenu=false,methodFamilyActionEvidence=):magic|P:[groups(AfflictionJewelSmallPassivesGrantES)]|S:[]",
+          "state": {
+            "rarity": "magic",
+            "affixCount": 1,
+            "matchedTargetCount": 0,
+            "targetCount": 3
+          },
+          "occupancyUnderKnownPolicy": 1013.8069816437692,
+          "occupancyUnderIndependentPolicy": 0,
+          "knownSelectedActionId": "alteration_orb",
+          "knownActionQInKnownGraph": 4727.859851537509,
+          "reason": "STATE_NOT_DISCOVERED"
+        },
+        {
+          "stateKey": "Large Cluster Jewel:Minions deal 10% increased Damage:84:8:flags(influenced=false,synthesised=false,acquisitionMenu=false,methodFamilyActionEvidence=):magic|P:[groups(AfflictionJewelSmallPassivesGrantEvasion)]|S:[]",
+          "state": {
+            "rarity": "magic",
+            "affixCount": 1,
+            "matchedTargetCount": 0,
+            "targetCount": 3
+          },
+          "occupancyUnderKnownPolicy": 1013.8069816437692,
+          "occupancyUnderIndependentPolicy": 0,
+          "knownSelectedActionId": "alteration_orb",
+          "knownActionQInKnownGraph": 4727.859851537509,
+          "reason": "STATE_NOT_DISCOVERED"
+        },
+        {
+          "stateKey": "Large Cluster Jewel:Minions deal 10% increased Damage:84:8:flags(influenced=false,synthesised=false,acquisitionMenu=false,methodFamilyActionEvidence=):magic|P:[groups(AfflictionJewelSmallPassivesGrantLife)]|S:[]",
+          "state": {
+            "rarity": "magic",
+            "affixCount": 1,
+            "matchedTargetCount": 0,
+            "targetCount": 3
+          },
+          "occupancyUnderKnownPolicy": 1013.8069816437692,
+          "occupancyUnderIndependentPolicy": 0,
+          "knownSelectedActionId": "alteration_orb",
+          "knownActionQInKnownGraph": 4727.859851537509,
+          "reason": "STATE_NOT_DISCOVERED"
+        },
+        {
+          "stateKey": "Large Cluster Jewel:Minions deal 10% increased Damage:84:8:flags(influenced=false,synthesised=false,acquisitionMenu=false,methodFamilyActionEvidence=):magic|P:[groups(AfflictionJewelSmallPassivesGrantMana)]|S:[]",
+          "state": {
+            "rarity": "magic",
+            "affixCount": 1,
+            "matchedTargetCount": 0,
+            "targetCount": 3
+          },
+          "occupancyUnderKnownPolicy": 1013.8069816437692,
+          "occupancyUnderIndependentPolicy": 0,
+          "knownSelectedActionId": "alteration_orb",
+          "knownActionQInKnownGraph": 4727.859851537509,
+          "reason": "STATE_NOT_DISCOVERED"
+        },
+        {
+          "stateKey": "Large Cluster Jewel:Minions deal 10% increased Damage:84:8:flags(influenced=false,synthesised=false,acquisitionMenu=false,methodFamilyActionEvidence=):magic|P:[groups(Feasting Fiends)]|S:[]",
+          "state": {
+            "rarity": "magic",
+            "affixCount": 1,
+            "matchedTargetCount": 0,
+            "targetCount": 3
+          },
+          "occupancyUnderKnownPolicy": 844.8391513698078,
+          "occupancyUnderIndependentPolicy": 0,
+          "knownSelectedActionId": "alteration_orb",
+          "knownActionQInKnownGraph": 4727.859851537509,
+          "reason": "STATE_NOT_DISCOVERED"
+        },
+        {
+          "stateKey": "Large Cluster Jewel:Minions deal 10% increased Damage:84:8:flags(influenced=false,synthesised=false,acquisitionMenu=false,methodFamilyActionEvidence=):magic|P:[]|S:[groups(AfflictionJewelSmallPassivesGrantChaosRes)]",
+          "state": {
+            "rarity": "magic",
+            "affixCount": 1,
+            "matchedTargetCount": 0,
+            "targetCount": 3
+          },
+          "occupancyUnderKnownPolicy": 683.0245595439095,
+          "occupancyUnderIndependentPolicy": 0,
+          "knownSelectedActionId": "alteration_orb",
+          "knownActionQInKnownGraph": 4727.859851537509,
+          "reason": "STATE_NOT_DISCOVERED"
+        },
+        {
+          "stateKey": "Large Cluster Jewel:Minions deal 10% increased Damage:84:8:flags(influenced=false,synthesised=false,acquisitionMenu=false,methodFamilyActionEvidence=):magic|P:[]|S:[groups(AfflictionJewelSmallPassivesGrantColdRes)]",
+          "state": {
+            "rarity": "magic",
+            "affixCount": 1,
+            "matchedTargetCount": 0,
+            "targetCount": 3
+          },
+          "occupancyUnderKnownPolicy": 683.0245595439095,
+          "occupancyUnderIndependentPolicy": 0,
+          "knownSelectedActionId": "alteration_orb",
+          "knownActionQInKnownGraph": 4727.859851537509,
+          "reason": "STATE_NOT_DISCOVERED"
+        },
+        {
+          "stateKey": "Large Cluster Jewel:Minions deal 10% increased Damage:84:8:flags(influenced=false,synthesised=false,acquisitionMenu=false,methodFamilyActionEvidence=):magic|P:[]|S:[groups(AfflictionJewelSmallPassivesGrantDex)]",
+          "state": {
+            "rarity": "magic",
+            "affixCount": 1,
+            "matchedTargetCount": 0,
+            "targetCount": 3
+          },
+          "occupancyUnderKnownPolicy": 683.0245595439095,
+          "occupancyUnderIndependentPolicy": 0,
+          "knownSelectedActionId": "alteration_orb",
+          "knownActionQInKnownGraph": 4727.859851537509,
+          "reason": "STATE_NOT_DISCOVERED"
+        },
+        {
+          "stateKey": "Large Cluster Jewel:Minions deal 10% increased Damage:84:8:flags(influenced=false,synthesised=false,acquisitionMenu=false,methodFamilyActionEvidence=):magic|P:[]|S:[groups(AfflictionJewelSmallPassivesGrantElementalRes)]",
+          "state": {
+            "rarity": "magic",
+            "affixCount": 1,
+            "matchedTargetCount": 0,
+            "targetCount": 3
+          },
+          "occupancyUnderKnownPolicy": 683.0245595439095,
+          "occupancyUnderIndependentPolicy": 0,
+          "knownSelectedActionId": "alteration_orb",
+          "knownActionQInKnownGraph": 4727.859851537509,
+          "reason": "STATE_NOT_DISCOVERED"
+        },
+        {
+          "stateKey": "Large Cluster Jewel:Minions deal 10% increased Damage:84:8:flags(influenced=false,synthesised=false,acquisitionMenu=false,methodFamilyActionEvidence=):magic|P:[]|S:[groups(AfflictionJewelSmallPassivesGrantFireRes)]",
+          "state": {
+            "rarity": "magic",
+            "affixCount": 1,
+            "matchedTargetCount": 0,
+            "targetCount": 3
+          },
+          "occupancyUnderKnownPolicy": 683.0245595439095,
+          "occupancyUnderIndependentPolicy": 0,
+          "knownSelectedActionId": "alteration_orb",
+          "knownActionQInKnownGraph": 4727.859851537509,
+          "reason": "STATE_NOT_DISCOVERED"
+        },
+        {
+          "stateKey": "Large Cluster Jewel:Minions deal 10% increased Damage:84:8:flags(influenced=false,synthesised=false,acquisitionMenu=false,methodFamilyActionEvidence=):magic|P:[]|S:[groups(AfflictionJewelSmallPassivesGrantInt)]",
+          "state": {
+            "rarity": "magic",
+            "affixCount": 1,
+            "matchedTargetCount": 0,
+            "targetCount": 3
+          },
+          "occupancyUnderKnownPolicy": 683.0245595439095,
+          "occupancyUnderIndependentPolicy": 0,
+          "knownSelectedActionId": "alteration_orb",
+          "knownActionQInKnownGraph": 4727.859851537509,
+          "reason": "STATE_NOT_DISCOVERED"
+        },
+        {
+          "stateKey": "Large Cluster Jewel:Minions deal 10% increased Damage:84:8:flags(influenced=false,synthesised=false,acquisitionMenu=false,methodFamilyActionEvidence=):magic|P:[]|S:[groups(AfflictionJewelSmallPassivesGrantLifeRegen)]",
+          "state": {
+            "rarity": "magic",
+            "affixCount": 1,
+            "matchedTargetCount": 0,
+            "targetCount": 3
+          },
+          "occupancyUnderKnownPolicy": 683.0245595439095,
+          "occupancyUnderIndependentPolicy": 0,
+          "knownSelectedActionId": "alteration_orb",
+          "knownActionQInKnownGraph": 4727.859851537509,
+          "reason": "STATE_NOT_DISCOVERED"
+        },
+        {
+          "stateKey": "Large Cluster Jewel:Minions deal 10% increased Damage:84:8:flags(influenced=false,synthesised=false,acquisitionMenu=false,methodFamilyActionEvidence=):magic|P:[]|S:[groups(AfflictionJewelSmallPassivesGrantManaRegen)]",
+          "state": {
+            "rarity": "magic",
+            "affixCount": 1,
+            "matchedTargetCount": 0,
+            "targetCount": 3
+          },
+          "occupancyUnderKnownPolicy": 683.0245595439095,
+          "occupancyUnderIndependentPolicy": 0,
+          "knownSelectedActionId": "alteration_orb",
+          "knownActionQInKnownGraph": 4727.859851537509,
+          "reason": "STATE_NOT_DISCOVERED"
+        },
+        {
+          "stateKey": "Large Cluster Jewel:Minions deal 10% increased Damage:84:8:flags(influenced=false,synthesised=false,acquisitionMenu=false,methodFamilyActionEvidence=):magic|P:[]|S:[groups(AfflictionJewelSmallPassivesGrantStr)]",
+          "state": {
+            "rarity": "magic",
+            "affixCount": 1,
+            "matchedTargetCount": 0,
+            "targetCount": 3
+          },
+          "occupancyUnderKnownPolicy": 683.0245595439095,
+          "occupancyUnderIndependentPolicy": 0,
+          "knownSelectedActionId": "alteration_orb",
+          "knownActionQInKnownGraph": 4727.859851537509,
+          "reason": "STATE_NOT_DISCOVERED"
+        },
+        {
+          "stateKey": "Large Cluster Jewel:Minions deal 10% increased Damage:84:8:flags(influenced=false,synthesised=false,acquisitionMenu=false,methodFamilyActionEvidence=):magic|P:[groups(AfflictionJewelSmallPassivesHaveIncreasedEffect)]|S:[]",
+          "state": {
+            "rarity": "magic",
+            "affixCount": 1,
+            "matchedTargetCount": 0,
+            "targetCount": 3
+          },
+          "occupancyUnderKnownPolicy": 675.8713210958462,
+          "occupancyUnderIndependentPolicy": 0,
+          "knownSelectedActionId": "alteration_orb",
+          "knownActionQInKnownGraph": 4727.859851537509,
+          "reason": "STATE_NOT_DISCOVERED"
+        },
+        {
+          "stateKey": "Large Cluster Jewel:Minions deal 10% increased Damage:84:8:flags(influenced=false,synthesised=false,acquisitionMenu=false,methodFamilyActionEvidence=):magic|P:[]|S:[groups(Call to the Slaughter)]",
+          "state": {
+            "rarity": "magic",
+            "affixCount": 1,
+            "matchedTargetCount": 0,
+            "targetCount": 3
+          },
+          "occupancyUnderKnownPolicy": 569.1871329532579,
+          "occupancyUnderIndependentPolicy": 0,
+          "knownSelectedActionId": "alteration_orb",
+          "knownActionQInKnownGraph": 4727.859851537509,
+          "reason": "STATE_NOT_DISCOVERED"
+        },
+        {
+          "stateKey": "Large Cluster Jewel:Minions deal 10% increased Damage:84:8:flags(influenced=false,synthesised=false,acquisitionMenu=false,methodFamilyActionEvidence=):magic|P:[]|S:[groups(Added Small Passive Skills also grant: Minions have #% increased Attack and Cast Speed)]",
+          "state": {
+            "rarity": "magic",
+            "affixCount": 1,
+            "matchedTargetCount": 0,
+            "targetCount": 3
+          },
+          "occupancyUnderKnownPolicy": 540.727776305595,
+          "occupancyUnderIndependentPolicy": 0,
+          "knownSelectedActionId": "alteration_orb",
+          "knownActionQInKnownGraph": 4727.859851537509,
+          "reason": "STATE_NOT_DISCOVERED"
+        },
+        {
+          "stateKey": "Large Cluster Jewel:Minions deal 10% increased Damage:84:8:flags(influenced=false,synthesised=false,acquisitionMenu=false,methodFamilyActionEvidence=):magic|P:[groups(Renewal):id(Renewal):t1:name(Renewal):target(1)]|S:[]",
+          "state": {
+            "rarity": "magic",
+            "affixCount": 1,
+            "matchedTargetCount": 1,
+            "targetCount": 3
+          },
+          "occupancyUnderKnownPolicy": 422.4195756849039,
+          "occupancyUnderIndependentPolicy": 0,
+          "knownSelectedActionId": "augmentation_orb",
+          "knownActionQInKnownGraph": 4725.114446005714,
+          "reason": "STATE_NOT_DISCOVERED"
+        }
+      ]
+    },
+    "route": {
+      "actionId": "method:family_conventional:known-policy",
+      "name": "Start clean base",
+      "acquisitionCandidateId": "candidate_0",
+      "acquisitionMethodId": "clean-base_0",
+      "expectedTotalCostChaos": 4767.731263962971,
+      "lowerBoundChaos": 40,
+      "incumbentUpperBoundChaos": 4767.731263962971,
+      "optimalityGapChaos": 4727.731263962971,
+      "status": "RESOLVED",
+      "couldBeatResolvedIncumbent": false,
+      "metrics": {
+        "expectedChaosCost": 4767.731263962971,
+        "expectedPhysicalActions": 35645.51554742855,
+        "estimatedManualTimeMs": 14258206.21897142,
+        "objectiveScore": 4767.731263962971,
+        "effortConfidence": "DEFAULT_APPROXIMATE"
+      },
+      "acquisitionMetrics": {
+        "expectedChaosCost": 40,
+        "expectedPhysicalActions": 0,
+        "estimatedManualTimeMs": 0,
+        "objectiveScore": 40,
+        "effortConfidence": "DEFAULT_APPROXIMATE"
+      },
+      "downstreamMetrics": {
+        "expectedChaosCost": 4727.731263962971,
+        "expectedPhysicalActions": 35645.51554742855,
+        "estimatedManualTimeMs": 14258206.21897142,
+        "objectiveScore": 4727.731263537508,
+        "effortConfidence": "DEFAULT_APPROXIMATE"
+      }
+    },
+    "acquisitionStatus": "RESOLVED",
+    "acquisitionL": 40,
+    "acquisitionU": 40,
+    "downstreamStatus": "RESOLVED",
+    "downstreamL": 0,
+    "downstreamU": 4727.731263962971,
+    "fullRouteStatus": "RESOLVED",
+    "fullRouteL": 40,
+    "fullRouteU": 4767.731263962971,
+    "requiredActionObservedOnPolicy": true,
+    "fullRouteActionEvidence": {
+      "version": "FULL_ROUTE_ACTION_EVIDENCE_V1",
+      "physicalAcquisitionIdentity": "Large Cluster Jewel|Minions deal 10% increased Damage|84|8|normal|influenced=false|synthesised=false|acquisitionMenu=false|methodFamilyActionEvidence=",
+      "policySessionIdentity": "phase2j-4ae46f61",
+      "sourcePolicyFingerprint": "policy-9e41c4f9",
+      "entries": [
+        {
+          "actionId": "clean_base_initial",
+          "actionName": "Initial clean base acquisition",
+          "scope": "ACQUISITION",
+          "expectedCount": 1,
+          "expectedCostChaos": 40,
+          "evidenceSource": "CLEAN_ACQUISITION",
+          "physicalAcquisitionIdentity": "Large Cluster Jewel|Minions deal 10% increased Damage|84|8|normal|influenced=false|synthesised=false|acquisitionMenu=false|methodFamilyActionEvidence=",
+          "policySessionIdentity": "phase2j-4ae46f61",
+          "sourcePolicyFingerprint": "policy-9e41c4f9"
+        },
+        {
+          "actionId": "alteration_orb",
+          "actionName": "Orb of Alteration",
+          "expectedCount": 35043.578236178895,
+          "expectedCostChaos": 4681.822052353502,
+          "scope": "DOWNSTREAM",
+          "evidenceSource": "DOWNSTREAM_SELECTED_POLICY",
+          "physicalAcquisitionIdentity": "Large Cluster Jewel|Minions deal 10% increased Damage|84|8|normal|influenced=false|synthesised=false|acquisitionMenu=false|methodFamilyActionEvidence=",
+          "policySessionIdentity": "phase2j-4ae46f61",
+          "sourcePolicyFingerprint": "policy-9e41c4f9"
+        },
+        {
+          "actionId": "augmentation_orb",
+          "actionName": "Orb of Augmentation",
+          "expectedCount": 529.4267566801163,
+          "expectedCostChaos": 20.864708480763387,
+          "scope": "DOWNSTREAM",
+          "evidenceSource": "DOWNSTREAM_SELECTED_POLICY",
+          "physicalAcquisitionIdentity": "Large Cluster Jewel|Minions deal 10% increased Damage|84|8|normal|influenced=false|synthesised=false|acquisitionMenu=false|methodFamilyActionEvidence=",
+          "policySessionIdentity": "phase2j-4ae46f61",
+          "sourcePolicyFingerprint": "policy-9e41c4f9"
+        },
+        {
+          "actionId": "exalted_orb",
+          "actionName": "Exalted Orb Slam",
+          "expectedCount": 11.632847748846748,
+          "expectedCostChaos": 13.610431866150691,
+          "scope": "DOWNSTREAM",
+          "evidenceSource": "DOWNSTREAM_SELECTED_POLICY",
+          "physicalAcquisitionIdentity": "Large Cluster Jewel|Minions deal 10% increased Damage|84|8|normal|influenced=false|synthesised=false|acquisitionMenu=false|methodFamilyActionEvidence=",
+          "policySessionIdentity": "phase2j-4ae46f61",
+          "sourcePolicyFingerprint": "policy-9e41c4f9"
+        },
+        {
+          "actionId": "scouring_orb",
+          "actionName": "Orb of Scouring",
+          "expectedCount": 19.625902273506394,
+          "expectedCostChaos": 10.580323915647316,
+          "scope": "DOWNSTREAM",
+          "evidenceSource": "DOWNSTREAM_SELECTED_POLICY",
+          "physicalAcquisitionIdentity": "Large Cluster Jewel|Minions deal 10% increased Damage|84|8|normal|influenced=false|synthesised=false|acquisitionMenu=false|methodFamilyActionEvidence=",
+          "policySessionIdentity": "phase2j-4ae46f61",
+          "sourcePolicyFingerprint": "policy-9e41c4f9"
+        },
+        {
+          "actionId": "regal_orb",
+          "actionName": "Regal Orb",
+          "expectedCount": 20.625902273557184,
+          "expectedCostChaos": 0.7503703247120104,
+          "scope": "DOWNSTREAM",
+          "evidenceSource": "DOWNSTREAM_SELECTED_POLICY",
+          "physicalAcquisitionIdentity": "Large Cluster Jewel|Minions deal 10% increased Damage|84|8|normal|influenced=false|synthesised=false|acquisitionMenu=false|methodFamilyActionEvidence=",
+          "policySessionIdentity": "phase2j-4ae46f61",
+          "sourcePolicyFingerprint": "policy-9e41c4f9"
+        },
+        {
+          "actionId": "transmutation_orb",
+          "actionName": "Orb of Transmutation",
+          "expectedCount": 20.62590227350724,
+          "expectedCostChaos": 0.10337702219481829,
+          "scope": "DOWNSTREAM",
+          "evidenceSource": "DOWNSTREAM_SELECTED_POLICY",
+          "physicalAcquisitionIdentity": "Large Cluster Jewel|Minions deal 10% increased Damage|84|8|normal|influenced=false|synthesised=false|acquisitionMenu=false|methodFamilyActionEvidence=",
+          "policySessionIdentity": "phase2j-4ae46f61",
+          "sourcePolicyFingerprint": "policy-9e41c4f9"
+        }
+      ]
+    },
+    "requiredActionEvidenceChecks": [],
+    "onPolicyActionIds": [
+      "alteration_orb",
+      "augmentation_orb",
+      "clean_base_initial",
+      "exalted_orb",
+      "regal_orb",
+      "scouring_orb",
+      "transmutation_orb"
+    ],
+    "expectedActionUsage": [
+      {
+        "actionId": "alteration_orb",
+        "actionName": "Orb of Alteration",
+        "expectedCount": 35043.578236178895,
+        "expectedCostChaos": 4681.822052353502
+      },
+      {
+        "actionId": "clean_base_initial",
+        "actionName": "Initial clean cluster jewel base",
+        "expectedCount": 1,
+        "expectedCostChaos": 40
+      },
+      {
+        "actionId": "augmentation_orb",
+        "actionName": "Orb of Augmentation",
+        "expectedCount": 529.4267566801163,
+        "expectedCostChaos": 20.864708480763387
+      },
+      {
+        "actionId": "exalted_orb",
+        "actionName": "Exalted Orb Slam",
+        "expectedCount": 11.632847748846748,
+        "expectedCostChaos": 13.610431866150691
+      },
+      {
+        "actionId": "scouring_orb",
+        "actionName": "Orb of Scouring",
+        "expectedCount": 19.625902273506394,
+        "expectedCostChaos": 10.580323915647316
+      },
+      {
+        "actionId": "regal_orb",
+        "actionName": "Regal Orb",
+        "expectedCount": 20.625902273557184,
+        "expectedCostChaos": 0.7503703247120104
+      },
+      {
+        "actionId": "transmutation_orb",
+        "actionName": "Orb of Transmutation",
+        "expectedCount": 20.62590227350724,
+        "expectedCostChaos": 0.10337702219481829
+      }
+    ],
+    "policyHealth": {
+      "selectedPolicyStatus": "FULLY RESOLVED / PROPER / ABSORBING / COST-RECONCILED",
+      "proofLevel": "BEST FULLY RESOLVED POLICY FOUND",
+      "onPolicyReachableStates": 415,
+      "onPolicyTerminalStates": 15,
+      "onPolicyUnresolvedTransitions": 0,
+      "terminalAbsorptionProbability": 1,
+      "proper": true,
+      "fullyResolved": true,
+      "bellmanConverged": true,
+      "occupancyConverged": true,
+      "costReconciled": true,
+      "reconciliationDifferenceChaos": 4.254416126059368e-7
+    },
+    "sessionIdentity": "phase2j-4ae46f61:family_conventional",
+    "retainedStates": 1,
+    "transitionDistributionsGenerated": 0,
+    "budget": {
+      "maxStates": 5000,
+      "maxWallTimeMs": 265,
+      "maxExpansionRounds": 3,
+      "elapsedMs": 300
+    },
+    "whyNotSelectedExplanation": "This resolved eligible policy is dominated by the selected policy for the requested objective and its tie-breakers.",
+    "objectiveEligibility": "OBJECTIVE_DOMINATED",
+    "policyEquivalenceFingerprint": "policy-9e41c4f9",
+    "policyEquivalenceEvidence": {
+      "version": "CANONICAL_POLICY_EQUIVALENCE_V1",
+      "physicalAcquisitionIdentity": "{\"state\":\"Large Cluster Jewel|Minions deal 10% increased Damage|84|8|normal|influenced=false|synthesised=false|acquisitionMenu=false|methodFamilyActionEvidence=\",\"kind\":\"CLEAN\",\"method\":\"clean-base\",\"synthesisTerminalSemantics\":\"CLEAN_BASE\"}",
+      "normalizedPolicyDecisionCount": 400,
+      "requiredActionEvidence": [
+        "alteration_orb",
+        "augmentation_orb",
+        "clean_base_initial",
+        "exalted_orb",
+        "regal_orb",
+        "scouring_orb",
+        "transmutation_orb"
+      ],
+      "recoveryDecisionCount": 152,
+      "terminalStateCount": 0,
+      "usageTolerance": 0.000001
+    },
+    "equivalentToSelectedPolicy": false,
+    "playerRouteName": "Start clean base"
+  },
+  "primordialFracture": {
+    "spec": {
+      "id": "family_fracture_Primordial Bond",
+      "kind": "SELF_FRACTURE",
+      "name": "Self-Fracture Primordial Bond (T1)",
+      "description": "Independently synthesize a fractured Primordial Bond (T1) base, then solve its downstream policy.",
+      "badge": "Fracture: Primordial Bond (T1)",
+      "allowedActionIds": [
+        "transmutation_orb",
+        "alteration_orb",
+        "augmentation_orb",
+        "regal_orb",
+        "exalted_orb",
+        "scouring_orb",
+        "chaos_orb",
+        "fracturing_orb",
+        "restart_reacquire"
+      ],
+      "requiredActionIds": [
+        "fracturing_orb"
+      ],
+      "requiredActionEvidence": [
+        {
+          "actionId": "fracturing_orb",
+          "scope": "ACQUISITION"
+        }
+      ],
+      "forcedAcquisitionType": "SELF_FRACTURE",
+      "targetFractureModId": "Primordial Bond",
+      "targetFractureModName": "Primordial Bond (T1)"
+    },
+    "status": "SAME_AS_SELECTED",
+    "costDifferenceChaos": 0,
+    "costDifferencePercent": 0,
+    "evaluationSource": "INDEPENDENT_SOLVE",
+    "incumbentSource": "ADMISSIBLE_KNOWN_POLICY",
+    "familySearchStatus": "BEST_FOUND_UNPROVEN",
+    "independentFullRouteU": 1459.7923662160783,
+    "knownPolicyCostChaos": 1459.7923662160783,
+    "revalidatedKnownPolicyCostChaos": 1459.7923662158066,
+    "selectedOpenPolicyCostChaos": 1459.7923662160783,
+    "selectedOpenPolicyAdmissibility": {
+      "version": "POLICY_ADMISSIBILITY_PHASE3D_V2",
+      "admissible": true,
+      "familyId": "family_fracture_Primordial Bond",
+      "sourcePolicyFingerprint": "selected-3303df08",
+      "sourceAcquisitionKind": "SELF_FRACTURE",
+      "sourceAcquisitionCostChaos": 1406.2963152858167,
+      "familyAcquisitionCostChaos": 1406.2963152858167,
+      "selectedPolicyDecisionCount": 346,
+      "selectedPhysicalActionIds": [
+        "alteration_orb",
+        "augmentation_orb",
+        "exalted_orb",
+        "regal_orb",
+        "scouring_orb"
+      ],
+      "transitionsRegenerated": 345,
+      "transitionOutcomesCompared": 808,
+      "maximumTransitionProbabilityDifference": 0,
+      "requiredActionEvidenceChecks": [
+        {
+          "actionId": "fracturing_orb",
+          "requiredScope": "ACQUISITION",
+          "observed": true,
+          "observedExpectedCount": 3.9999999999958504,
+          "observedScopes": [
+            "ACQUISITION"
+          ],
+          "evidenceSources": [
+            "ACQUISITION_SYNTHESIS_POLICY"
+          ]
+        }
+      ],
+      "fullRouteActionEvidence": {
+        "version": "FULL_ROUTE_ACTION_EVIDENCE_V1",
+        "physicalAcquisitionIdentity": "Large Cluster Jewel|Minions deal 10% increased Damage|84|8|magic|influenced=false|synthesised=false|acquisitionMenu=false|methodFamilyActionEvidence=|Suffix:Primordial Bond:1:F:",
+        "policySessionIdentity": "phase2j-4ae46f61",
+        "sourcePolicyFingerprint": "selected-3303df08",
+        "entries": [
+          {
+            "actionId": "fracturing_orb",
+            "actionName": "Fracturing Orb",
+            "expectedCount": 3.9999999999958504,
+            "expectedCostChaos": 1194.3999999987611,
+            "scope": "ACQUISITION",
+            "evidenceSource": "ACQUISITION_SYNTHESIS_POLICY",
+            "physicalAcquisitionIdentity": "Large Cluster Jewel|Minions deal 10% increased Damage|84|8|magic|influenced=false|synthesised=false|acquisitionMenu=false|methodFamilyActionEvidence=|Suffix:Primordial Bond:1:F:",
+            "policySessionIdentity": "phase2j-4ae46f61",
+            "sourcePolicyFingerprint": "selected-3303df08"
+          },
+          {
+            "actionId": "restart_reacquire",
+            "actionName": "Abandon attempt and reacquire a clean base",
+            "expectedCount": 2.999999999996883,
+            "expectedCostChaos": 119.99999999987531,
+            "scope": "ACQUISITION",
+            "evidenceSource": "ACQUISITION_SYNTHESIS_POLICY",
+            "physicalAcquisitionIdentity": "Large Cluster Jewel|Minions deal 10% increased Damage|84|8|magic|influenced=false|synthesised=false|acquisitionMenu=false|methodFamilyActionEvidence=|Suffix:Primordial Bond:1:F:",
+            "policySessionIdentity": "phase2j-4ae46f61",
+            "sourcePolicyFingerprint": "selected-3303df08"
+          },
+          {
+            "actionId": "alteration_orb",
+            "actionName": "Orb of Alteration",
+            "expectedCount": 323.68085106349344,
+            "expectedCostChaos": 43.24376170208261,
+            "scope": "ACQUISITION",
+            "evidenceSource": "ACQUISITION_SYNTHESIS_POLICY",
+            "physicalAcquisitionIdentity": "Large Cluster Jewel|Minions deal 10% increased Damage|84|8|magic|influenced=false|synthesised=false|acquisitionMenu=false|methodFamilyActionEvidence=|Suffix:Primordial Bond:1:F:",
+            "policySessionIdentity": "phase2j-4ae46f61",
+            "sourcePolicyFingerprint": "selected-3303df08"
+          },
+          {
+            "actionId": "exalted_orb",
+            "actionName": "Exalted Orb Slam",
+            "expectedCount": 3.999999999995821,
+            "expectedCostChaos": 4.67999999999511,
+            "scope": "ACQUISITION",
+            "evidenceSource": "ACQUISITION_SYNTHESIS_POLICY",
+            "physicalAcquisitionIdentity": "Large Cluster Jewel|Minions deal 10% increased Damage|84|8|magic|influenced=false|synthesised=false|acquisitionMenu=false|methodFamilyActionEvidence=|Suffix:Primordial Bond:1:F:",
+            "policySessionIdentity": "phase2j-4ae46f61",
+            "sourcePolicyFingerprint": "selected-3303df08"
+          },
+          {
+            "actionId": "augmentation_orb",
+            "actionName": "Orb of Augmentation",
+            "expectedCount": 82.9202127658712,
+            "expectedCostChaos": 3.2678855851029853,
+            "scope": "ACQUISITION",
+            "evidenceSource": "ACQUISITION_SYNTHESIS_POLICY",
+            "physicalAcquisitionIdentity": "Large Cluster Jewel|Minions deal 10% increased Damage|84|8|magic|influenced=false|synthesised=false|acquisitionMenu=false|methodFamilyActionEvidence=|Suffix:Primordial Bond:1:F:",
+            "policySessionIdentity": "phase2j-4ae46f61",
+            "sourcePolicyFingerprint": "selected-3303df08"
+          },
+          {
+            "actionId": "scouring_orb",
+            "actionName": "Orb of Scouring",
+            "expectedCount": 0.9999999999989615,
+            "expectedCostChaos": 0.5390999999994401,
+            "scope": "ACQUISITION",
+            "evidenceSource": "ACQUISITION_SYNTHESIS_POLICY",
+            "physicalAcquisitionIdentity": "Large Cluster Jewel|Minions deal 10% increased Damage|84|8|magic|influenced=false|synthesised=false|acquisitionMenu=false|methodFamilyActionEvidence=|Suffix:Primordial Bond:1:F:",
+            "policySessionIdentity": "phase2j-4ae46f61",
+            "sourcePolicyFingerprint": "selected-3303df08"
+          },
+          {
+            "actionId": "regal_orb",
+            "actionName": "Regal Orb",
+            "expectedCount": 3.9999999999958216,
+            "expectedCostChaos": 0.145519999999848,
+            "scope": "ACQUISITION",
+            "evidenceSource": "ACQUISITION_SYNTHESIS_POLICY",
+            "physicalAcquisitionIdentity": "Large Cluster Jewel|Minions deal 10% increased Damage|84|8|magic|influenced=false|synthesised=false|acquisitionMenu=false|methodFamilyActionEvidence=|Suffix:Primordial Bond:1:F:",
+            "policySessionIdentity": "phase2j-4ae46f61",
+            "sourcePolicyFingerprint": "selected-3303df08"
+          },
+          {
+            "actionId": "transmutation_orb",
+            "actionName": "Orb of Transmutation",
+            "expectedCount": 3.999999999996871,
+            "expectedCostChaos": 0.020047999999984318,
+            "scope": "ACQUISITION",
+            "evidenceSource": "ACQUISITION_SYNTHESIS_POLICY",
+            "physicalAcquisitionIdentity": "Large Cluster Jewel|Minions deal 10% increased Damage|84|8|magic|influenced=false|synthesised=false|acquisitionMenu=false|methodFamilyActionEvidence=|Suffix:Primordial Bond:1:F:",
+            "policySessionIdentity": "phase2j-4ae46f61",
+            "sourcePolicyFingerprint": "selected-3303df08"
+          },
+          {
+            "actionId": "alteration_orb",
+            "actionName": "Orb of Alteration",
+            "expectedCount": 193.388459707309,
+            "expectedCostChaos": 25.836698216896487,
+            "scope": "DOWNSTREAM",
+            "evidenceSource": "DOWNSTREAM_SELECTED_POLICY",
+            "physicalAcquisitionIdentity": "Large Cluster Jewel|Minions deal 10% increased Damage|84|8|magic|influenced=false|synthesised=false|acquisitionMenu=false|methodFamilyActionEvidence=|Suffix:Primordial Bond:1:F:",
+            "policySessionIdentity": "phase2j-4ae46f61",
+            "sourcePolicyFingerprint": "selected-3303df08"
+          },
+          {
+            "actionId": "exalted_orb",
+            "actionName": "Exalted Orb Slam",
+            "expectedCount": 11.632847748272178,
+            "expectedCostChaos": 13.61043186547845,
+            "scope": "DOWNSTREAM",
+            "evidenceSource": "DOWNSTREAM_SELECTED_POLICY",
+            "physicalAcquisitionIdentity": "Large Cluster Jewel|Minions deal 10% increased Damage|84|8|magic|influenced=false|synthesised=false|acquisitionMenu=false|methodFamilyActionEvidence=|Suffix:Primordial Bond:1:F:",
+            "policySessionIdentity": "phase2j-4ae46f61",
+            "sourcePolicyFingerprint": "selected-3303df08"
+          },
+          {
+            "actionId": "scouring_orb",
+            "actionName": "Orb of Scouring",
+            "expectedCount": 19.625902272537118,
+            "expectedCostChaos": 10.580323915124819,
+            "scope": "DOWNSTREAM",
+            "evidenceSource": "DOWNSTREAM_SELECTED_POLICY",
+            "physicalAcquisitionIdentity": "Large Cluster Jewel|Minions deal 10% increased Damage|84|8|magic|influenced=false|synthesised=false|acquisitionMenu=false|methodFamilyActionEvidence=|Suffix:Primordial Bond:1:F:",
+            "policySessionIdentity": "phase2j-4ae46f61",
+            "sourcePolicyFingerprint": "selected-3303df08"
+          },
+          {
+            "actionId": "augmentation_orb",
+            "actionName": "Orb of Augmentation",
+            "expectedCount": 68.97301719936435,
+            "expectedCostChaos": 2.7182266078269492,
+            "scope": "DOWNSTREAM",
+            "evidenceSource": "DOWNSTREAM_SELECTED_POLICY",
+            "physicalAcquisitionIdentity": "Large Cluster Jewel|Minions deal 10% increased Damage|84|8|magic|influenced=false|synthesised=false|acquisitionMenu=false|methodFamilyActionEvidence=|Suffix:Primordial Bond:1:F:",
+            "policySessionIdentity": "phase2j-4ae46f61",
+            "sourcePolicyFingerprint": "selected-3303df08"
+          },
+          {
+            "actionId": "regal_orb",
+            "actionName": "Regal Orb",
+            "expectedCount": 20.62590227253722,
+            "expectedCostChaos": 0.7503703246749042,
+            "scope": "DOWNSTREAM",
+            "evidenceSource": "DOWNSTREAM_SELECTED_POLICY",
+            "physicalAcquisitionIdentity": "Large Cluster Jewel|Minions deal 10% increased Damage|84|8|magic|influenced=false|synthesised=false|acquisitionMenu=false|methodFamilyActionEvidence=|Suffix:Primordial Bond:1:F:",
+            "policySessionIdentity": "phase2j-4ae46f61",
+            "sourcePolicyFingerprint": "selected-3303df08"
+          }
+        ]
+      },
+      "failures": [],
+      "evaluation": {
+        "startKey": "Large Cluster Jewel:Minions deal 10% increased Damage:84:8:flags(influenced=false,synthesised=false,acquisitionMenu=false,methodFamilyActionEvidence=):magic|P:[]|S:[FRAC:groups(Primordial Bond):id(Primordial Bond):t1:name(Primordial Bond):target(0)]",
+        "reachableStateCount": 360,
+        "reachableNonTerminalStateCount": 345,
+        "reachableTerminalStateCount": 15,
+        "unresolvedTransitionCount": 0,
+        "probabilityRowsReconciled": true,
+        "maximumProbabilityRowDifference": 1.1102230246251565e-16,
+        "totalExpectedCostChaos": 53.49605092998983,
+        "expectedPhysicalActions": 314.2461292000758,
+        "estimatedManualTimeMs": 125698.45168002995,
+        "terminalAbsorptionProbability": 1.0000000000001323,
+        "proper": true,
+        "valueConverged": true,
+        "occupancyConverged": true,
+        "costReconciled": true,
+        "reconciliationDifferenceChaos": 2.1181278953008587e-11,
+        "valueIterations": 5,
+        "occupancyIterations": 4,
+        "expectedVisitsByStateKey": {},
+        "valuesByStateKey": {},
+        "expectedActionUsage": [
+          {
+            "actionId": "alteration_orb",
+            "actionName": "Orb of Alteration",
+            "expectedCount": 193.3884597073425,
+            "expectedCostChaos": 25.836698216900963
+          },
+          {
+            "actionId": "exalted_orb",
+            "actionName": "Exalted Orb Slam",
+            "expectedCount": 11.632847748274262,
+            "expectedCostChaos": 13.610431865480885
+          },
+          {
+            "actionId": "scouring_orb",
+            "actionName": "Orb of Scouring",
+            "expectedCount": 19.625902272540724,
+            "expectedCostChaos": 10.580323915126703
+          },
+          {
+            "actionId": "augmentation_orb",
+            "actionName": "Orb of Augmentation",
+            "expectedCount": 68.97301719937637,
+            "expectedCostChaos": 2.7182266078274226
+          },
+          {
+            "actionId": "regal_orb",
+            "actionName": "Regal Orb",
+            "expectedCount": 20.62590227254079,
+            "expectedCostChaos": 0.7503703246750341
+          }
+        ]
+      },
+      "sourceParity": {
+        "expectedDownstreamCostChaos": 53.49605093001628,
+        "revalidatedDownstreamCostChaos": 53.49605092998983,
+        "costDifferenceChaos": 2.645350605234853e-11,
+        "expectedPhysicalActions": 314.2461292000228,
+        "revalidatedPhysicalActions": 314.2461292000758,
+        "actionDifference": 5.303490979713388e-11,
+        "expectedManualTimeMs": 125698.4516800086,
+        "revalidatedManualTimeMs": 125698.45168002995,
+        "timeDifferenceMs": 2.134765964001417e-8
+      }
+    },
+    "knownPolicyAdmissibility": {
+      "version": "POLICY_ADMISSIBILITY_PHASE3D_V2",
+      "admissible": false,
+      "familyId": "family_fracture_Primordial Bond",
+      "sourcePolicyFingerprint": "selected-b36335b1",
+      "sourceAcquisitionKind": "CLEAN",
+      "sourceAcquisitionCostChaos": 40,
+      "familyAcquisitionCostChaos": 1406.2963152858167,
+      "selectedPolicyDecisionCount": 400,
+      "selectedPhysicalActionIds": [
+        "alteration_orb",
+        "augmentation_orb",
+        "exalted_orb",
+        "regal_orb",
+        "scouring_orb",
+        "transmutation_orb"
+      ],
+      "transitionsRegenerated": 0,
+      "transitionOutcomesCompared": 0,
+      "maximumTransitionProbabilityDifference": 0,
+      "requiredActionEvidenceChecks": [
+        {
+          "actionId": "fracturing_orb",
+          "requiredScope": "ACQUISITION",
+          "observed": false,
+          "observedExpectedCount": 0,
+          "observedScopes": [],
+          "evidenceSources": []
+        }
+      ],
+      "fullRouteActionEvidence": {
+        "version": "FULL_ROUTE_ACTION_EVIDENCE_V1",
+        "physicalAcquisitionIdentity": "Large Cluster Jewel|Minions deal 10% increased Damage|84|8|normal|influenced=false|synthesised=false|acquisitionMenu=false|methodFamilyActionEvidence=",
+        "policySessionIdentity": "phase2j-4ae46f61",
+        "sourcePolicyFingerprint": "selected-b36335b1",
+        "entries": [
+          {
+            "actionId": "clean_base_initial",
+            "actionName": "Initial clean base acquisition",
+            "scope": "ACQUISITION",
+            "expectedCount": 1,
+            "expectedCostChaos": 40,
+            "evidenceSource": "CLEAN_ACQUISITION",
+            "physicalAcquisitionIdentity": "Large Cluster Jewel|Minions deal 10% increased Damage|84|8|normal|influenced=false|synthesised=false|acquisitionMenu=false|methodFamilyActionEvidence=",
+            "policySessionIdentity": "phase2j-4ae46f61",
+            "sourcePolicyFingerprint": "selected-b36335b1"
+          },
+          {
+            "actionId": "alteration_orb",
+            "actionName": "Orb of Alteration",
+            "expectedCount": 35043.578236178895,
+            "expectedCostChaos": 4681.822052353502,
+            "scope": "DOWNSTREAM",
+            "evidenceSource": "DOWNSTREAM_SELECTED_POLICY",
+            "physicalAcquisitionIdentity": "Large Cluster Jewel|Minions deal 10% increased Damage|84|8|normal|influenced=false|synthesised=false|acquisitionMenu=false|methodFamilyActionEvidence=",
+            "policySessionIdentity": "phase2j-4ae46f61",
+            "sourcePolicyFingerprint": "selected-b36335b1"
+          },
+          {
+            "actionId": "augmentation_orb",
+            "actionName": "Orb of Augmentation",
+            "expectedCount": 529.4267566801163,
+            "expectedCostChaos": 20.864708480763387,
+            "scope": "DOWNSTREAM",
+            "evidenceSource": "DOWNSTREAM_SELECTED_POLICY",
+            "physicalAcquisitionIdentity": "Large Cluster Jewel|Minions deal 10% increased Damage|84|8|normal|influenced=false|synthesised=false|acquisitionMenu=false|methodFamilyActionEvidence=",
+            "policySessionIdentity": "phase2j-4ae46f61",
+            "sourcePolicyFingerprint": "selected-b36335b1"
+          },
+          {
+            "actionId": "exalted_orb",
+            "actionName": "Exalted Orb Slam",
+            "expectedCount": 11.632847748846748,
+            "expectedCostChaos": 13.610431866150691,
+            "scope": "DOWNSTREAM",
+            "evidenceSource": "DOWNSTREAM_SELECTED_POLICY",
+            "physicalAcquisitionIdentity": "Large Cluster Jewel|Minions deal 10% increased Damage|84|8|normal|influenced=false|synthesised=false|acquisitionMenu=false|methodFamilyActionEvidence=",
+            "policySessionIdentity": "phase2j-4ae46f61",
+            "sourcePolicyFingerprint": "selected-b36335b1"
+          },
+          {
+            "actionId": "scouring_orb",
+            "actionName": "Orb of Scouring",
+            "expectedCount": 19.625902273506394,
+            "expectedCostChaos": 10.580323915647316,
+            "scope": "DOWNSTREAM",
+            "evidenceSource": "DOWNSTREAM_SELECTED_POLICY",
+            "physicalAcquisitionIdentity": "Large Cluster Jewel|Minions deal 10% increased Damage|84|8|normal|influenced=false|synthesised=false|acquisitionMenu=false|methodFamilyActionEvidence=",
+            "policySessionIdentity": "phase2j-4ae46f61",
+            "sourcePolicyFingerprint": "selected-b36335b1"
+          },
+          {
+            "actionId": "regal_orb",
+            "actionName": "Regal Orb",
+            "expectedCount": 20.625902273557184,
+            "expectedCostChaos": 0.7503703247120104,
+            "scope": "DOWNSTREAM",
+            "evidenceSource": "DOWNSTREAM_SELECTED_POLICY",
+            "physicalAcquisitionIdentity": "Large Cluster Jewel|Minions deal 10% increased Damage|84|8|normal|influenced=false|synthesised=false|acquisitionMenu=false|methodFamilyActionEvidence=",
+            "policySessionIdentity": "phase2j-4ae46f61",
+            "sourcePolicyFingerprint": "selected-b36335b1"
+          },
+          {
+            "actionId": "transmutation_orb",
+            "actionName": "Orb of Transmutation",
+            "expectedCount": 20.62590227350724,
+            "expectedCostChaos": 0.10337702219481829,
+            "scope": "DOWNSTREAM",
+            "evidenceSource": "DOWNSTREAM_SELECTED_POLICY",
+            "physicalAcquisitionIdentity": "Large Cluster Jewel|Minions deal 10% increased Damage|84|8|normal|influenced=false|synthesised=false|acquisitionMenu=false|methodFamilyActionEvidence=",
+            "policySessionIdentity": "phase2j-4ae46f61",
+            "sourcePolicyFingerprint": "selected-b36335b1"
+          }
+        ]
+      },
+      "failures": [
+        {
+          "code": "ACQUISITION_KIND_MISMATCH",
+          "message": "Family requires SELF_FRACTURE, source policy uses CLEAN.",
+          "expected": "SELF_FRACTURE",
+          "actual": "CLEAN"
+        },
+        {
+          "code": "ACQUISITION_IDENTITY_MISMATCH",
+          "message": "The physical acquisition state does not match the family start state.",
+          "expected": "Large Cluster Jewel|Minions deal 10% increased Damage|84|8|magic|influenced=false|synthesised=false|acquisitionMenu=false|methodFamilyActionEvidence=|Suffix:Primordial Bond:1:F:",
+          "actual": "Large Cluster Jewel|Minions deal 10% increased Damage|84|8|normal|influenced=false|synthesised=false|acquisitionMenu=false|methodFamilyActionEvidence="
+        },
+        {
+          "code": "ACQUISITION_COST_MISMATCH",
+          "message": "The family-context acquisition cost differs from the source policy.",
+          "expected": 1406.2963152858167,
+          "actual": 40
+        },
+        {
+          "code": "REQUIRED_ACTION_NOT_OBSERVED",
+          "message": "Required family action fracturing_orb is absent from positive acquisition evidence.",
+          "actionId": "fracturing_orb",
+          "expected": "ACQUISITION"
+        }
+      ]
+    },
+    "route": {
+      "actionId": "method:family_fracture_Primordial Bond:known-policy",
+      "name": "Self-fracture Primordial Bond",
+      "acquisitionCandidateId": "candidate_1",
+      "acquisitionMethodId": "self-fracture_executable",
+      "expectedTotalCostChaos": 1459.7923662158182,
+      "lowerBoundChaos": 340.41913,
+      "incumbentUpperBoundChaos": 1459.7923662158182,
+      "optimalityGapChaos": 1119.3732362158182,
+      "status": "RESOLVED",
+      "couldBeatResolvedIncumbent": false,
+      "metrics": {
+        "expectedChaosCost": 1459.7923662158182,
+        "expectedPhysicalActions": 740.8471930293676,
+        "estimatedManualTimeMs": 314538.8772117272,
+        "objectiveScore": 1459.7923662158182,
+        "effortConfidence": "DEFAULT_APPROXIMATE"
+      },
+      "acquisitionMetrics": {
+        "expectedChaosCost": 1406.2963152858165,
+        "expectedPhysicalActions": 426.60106382934487,
+        "estimatedManualTimeMs": 188840.4255317186,
+        "objectiveScore": 1406.2963152858167,
+        "effortConfidence": "DEFAULT_APPROXIMATE"
+      },
+      "downstreamMetrics": {
+        "expectedChaosCost": 53.496050930001616,
+        "expectedPhysicalActions": 314.2461292015328,
+        "estimatedManualTimeMs": 125698.45168061172,
+        "objectiveScore": 53.496050930021994,
+        "effortConfidence": "DEFAULT_APPROXIMATE"
+      }
+    },
+    "acquisitionStatus": "RESOLVED",
+    "acquisitionL": 338.6,
+    "acquisitionU": 1406.2963152858165,
+    "downstreamStatus": "RESOLVED",
+    "downstreamL": 0,
+    "downstreamU": 53.496050930001616,
+    "fullRouteStatus": "RESOLVED",
+    "fullRouteL": 340.41913,
+    "fullRouteU": 1459.7923662158182,
+    "requiredActionObservedOnPolicy": true,
+    "fullRouteActionEvidence": {
+      "version": "FULL_ROUTE_ACTION_EVIDENCE_V1",
+      "physicalAcquisitionIdentity": "Large Cluster Jewel|Minions deal 10% increased Damage|84|8|magic|influenced=false|synthesised=false|acquisitionMenu=false|methodFamilyActionEvidence=|Suffix:Primordial Bond:1:F:",
+      "policySessionIdentity": "phase2j-4ae46f61",
+      "sourcePolicyFingerprint": "policy-b8fc0f29",
+      "entries": [
+        {
+          "actionId": "fracturing_orb",
+          "actionName": "Fracturing Orb",
+          "expectedCount": 3.9999999999958504,
+          "expectedCostChaos": 1194.3999999987611,
+          "scope": "ACQUISITION",
+          "evidenceSource": "ACQUISITION_SYNTHESIS_POLICY",
+          "physicalAcquisitionIdentity": "Large Cluster Jewel|Minions deal 10% increased Damage|84|8|magic|influenced=false|synthesised=false|acquisitionMenu=false|methodFamilyActionEvidence=|Suffix:Primordial Bond:1:F:",
+          "policySessionIdentity": "phase2j-4ae46f61",
+          "sourcePolicyFingerprint": "policy-b8fc0f29"
+        },
+        {
+          "actionId": "restart_reacquire",
+          "actionName": "Abandon attempt and reacquire a clean base",
+          "expectedCount": 2.999999999996883,
+          "expectedCostChaos": 119.99999999987531,
+          "scope": "ACQUISITION",
+          "evidenceSource": "ACQUISITION_SYNTHESIS_POLICY",
+          "physicalAcquisitionIdentity": "Large Cluster Jewel|Minions deal 10% increased Damage|84|8|magic|influenced=false|synthesised=false|acquisitionMenu=false|methodFamilyActionEvidence=|Suffix:Primordial Bond:1:F:",
+          "policySessionIdentity": "phase2j-4ae46f61",
+          "sourcePolicyFingerprint": "policy-b8fc0f29"
+        },
+        {
+          "actionId": "alteration_orb",
+          "actionName": "Orb of Alteration",
+          "expectedCount": 323.68085106349344,
+          "expectedCostChaos": 43.24376170208261,
+          "scope": "ACQUISITION",
+          "evidenceSource": "ACQUISITION_SYNTHESIS_POLICY",
+          "physicalAcquisitionIdentity": "Large Cluster Jewel|Minions deal 10% increased Damage|84|8|magic|influenced=false|synthesised=false|acquisitionMenu=false|methodFamilyActionEvidence=|Suffix:Primordial Bond:1:F:",
+          "policySessionIdentity": "phase2j-4ae46f61",
+          "sourcePolicyFingerprint": "policy-b8fc0f29"
+        },
+        {
+          "actionId": "exalted_orb",
+          "actionName": "Exalted Orb Slam",
+          "expectedCount": 3.999999999995821,
+          "expectedCostChaos": 4.67999999999511,
+          "scope": "ACQUISITION",
+          "evidenceSource": "ACQUISITION_SYNTHESIS_POLICY",
+          "physicalAcquisitionIdentity": "Large Cluster Jewel|Minions deal 10% increased Damage|84|8|magic|influenced=false|synthesised=false|acquisitionMenu=false|methodFamilyActionEvidence=|Suffix:Primordial Bond:1:F:",
+          "policySessionIdentity": "phase2j-4ae46f61",
+          "sourcePolicyFingerprint": "policy-b8fc0f29"
+        },
+        {
+          "actionId": "augmentation_orb",
+          "actionName": "Orb of Augmentation",
+          "expectedCount": 82.9202127658712,
+          "expectedCostChaos": 3.2678855851029853,
+          "scope": "ACQUISITION",
+          "evidenceSource": "ACQUISITION_SYNTHESIS_POLICY",
+          "physicalAcquisitionIdentity": "Large Cluster Jewel|Minions deal 10% increased Damage|84|8|magic|influenced=false|synthesised=false|acquisitionMenu=false|methodFamilyActionEvidence=|Suffix:Primordial Bond:1:F:",
+          "policySessionIdentity": "phase2j-4ae46f61",
+          "sourcePolicyFingerprint": "policy-b8fc0f29"
+        },
+        {
+          "actionId": "scouring_orb",
+          "actionName": "Orb of Scouring",
+          "expectedCount": 0.9999999999989615,
+          "expectedCostChaos": 0.5390999999994401,
+          "scope": "ACQUISITION",
+          "evidenceSource": "ACQUISITION_SYNTHESIS_POLICY",
+          "physicalAcquisitionIdentity": "Large Cluster Jewel|Minions deal 10% increased Damage|84|8|magic|influenced=false|synthesised=false|acquisitionMenu=false|methodFamilyActionEvidence=|Suffix:Primordial Bond:1:F:",
+          "policySessionIdentity": "phase2j-4ae46f61",
+          "sourcePolicyFingerprint": "policy-b8fc0f29"
+        },
+        {
+          "actionId": "regal_orb",
+          "actionName": "Regal Orb",
+          "expectedCount": 3.9999999999958216,
+          "expectedCostChaos": 0.145519999999848,
+          "scope": "ACQUISITION",
+          "evidenceSource": "ACQUISITION_SYNTHESIS_POLICY",
+          "physicalAcquisitionIdentity": "Large Cluster Jewel|Minions deal 10% increased Damage|84|8|magic|influenced=false|synthesised=false|acquisitionMenu=false|methodFamilyActionEvidence=|Suffix:Primordial Bond:1:F:",
+          "policySessionIdentity": "phase2j-4ae46f61",
+          "sourcePolicyFingerprint": "policy-b8fc0f29"
+        },
+        {
+          "actionId": "transmutation_orb",
+          "actionName": "Orb of Transmutation",
+          "expectedCount": 3.999999999996871,
+          "expectedCostChaos": 0.020047999999984318,
+          "scope": "ACQUISITION",
+          "evidenceSource": "ACQUISITION_SYNTHESIS_POLICY",
+          "physicalAcquisitionIdentity": "Large Cluster Jewel|Minions deal 10% increased Damage|84|8|magic|influenced=false|synthesised=false|acquisitionMenu=false|methodFamilyActionEvidence=|Suffix:Primordial Bond:1:F:",
+          "policySessionIdentity": "phase2j-4ae46f61",
+          "sourcePolicyFingerprint": "policy-b8fc0f29"
+        },
+        {
+          "actionId": "alteration_orb",
+          "actionName": "Orb of Alteration",
+          "expectedCount": 193.388459707309,
+          "expectedCostChaos": 25.836698216896487,
+          "scope": "DOWNSTREAM",
+          "evidenceSource": "DOWNSTREAM_SELECTED_POLICY",
+          "physicalAcquisitionIdentity": "Large Cluster Jewel|Minions deal 10% increased Damage|84|8|magic|influenced=false|synthesised=false|acquisitionMenu=false|methodFamilyActionEvidence=|Suffix:Primordial Bond:1:F:",
+          "policySessionIdentity": "phase2j-4ae46f61",
+          "sourcePolicyFingerprint": "policy-b8fc0f29"
+        },
+        {
+          "actionId": "exalted_orb",
+          "actionName": "Exalted Orb Slam",
+          "expectedCount": 11.632847748272178,
+          "expectedCostChaos": 13.61043186547845,
+          "scope": "DOWNSTREAM",
+          "evidenceSource": "DOWNSTREAM_SELECTED_POLICY",
+          "physicalAcquisitionIdentity": "Large Cluster Jewel|Minions deal 10% increased Damage|84|8|magic|influenced=false|synthesised=false|acquisitionMenu=false|methodFamilyActionEvidence=|Suffix:Primordial Bond:1:F:",
+          "policySessionIdentity": "phase2j-4ae46f61",
+          "sourcePolicyFingerprint": "policy-b8fc0f29"
+        },
+        {
+          "actionId": "scouring_orb",
+          "actionName": "Orb of Scouring",
+          "expectedCount": 19.625902272537118,
+          "expectedCostChaos": 10.580323915124819,
+          "scope": "DOWNSTREAM",
+          "evidenceSource": "DOWNSTREAM_SELECTED_POLICY",
+          "physicalAcquisitionIdentity": "Large Cluster Jewel|Minions deal 10% increased Damage|84|8|magic|influenced=false|synthesised=false|acquisitionMenu=false|methodFamilyActionEvidence=|Suffix:Primordial Bond:1:F:",
+          "policySessionIdentity": "phase2j-4ae46f61",
+          "sourcePolicyFingerprint": "policy-b8fc0f29"
+        },
+        {
+          "actionId": "augmentation_orb",
+          "actionName": "Orb of Augmentation",
+          "expectedCount": 68.97301719936435,
+          "expectedCostChaos": 2.7182266078269492,
+          "scope": "DOWNSTREAM",
+          "evidenceSource": "DOWNSTREAM_SELECTED_POLICY",
+          "physicalAcquisitionIdentity": "Large Cluster Jewel|Minions deal 10% increased Damage|84|8|magic|influenced=false|synthesised=false|acquisitionMenu=false|methodFamilyActionEvidence=|Suffix:Primordial Bond:1:F:",
+          "policySessionIdentity": "phase2j-4ae46f61",
+          "sourcePolicyFingerprint": "policy-b8fc0f29"
+        },
+        {
+          "actionId": "regal_orb",
+          "actionName": "Regal Orb",
+          "expectedCount": 20.62590227253722,
+          "expectedCostChaos": 0.7503703246749042,
+          "scope": "DOWNSTREAM",
+          "evidenceSource": "DOWNSTREAM_SELECTED_POLICY",
+          "physicalAcquisitionIdentity": "Large Cluster Jewel|Minions deal 10% increased Damage|84|8|magic|influenced=false|synthesised=false|acquisitionMenu=false|methodFamilyActionEvidence=|Suffix:Primordial Bond:1:F:",
+          "policySessionIdentity": "phase2j-4ae46f61",
+          "sourcePolicyFingerprint": "policy-b8fc0f29"
+        }
+      ]
+    },
+    "requiredActionEvidenceChecks": [
+      {
+        "actionId": "fracturing_orb",
+        "requiredScope": "ACQUISITION",
+        "observed": true,
+        "observedExpectedCount": 3.9999999999958504,
+        "observedScopes": [
+          "ACQUISITION"
+        ],
+        "evidenceSources": [
+          "ACQUISITION_SYNTHESIS_POLICY"
+        ]
+      }
+    ],
+    "onPolicyActionIds": [
+      "alteration_orb",
+      "augmentation_orb",
+      "clean_base_initial",
+      "exalted_orb",
+      "fracturing_orb",
+      "regal_orb",
+      "restart_reacquire",
+      "scouring_orb",
+      "transmutation_orb"
+    ],
+    "expectedActionUsage": [
+      {
+        "actionId": "fracturing_orb",
+        "actionName": "Fracturing Orb",
+        "expectedCount": 3.9999999999958504,
+        "expectedCostChaos": 1194.3999999987611
+      },
+      {
+        "actionId": "restart_reacquire",
+        "actionName": "Abandon attempt and reacquire a clean base",
+        "expectedCount": 2.999999999996883,
+        "expectedCostChaos": 119.99999999987531
+      },
+      {
+        "actionId": "alteration_orb",
+        "actionName": "Orb of Alteration",
+        "expectedCount": 517.0693107708024,
+        "expectedCostChaos": 69.0804599189791
+      },
+      {
+        "actionId": "clean_base_initial",
+        "actionName": "Initial clean cluster jewel base",
+        "expectedCount": 1,
+        "expectedCostChaos": 40
+      },
+      {
+        "actionId": "exalted_orb",
+        "actionName": "Exalted Orb Slam",
+        "expectedCount": 15.632847748267999,
+        "expectedCostChaos": 18.29043186547356
+      },
+      {
+        "actionId": "scouring_orb",
+        "actionName": "Orb of Scouring",
+        "expectedCount": 20.62590227253608,
+        "expectedCostChaos": 11.119423915124258
+      },
+      {
+        "actionId": "augmentation_orb",
+        "actionName": "Orb of Augmentation",
+        "expectedCount": 151.89322996523555,
+        "expectedCostChaos": 5.986112192929935
+      },
+      {
+        "actionId": "regal_orb",
+        "actionName": "Regal Orb",
+        "expectedCount": 24.625902272533043,
+        "expectedCostChaos": 0.8958903246747522
+      },
+      {
+        "actionId": "transmutation_orb",
+        "actionName": "Orb of Transmutation",
+        "expectedCount": 3.999999999996871,
+        "expectedCostChaos": 0.020047999999984318
+      }
+    ],
+    "policyHealth": {
+      "selectedPolicyStatus": "FULLY RESOLVED / PROPER / ABSORBING / COST-RECONCILED",
+      "proofLevel": "BEST FULLY RESOLVED POLICY FOUND",
+      "onPolicyReachableStates": 361,
+      "onPolicyTerminalStates": 15,
+      "onPolicyUnresolvedTransitions": 0,
+      "terminalAbsorptionProbability": 0.9999999999882052,
+      "proper": true,
+      "fullyResolved": true,
+      "bellmanConverged": true,
+      "occupancyConverged": true,
+      "costReconciled": true,
+      "reconciliationDifferenceChaos": 1.1823431123048067e-11
+    },
+    "sessionIdentity": "phase2j-4ae46f61:family_fracture_Primordial Bond",
+    "retainedStates": 4670,
+    "transitionDistributionsGenerated": 14272,
+    "whyNotSelectedExplanation": "Same selected policy: this family-context revalidation confirms the same physical acquisition, normalized state-to-action policy, recovery/terminal semantics, and full-route usage within the declared tolerance.",
+    "objectiveEligibility": "RESOLVED_ELIGIBLE",
+    "policyEquivalenceFingerprint": "policy-b8fc0f29",
+    "policyEquivalenceEvidence": {
+      "version": "CANONICAL_POLICY_EQUIVALENCE_V1",
+      "physicalAcquisitionIdentity": "{\"state\":\"Large Cluster Jewel|Minions deal 10% increased Damage|84|8|magic|influenced=false|synthesised=false|acquisitionMenu=false|methodFamilyActionEvidence=|Suffix:Primordial Bond:1:F:\",\"kind\":\"SELF_FRACTURE\",\"method\":\"self-fracture_executable\",\"synthesisTerminalSemantics\":\"Terminal when the requested modifier is present AND fractured, and no unmatched removable explicit affix remains, so the resulting physical state is a legal reusable starting base for downstream crafting.\"}",
+      "normalizedPolicyDecisionCount": 572,
+      "requiredActionEvidence": [
+        "alteration_orb",
+        "augmentation_orb",
+        "clean_base_initial",
+        "exalted_orb",
+        "fracturing_orb",
+        "regal_orb",
+        "restart_reacquire",
+        "scouring_orb",
+        "transmutation_orb"
+      ],
+      "recoveryDecisionCount": 306,
+      "terminalStateCount": 1,
+      "usageTolerance": 0.000001
+    },
+    "equivalentToSelectedPolicy": true,
+    "duplicateOfMethodFamilyId": "family_open",
+    "playerRouteName": "Self-fracture Primordial Bond"
+  },
+  "harvestControls": [
+    {
+      "id": "family_harvest_life",
+      "kind": "HARVEST",
+      "name": "Harvest Reforge Life",
+      "description": "Clean-base family constrained to Harvest Reforge Life; the selected policy must contain that action.",
+      "badge": "Harvest life",
+      "allowedActionIds": [
+        "transmutation_orb",
+        "regal_orb",
+        "harvest_reforge_life"
+      ],
+      "requiredActionIds": [
+        "harvest_reforge_life"
+      ],
+      "requiredActionEvidence": [
+        {
+          "actionId": "harvest_reforge_life",
+          "scope": "DOWNSTREAM"
+        }
+      ],
+      "forbiddenActionIds": [
+        "fracturing_orb"
+      ],
+      "forcedAcquisitionType": "CLEAN"
+    },
+    {
+      "id": "family_harvest_attack",
+      "kind": "HARVEST",
+      "name": "Harvest Reforge Attack",
+      "description": "Clean-base family constrained to Harvest Reforge Attack; the selected policy must contain that action.",
+      "badge": "Harvest attack",
+      "allowedActionIds": [
+        "transmutation_orb",
+        "regal_orb",
+        "harvest_reforge_attack"
+      ],
+      "requiredActionIds": [
+        "harvest_reforge_attack"
+      ],
+      "requiredActionEvidence": [
+        {
+          "actionId": "harvest_reforge_attack",
+          "scope": "DOWNSTREAM"
+        }
+      ],
+      "forbiddenActionIds": [
+        "fracturing_orb"
+      ],
+      "forcedAcquisitionType": "CLEAN"
+    },
+    {
+      "id": "family_harvest_physical",
+      "kind": "HARVEST",
+      "name": "Harvest Reforge Physical",
+      "description": "Clean-base family constrained to Harvest Reforge Physical; the selected policy must contain that action.",
+      "badge": "Harvest physical",
+      "allowedActionIds": [
+        "transmutation_orb",
+        "regal_orb",
+        "harvest_reforge_physical"
+      ],
+      "requiredActionIds": [
+        "harvest_reforge_physical"
+      ],
+      "requiredActionEvidence": [
+        {
+          "actionId": "harvest_reforge_physical",
+          "scope": "DOWNSTREAM"
+        }
+      ],
+      "forbiddenActionIds": [
+        "fracturing_orb"
+      ],
+      "forcedAcquisitionType": "CLEAN"
+    }
+  ],
+  "combinedControls": [
+    {
+      "id": "family_fracture_harvest_Primordial Bond_life",
+      "kind": "SELF_FRACTURE_HARVEST",
+      "name": "Self-Fracture Primordial Bond (T1) + Harvest Reforge Life",
+      "description": "Reuse the independently synthesized fractured acquisition, then require a tagged Harvest action in the downstream policy.",
+      "badge": "Fracture + Harvest life",
+      "allowedActionIds": [
+        "regal_orb",
+        "harvest_reforge_life"
+      ],
+      "requiredActionIds": [
+        "fracturing_orb",
+        "harvest_reforge_life"
+      ],
+      "requiredActionEvidence": [
+        {
+          "actionId": "fracturing_orb",
+          "scope": "ACQUISITION"
+        },
+        {
+          "actionId": "harvest_reforge_life",
+          "scope": "DOWNSTREAM"
+        }
+      ],
+      "forcedAcquisitionType": "SELF_FRACTURE",
+      "targetFractureModId": "Primordial Bond",
+      "targetFractureModName": "Primordial Bond (T1)"
+    },
+    {
+      "id": "family_fracture_harvest_Primordial Bond_attack",
+      "kind": "SELF_FRACTURE_HARVEST",
+      "name": "Self-Fracture Primordial Bond (T1) + Harvest Reforge Attack",
+      "description": "Reuse the independently synthesized fractured acquisition, then require a tagged Harvest action in the downstream policy.",
+      "badge": "Fracture + Harvest attack",
+      "allowedActionIds": [
+        "regal_orb",
+        "harvest_reforge_attack"
+      ],
+      "requiredActionIds": [
+        "fracturing_orb",
+        "harvest_reforge_attack"
+      ],
+      "requiredActionEvidence": [
+        {
+          "actionId": "fracturing_orb",
+          "scope": "ACQUISITION"
+        },
+        {
+          "actionId": "harvest_reforge_attack",
+          "scope": "DOWNSTREAM"
+        }
+      ],
+      "forcedAcquisitionType": "SELF_FRACTURE",
+      "targetFractureModId": "Primordial Bond",
+      "targetFractureModName": "Primordial Bond (T1)"
+    },
+    {
+      "id": "family_fracture_harvest_Primordial Bond_physical",
+      "kind": "SELF_FRACTURE_HARVEST",
+      "name": "Self-Fracture Primordial Bond (T1) + Harvest Reforge Physical",
+      "description": "Reuse the independently synthesized fractured acquisition, then require a tagged Harvest action in the downstream policy.",
+      "badge": "Fracture + Harvest physical",
+      "allowedActionIds": [
+        "regal_orb",
+        "harvest_reforge_physical"
+      ],
+      "requiredActionIds": [
+        "fracturing_orb",
+        "harvest_reforge_physical"
+      ],
+      "requiredActionEvidence": [
+        {
+          "actionId": "fracturing_orb",
+          "scope": "ACQUISITION"
+        },
+        {
+          "actionId": "harvest_reforge_physical",
+          "scope": "DOWNSTREAM"
+        }
+      ],
+      "forcedAcquisitionType": "SELF_FRACTURE",
+      "targetFractureModId": "Primordial Bond",
+      "targetFractureModName": "Primordial Bond (T1)"
+    },
+    {
+      "id": "family_fracture_harvest_Renewal_life",
+      "kind": "SELF_FRACTURE_HARVEST",
+      "name": "Self-Fracture Renewal (T1) + Harvest Reforge Life",
+      "description": "Reuse the independently synthesized fractured acquisition, then require a tagged Harvest action in the downstream policy.",
+      "badge": "Fracture + Harvest life",
+      "allowedActionIds": [
+        "regal_orb",
+        "harvest_reforge_life"
+      ],
+      "requiredActionIds": [
+        "fracturing_orb",
+        "harvest_reforge_life"
+      ],
+      "requiredActionEvidence": [
+        {
+          "actionId": "fracturing_orb",
+          "scope": "ACQUISITION"
+        },
+        {
+          "actionId": "harvest_reforge_life",
+          "scope": "DOWNSTREAM"
+        }
+      ],
+      "forcedAcquisitionType": "SELF_FRACTURE",
+      "targetFractureModId": "Renewal",
+      "targetFractureModName": "Renewal (T1)"
+    },
+    {
+      "id": "family_fracture_harvest_Renewal_attack",
+      "kind": "SELF_FRACTURE_HARVEST",
+      "name": "Self-Fracture Renewal (T1) + Harvest Reforge Attack",
+      "description": "Reuse the independently synthesized fractured acquisition, then require a tagged Harvest action in the downstream policy.",
+      "badge": "Fracture + Harvest attack",
+      "allowedActionIds": [
+        "regal_orb",
+        "harvest_reforge_attack"
+      ],
+      "requiredActionIds": [
+        "fracturing_orb",
+        "harvest_reforge_attack"
+      ],
+      "requiredActionEvidence": [
+        {
+          "actionId": "fracturing_orb",
+          "scope": "ACQUISITION"
+        },
+        {
+          "actionId": "harvest_reforge_attack",
+          "scope": "DOWNSTREAM"
+        }
+      ],
+      "forcedAcquisitionType": "SELF_FRACTURE",
+      "targetFractureModId": "Renewal",
+      "targetFractureModName": "Renewal (T1)"
+    },
+    {
+      "id": "family_fracture_harvest_Renewal_physical",
+      "kind": "SELF_FRACTURE_HARVEST",
+      "name": "Self-Fracture Renewal (T1) + Harvest Reforge Physical",
+      "description": "Reuse the independently synthesized fractured acquisition, then require a tagged Harvest action in the downstream policy.",
+      "badge": "Fracture + Harvest physical",
+      "allowedActionIds": [
+        "regal_orb",
+        "harvest_reforge_physical"
+      ],
+      "requiredActionIds": [
+        "fracturing_orb",
+        "harvest_reforge_physical"
+      ],
+      "requiredActionEvidence": [
+        {
+          "actionId": "fracturing_orb",
+          "scope": "ACQUISITION"
+        },
+        {
+          "actionId": "harvest_reforge_physical",
+          "scope": "DOWNSTREAM"
+        }
+      ],
+      "forcedAcquisitionType": "SELF_FRACTURE",
+      "targetFractureModId": "Renewal",
+      "targetFractureModName": "Renewal (T1)"
+    },
+    {
+      "id": "family_fracture_harvest_Rotten Claws_life",
+      "kind": "SELF_FRACTURE_HARVEST",
+      "name": "Self-Fracture Rotten Claws (T1) + Harvest Reforge Life",
+      "description": "Reuse the independently synthesized fractured acquisition, then require a tagged Harvest action in the downstream policy.",
+      "badge": "Fracture + Harvest life",
+      "allowedActionIds": [
+        "regal_orb",
+        "harvest_reforge_life"
+      ],
+      "requiredActionIds": [
+        "fracturing_orb",
+        "harvest_reforge_life"
+      ],
+      "requiredActionEvidence": [
+        {
+          "actionId": "fracturing_orb",
+          "scope": "ACQUISITION"
+        },
+        {
+          "actionId": "harvest_reforge_life",
+          "scope": "DOWNSTREAM"
+        }
+      ],
+      "forcedAcquisitionType": "SELF_FRACTURE",
+      "targetFractureModId": "Rotten Claws",
+      "targetFractureModName": "Rotten Claws (T1)"
+    },
+    {
+      "id": "family_fracture_harvest_Rotten Claws_attack",
+      "kind": "SELF_FRACTURE_HARVEST",
+      "name": "Self-Fracture Rotten Claws (T1) + Harvest Reforge Attack",
+      "description": "Reuse the independently synthesized fractured acquisition, then require a tagged Harvest action in the downstream policy.",
+      "badge": "Fracture + Harvest attack",
+      "allowedActionIds": [
+        "regal_orb",
+        "harvest_reforge_attack"
+      ],
+      "requiredActionIds": [
+        "fracturing_orb",
+        "harvest_reforge_attack"
+      ],
+      "requiredActionEvidence": [
+        {
+          "actionId": "fracturing_orb",
+          "scope": "ACQUISITION"
+        },
+        {
+          "actionId": "harvest_reforge_attack",
+          "scope": "DOWNSTREAM"
+        }
+      ],
+      "forcedAcquisitionType": "SELF_FRACTURE",
+      "targetFractureModId": "Rotten Claws",
+      "targetFractureModName": "Rotten Claws (T1)"
+    },
+    {
+      "id": "family_fracture_harvest_Rotten Claws_physical",
+      "kind": "SELF_FRACTURE_HARVEST",
+      "name": "Self-Fracture Rotten Claws (T1) + Harvest Reforge Physical",
+      "description": "Reuse the independently synthesized fractured acquisition, then require a tagged Harvest action in the downstream policy.",
+      "badge": "Fracture + Harvest physical",
+      "allowedActionIds": [
+        "regal_orb",
+        "harvest_reforge_physical"
+      ],
+      "requiredActionIds": [
+        "fracturing_orb",
+        "harvest_reforge_physical"
+      ],
+      "requiredActionEvidence": [
+        {
+          "actionId": "fracturing_orb",
+          "scope": "ACQUISITION"
+        },
+        {
+          "actionId": "harvest_reforge_physical",
+          "scope": "DOWNSTREAM"
+        }
+      ],
+      "forcedAcquisitionType": "SELF_FRACTURE",
+      "targetFractureModId": "Rotten Claws",
+      "targetFractureModName": "Rotten Claws (T1)"
+    }
+  ]
+}

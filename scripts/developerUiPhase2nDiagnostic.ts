@@ -65,12 +65,25 @@ if (!result.methodPortfolio || result.methodPortfolio.length === 0) {
 }
 
 const openFamily = result.methodPortfolio.find((m) => m.spec.kind === 'OPEN');
-if (!openFamily || openFamily.status !== 'SELECTED_WINNER') {
-  throw new Error('N1 Failed: OPEN family is not SELECTED_WINNER');
+const selectedFamilies = result.methodPortfolio.filter((family) =>
+  family.status === 'SELECTED_WINNER'
+);
+if (!openFamily || selectedFamilies.length !== 1 || !result.recommended) {
+  throw new Error('N1 Failed: canonical portfolio did not publish exactly one selected family');
 }
-lines.push(`Open Family Winner: ${openFamily.route?.name}`);
-lines.push(`Open Family Cost: ${openFamily.route?.expectedTotalCostChaos?.toFixed(2)}c`);
-lines.push('N1 PASS: Open policy correctly matches the primary recommendation.');
+const selectedFamily = selectedFamilies[0];
+const selectedFamilyCost = selectedFamily.route?.expectedTotalCostChaos;
+if (
+  selectedFamilyCost === null || selectedFamilyCost === undefined ||
+  result.recommended.expectedTotalCostChaos === null ||
+  Math.abs(selectedFamilyCost - result.recommended.expectedTotalCostChaos) > 1e-6
+) {
+  throw new Error('N1 Failed: selected method family does not match the primary recommendation');
+}
+lines.push(`Selected Family: ${selectedFamily.spec.name}`);
+lines.push(`Selected Family Cost: ${selectedFamilyCost.toFixed(2)}c`);
+lines.push(`Open Family Status: ${openFamily.status}`);
+lines.push('N1 PASS: The unique selected family matches the canonical primary recommendation.');
 
 // ==========================================
 // N2: Conventional Alt/Aug/Regal Family

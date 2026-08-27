@@ -48,6 +48,47 @@ export type MethodFamilyStageStatus =
   | 'RESOLVED'
   | 'DOMINATED';
 
+export type PolicyActionEvidenceScope = 'ACQUISITION' | 'DOWNSTREAM' | 'FULL_ROUTE';
+
+export interface RequiredActionEvidenceSpec {
+  actionId: string;
+  scope: PolicyActionEvidenceScope;
+}
+
+export type FullRouteActionEvidenceSource =
+  | 'CLEAN_ACQUISITION'
+  | 'ACQUISITION_SYNTHESIS_POLICY'
+  | 'DOWNSTREAM_SELECTED_POLICY';
+
+export interface FullRouteActionEvidenceEntry {
+  actionId: string;
+  actionName: string;
+  scope: Exclude<PolicyActionEvidenceScope, 'FULL_ROUTE'>;
+  expectedCount: number;
+  expectedCostChaos: number;
+  evidenceSource: FullRouteActionEvidenceSource;
+  physicalAcquisitionIdentity: string;
+  policySessionIdentity: string;
+  sourcePolicyFingerprint: string;
+}
+
+export interface FullRouteActionEvidence {
+  version: 'FULL_ROUTE_ACTION_EVIDENCE_V1';
+  physicalAcquisitionIdentity: string;
+  policySessionIdentity: string;
+  sourcePolicyFingerprint: string;
+  entries: FullRouteActionEvidenceEntry[];
+}
+
+export interface RequiredActionEvidenceCheck {
+  actionId: string;
+  requiredScope: PolicyActionEvidenceScope;
+  observed: boolean;
+  observedExpectedCount: number;
+  observedScopes: Array<Exclude<PolicyActionEvidenceScope, 'FULL_ROUTE'>>;
+  evidenceSources: FullRouteActionEvidenceSource[];
+}
+
 export type MethodFamilyObjectiveEligibility =
   | 'RESOLVED_ELIGIBLE'
   | 'OVER_COST_CEILING'
@@ -62,7 +103,9 @@ export interface MethodFamilySpec {
   description: string;
   badge: string;
   allowedActionIds?: string[] | null;
+  /** @deprecated Use requiredActionEvidence for stage-aware route evidence. */
   requiredActionIds?: string[] | null;
+  requiredActionEvidence?: RequiredActionEvidenceSpec[] | null;
   forbiddenActionIds?: string[] | null;
   forcedAcquisitionType?: 'CLEAN' | 'SELF_FRACTURE' | 'OPEN';
   targetFractureModId?: string;
@@ -105,6 +148,8 @@ export interface MethodFamilyResult {
   fullRouteL?: number;
   fullRouteU?: number;
   requiredActionObservedOnPolicy: boolean;
+  fullRouteActionEvidence?: FullRouteActionEvidence;
+  requiredActionEvidenceChecks?: RequiredActionEvidenceCheck[];
   onPolicyActionIds: string[];
   expectedActionUsage?: ExpectedActionUsage[];
   policyHealth?: {

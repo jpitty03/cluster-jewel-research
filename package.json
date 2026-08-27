@@ -66,6 +66,7 @@
     "diagnostic:phase3a:committed": "tsx scripts/phase3aDiagnostics.ts --committed-evidence",
     "diagnostic:phase3b": "tsx scripts/phase3bDiagnostics.ts",
     "diagnostic:phase3c": "tsx scripts/phase3cDiagnostics.ts",
+    "diagnostic:phase3d": "tsx scripts/phase3dDiagnostics.ts",
     "browser:smoke": "tsx scripts/browserPhase2sSmoke.ts",
     "publish": "npm run scrape && npm run price && node scripts/publish.mjs"
   },

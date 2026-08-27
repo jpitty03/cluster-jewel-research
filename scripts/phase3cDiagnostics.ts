@@ -274,13 +274,36 @@ function policyFamilyDiagnostics(result: OptimizeCraftResult): {
     family.spec.kind === 'SELF_FRACTURE'
   );
   assert(fractureControls.length > 0, 'C6 self-fracture controls are absent');
-  assert(fractureControls.every((family) =>
-    family.knownPolicyAdmissibility?.admissible === false &&
-    family.knownPolicyAdmissibility.failures.some((failure) =>
+  const cleanKnownFractureAudits = fractureControls
+    .map((family) => family.knownPolicyAdmissibility)
+    .filter((audit) => audit !== undefined);
+  assert(cleanKnownFractureAudits.every((audit) =>
+    audit.admissible === false &&
+    audit.failures.some((failure) =>
       failure.code === 'ACQUISITION_KIND_MISMATCH' ||
       failure.code === 'ACQUISITION_IDENTITY_MISMATCH'
     )
-  ), 'C6 clean known policy was admitted to a self-fracture family');
+  ), 'C6 an available clean known policy was admitted to a self-fracture family');
+  const selectedFractureTarget = result.presentation.acquisitionContext.kind === 'SELF_FRACTURE'
+    ? result.presentation.acquisitionContext.targetModId
+    : undefined;
+  const selectedPolicyMismatchControls = fractureControls.filter((family) =>
+    selectedFractureTarget === undefined ||
+    family.spec.targetFractureModId !== selectedFractureTarget
+  );
+  assert(selectedPolicyMismatchControls.length > 0,
+    'C6 self-fracture identity mismatch controls are absent');
+  assert(selectedPolicyMismatchControls.every((family) =>
+    family.selectedOpenPolicyAdmissibility?.admissible === false &&
+    family.selectedOpenPolicyAdmissibility.failures.some((failure) =>
+      failure.code === 'ACQUISITION_KIND_MISMATCH' ||
+      failure.code === 'ACQUISITION_IDENTITY_MISMATCH'
+    )
+  ), 'C6 selected policy was admitted to a mismatched self-fracture family');
+  assert(
+    cleanKnownFractureAudits.length > 0 || selectedPolicyMismatchControls.length > 0,
+    'C6 no executable self-fracture negative-control audit was available',
+  );
 
   const sameFingerprint = open.policyEquivalenceFingerprint !== undefined &&
     open.policyEquivalenceFingerprint === conventional.policyEquivalenceFingerprint;

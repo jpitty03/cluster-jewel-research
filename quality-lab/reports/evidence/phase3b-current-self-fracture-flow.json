@@ -62,7 +62,7 @@
   "flow": {
     "version": "SELECTED_POLICY_FLOW_V1",
     "status": "CERTIFIED",
-    "sourceBundleId": "bundle:family_fracture_Riot Queller",
+    "sourceBundleId": "bundle:family_fracture_Riot Queller:independent",
     "sourcePolicyFingerprint": "policy-15881dc7",
     "nodes": [
       {
@@ -1452,7 +1452,7 @@
           "exactExpectedFlow": 1.412476879104645
         }
       ],
-      "aggregationMs": 61
+      "aggregationMs": 58.19999980926514
     },
     "reconciliation": {
       "tolerance": 1e-7,

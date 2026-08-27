@@ -32,7 +32,7 @@ Probabilities are derived from eligible pools and mechanics, NOT tuned to fit ob
 
 Step / Benchmark               Craft of Exile (Observed)   Analytical Engine   Our Monte Carlo     Difference   Status
 ------------------------------------------------------------------------------------------------------------------------
-Orb of Alteration              1.5215% (~1 / 65.7)         1.4377% (1 / 69.6)   1.4750% (1 / 67.8)   0.0838pp      ALIGNED
+Orb of Alteration              1.5215% (~1 / 65.7)         1.4377% (1 / 69.6)   1.5050% (1 / 66.4)   0.0838pp      ALIGNED
 Orb of Alteration              0.0211% (~1 / 4,748.4)      0.0230% (1 / 4347.9) 0.0238% (1 / 4201.7) 0.0019pp      ALIGNED
 Harvest Reforge Defences       0.2512% (~1 / 398.0165)     0.2755% (1 / 362.9)  0.2753% (1 / 363.2)  0.0243pp      CLOSE / APPROXIMATE
 Exactly one Orb of Annulment after Harvest raw hit 40.0367% (~1 / 2.4977)      43.7754% (1 / 2.2844) 44.2790% (1 / 2.2584) 3.7387pp      CLOSE / APPROXIMATE
@@ -96,13 +96,13 @@ FULL GENERIC MULTI-STAGE ROUTE:
     - of the Prodigy (T1): not directly acquired; executable synthesis is evaluated separately
     - Glowing (T1): not directly acquired; executable synthesis is evaluated separately
   Evaluated starting routes:
-    - Clean Base: acquisition=10.0c (deterministic), downstream=1473.987c, full=1483.987c, proof=OPTIMAL OVER MODELED ACTIONS: PROVEN
+    - Clean Base: acquisition=10.0c (deterministic), downstream=1473.994c, full=1483.994c, proof=OPTIMAL OVER MODELED ACTIONS: PROVEN
   Selected acquisition: Clean Base at 10.0c
-  Expected currencies: transmutation=4.000, augmentation=6.333, alteration=14.333, regal=4.000, exalt=4.000, fracturing=4.000, reacquisition=3.000, scour=1.000
-  Expected downstream cost: 1473.987c; acquisition-inclusive: 1483.987c
+  Expected currencies: transmutation=4.000, augmentation=6.583, alteration=14.333, regal=4.000, exalt=4.000, fracturing=4.000, reacquisition=3.000, scour=1.000
+  Expected downstream cost: 1473.994c; acquisition-inclusive: 1483.994c
   Action Orb of Transmutation: local successors=12, first discoveries=11, on-policy selections=1, unresolved edges=0
   Action Orb of Augmentation: local successors=18, first discoveries=12, on-policy selections=4, unresolved edges=0
-  Action Orb of Alteration: local successors=23, first discoveries=0, on-policy selections=7, unresolved edges=0
+  Action Orb of Alteration: local successors=28, first discoveries=0, on-policy selections=7, unresolved edges=0
   Action Regal Orb: local successors=64, first discoveries=5, on-policy selections=2, unresolved edges=0
   Action Orb of Scouring: local successors=6, first discoveries=5, on-policy selections=2, unresolved edges=0
   Action Orb of Annulment: local successors=77, first discoveries=72, on-policy selections=0, unresolved edges=0
@@ -114,11 +114,11 @@ FULL GENERIC MULTI-STAGE ROUTE:
     Candidate graph cycles: YES
     On-policy states: 30
     On-policy cycles: YES
-    Bellman: CONVERGED in 874 iterations (residual 7.0940e-13)
+    Bellman: CONVERGED in 874 iterations (residual 4.8203e-13)
     On-policy unresolved probability: 0.000000%
     Terminal absorption: 100.000000%
-    Occupancy: CONVERGED in 8 iterations (residual 5.5511e-16)
-    Action-cost sum / Bellman EV: 1473.9867c / 1473.9867c
+    Occupancy: CONVERGED in 9 iterations (residual 1.3323e-15)
+    Action-cost sum / Bellman EV: 1473.9942c / 1473.9942c
     EV reconciliation delta: 0.000000c (RECONCILED)
     Selected policy: FULLY RESOLVED / PROPER / ABSORBING / COST-RECONCILED
     Recursive candidate resolution: CONVERGED

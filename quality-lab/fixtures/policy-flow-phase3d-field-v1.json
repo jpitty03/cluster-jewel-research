@@ -1,0 +1,78 @@
+{
+  "fixtureId": "policy-flow-phase3d-field-v1",
+  "fixtureVersion": 1,
+  "sourceAppCommit": "Phase 3B retained real Worker flow reviewed by Phase 3D",
+  "normalizedRequest": {
+    "id": "phase2y_field_three_notable",
+    "name": "Phase 2Y Dark Ideation plus Unspeakable Gifts plus Wicked Pall field handoff",
+    "baseType": "Large Cluster Jewel",
+    "clusterType": "12% increased Chaos Damage",
+    "itemLevel": 75,
+    "passiveCount": 8,
+    "finalRarity": "rare",
+    "extraAffixes": "allow-extra",
+    "targetMods": [
+      "Dark Ideation",
+      "Unspeakable Gifts",
+      "Wicked Pall"
+    ],
+    "priceContext": {
+      "currencyRates": {
+        "chaos": 1,
+        "divine": 213.5,
+        "fracturing": 298.6,
+        "annul": 11.66,
+        "exalt": 1.17,
+        "scour": 0.5391,
+        "alteration": 0.1336,
+        "transmutation": 0.005012,
+        "augmentation": 0.03941,
+        "regal": 0.03638,
+        "wildLifeforce": 0.02377,
+        "vividLifeforce": 0.08208,
+        "primalLifeforce": 0.04085
+      }
+    },
+    "marketContext": {
+      "league": "Allflame",
+      "snapshotAt": "2026-08-26T06:31:33.498Z",
+      "snapshotStale": false,
+      "currencyRatesAt": "2026-08-26T05:36:32.599Z",
+      "currencyRatesStale": false,
+      "stale": false,
+      "cleanBaseQuote": {
+        "status": "UNAVAILABLE",
+        "provenance": "Allflame has no exact ilvl 75 clean-base quote; the unchanged optimizer research fallback remains explicit."
+      },
+      "currencyMappings": {},
+      "currencyCoverage": {
+        "mappedAndPresent": [],
+        "mappedButMissing": [],
+        "unmappedEngineCurrencies": []
+      }
+    },
+    "searchBudget": {
+      "maxStates": 50000,
+      "maxWallTimeMs": 300000,
+      "maxExpansionRounds": 6
+    }
+  },
+  "selectedBundleId": "core:open-selected-policy",
+  "selectedPolicyFingerprint": "policy-163b1731",
+  "policyFlowVersion": "SELECTED_POLICY_FLOW_V1",
+  "topologyFingerprint": "topology-b6fb87a1",
+  "serializedSummary": {
+    "path": "quality-lab/reports/evidence/phase3b-field-three-notable.json",
+    "selector": "flow",
+    "artifactSha256": "df1dbc45cf001bfc1e9a4f1e068a2e8c38415f3ddfac72e42bbe8417e881b87f",
+    "normalizedSummarySha256": "90f245597cac6ba44664fd650b88db36e83bb11703fd567851440b4d9fbf286e",
+    "nodeCount": 23,
+    "edgeCount": 49
+  },
+  "certificationScope": "Retained exact 23-node real self-fracture Worker PolicyFlow used for Phase 3D scope, handoff, and Fit All browser evidence.",
+  "limitations": [
+    "The frozen renderer wrapper is harness-only.",
+    "The graph retains the exact reviewed PolicyFlow; only the presentation context is supplied by the gate.",
+    "The live frozen minion field Worker A/B remains authoritative for budget and family evidence."
+  ]
+}
