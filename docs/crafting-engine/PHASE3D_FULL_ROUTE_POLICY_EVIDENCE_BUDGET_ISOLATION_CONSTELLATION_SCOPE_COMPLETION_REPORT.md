@@ -1,6 +1,6 @@
 # Phase 3D Full-Route Policy Evidence, Budget Isolation, and Constellation Scope Completion Report
 
-Status: **IMPLEMENTATION COMPLETE / TARGETED + DEV + RELEASE PASS / DEPLOYMENT PENDING**
+Status: **COMPLETE / TARGETED + DEV + RELEASE PASS / PAGES DEPLOYED**
 
 Date: 2026-08-27
 
@@ -295,7 +295,9 @@ Self-review additionally found and repaired one integration edge before broad va
 - Implementation/evidence/report commit: `c9d8b7b3a129e42d54a25f3449502d1c7f24240b`.
 - Push to `origin/main`: `debd00cbc16911eb8ac27b010605015b8af6e334..c9d8b7b3a129e42d54a25f3449502d1c7f24240b` completed.
 - Initial GitHub Pages workflow: run `33123134291`; build/lint/diff passed, then the committed-evidence audit correctly rejected the 214.217s DEV tier and triggered the corrective tiering change documented above.
-- Corrective commit and successful GitHub Pages workflow: pending.
-- Deployed SHA and live verification: pending.
+- Corrective evidence/tiering commit: `9c23ed9cb2cb9f1112f62d3b3eff8ee05a2aa873`; pushed as `c9d8b7b3a129e42d54a25f3449502d1c7f24240b..9c23ed9cb2cb9f1112f62d3b3eff8ee05a2aa873`.
+- Successful GitHub Pages workflow: [run 33123681072](https://github.com/jpitty03/cluster-jewel-research/actions/runs/33123681072); `validate-and-build` and `deploy` both passed.
+- Successful Pages deployment: ID `6132323396`, environment `github-pages`, deployed product SHA `9c23ed9cb2cb9f1112f62d3b3eff8ee05a2aa873`.
+- Live verification: `https://jpitty03.github.io/cluster-jewel-research/` returned HTTP 200 and served `assets/index-E94EtjQj.js`.
 
-This section will be closed with immutable commit and Pages evidence after the implementation commit deploys. A later documentation-only closeout does not change product, mechanics, search, layout, or validation evidence.
+This report is finalized in a documentation-only closeout after the verified product deployment. That closeout does not change product, mechanics, search, layout, or validation evidence; its own Pages run is verified separately in the final handoff.
