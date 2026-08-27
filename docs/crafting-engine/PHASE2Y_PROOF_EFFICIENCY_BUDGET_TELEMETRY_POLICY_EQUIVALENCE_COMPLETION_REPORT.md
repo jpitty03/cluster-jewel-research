@@ -1,6 +1,6 @@
 # Phase 2Y Proof Efficiency, Budget Telemetry, Policy Equivalence Completion Report
 
-Status: **VALIDATION PASS — Phase 2Y.1 deployment verification pending**
+Status: **CLOSED / PASS / DEPLOYED**
 
 Completed locally on 2026-08-26 PDT. Real-browser artifacts use UTC timestamps on 2026-08-27.
 
@@ -15,7 +15,7 @@ This report closes the original Phase 2Y product phase and its narrow Phase 2Y.1
 
 - Phase 2Y implementation baseline: `a6743b8443e1c0817c110c37387d5412c64340a5`.
 - Phase 2Y.1 source-of-truth plan: `d9d2892`.
-- Phase 2Y.1 compactor repair, focused harness, release evidence, and this report: `PENDING_PHASE2Y1_IMPLEMENTATION_COMMIT`.
+- Phase 2Y.1 compactor repair, focused harness, release evidence, and this report: `aa80dde613e4b217859beb19c4e7fe1fcb423959`.
 - A later report-only metadata commit may record the deployment result; it does not change product or validation behavior.
 
 The work began from a clean `main` at `d9d2892`, with `HEAD == origin/main`. The newer user data commit recorded by the Phase 2Y gate (`4e06388da42d9e875b231519abdea0509f8d6c0e`) remains preserved.
@@ -366,10 +366,10 @@ No source file changed after the final full browser pass, so the full matrix was
 
 ## 29. Hosted lean deployment result
 
-- Product/evidence deployment SHA: `PENDING_DEPLOY_SHA`.
-- GitHub Pages workflow run: `PENDING_DEPLOY_RUN`.
-- Hosted URL: `PENDING_DEPLOY_URL`.
-- Result: `PENDING_DEPLOY_RESULT`.
+- Product/evidence deployment SHA: `aa80dde613e4b217859beb19c4e7fe1fcb423959`.
+- GitHub Pages workflow run: [33040593211](https://github.com/jpitty03/cluster-jewel-research/actions/runs/33040593211).
+- Hosted URL: [https://jpitty03.github.io/cluster-jewel-research/](https://jpitty03.github.io/cluster-jewel-research/).
+- Result: **SUCCESS**; `validate-and-build` and `deploy` both completed successfully.
 
 The hosted workflow remains lean: build, lint, diff hygiene, and committed local-release evidence integrity gate deployment; the heavyweight browser/solver matrix remains local, with remote extended validation manual-only.
 
@@ -514,6 +514,6 @@ All Phase 2Y screenshots named in section 27 were opened and manually reviewed r
 - Hardcoded route winner added: **NO**.
 - Pre-fractured market ranking added: **NO**.
 - Y18 weakened or missing proof fabricated: **NO**.
-- Final deployed product SHA/run: `PENDING_DEPLOY_SHA` / `PENDING_DEPLOY_RUN`.
+- Final deployed product SHA/run: `aa80dde613e4b217859beb19c4e7fe1fcb423959` / [33040593211](https://github.com/jpitty03/cluster-jewel-research/actions/runs/33040593211).
 
-Phase 2Y is closed only after the pending deployment fields above are replaced with the verified hosted result.
+Phase 2Y is closed. The subsequent report-metadata commit changes documentation only; the verified product/evidence deployment remains the SHA and run above.
