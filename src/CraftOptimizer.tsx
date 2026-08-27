@@ -2209,12 +2209,12 @@ export function CraftOptimizer({ seed = null, onBackToClusterJewels }: CraftOpti
                         <details className="method-equivalence-evidence">
                           <summary>Policy equivalence evidence</summary>
                           <dl>
-                            <dt>Fingerprint</dt><dd>{method.policyEquivalenceFingerprint}</dd>
-                            <dt>Acquisition identity</dt><dd>{method.policyEquivalenceEvidence.physicalAcquisitionIdentity}</dd>
-                            <dt>Normalized decisions</dt><dd>{method.policyEquivalenceEvidence.normalizedPolicyDecisionCount}</dd>
-                            <dt>Required action evidence</dt><dd>{method.policyEquivalenceEvidence.requiredActionEvidence.join(', ') || 'none'}</dd>
-                            <dt>Recovery / terminal evidence</dt><dd>{method.policyEquivalenceEvidence.recoveryDecisionCount} / {method.policyEquivalenceEvidence.terminalStateCount}</dd>
-                            <dt>Usage tolerance</dt><dd>{method.policyEquivalenceEvidence.usageTolerance}</dd>
+                            <div><dt>Fingerprint</dt><dd>{method.policyEquivalenceFingerprint}</dd></div>
+                            <div><dt>Acquisition identity</dt><dd>{method.policyEquivalenceEvidence.physicalAcquisitionIdentity}</dd></div>
+                            <div><dt>Normalized decisions</dt><dd>{method.policyEquivalenceEvidence.normalizedPolicyDecisionCount}</dd></div>
+                            <div><dt>Required action evidence</dt><dd>{method.policyEquivalenceEvidence.requiredActionEvidence.join(', ') || 'none'}</dd></div>
+                            <div><dt>Recovery / terminal evidence</dt><dd>{method.policyEquivalenceEvidence.recoveryDecisionCount} / {method.policyEquivalenceEvidence.terminalStateCount}</dd></div>
+                            <div><dt>Usage tolerance</dt><dd>{method.policyEquivalenceEvidence.usageTolerance}</dd></div>
                           </dl>
                         </details>
                       )}
