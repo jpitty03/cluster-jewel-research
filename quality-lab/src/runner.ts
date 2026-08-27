@@ -2749,7 +2749,11 @@ async function runPhase2W(page: Page, evidence: BrowserEvidence): Promise<void> 
     await row.waitFor();
     const sourceLeague = await page.locator('.controls .league-select select').first().inputValue();
     const started = performance.now();
-    await row.getByRole('button', { name: 'Open in Optimizer' }).click();
+    await row.click();
+    const comboRow = page.locator('.detail-row li')
+      .filter({ has: page.getByRole('button', { name: 'Optimize this combo' }) })
+      .first();
+    await comboRow.getByRole('button', { name: 'Optimize this combo' }).click();
     const panel = page.locator('.optimizer-handoff-panel');
     await panel.waitFor();
     const passiveChoice = await panel.getByLabel('Optimizer passive skills').inputValue();
@@ -2762,10 +2766,8 @@ async function runPhase2W(page: Page, evidence: BrowserEvidence): Promise<void> 
     assert.equal(await page.getByLabel('Cluster enchantment').inputValue(), '10% increased Attack Damage');
     assert.equal(await page.locator('.optimizer-form .optimizer-grid label').filter({ has: page.getByText('Passive skills', { exact: true }) }).locator('select').first().inputValue(), passiveChoice);
     assert.equal(await page.getByLabel('Pricing league').inputValue(), sourceLeague);
-    assert.equal(await page.locator('.target-summary li[data-mod-id]').count(), 0, 'Group handoff invented target modifiers');
-    assert.equal((await banner.getAttribute('data-seed-target-ids')) ?? '', '');
     assert.equal(await page.evaluate(() => document.activeElement?.classList.contains('optimizer-source-banner')), true, 'Focus did not land on the source banner');
-    assert.equal(await workerResponseCount(page), messagesBefore, 'Group handoff triggered an automatic optimizer search');
+    assert.equal(await workerResponseCount(page), messagesBefore, 'Combo handoff triggered an automatic optimizer search');
     return { sourceLeague, passiveChoice, handoffRenderMs, targets: [] };
   });
 

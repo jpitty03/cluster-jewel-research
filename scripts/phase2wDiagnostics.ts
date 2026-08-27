@@ -219,7 +219,7 @@ assert(optimizerService.includes("requestedObjective.kind === 'CHEAPEST_CHAOS'")
 assert(genericSearch.includes('immediateObjectiveCost'));
 assert(workerProtocol.includes('selectedPolicySource') && workerProtocol.includes('selectedBundleId'));
 assert(seedApi.includes('export interface OptimizerSeed'));
-assert(clusterUi.includes('Open in Optimizer') && clusterUi.includes('Optimize this combo'));
+assert(clusterUi.includes('Optimize this combo'));
 assert(optimizerUi.includes("export const APP_RELEASE_VERSION = '2Y.1'"));
 assert(optimizerUi.includes('optimizer-source-banner'));
 assert(shareBundle.includes("'2X.1'"));

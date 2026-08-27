@@ -84,7 +84,7 @@ const daysAgo = (iso: string) => {
 
 interface PendingOptimizerLaunch {
   group: Group
-  combo?: ComboCount
+  combo: ComboCount
   targetModIds: string[]
   passiveRange: { min: number; max: number }
   passiveCount: number
@@ -759,23 +759,14 @@ function ClusterJewels({ onOptimize }: { onOptimize: (seed: OptimizerSeed) => vo
 
   const totalShown = groups.reduce((s, g) => s + g.jewels.length, 0)
 
-  const beginOptimizerLaunch = (group: Group, combo?: ComboCount) => {
+  const beginOptimizerLaunch = (group: Group, combo: ComboCount) => {
     setOptimizerHandoffError(null)
     const baseType = exactBaseType(group.base)
     if (!baseType) {
       setOptimizerHandoffError(`Unsupported optimizer base: ${group.base}`)
       return
     }
-    const observedPassives = group.jewels.flatMap((jewel) =>
-      jewel.passives === null ? [] : [jewel.passives]
-    )
-    const fallbackPassive = browserCraftingCatalog.getPassiveCounts(baseType)[0]
-    const pinned = combo
-      ? pinnedPassives(group.base, combo.notables, combo.passivesMin, combo.passivesMax)
-      : groupBasePassives(pricesByLeague[league] ?? { bases: {} } as PriceFile, group)?.passives ?? {
-          min: observedPassives.length ? Math.min(...observedPassives) : fallbackPassive,
-          max: observedPassives.length ? Math.max(...observedPassives) : fallbackPassive,
-        }
+    const pinned = pinnedPassives(group.base, combo.notables, combo.passivesMin, combo.passivesMax)
     const catalogPassives = browserCraftingCatalog.getPassiveCounts(baseType)
     const validMin = pinned.min !== null && catalogPassives.includes(pinned.min)
       ? pinned.min
@@ -787,24 +778,22 @@ function ClusterJewels({ onOptimize }: { onOptimize: (seed: OptimizerSeed) => vo
       min: Math.min(validMin, validMax),
       max: Math.max(validMin, validMax),
     }
-    const matchingJewels = combo
-      ? group.jewels.filter((jewel) =>
-          [...jewel.notables].sort().join(' + ') === combo.combo
-        )
-      : group.jewels
+    const matchingJewels = group.jewels.filter((jewel) =>
+      [...jewel.notables].sort().join(' + ') === combo.combo
+    )
     const observedItemLevels = [...new Set(matchingJewels.flatMap((jewel) =>
       jewel.ilvl === null ? [] : [jewel.ilvl]
     ))]
     const itemLevel = observedItemLevels.length === 1 ? observedItemLevels[0] : 84
     let targetModIds: string[] = []
     try {
-      if (combo) targetModIds = resolveComboTargetIds(baseType, group.clusterType, combo, itemLevel)
+      targetModIds = resolveComboTargetIds(baseType, group.clusterType, combo, itemLevel)
     } catch (error) {
       setOptimizerHandoffError(error instanceof Error ? error.message : String(error))
       return
     }
     const file = pricesByLeague[league]
-    const entry = combo ? file?.prices[priceKey(group.base, group.clusterType, combo.combo)] : undefined
+    const entry = file?.prices[priceKey(group.base, group.clusterType, combo.combo)]
     const lowChaos = entry ? chaosValue(file?.rates, entry.low) : null
     const sourceMarketValue = entry && lowChaos !== null
       ? {
@@ -835,7 +824,7 @@ function ClusterJewels({ onOptimize }: { onOptimize: (seed: OptimizerSeed) => vo
     const baseType = exactBaseType(pending.group.base)
     if (!baseType) return
     onOptimize({
-      id: `cluster-jewels:${Date.now()}:${pending.group.key}:${pending.combo?.combo ?? 'group'}`,
+      id: `cluster-jewels:${Date.now()}:${pending.group.key}:${pending.combo.combo}`,
       source: 'CLUSTER_JEWELS',
       league,
       baseType,
@@ -845,7 +834,7 @@ function ClusterJewels({ onOptimize }: { onOptimize: (seed: OptimizerSeed) => vo
       itemLevel: pending.itemLevel,
       itemLevelDefaulted: pending.itemLevelDefaulted,
       targetModIds: pending.targetModIds,
-      sourceComboLabel: pending.combo?.combo,
+      sourceComboLabel: pending.combo.combo,
       sourceMarketValue: pending.sourceMarketValue,
     })
     setPendingOptimizerLaunch(null)
@@ -968,8 +957,8 @@ function ClusterJewels({ onOptimize }: { onOptimize: (seed: OptimizerSeed) => vo
             <h2 id="optimizer-handoff-title">Open this jewel in Craft Optimizer</h2>
             <p>
               <strong>{pendingOptimizerLaunch.group.base}</strong> ·{' '}
-              {pendingOptimizerLaunch.group.clusterType}
-              {pendingOptimizerLaunch.combo && <> · {pendingOptimizerLaunch.combo.combo}</>}
+              {pendingOptimizerLaunch.group.clusterType} ·{' '}
+              {pendingOptimizerLaunch.combo.combo}
             </p>
           </div>
           <div className="optimizer-handoff-fields">
@@ -1015,14 +1004,10 @@ function ClusterJewels({ onOptimize }: { onOptimize: (seed: OptimizerSeed) => vo
             {pendingOptimizerLaunch.itemLevelDefaulted && (
               <p>Item level was not uniquely observed, so ilvl 84 is the editable default.</p>
             )}
-            {pendingOptimizerLaunch.combo ? (
-              <p>
-                {pendingOptimizerLaunch.targetModIds.length} exact modifier ID
-                {pendingOptimizerLaunch.targetModIds.length === 1 ? '' : 's'} will be transferred.
-              </p>
-            ) : (
-              <p>No modifiers are preselected for a group-level handoff.</p>
-            )}
+            <p>
+              {pendingOptimizerLaunch.targetModIds.length} exact modifier ID
+              {pendingOptimizerLaunch.targetModIds.length === 1 ? '' : 's'} will be transferred.
+            </p>
             {pendingOptimizerLaunch.sourceMarketValue && (
               <p>
                 Optional sampled-low sale value: {pendingOptimizerLaunch.sourceMarketValue.chaos.toFixed(1)}c.
@@ -1098,7 +1083,6 @@ function ClusterJewels({ onOptimize }: { onOptimize: (seed: OptimizerSeed) => vo
                   >
                     Median{arrow('median')}
                   </th>
-                  <th className="optimizer-launch-col">Craft</th>
                 </tr>
               </thead>
               <tbody>
@@ -1121,66 +1105,60 @@ function ClusterJewels({ onOptimize }: { onOptimize: (seed: OptimizerSeed) => vo
                       <td className="price-col">
                         <GroupPriceCell league={league} g={g} quote={median} label="median" />
                       </td>
-                      <td className="optimizer-launch-col">
-                        <button
-                          type="button"
-                          className="cluster-optimize-button"
-                          onClick={(event) => {
-                            event.stopPropagation()
-                            beginOptimizerLaunch(g)
-                          }}
-                        >
-                          Open in Optimizer
-                        </button>
-                      </td>
                     </tr>
                     {expanded === g.key && (
                       <tr className="detail-row">
-                        <td colSpan={8}>
+                        <td colSpan={7}>
                           <div className="detail">
-                            <div>
+                            <div className="detail-section detail-combos-section">
                               <h3>Notable combinations</h3>
-                              <ul>
+                              <ul className="combo-list">
                                 {g.comboCounts.map((cc) => {
                                   const url = comboTradeUrl(league, g.base, g.clusterType, cc)
                                   return (
-                                    <li key={cc.combo}>
-                                      <span className="count">{cc.count}×</span>{' '}
-                                      {url ? (
-                                        <a
-                                          href={url}
-                                          target="_blank"
-                                          rel="noreferrer"
-                                          title="Search this combo on pathofexile.com/trade"
-                                        >
-                                          {cc.combo}
-                                        </a>
-                                      ) : (
-                                        cc.combo
-                                      )}
-                                      <ComboPrice
-                                        league={league}
-                                        base={g.base}
-                                        clusterType={g.clusterType}
-                                        cc={cc}
-                                      />
+                                    <li key={cc.combo} className="combo-item">
+                                      <div className="combo-info">
+                                        <span className="count">{cc.count}×</span>
+                                        <span className="combo-name" title={cc.combo}>
+                                          {url ? (
+                                            <a
+                                              href={url}
+                                              target="_blank"
+                                              rel="noreferrer"
+                                              title="Search this combo on pathofexile.com/trade"
+                                            >
+                                              {cc.combo}
+                                            </a>
+                                          ) : (
+                                            cc.combo
+                                          )}
+                                        </span>
+                                        <ComboPrice
+                                          league={league}
+                                          base={g.base}
+                                          clusterType={g.clusterType}
+                                          cc={cc}
+                                        />
+                                      </div>
                                       <button
                                         type="button"
                                         className="combo-optimize-button"
                                         onClick={() => beginOptimizerLaunch(g, cc)}
+                                        title="Open Craft Optimizer for this combo"
+                                        aria-label="Optimize this combo"
                                       >
-                                        Optimize this combo
+                                        Optimize combo
                                       </button>
                                     </li>
                                   )
                                 })}
                               </ul>
                             </div>
-                            <div>
+                            <div className="detail-section">
                               <h3>Individual notables</h3>
-                              <ul>
+                              <ul className="notables-list">
                                 {g.notableCounts.map(([n, c]) => (
-                                  <li key={n}>
+                                  <li key={n} className="notable-item">
                                     <span className="count">{c}×</span> {n}
                                     <ModMetaTag base={g.base} clusterType={g.clusterType} notable={n} />
                                   </li>
@@ -1189,11 +1167,11 @@ function ClusterJewels({ onOptimize }: { onOptimize: (seed: OptimizerSeed) => vo
                               {g.fracturedCounts.length > 0 && (
                                 <>
                                   <h3>Fractured mods</h3>
-                                  <ul>
+                                  <ul className="fractured-list">
                                     {g.fracturedCounts.map(([mod, c]) => {
                                       const notable = notableFromFractured(mod)
                                       return (
-                                        <li key={mod}>
+                                        <li key={mod} className="fractured-item">
                                           <span className="count">{c}×</span> {mod}
                                           {notable && (
                                             <ModMetaTag
@@ -1209,15 +1187,15 @@ function ClusterJewels({ onOptimize }: { onOptimize: (seed: OptimizerSeed) => vo
                                 </>
                               )}
                             </div>
-                            <div>
+                            <div className="detail-section">
                               <h3>
                                 Small-passive grants
                                 <span className="h3-note"> · explicit "also grant"</span>
                               </h3>
                               {g.smallGrantCounts.length > 0 ? (
-                                <ul>
+                                <ul className="grants-list">
                                   {g.smallGrantCounts.map(([grant, c]) => (
-                                    <li key={grant}>
+                                    <li key={grant} className="grant-item">
                                       <span className="count">{c}×</span> {grant}
                                     </li>
                                   ))}
@@ -1226,13 +1204,13 @@ function ClusterJewels({ onOptimize }: { onOptimize: (seed: OptimizerSeed) => vo
                                 <p className="empty-note">None on these jewels</p>
                               )}
                             </div>
-                            <div>
+                            <div className="detail-section">
                               <h3>Used by</h3>
-                              <ul>
+                              <ul className="used-by-list">
                                 {usedByRows(g.jewels).map((r) => (
-                                  <li key={r.key}>
+                                  <li key={r.key} className="used-by-item">
                                     <span className="count">{r.count}×</span>{' '}
-                                    {r.streamer ?? r.character}
+                                    <span className="streamer-name">{r.streamer ?? r.character}</span>
                                     <span className="owner">
                                       {r.streamer != null && r.streamer !== r.character && (
                                         <> · {r.character}</>
