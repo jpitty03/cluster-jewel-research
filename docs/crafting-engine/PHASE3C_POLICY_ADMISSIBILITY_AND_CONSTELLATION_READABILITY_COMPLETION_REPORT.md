@@ -1,6 +1,6 @@
 # Phase 3C Policy Admissibility and Constellation Readability Completion Report
 
-Status: **COMPLETE / PASS — deployment closeout pending final push**
+Status: **COMPLETE / PASS / DEPLOYED**
 
 Date: 2026-08-27
 
@@ -242,4 +242,11 @@ EXTENDED, the nightly workflow, the legacy 115-gate suite, and the legacy releas
 
 ## 7. Commit and deployment
 
-The implementation/report commit, pushed SHA, GitHub Pages workflow run, and deployed URL will be appended here after the final push. This unavoidable closeout is a documentation-only follow-up: a commit cannot embed its own content-derived SHA or its future workflow run ID.
+- Implementation and report commit: `5b3c0af6775196d305be8d4372777c39425b0b3a`
+- Push: `main` fast-forwarded from `c8f3fb03a423b234826c017fde0367d305f04322` to `5b3c0af6775196d305be8d4372777c39425b0b3a` on `origin`.
+- GitHub Pages workflow: [Deploy to GitHub Pages run 33111463760](https://github.com/jpitty03/cluster-jewel-research/actions/runs/33111463760)
+- Workflow outcome: `success`; both `validate-and-build` and `deploy` completed for the exact implementation SHA.
+- Deployed URL: [https://jpitty03.github.io/cluster-jewel-research/](https://jpitty03.github.io/cluster-jewel-research/)
+- Live verification: HTTP 200; deployed production asset `assets/index-BQkJbjrq.js` observed after the successful run.
+
+This deployment record is a documentation-only closeout made after the implementation was already deployed. It does not change mechanics, search, layout, fixtures, or retained validation evidence.
