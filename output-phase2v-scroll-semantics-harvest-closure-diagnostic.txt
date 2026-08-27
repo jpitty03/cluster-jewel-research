@@ -23,7 +23,7 @@ V17 — Local-heavy / hosted-lean validation policy
 PASS: full diagnostics/browser work remains local; automatic deploy runs build/lint/diff plus committed Phase 2Y evidence audit, and the heavy remote workflow is manual only.
 
 === ALL PHASE 2V DIAGNOSTIC GATES PASS ===
-Real browser: Playwright Chromium 151.0.7922.34; run=2026-08-27T02-03-41-994Z; scenario=release
+Real browser: Playwright Chromium 151.0.7922.34; run=2026-08-27T03-56-52-896Z; scenario=release
 Release label/schema: 2Y.1 (Phase 2V behavior retained)
 Unit tests added/run: NO
 Mechanics probabilities changed: NO

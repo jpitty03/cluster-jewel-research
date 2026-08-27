@@ -18,16 +18,26 @@ export const WORKER_CAPTURE_INIT_SCRIPT = String.raw`
   const events = readProtocolHistory();
   const compactRoute = (route) => route && ({
     actionId: route.actionId,
+    name: route.name,
     actionName: route.actionName,
     acquisitionCandidateId: route.acquisitionCandidateId,
     acquisitionMethodId: route.acquisitionMethodId,
     expectedTotalCostChaos: route.expectedTotalCostChaos,
+    lowerBoundChaos: route.lowerBoundChaos,
     incumbentUpperBoundChaos: route.incumbentUpperBoundChaos,
+    optimalityGapChaos: route.optimalityGapChaos,
+    status: route.status,
+    couldBeatResolvedIncumbent: route.couldBeatResolvedIncumbent,
     metrics: route.metrics,
+    acquisitionMetrics: route.acquisitionMetrics,
+    downstreamMetrics: route.downstreamMetrics,
   });
   const compactHarvestComparison = (comparison) => comparison && ({
     ...comparison,
     conventionalRoute: compactRoute(comparison.conventionalRoute),
+    resolvedHarvestRoute: compactRoute(comparison.resolvedHarvestRoute),
+    // Retain compatibility with captured results from any prior schema that used
+    // this alias, but send it through the exact same canonical route compactor.
     harvestRoute: compactRoute(comparison.harvestRoute),
   });
   const compactResult = (result) => result && ({

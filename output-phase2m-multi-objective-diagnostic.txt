@@ -18,8 +18,8 @@ M2 PASS: Exact 3-vector (chaos, actions, time) reconciled from policy occupancy.
 M3 PASS: Virtual acquire menu transition has 0 physical actions; full route accounts for complete synthesis + downstream usage.
 
 --- M4: Wrong-Fracture Effort Accounting ---
-Fracture Route Resolved: Self-fracture of the Prodigy (T1)
-Fracture Total Physical Actions: 338.5
+Fracture Route Resolved: Self-fracture Glowing (T1)
+Fracture Total Physical Actions: 280.3
 M4 PASS: Wrong-fracture expected visits, repeated base prep, and recovery loops are fully accounted.
 
 --- M5: Multi-Objective Matrix ---
@@ -57,7 +57,7 @@ M11 PASS: Selected route has certified finite upper bound within explicit cost c
 
 --- M12: Objective Identity and Session Reuse ---
 Session Reuse Status: RESUMED
-Retained States Reused: 3000
+Retained States Reused: 1800
 M12 PASS: Objective switching safely retains transition distributions and recomputes Bellman policy.
 
 === ALL PHASE 2M ACCEPTANCE GATES PASS ===

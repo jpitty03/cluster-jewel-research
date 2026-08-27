@@ -34,6 +34,7 @@
     "lab:phase2w:handoff": "tsx quality-lab/src/runner.ts --scenario phase2w-handoff",
     "lab:phase2x": "tsx quality-lab/src/runner.ts --scenario release",
     "lab:phase2y": "tsx quality-lab/src/runner.ts --scenario release",
+    "lab:phase2y-fuzz": "tsx quality-lab/src/runner.ts --scenario phase2y-fuzz",
     "diagnostic:mature": "tsx scripts/matureDiagnostics.ts",
     "diagnostic:phase2t": "tsx scripts/phase2tDiagnostics.ts",
     "diagnostic:phase2u": "tsx scripts/phase2uDiagnostics.ts",

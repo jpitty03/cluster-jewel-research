@@ -53,7 +53,7 @@
   },
   "result": {
     "recommendationStatus": "PROVISIONAL_RESOLVED",
-    "route": "Self-fracture Riot Queller (T1)",
+    "route": "Self-fracture Riot Queller",
     "bundleId": "bundle:family_fracture_Riot Queller",
     "expectedCostChaos": 1757.610772265634,
     "selectedPhysicalActionIds": [

@@ -437,6 +437,7 @@
         "constellationHarvest": false,
         "acquisitionResourceInPlan": false,
         "unresolvedMethodFamilies": [
+          "family_fracture_AfflictionJewelSmallPassivesGrantAttributes3",
           "family_fracture_AfflictionJewelSmallPassivesGrantES3",
           "family_fracture_harvest_AfflictionJewelSmallPassivesGrantES3_defences",
           "family_fracture_AfflictionJewelSmallPassivesHaveIncreasedEffect2"
@@ -491,6 +492,7 @@
         "constellationHarvest": false,
         "acquisitionResourceInPlan": false,
         "unresolvedMethodFamilies": [
+          "family_fracture_AfflictionJewelSmallPassivesGrantAttributes3",
           "family_fracture_AfflictionJewelSmallPassivesGrantES3",
           "family_fracture_harvest_AfflictionJewelSmallPassivesGrantES3_defences",
           "family_fracture_AfflictionJewelSmallPassivesHaveIncreasedEffect2"

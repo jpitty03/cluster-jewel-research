@@ -1,6 +1,6 @@
 {
   "appVersion": "2Y.1",
-  "exportedAt": "2026-08-27T03:15:17.222Z",
+  "exportedAt": "2026-08-27T04:11:14.220Z",
   "requestInput": {
     "baseType": "Small Cluster Jewel",
     "clusterType": "6% increased maximum Mana",
@@ -36,10 +36,10 @@
     "marketContext": {
       "league": "Allflame",
       "snapshotAt": "2026-08-26T06:31:33.498Z",
-      "snapshotAgeMs": 74621331,
+      "snapshotAgeMs": 77978130,
       "snapshotStale": false,
       "currencyRatesAt": "2026-08-26T05:36:32.599Z",
-      "currencyRatesAgeMs": 77922230,
+      "currencyRatesAgeMs": 81279029,
       "currencyRatesStale": false,
       "stale": false,
       "cleanBaseQuote": {
@@ -50,7 +50,7 @@
         "listed": 90,
         "sampled": 10,
         "at": "2026-08-26T05:57:33.050Z",
-        "ageMs": 76661779,
+        "ageMs": 80018578,
         "stale": false,
         "provenance": "Allflame sampled low listing for Small Cluster Jewel||6% increased maximum Mana||3-3||i84; midpoint 10.000c; 10 sampled of 90 listed at 2026-08-26T05:57:33.050Z"
       },
@@ -105,7 +105,7 @@
     "searchIntent": "RECOMMEND"
   },
   "optimizerSeedContext": {
-    "id": "cluster-jewels:1787800514814:Small Cluster Jewel||6% increased maximum Mana:35% increased Small Passive Effect",
+    "id": "cluster-jewels:1787803871612:Small Cluster Jewel||6% increased maximum Mana:35% increased Small Passive Effect",
     "source": "CLUSTER_JEWELS",
     "league": "Allflame",
     "baseType": "Small Cluster Jewel",
@@ -163,10 +163,10 @@
         "fullRouteU": 9.427055174999975
       },
       "timingScopes": {
-        "firstCompletedRoundMs": 246,
-        "firstCertifiedDownstreamPolicyMs": 246,
-        "firstUsefulExecutableFullRouteMs": 246,
-        "firstAcquisitionSafeRecommendationMs": 248
+        "firstCompletedRoundMs": 382,
+        "firstCertifiedDownstreamPolicyMs": 382,
+        "firstUsefulExecutableFullRouteMs": 382,
+        "firstAcquisitionSafeRecommendationMs": 385
       },
       "workScopes": {
         "portfolioTotalStatesExpanded": 350,
@@ -346,7 +346,7 @@
           "maxStates": 1200,
           "maxWallTimeMs": 3150,
           "maxExpansionRounds": 2,
-          "elapsedMs": 246
+          "elapsedMs": 382
         }
       },
       {

@@ -1,6 +1,6 @@
 {
   "appVersion": "2Y.1",
-  "exportedAt": "2026-08-27T03:16:44.916Z",
+  "exportedAt": "2026-08-27T04:12:51.264Z",
   "requestInput": {
     "baseType": "Large Cluster Jewel",
     "clusterType": "12% increased Attack Damage while holding a Shield",
@@ -43,10 +43,10 @@
     "marketContext": {
       "league": "Allflame",
       "snapshotAt": "2026-08-26T06:31:33.498Z",
-      "snapshotAgeMs": 74684862,
+      "snapshotAgeMs": 78050926,
       "snapshotStale": false,
       "currencyRatesAt": "2026-08-26T05:36:32.599Z",
-      "currencyRatesAgeMs": 77985761,
+      "currencyRatesAgeMs": 81351825,
       "currencyRatesStale": false,
       "stale": false,
       "cleanBaseQuote": {
@@ -57,7 +57,7 @@
         "listed": 70,
         "sampled": 10,
         "at": "2026-08-26T05:47:03.029Z",
-        "ageMs": 77355331,
+        "ageMs": 80721395,
         "stale": false,
         "provenance": "Allflame sampled low listing for Large Cluster Jewel||12% increased Attack Damage while holding a Shield||8-8||i84; midpoint 50.000c; 10 sampled of 70 listed at 2026-08-26T05:47:03.029Z"
       },
@@ -112,7 +112,7 @@
     "searchIntent": "RECOMMEND"
   },
   "optimizerSeedContext": {
-    "id": "cluster-jewels:1787800578345:Large Cluster Jewel||12% increased Attack Damage while holding a Shield:Prodigious Defence + Riot Queller + Smite the Weak",
+    "id": "cluster-jewels:1787803944410:Large Cluster Jewel||12% increased Attack Damage while holding a Shield:Prodigious Defence + Riot Queller + Smite the Weak",
     "source": "CLUSTER_JEWELS",
     "league": "Allflame",
     "baseType": "Large Cluster Jewel",
@@ -173,13 +173,13 @@
         "fullRouteU": 1669.6299301428464
       },
       "timingScopes": {
-        "firstCompletedRoundMs": 98,
-        "firstCertifiedDownstreamPolicyMs": 3904,
-        "firstUsefulExecutableFullRouteMs": 3904
+        "firstCompletedRoundMs": 103,
+        "firstCertifiedDownstreamPolicyMs": 1555,
+        "firstUsefulExecutableFullRouteMs": 1555
       },
       "workScopes": {
-        "portfolioTotalStatesExpanded": 10002,
-        "portfolioRetainedStates": 19340,
+        "portfolioTotalStatesExpanded": 11669,
+        "portfolioRetainedStates": 22792,
         "selectedPolicyGraphStates": 3002,
         "acquisitionSynthesisStates": 3334,
         "methodFamilyStates": 0,
@@ -512,7 +512,7 @@
           "maxStates": 5000,
           "maxWallTimeMs": 8000,
           "maxExpansionRounds": 3,
-          "elapsedMs": 6302
+          "elapsedMs": 2912
         }
       },
       {
@@ -688,8 +688,8 @@
           "reconciliationDifferenceChaos": 9.012433110910933e-8
         },
         "sessionIdentity": "phase2j-0b5708fd:family_fracture_Prodigious Defence",
-        "retainedStates": 4669,
-        "transitionDistributionsGenerated": 19484
+        "retainedStates": 8003,
+        "transitionDistributionsGenerated": 28936
       },
       {
         "id": "family_fracture_harvest_Prodigious Defence_attack",
@@ -700,7 +700,7 @@
         "fullRouteStatus": "NOT_SEARCHED",
         "requiredActionObservedOnPolicy": false,
         "onPolicyActionIds": [],
-        "retainedStates": 1667,
+        "retainedStates": 3334,
         "transitionDistributionsGenerated": 10033
       },
       {
@@ -902,10 +902,10 @@
           "bellmanConverged": true,
           "occupancyConverged": true,
           "costReconciled": true,
-          "reconciliationDifferenceChaos": 7.909056876087561e-8
+          "reconciliationDifferenceChaos": 7.089590781106381e-8
         },
         "sessionIdentity": "phase2j-0b5708fd:family_fracture_Smite the Weak",
-        "retainedStates": 5001,
+        "retainedStates": 5119,
         "transitionDistributionsGenerated": 20888
       },
       {

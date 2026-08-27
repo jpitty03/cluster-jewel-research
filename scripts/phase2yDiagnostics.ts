@@ -306,17 +306,28 @@ for (const candidate of boundRows(field.result)) {
     `debt=${candidate.proofDebtChaos?.toFixed(3) ?? 'unknown'}c`,
   );
 }
-assert(field.result.acquisition.portfolioProof.tranches.every((tranche) =>
-  tranche.wallTimeMs !== undefined &&
-  tranche.statesExpandedBefore !== undefined &&
-  tranche.statesExpandedAfter !== undefined &&
-  tranche.transitionDistributionsReusedBefore !== undefined &&
-  tranche.transitionDistributionsReusedAfter !== undefined &&
-  tranche.potentialGapBeforeChaos !== undefined &&
-  tranche.potentialGapAfterChaos !== undefined &&
-  tranche.proofStatusBefore !== undefined &&
-  tranche.proofStatusAfter !== undefined
-), 'Per-tranche Phase 2Y telemetry is incomplete');
+const requiredTrancheTelemetry = [
+  'wallTimeMs',
+  'statesExpandedBefore',
+  'statesExpandedAfter',
+  'transitionDistributionsReusedBefore',
+  'transitionDistributionsReusedAfter',
+  'potentialGapBeforeChaos',
+  'potentialGapAfterChaos',
+  'proofStatusBefore',
+  'proofStatusAfter',
+] as const;
+const incompleteTranches = field.result.acquisition.portfolioProof.tranches.flatMap(
+  (tranche, index) => {
+    const missing = requiredTrancheTelemetry.filter((key) => tranche[key] === undefined);
+    return missing.length === 0 ? [] : [{ index, candidateId: tranche.candidateId, stage: tranche.stage, missing }];
+  },
+);
+assert.deepEqual(
+  incompleteTranches,
+  [],
+  `Per-tranche Phase 2Y telemetry is incomplete: ${JSON.stringify(incompleteTranches)}`,
+);
 lines.push(`tranches=${field.result.acquisition.portfolioProof.tranches.length}; all timing/state/proof fields=PRESENT`);
 
 console.error('[phase2y] simple exact modeled optimum witness');

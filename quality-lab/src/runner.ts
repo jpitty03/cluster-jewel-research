@@ -380,9 +380,14 @@ function compactWorkerEvents(events: CapturedWorkerEvent[]): CapturedWorkerEvent
             },
             status: family.status,
             objectiveEligibility: family.objectiveEligibility,
+            playerRouteName: family.playerRouteName,
             evaluationSource: family.evaluationSource,
             acquisitionStatus: family.acquisitionStatus,
+            acquisitionL: family.acquisitionL,
+            acquisitionU: family.acquisitionU,
             downstreamStatus: family.downstreamStatus,
+            downstreamL: family.downstreamL,
+            downstreamU: family.downstreamU,
             fullRouteStatus: family.fullRouteStatus,
             fullRouteL: family.fullRouteL,
             fullRouteU: family.fullRouteU,
@@ -394,6 +399,10 @@ function compactWorkerEvents(events: CapturedWorkerEvent[]): CapturedWorkerEvent
             repeatableRerollCertification: family.repeatableRerollCertification,
             retainedStates: family.retainedStates,
             budget: family.budget,
+            duplicateOfMethodFamilyId: family.duplicateOfMethodFamilyId,
+            policyEquivalenceFingerprint: family.policyEquivalenceFingerprint,
+            equivalentToSelectedPolicy: family.equivalentToSelectedPolicy,
+            policyEquivalenceEvidence: family.policyEquivalenceEvidence,
           };
         })
       : undefined;
@@ -679,6 +688,120 @@ function assertMethodFamilyStageAccounting(
     full.upper, `${context} action/card U`, 1e-5);
   }
   return Object.fromEntries(resolved);
+}
+
+interface CapturedRouteSurface {
+  path: string;
+  route: JsonRecord;
+}
+
+function capturedRouteSurfaces(result: JsonRecord, label: string): CapturedRouteSurface[] {
+  const surfaces: CapturedRouteSurface[] = [];
+  const append = (path: string, value: unknown): void => {
+    if (value === undefined || value === null) return;
+    surfaces.push({ path, route: jsonRecord(value, `${label} ${path}`) });
+  };
+  append('recommended', result.recommended);
+  if (Array.isArray(result.alternatives)) {
+    result.alternatives.forEach((route, index) => append(`alternatives[${index}]`, route));
+  }
+  if (result.harvestComparison !== undefined && result.harvestComparison !== null) {
+    const harvest = jsonRecord(result.harvestComparison, `${label} Harvest comparison`);
+    append('harvestComparison.conventionalRoute', harvest.conventionalRoute);
+    append('harvestComparison.resolvedHarvestRoute', harvest.resolvedHarvestRoute);
+    append('harvestComparison.harvestRoute', harvest.harvestRoute);
+  }
+  if (Array.isArray(result.methodPortfolio)) {
+    result.methodPortfolio.forEach((entry, index) => {
+      const family = jsonRecord(entry, `${label} method family ${index}`);
+      append(`methodPortfolio[${index}].route`, family.route);
+    });
+  }
+  if (Array.isArray(result.paretoAlternatives)) {
+    result.paretoAlternatives.forEach((entry, index) => {
+      const alternative = jsonRecord(entry, `${label} Pareto alternative ${index}`);
+      append(`paretoAlternatives[${index}].route`, alternative.route);
+    });
+  }
+  return surfaces;
+}
+
+function nullableFiniteValue(value: unknown, label: string): number | null {
+  if (value === null) return null;
+  return numberValue(value, label);
+}
+
+function compactRouteProofContract(route: JsonRecord, label: string): JsonRecord {
+  assert(typeof route.actionId === 'string' && route.actionId.length > 0,
+    `${label} actionId is missing`);
+  assert(typeof route.name === 'string' && route.name.length > 0,
+    `${label} name is missing`);
+  assert(typeof route.status === 'string' && route.status.length > 0,
+    `${label} status is missing`);
+  assert.equal(typeof route.couldBeatResolvedIncumbent, 'boolean',
+    `${label} couldBeatResolvedIncumbent is missing`);
+  return {
+    actionId: route.actionId,
+    name: route.name,
+    actionName: route.actionName,
+    acquisitionCandidateId: route.acquisitionCandidateId,
+    acquisitionMethodId: route.acquisitionMethodId,
+    expectedTotalCostChaos: nullableFiniteValue(
+      route.expectedTotalCostChaos,
+      `${label} expectedTotalCostChaos`,
+    ),
+    lowerBoundChaos: numberValue(route.lowerBoundChaos, `${label} lowerBoundChaos`),
+    incumbentUpperBoundChaos: nullableFiniteValue(
+      route.incumbentUpperBoundChaos,
+      `${label} incumbentUpperBoundChaos`,
+    ),
+    optimalityGapChaos: nullableFiniteValue(
+      route.optimalityGapChaos,
+      `${label} optimalityGapChaos`,
+    ),
+    status: route.status,
+    couldBeatResolvedIncumbent: route.couldBeatResolvedIncumbent,
+    metrics: route.metrics,
+    acquisitionMetrics: route.acquisitionMetrics,
+    downstreamMetrics: route.downstreamMetrics,
+  };
+}
+
+function assertCompactedRouteSurfaces(
+  sourceResult: JsonRecord,
+  compactedResult: JsonRecord,
+): Array<{ path: string; lowerBoundChaos: number; expectedTotalCostChaos: number | null }> {
+  const source = capturedRouteSurfaces(sourceResult, 'source Worker result');
+  const compacted = new Map(capturedRouteSurfaces(
+    compactedResult,
+    'compacted Worker result',
+  ).map((surface) => [surface.path, surface.route]));
+  assert(source.length > 0, 'The real Worker result exposed no route surfaces');
+  assert.equal(compacted.size, source.length,
+    'Route surface count changed at the compaction boundary');
+  return source.map((surface) => {
+    const compactedRoute = compacted.get(surface.path);
+    assert(compactedRoute, `Compaction discarded ${surface.path}`);
+    for (const key of [
+      'expectedTotalCostChaos',
+      'lowerBoundChaos',
+      'incumbentUpperBoundChaos',
+      'optimalityGapChaos',
+      'status',
+      'couldBeatResolvedIncumbent',
+    ]) assert(Object.hasOwn(compactedRoute, key), `${surface.path} discarded ${key}`);
+    const expected = compactRouteProofContract(surface.route, `source ${surface.path}`);
+    const observed = compactRouteProofContract(compactedRoute, `compacted ${surface.path}`);
+    assert.deepEqual(observed, expected, `${surface.path} proof contract changed in compaction`);
+    return {
+      path: surface.path,
+      lowerBoundChaos: numberValue(observed.lowerBoundChaos, `${surface.path} retained L`),
+      expectedTotalCostChaos: nullableFiniteValue(
+        observed.expectedTotalCostChaos,
+        `${surface.path} retained U`,
+      ),
+    };
+  });
 }
 
 function assertHarvestEvidence(result: JsonRecord): Record<string, unknown> {
@@ -3632,6 +3755,352 @@ async function runPhase2X(page: Page, evidence: BrowserEvidence): Promise<void> 
   });
 }
 
+async function assertFocusedCanonicalRouteIdentity(
+  page: Page,
+  result: JsonRecord,
+): Promise<Record<string, unknown>> {
+  const presentation = jsonRecord(result.presentation, 'focused route presentation');
+  const acquisitionContext = jsonRecord(
+    presentation.acquisitionContext,
+    'focused acquisition context',
+  );
+  const routeName = String(presentation.selectedRouteName);
+  assert(routeName.length > 0, 'Focused result omitted its selected route name');
+  if (acquisitionContext.kind === 'SELF_FRACTURE') {
+    assert.match(routeName, /^Self-fracture /);
+  } else {
+    assert.doesNotMatch(routeName, /^Self-fracture /);
+  }
+  assert.equal(await page.locator('.recommendation-hero').getAttribute('data-selected-route'), routeName);
+  assert.equal(await page.getByLabel('Search Activity').getAttribute('data-selected-route'), routeName);
+  assert.equal(
+    await page.locator('.craft-guide [data-selected-route]').first().getAttribute('data-selected-route'),
+    routeName,
+  );
+  assert.equal(
+    await page.getByTestId('markov-constellation-container').getAttribute('data-selected-route'),
+    routeName,
+  );
+  assert.equal(
+    (await page.locator('.pareto-alternative-card.selected-objective .pareto-route-name')
+      .first().innerText()).trim(),
+    routeName,
+  );
+  assert.equal(
+    await page.locator('.method-family-card.winner').first().getAttribute('data-player-route'),
+    routeName,
+  );
+  const families = arrayValue(result.methodPortfolio, 'focused method portfolio')
+    .map((entry) => jsonRecord(entry, 'focused method family'));
+  const selected = families.filter((family) => family.status === 'SELECTED_WINNER');
+  assert.equal(selected.length, 1, 'Focused result did not expose exactly one selected method');
+  assert.equal(jsonRecord(selected[0].route, 'focused selected route').name, routeName);
+  const selectedAccounting = assertMethodFamilyStageAccounting(selected[0], 'focused selected method');
+  const equivalent = families.filter((family) => family.status === 'SAME_AS_SELECTED');
+  for (const [index, family] of equivalent.entries()) {
+    assert.equal(jsonRecord(family.route, `focused equivalent route ${index}`).name, routeName);
+    assert.equal(family.policyEquivalenceFingerprint, selected[0].policyEquivalenceFingerprint);
+    assertMethodFamilyStageAccounting(family, `focused equivalent method ${index}`);
+  }
+  return {
+    routeName,
+    acquisitionKind: acquisitionContext.kind,
+    selectedAccounting,
+    equivalentFamilies: equivalent.map((family) =>
+      jsonRecord(family.spec, 'focused equivalent spec').id
+    ),
+  };
+}
+
+async function runPhase2YGeneratedProofDebtFuzz(
+  page: Page,
+  evidence: BrowserEvidence,
+): Promise<void> {
+  const scenario = 'phase2y-proof-efficiency-budget-equivalence';
+  await gate(evidence, scenario, 'Y18-generated-proof-debt-browser-fuzz', async () => {
+    const fuzzSeeds = [
+      'phase2v_one_mod_clean_graph',
+      'harvest_one_mod_math_witness',
+      'herald_envoy_endbringer',
+      'three_notable',
+      'phase2w_eldritch_low_tolerance',
+    ];
+    for (const fixtureId of fuzzSeeds) {
+      const input = fixture(fixtureId);
+      await importFixture(page, input);
+      await setObjective(page, 'CHEAPEST_CHAOS');
+      const budget = { maxStates: 1_200, maxWallTimeMs: 5_000, maxExpansionRounds: 2 };
+      await setBudget(page, budget);
+      try {
+        await runOptimization(page, budget.maxWallTimeMs);
+      } catch (error) {
+        throw new Error(
+          `Y18 fixture ${fixtureId} failed at unchanged 1,200-state/5,000ms caps: ${String(error)}`,
+        );
+      }
+    }
+    const results = (await workerEvents(page))
+      .filter((event) => event.kind === 'MESSAGE_FROM_WORKER' &&
+        event.payload?.type === 'RESULT' &&
+        event.payload.result !== null &&
+        typeof event.payload.result === 'object')
+      .map((event) => jsonRecord(event.payload?.result, 'fuzz Worker result'));
+    assert(results.length >= 12, `Only ${results.length} real Worker results were available to fuzz`);
+    let candidatesChecked = 0;
+    let equivalentPairs = 0;
+    for (const result of results) {
+      assert.equal(jsonRecord(result.internalConsistency, 'fuzz consistency').status, 'OK');
+      const search = jsonRecord(result.search, 'fuzz search');
+      const requestBudget = jsonRecord(search.requestBudget, 'fuzz request budget');
+      assert.equal(requestBudget.semantics, 'UP_TO_CAPS');
+      assert(arrayValue(jsonRecord(requestBudget.stop, 'fuzz stop').evidence, 'fuzz stop evidence').length >= 3);
+      const acquisition = jsonRecord(result.acquisition, 'fuzz acquisition');
+      const proof = jsonRecord(acquisition.portfolioProof, 'fuzz portfolio proof');
+      for (const entry of arrayValue(proof.candidateEvidence, 'fuzz candidate evidence')) {
+        const candidate = jsonRecord(entry, 'fuzz candidate');
+        if (candidate.fullRouteUpperBoundChaos !== undefined) {
+          assert(numberValue(candidate.fullRouteLowerBoundChaos, 'fuzz L') <=
+            numberValue(candidate.fullRouteUpperBoundChaos, 'fuzz U') + 1e-6);
+        }
+        candidatesChecked++;
+      }
+      if (result.recommended) {
+        const route = String(jsonRecord(result.presentation, 'fuzz presentation').selectedRouteName);
+        assert(/^(Start clean base|Self-fracture .+|Harvest Reforge .+|Self-fracture .+ \+ Harvest)$/.test(route));
+        assert.equal(jsonRecord(result.craftPlan, 'fuzz craft plan').status, 'CERTIFIED');
+      }
+      const families = arrayValue(result.methodPortfolio, 'fuzz families')
+        .map((entry) => jsonRecord(entry, 'fuzz family'));
+      for (const [index, family] of families
+        .filter((entry) => ['SELECTED_WINNER', 'SAME_AS_SELECTED'].includes(String(entry.status)))
+        .entries()) {
+        assertMethodFamilyStageAccounting(family, `fuzz method ${index}`);
+      }
+      const selected = families.find((family) => family.status === 'SELECTED_WINNER');
+      if (selected?.policyEquivalenceFingerprint) {
+        for (const family of families) {
+          if (family !== selected &&
+            family.policyEquivalenceFingerprint === selected.policyEquivalenceFingerprint) {
+            assert.equal(family.status, 'SAME_AS_SELECTED');
+            equivalentPairs++;
+          }
+        }
+      }
+    }
+    const fuzzArtifact = join(evidenceDirectory, 'phase2y-proof-debt-browser-fuzz.json');
+    const fuzzSummary = {
+      seed: 'phase2y-real-worker-result-matrix-v1',
+      generatedFixtures: fuzzSeeds,
+      results: results.length,
+      candidatesChecked,
+      equivalentPairs,
+    };
+    writeFileSync(fuzzArtifact, `${JSON.stringify(fuzzSummary, null, 2)}\n`, 'utf8');
+    evidence.artifacts.phase2yProofDebtFuzz = relative(repositoryRoot, fuzzArtifact);
+    return { ...fuzzSummary, artifact: evidence.artifacts.phase2yProofDebtFuzz };
+  });
+}
+
+async function runPhase2Y1FocusedCloseout(
+  page: Page,
+  evidence: BrowserEvidence,
+): Promise<void> {
+  const scenario = 'phase2y1-evidence-compaction-closeout';
+  await ensureOptimizerPage(page, String(evidence.productionUrl));
+  const baselineWorkerArtifact = join(evidenceDirectory, 'worker-events.json');
+  const baselineEvents = JSON.parse(readFileSync(baselineWorkerArtifact, 'utf8')) as CapturedWorkerEvent[];
+  const baselineCompactedResults = baselineEvents.filter((event) =>
+    event.kind === 'MESSAGE_FROM_WORKER' && event.payload?.type === 'RESULT' &&
+    event.payload.result !== undefined
+  );
+  const initialHeapBytes = await page.evaluate(() => 'memory' in performance
+    ? (performance as Performance & { memory: { usedJSHeapSize: number } }).memory.usedJSHeapSize
+    : undefined);
+  let sourceSequence = -1;
+  let sourceResult: JsonRecord | undefined;
+  let sourceResultBytes = 0;
+  let compactedResultBytes = 0;
+  let retainedRoutes: Array<{
+    path: string;
+    lowerBoundChaos: number;
+    expectedTotalCostChaos: number | null;
+  }> = [];
+
+  await gate(evidence, scenario, 'Y1.1-Y1.2-real-route-surface-source-contract', async () => {
+    const input = fixture('harvest_one_mod_math_witness');
+    await importFixture(page, input);
+    await setObjective(page, 'CHEAPEST_CHAOS');
+    await setBudget(page, input.searchBudget);
+    await runOptimization(page, input.searchBudget.maxWallTimeMs);
+    const result = await compareMethods(page, input.searchBudget.maxWallTimeMs);
+    assertFullRouteReconciliation(result);
+    assertHarvestEvidence(result);
+    const sourceEvent = await latestWorkerResponseEvent(page);
+    assert(sourceEvent, 'The representative full Worker RESULT was not captured');
+    const payload = workerPayload(sourceEvent);
+    assert.notEqual(payload.__qualityLabCompacted, true,
+      'The representative source RESULT was compacted before its contract was captured');
+    sourceSequence = sourceEvent.sequence;
+    sourceResult = jsonRecord(payload.result, 'representative full Worker result');
+    sourceResultBytes = Buffer.byteLength(JSON.stringify(sourceResult), 'utf8');
+    const surfaces = capturedRouteSurfaces(sourceResult, 'representative full Worker result');
+    const paths = surfaces.map((surface) => surface.path);
+    for (const expected of [
+      'recommended',
+      'alternatives[',
+      'harvestComparison.conventionalRoute',
+      'harvestComparison.resolvedHarvestRoute',
+      'methodPortfolio[',
+      'paretoAlternatives[',
+    ]) assert(paths.some((path) => path.startsWith(expected)),
+      `Representative Worker result omitted route surface ${expected}`);
+    for (const surface of surfaces) {
+      compactRouteProofContract(surface.route, `source ${surface.path}`);
+    }
+    return {
+      requestSequence: sourceSequence,
+      routeSurfaces: paths,
+      fullResultBytes: sourceResultBytes,
+    };
+  });
+
+  await gate(evidence, scenario, 'Y1.3-real-compaction-boundary-witness', async () => {
+    assert(sourceResult && sourceSequence >= 0, 'The source route contract is unavailable');
+    const trigger = fixture('phase2v_one_mod_clean_graph');
+    await importFixture(page, trigger);
+    await setObjective(page, 'CHEAPEST_CHAOS');
+    const budget = { maxStates: 1_200, maxWallTimeMs: 5_000, maxExpansionRounds: 2 };
+    await setBudget(page, budget);
+    await runOptimization(page, budget.maxWallTimeMs);
+    const sourceEvent = (await workerEvents(page)).find((event) =>
+      event.sequence === sourceSequence
+    );
+    assert(sourceEvent, 'The earlier Worker RESULT disappeared after the next request');
+    const payload = workerPayload(sourceEvent);
+    assert.equal(payload.__qualityLabCompacted, true,
+      'The next real Worker request did not cross the compaction boundary');
+    const compactedResult = jsonRecord(payload.result, 'compacted historical Worker result');
+    retainedRoutes = assertCompactedRouteSurfaces(sourceResult, compactedResult);
+    compactedResultBytes = Buffer.byteLength(JSON.stringify(compactedResult), 'utf8');
+    assert(compactedResultBytes < sourceResultBytes,
+      'Worker RESULT compaction did not reduce the serialized evidence size');
+    const compactedJson = JSON.stringify(compactedResult);
+    assert(!compactedJson.includes('"policyRules"'), 'Compaction retained the full policy-rule graph');
+    assert(!compactedJson.includes('"policyExplanation"'),
+      'Compaction retained the full policy-explanation graph');
+    return {
+      requestSequence: sourceSequence,
+      routeCount: retainedRoutes.length,
+      retainedRoutes,
+      fullResultBytes: sourceResultBytes,
+      compactedResultBytes,
+      reductionFraction: 1 - compactedResultBytes / sourceResultBytes,
+    };
+  });
+
+  await gate(evidence, scenario, 'Y1.8-compaction-memory-and-history-safety', async () => {
+    // Prime historical compaction with a cheap identity that is intentionally not
+    // part of the Y18 seed. Duplicating a later fuzz identity here would turn the
+    // focused path into a continuation/deepening workload instead of reproducing
+    // release Y18's cold bounded matrix.
+    const preludeFixtures = Array.from({ length: 4 }, () => 'cheap_one_mod');
+    const budget = { maxStates: 1_200, maxWallTimeMs: 5_000, maxExpansionRounds: 2 };
+    for (const fixtureId of preludeFixtures) {
+      await importFixture(page, fixture(fixtureId));
+      await setObjective(page, 'CHEAPEST_CHAOS');
+      await setBudget(page, budget);
+      await runOptimization(page, budget.maxWallTimeMs);
+    }
+    await compactCapturedWorkerResults(page);
+    const events = await workerEvents(page);
+    const compactedResults = events.filter((event) =>
+      event.kind === 'MESSAGE_FROM_WORKER' && event.payload?.type === 'RESULT' &&
+      event.payload.__qualityLabCompacted === true && event.payload.result !== undefined
+    );
+    assert(compactedResults.length >= 7,
+      `Only ${compactedResults.length} real Worker results were compacted before focused fuzz`);
+    const compactedBytes = compactedResults.map((event) =>
+      Buffer.byteLength(JSON.stringify(event.payload?.result), 'utf8')
+    );
+    assert(compactedResults.every((event) => {
+      const serialized = JSON.stringify(event.payload?.result);
+      return !serialized.includes('"policyRules"') &&
+        !serialized.includes('"policyExplanation"');
+    }), 'A compacted historical result retained a giant policy graph');
+    const finalHeapBytes = await page.evaluate(() => 'memory' in performance
+      ? (performance as Performance & { memory: { usedJSHeapSize: number } }).memory.usedJSHeapSize
+      : undefined);
+    const artifact = join(evidenceDirectory, 'phase2y1-compaction-witness.json');
+    const compactionEvidence = {
+      sourceEventSequence: sourceSequence,
+      sourceFullResultBytes: sourceResultBytes,
+      repairedCompactedResultBytes: compactedResultBytes,
+      repairedReductionFraction: 1 - compactedResultBytes / sourceResultBytes,
+      retainedRouteProofContracts: retainedRoutes,
+      historicalResultsCompacted: compactedResults.length,
+      compactedHistoryBytes: compactedBytes.reduce((sum, bytes) => sum + bytes, 0),
+      largestCompactedResultBytes: Math.max(...compactedBytes),
+      committedFailedRunArtifactBytes: statSync(baselineWorkerArtifact).size,
+      committedFailedRunResultsWithPayload: baselineCompactedResults.length,
+      eventCount: events.length,
+      initialHeapBytes,
+      finalHeapBytes,
+      heapDeltaBytes: initialHeapBytes === undefined || finalHeapBytes === undefined
+        ? undefined
+        : finalHeapBytes - initialHeapBytes,
+      giantHistoricalPolicyGraphsRetained: false,
+      proofValuesInferredOrFabricated: false,
+    };
+    writeFileSync(artifact, `${JSON.stringify(compactionEvidence, null, 2)}\n`, 'utf8');
+    evidence.artifacts.phase2y1CompactionWitness = relative(repositoryRoot, artifact);
+    return { ...compactionEvidence, artifact: evidence.artifacts.phase2y1CompactionWitness };
+  });
+
+  await runPhase2YGeneratedProofDebtFuzz(page, evidence);
+
+  await gate(evidence, scenario, 'Y1.5-Y1.7-route-identity-and-method-reservation', async () => {
+    const input = fixture('cheap_one_mod');
+    await importFixture(page, input);
+    await setObjective(page, 'CHEAPEST_CHAOS');
+    const budget = { maxStates: 1_200, maxWallTimeMs: 5_000, maxExpansionRounds: 2 };
+    await setBudget(page, budget);
+    await runOptimization(page, budget.maxWallTimeMs);
+    const result = await compareMethods(page, budget.maxWallTimeMs);
+    assertFullRouteReconciliation(result);
+    const identity = await assertFocusedCanonicalRouteIdentity(page, result);
+    const families = arrayValue(result.methodPortfolio, 'focused comparison families')
+      .map((entry) => jsonRecord(entry, 'focused comparison family'));
+    assert(families.some((family) => family.status === 'SAME_AS_SELECTED'),
+      'Focused method comparison did not expose the real equivalent policy control');
+    for (const kind of ['OPEN', 'CONVENTIONAL']) {
+      const family = families.find((entry) =>
+        jsonRecord(entry.spec, 'focused family spec').kind === kind
+      );
+      assert(family, `Focused comparison omitted ${kind}`);
+      assert.equal(family.evaluationSource, 'INDEPENDENT_SOLVE');
+    }
+    const request = await latestWorkerRequestInput(page);
+    assert.equal(request.compareMethodFamilies, true,
+      'Compare Methods did not reserve unified-family work in the real Worker request');
+    const allocations = jsonRecord(
+      jsonRecord(jsonRecord(result.search, 'focused comparison search').requestBudget,
+        'focused comparison budget').allocations,
+      'focused comparison allocations',
+    );
+    const methodAllocation = jsonRecord(
+      allocations.methodFamilyComparison,
+      'focused method-family allocation',
+    );
+    assert(numberValue(methodAllocation.wallTimeMs, 'focused method-family wall time') > 0,
+      'Method-family comparison received no real scheduler time');
+    return {
+      identity,
+      requestCompareMethodFamilies: request.compareMethodFamilies,
+      methodFamilyAllocation: methodAllocation,
+    };
+  });
+}
+
 async function runPhase2Y(page: Page, evidence: BrowserEvidence): Promise<void> {
   const scenario = 'phase2y-proof-efficiency-budget-equivalence';
   const fieldFixture = fixture('phase2y_field_three_notable');
@@ -4136,80 +4605,7 @@ async function runPhase2Y(page: Page, evidence: BrowserEvidence): Promise<void> 
     return { selectedNodeCount: selectedIds.length, guideActions };
   });
 
-  await gate(evidence, scenario, 'Y18-generated-proof-debt-browser-fuzz', async () => {
-    const fuzzSeeds = [
-      'phase2v_one_mod_clean_graph',
-      'harvest_one_mod_math_witness',
-      'herald_envoy_endbringer',
-      'three_notable',
-      'phase2w_eldritch_low_tolerance',
-    ];
-    for (const fixtureId of fuzzSeeds) {
-      const input = fixture(fixtureId);
-      await importFixture(page, input);
-      await setObjective(page, 'CHEAPEST_CHAOS');
-      const budget = { maxStates: 1_200, maxWallTimeMs: 5_000, maxExpansionRounds: 2 };
-      await setBudget(page, budget);
-      await runOptimization(page, budget.maxWallTimeMs);
-    }
-    const results = (await workerEvents(page))
-      .filter((event) => event.kind === 'MESSAGE_FROM_WORKER' &&
-        event.payload?.type === 'RESULT' &&
-        event.payload.result !== null &&
-        typeof event.payload.result === 'object')
-      .map((event) => jsonRecord(event.payload?.result, 'fuzz Worker result'));
-    assert(results.length >= 12, `Only ${results.length} real Worker results were available to fuzz`);
-    let candidatesChecked = 0;
-    let equivalentPairs = 0;
-    for (const result of results) {
-      assert.equal(jsonRecord(result.internalConsistency, 'fuzz consistency').status, 'OK');
-      const search = jsonRecord(result.search, 'fuzz search');
-      const requestBudget = jsonRecord(search.requestBudget, 'fuzz request budget');
-      assert.equal(requestBudget.semantics, 'UP_TO_CAPS');
-      assert(arrayValue(jsonRecord(requestBudget.stop, 'fuzz stop').evidence, 'fuzz stop evidence').length >= 3);
-      const acquisition = jsonRecord(result.acquisition, 'fuzz acquisition');
-      const proof = jsonRecord(acquisition.portfolioProof, 'fuzz portfolio proof');
-      for (const entry of arrayValue(proof.candidateEvidence, 'fuzz candidate evidence')) {
-        const candidate = jsonRecord(entry, 'fuzz candidate');
-        if (candidate.fullRouteUpperBoundChaos !== undefined) {
-          assert(numberValue(candidate.fullRouteLowerBoundChaos, 'fuzz L') <=
-            numberValue(candidate.fullRouteUpperBoundChaos, 'fuzz U') + 1e-6);
-        }
-        candidatesChecked++;
-      }
-      if (result.recommended) {
-        const route = String(jsonRecord(result.presentation, 'fuzz presentation').selectedRouteName);
-        assert(/^(Start clean base|Self-fracture .+|Harvest Reforge .+|Self-fracture .+ \+ Harvest)$/.test(route));
-        assert.equal(jsonRecord(result.craftPlan, 'fuzz craft plan').status, 'CERTIFIED');
-      }
-      const families = arrayValue(result.methodPortfolio, 'fuzz families').map((entry) => jsonRecord(entry, 'fuzz family'));
-      for (const [index, family] of families
-        .filter((entry) => ['SELECTED_WINNER', 'SAME_AS_SELECTED'].includes(String(entry.status)))
-        .entries()) {
-        assertMethodFamilyStageAccounting(family, `fuzz method ${index}`);
-      }
-      const selected = families.find((family) => family.status === 'SELECTED_WINNER');
-      if (selected?.policyEquivalenceFingerprint) {
-        for (const family of families) {
-          if (family !== selected && family.policyEquivalenceFingerprint === selected.policyEquivalenceFingerprint) {
-            assert.equal(family.status, 'SAME_AS_SELECTED');
-            equivalentPairs++;
-          }
-        }
-      }
-    }
-    const fuzzArtifact = join(evidenceDirectory, 'phase2y-proof-debt-browser-fuzz.json');
-    const fuzzSummary = {
-      seed: 'phase2y-real-worker-result-matrix-v1',
-      generatedFixtures: fuzzSeeds,
-      results: results.length,
-      candidatesChecked,
-      equivalentPairs,
-    };
-    writeFileSync(fuzzArtifact, `${JSON.stringify(fuzzSummary, null, 2)}\n`, 'utf8');
-    evidence.artifacts.phase2yProofDebtFuzz = relative(repositoryRoot, fuzzArtifact);
-    return { ...fuzzSummary, artifact: evidence.artifacts.phase2yProofDebtFuzz };
-  });
+  await runPhase2YGeneratedProofDebtFuzz(page, evidence);
 
   await gate(evidence, scenario, 'Y19-performance-memory-and-bound-cache', async () => {
     assert(fieldResult, 'Field performance evidence unavailable');
@@ -4507,9 +4903,23 @@ function scenarioEnabled(requested: string, name: string): boolean {
 function writeReports(evidence: BrowserEvidence): void {
   evidence.finishedAt = new Date().toISOString();
   evidence.status = evidence.checks.every((check) => check.passed) ? 'PASSED' : 'FAILED';
-  writeFileSync(join(reportsDirectory, 'release-gate.json'), `${JSON.stringify(evidence, null, 2)}\n`, 'utf8');
+  const focusedCloseout = evidence.requestedScenario === 'phase2y-fuzz';
+  const jsonReport = join(
+    reportsDirectory,
+    focusedCloseout ? 'phase2y1-focused-gate.json' : 'release-gate.json',
+  );
+  const summaryReport = join(
+    reportsDirectory,
+    focusedCloseout ? 'phase2y1-focused-summary.md' : 'summary.md',
+  );
+  if (focusedCloseout) {
+    evidence.artifacts.phase2y1FocusedGate = relative(repositoryRoot, jsonReport);
+  }
+  writeFileSync(jsonReport, `${JSON.stringify(evidence, null, 2)}\n`, 'utf8');
   const lines = [
-    '# Phase 2Y Real-Browser Release Gate',
+    focusedCloseout
+      ? '# Phase 2Y.1 Focused Real-Browser Compaction Gate'
+      : '# Phase 2Y Real-Browser Release Gate',
     '',
     `- Run: ${evidence.runId}`,
     `- Started: ${evidence.startedAt}`,
@@ -4533,7 +4943,7 @@ function writeReports(evidence: BrowserEvidence): void {
   lines.push(`- Network errors: ${evidence.networkErrors.length}`);
   lines.push('', '## Artifacts', '');
   for (const [name, path] of Object.entries(evidence.artifacts)) lines.push(`- ${name}: \`${path}\``);
-  writeFileSync(join(reportsDirectory, 'summary.md'), `${lines.join('\n')}\n`, 'utf8');
+  writeFileSync(summaryReport, `${lines.join('\n')}\n`, 'utf8');
 }
 
 async function closeBrowser(
@@ -4610,6 +5020,7 @@ async function main(): Promise<void> {
     if (scenarioEnabled(requested, 'animation')) await runConstellation(page, evidence, requested === 'nightly' ? 60_000 : 5_000);
     if (scenarioEnabled(requested, 'additional')) await runAdditionalFixtures(page, evidence);
     if (scenarioEnabled(requested, 'phase2y')) await runPhase2Y(page, evidence);
+    if (requested === 'phase2y-fuzz') await runPhase2Y1FocusedCloseout(page, evidence);
 
     await compactCapturedWorkerResults(page);
     const events = await workerEvents(page);
@@ -4617,9 +5028,16 @@ async function main(): Promise<void> {
     const fullWorkerTrace = join(artifactsDirectory, 'worker-events-full.json');
     writeFileSync(fullWorkerTrace, `${JSON.stringify(events, null, 2)}\n`, 'utf8');
     evidence.artifacts.fullWorkerEvents = relative(repositoryRoot, fullWorkerTrace);
-    const workerTrace = join(evidenceDirectory, 'worker-events.json');
+    const workerTrace = join(
+      evidenceDirectory,
+      requested === 'phase2y-fuzz'
+        ? 'phase2y1-focused-worker-events.json'
+        : 'worker-events.json',
+    );
     writeFileSync(workerTrace, `${JSON.stringify(compactWorkerEvents(events), null, 2)}\n`, 'utf8');
-    evidence.artifacts.workerEvents = relative(repositoryRoot, workerTrace);
+    evidence.artifacts[
+      requested === 'phase2y-fuzz' ? 'phase2y1FocusedWorkerEvents' : 'workerEvents'
+    ] = relative(repositoryRoot, workerTrace);
     evidence.artifacts.videoDirectory = relative(repositoryRoot, join(artifactsDirectory, 'video'));
 
     await gate(evidence, 'release-process', 'runtime-error-audit', async () => {
