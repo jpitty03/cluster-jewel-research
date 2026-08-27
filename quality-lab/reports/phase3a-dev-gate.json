@@ -1,0 +1,364 @@
+{
+  "schemaVersion": "PHASE3A_QUALITY_REPORT_V1",
+  "runId": "2026-08-27T06-30-49-192Z",
+  "suite": "DEV",
+  "requestedGateIds": [
+    "A-clean-worker-canonical",
+    "B-self-fracture-policy",
+    "B-harvest-objective-policy",
+    "D-real-policy-flow-differential",
+    "D-frozen-policy-flow-renderer"
+  ],
+  "selectedGateIds": [
+    "A-clean-worker-canonical",
+    "B-self-fracture-policy",
+    "B-harvest-objective-policy",
+    "D-real-policy-flow-differential",
+    "D-frozen-policy-flow-renderer"
+  ],
+  "startedAt": "2026-08-27T06:30:49.193Z",
+  "finishedAt": "2026-08-27T06:31:42.606Z",
+  "status": "PASSED",
+  "identity": {
+    "applicationSourceBuildHash": "app-a689ed3470c02ec44283",
+    "fixtureCorpusVersion": "Phase2Y-Frozen-Browser-Corpus-1",
+    "fixtureCorpusHash": "corpus-606784355f3ddfef06ac",
+    "priceSnapshotIdentity": "prices-34734839cce7da56",
+    "browserVersion": "151.0.7922.34",
+    "harnessVersion": "PHASE3A_QUALITY_LAB_V1",
+    "compatibilityHash": "compatible-93284ec92f863ae208ecd116"
+  },
+  "scheduling": {
+    "processLevelShards": [
+      "A",
+      "B",
+      "D"
+    ],
+    "browserLightParallelism": 2,
+    "solverHeavyConcurrency": 1,
+    "longSoakAutomatic": false,
+    "shardPlan": [
+      {
+        "shard": "A",
+        "gateIds": [
+          "A-clean-worker-canonical"
+        ],
+        "mode": "PARALLEL_BROWSER_LIGHT"
+      },
+      {
+        "shard": "B",
+        "gateIds": [
+          "B-self-fracture-policy",
+          "B-harvest-objective-policy"
+        ],
+        "mode": "SERIAL_SOLVER_HEAVY"
+      },
+      {
+        "shard": "D",
+        "gateIds": [
+          "D-real-policy-flow-differential",
+          "D-frozen-policy-flow-renderer"
+        ],
+        "mode": "PARALLEL_BROWSER_LIGHT"
+      }
+    ]
+  },
+  "counts": {
+    "passed": 5,
+    "failed": 0,
+    "resumed": 0,
+    "skipped": 0,
+    "total": 5
+  },
+  "results": [
+    {
+      "id": "A-clean-worker-canonical",
+      "title": "Cheap clean Worker result, protocol, canonical identity, and DOM binding",
+      "phase": "3A",
+      "shard": "A",
+      "tags": [
+        "worker",
+        "solver",
+        "proof",
+        "clean"
+      ],
+      "costClass": "FAST",
+      "status": "PASS",
+      "passed": true,
+      "startedAt": "2026-08-27T06:30:50.017Z",
+      "finishedAt": "2026-08-27T06:30:51.989Z",
+      "durationMs": 1972,
+      "details": {
+        "fixture": "cheap_one_mod",
+        "protocol": {
+          "messageTypes": [
+            "PROGRESS",
+            "PROGRESS",
+            "PROGRESS",
+            "PROGRESS",
+            "PROGRESS",
+            "PROGRESS",
+            "COMPLETE",
+            "RESULT"
+          ],
+          "completeIndex": 6,
+          "resultIndex": 7
+        },
+        "flow": {
+          "nodes": 5,
+          "edges": 14,
+          "samples": 24
+        },
+        "accounting": {
+          "selectedBundleId": "core:clean-open-policy",
+          "maximumDifferenceChaos": 8.881784197001252e-16,
+          "acquisitionCostChaos": 2,
+          "downstreamCostChaos": 4.368169699999769,
+          "fullRouteCostChaos": 6.368169699999769
+        }
+      },
+      "executionIdentity": {
+        "applicationSourceBuildHash": "app-a689ed3470c02ec44283",
+        "gateIdVersion": "A-clean-worker-canonical@1",
+        "fixtureCorpusVersion": "Phase2Y-Frozen-Browser-Corpus-1",
+        "fixtureInputHash": "fixture-a8a605222b9c93d082e9",
+        "priceSnapshotIdentity": "prices-34734839cce7da56",
+        "browserVersion": "151.0.7922.34",
+        "harnessVersion": "PHASE3A_QUALITY_LAB_V1",
+        "compatibilityHash": "compatible-93284ec92f863ae208ecd116"
+      }
+    },
+    {
+      "id": "B-self-fracture-policy",
+      "title": "Real self-fracture route preserves Scour and reacquire semantics",
+      "phase": "3A",
+      "shard": "B",
+      "tags": [
+        "worker",
+        "solver",
+        "fracture",
+        "handoff",
+        "proof"
+      ],
+      "costClass": "SOLVER_HEAVY",
+      "status": "PASS",
+      "passed": true,
+      "startedAt": "2026-08-27T06:30:54.480Z",
+      "finishedAt": "2026-08-27T06:31:21.228Z",
+      "durationMs": 26747,
+      "details": {
+        "conserved": {
+          "nodes": 18,
+          "edges": 37,
+          "samples": 24
+        },
+        "scourEdges": 4,
+        "reacquireEdges": 1,
+        "fracturedDestination": {
+          "rarity": "magic",
+          "selectedActionId": "augmentation_orb"
+        },
+        "accounting": {
+          "selectedBundleId": "bundle:family_fracture_Riot Queller",
+          "maximumDifferenceChaos": 0,
+          "acquisitionCostChaos": 1652.3740800069322,
+          "downstreamCostChaos": 105.2366922587018,
+          "fullRouteCostChaos": 1757.610772265634
+        }
+      },
+      "executionIdentity": {
+        "applicationSourceBuildHash": "app-a689ed3470c02ec44283",
+        "gateIdVersion": "B-self-fracture-policy@1",
+        "fixtureCorpusVersion": "Phase2Y-Frozen-Browser-Corpus-1",
+        "fixtureInputHash": "fixture-2f70c545c1e6acdbe389",
+        "priceSnapshotIdentity": "prices-34734839cce7da56",
+        "browserVersion": "151.0.7922.34",
+        "harnessVersion": "PHASE3A_QUALITY_LAB_V1",
+        "compatibilityHash": "compatible-93284ec92f863ae208ecd116"
+      }
+    },
+    {
+      "id": "B-harvest-objective-policy",
+      "title": "Fewest-actions objective selects real Harvest repeat and success flow",
+      "phase": "3A",
+      "shard": "B",
+      "tags": [
+        "worker",
+        "solver",
+        "objectives",
+        "harvest",
+        "proof"
+      ],
+      "costClass": "SOLVER_HEAVY",
+      "status": "PASS",
+      "passed": true,
+      "startedAt": "2026-08-27T06:31:21.228Z",
+      "finishedAt": "2026-08-27T06:31:42.514Z",
+      "durationMs": 21286,
+      "details": {
+        "objective": {
+          "kind": "FEWEST_ACTIONS_WITHIN_COST",
+          "maxExpectedCostChaos": 600
+        },
+        "conserved": {
+          "nodes": 11,
+          "edges": 18,
+          "samples": 24
+        },
+        "harvestNodes": 2,
+        "repeatEdges": 2,
+        "successEdges": 2,
+        "accounting": {
+          "selectedBundleId": "bundle:family_harvest_defences",
+          "maximumDifferenceChaos": 1.1368683772161603e-13,
+          "acquisitionCostChaos": 4,
+          "downstreamCostChaos": 572.57990101593,
+          "fullRouteCostChaos": 576.57990101593
+        }
+      },
+      "executionIdentity": {
+        "applicationSourceBuildHash": "app-a689ed3470c02ec44283",
+        "gateIdVersion": "B-harvest-objective-policy@1",
+        "fixtureCorpusVersion": "Phase2Y-Frozen-Browser-Corpus-1",
+        "fixtureInputHash": "fixture-00e49a73585df6bded7e",
+        "priceSnapshotIdentity": "prices-34734839cce7da56",
+        "browserVersion": "151.0.7922.34",
+        "harnessVersion": "PHASE3A_QUALITY_LAB_V1",
+        "compatibilityHash": "compatible-93284ec92f863ae208ecd116"
+      }
+    },
+    {
+      "id": "D-real-policy-flow-differential",
+      "title": "Real Worker policy-flow summary matches frozen serialization and DOM topology",
+      "phase": "3A",
+      "shard": "D",
+      "tags": [
+        "worker",
+        "solver",
+        "constellation",
+        "proof",
+        "visual"
+      ],
+      "costClass": "FAST",
+      "status": "PASS",
+      "passed": true,
+      "startedAt": "2026-08-27T06:30:50.038Z",
+      "finishedAt": "2026-08-27T06:30:51.908Z",
+      "durationMs": 1869,
+      "details": {
+        "sourceAppCommit": "df49b94ecca555671d8c78268d3149c2b8c84c7b",
+        "normalizedSummarySha256": "12c4d104b9fd3f9c43499995e024d05df4fb9de90b9b0e72ca4233a8564d0746",
+        "topologyFingerprint": "topology-4481a40d",
+        "conservation": {
+          "nodes": 5,
+          "edges": 14,
+          "samples": 24
+        },
+        "workerToDom": true
+      },
+      "executionIdentity": {
+        "applicationSourceBuildHash": "app-a689ed3470c02ec44283",
+        "gateIdVersion": "D-real-policy-flow-differential@1",
+        "fixtureCorpusVersion": "Phase2Y-Frozen-Browser-Corpus-1",
+        "fixtureInputHash": "fixture-eae470b544f63a5880cc",
+        "priceSnapshotIdentity": "prices-34734839cce7da56",
+        "browserVersion": "151.0.7922.34",
+        "harnessVersion": "PHASE3A_QUALITY_LAB_V1",
+        "compatibilityHash": "compatible-93284ec92f863ae208ecd116"
+      }
+    },
+    {
+      "id": "D-frozen-policy-flow-renderer",
+      "title": "Frozen PolicyFlowSummary drives the production renderer through a harness-only Worker wrapper",
+      "phase": "3A",
+      "shard": "D",
+      "tags": [
+        "constellation",
+        "visual",
+        "accessibility"
+      ],
+      "costClass": "FAST",
+      "status": "PASS",
+      "passed": true,
+      "startedAt": "2026-08-27T06:30:51.908Z",
+      "finishedAt": "2026-08-27T06:30:53.603Z",
+      "durationMs": 1695,
+      "details": {
+        "certificationScope": "RENDERER_INTERACTION_ONLY",
+        "topologyFingerprint": "topology-4481a40d",
+        "nodeCount": 5,
+        "edgeCount": 14,
+        "branchInteraction": true
+      },
+      "executionIdentity": {
+        "applicationSourceBuildHash": "app-a689ed3470c02ec44283",
+        "gateIdVersion": "D-frozen-policy-flow-renderer@1",
+        "fixtureCorpusVersion": "Phase2Y-Frozen-Browser-Corpus-1",
+        "fixtureInputHash": "fixture-eae470b544f63a5880cc",
+        "priceSnapshotIdentity": "prices-34734839cce7da56",
+        "browserVersion": "151.0.7922.34",
+        "harnessVersion": "PHASE3A_QUALITY_LAB_V1",
+        "compatibilityHash": "compatible-93284ec92f863ae208ecd116"
+      }
+    }
+  ],
+  "runtime": {
+    "totalWallMs": 53413,
+    "summedGateMs": 53569,
+    "appStartupMs": 1029,
+    "browserStartupMs": 198,
+    "solverHeavyMs": 48033,
+    "visualInteractionMs": 3564,
+    "harnessOverheadMs": 1376,
+    "categoryTotalsMs": {
+      "worker": 51874,
+      "solver": 51874,
+      "proof": 51874,
+      "clean": 1972,
+      "fracture": 26747,
+      "handoff": 26747,
+      "objectives": 21286,
+      "harvest": 21286,
+      "constellation": 3564,
+      "visual": 3564,
+      "accessibility": 1695
+    },
+    "slowestGates": [
+      {
+        "id": "B-self-fracture-policy",
+        "durationMs": 26747,
+        "status": "PASS"
+      },
+      {
+        "id": "B-harvest-objective-policy",
+        "durationMs": 21286,
+        "status": "PASS"
+      },
+      {
+        "id": "A-clean-worker-canonical",
+        "durationMs": 1972,
+        "status": "PASS"
+      },
+      {
+        "id": "D-real-policy-flow-differential",
+        "durationMs": 1869,
+        "status": "PASS"
+      },
+      {
+        "id": "D-frozen-policy-flow-renderer",
+        "durationMs": 1695,
+        "status": "PASS"
+      }
+    ]
+  },
+  "runtimeErrors": {
+    "console": [],
+    "page": [],
+    "network": []
+  },
+  "artifacts": {
+    "runReport": "quality-lab\\artifacts\\phase3a-2026-08-27T06-30-49-192Z\\report.json",
+    "stableReport": "quality-lab\\reports\\phase3a-dev-gate.json",
+    "summary": "quality-lab\\reports\\phase3a-dev-summary.md"
+  }
+}

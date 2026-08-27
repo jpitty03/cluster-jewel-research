@@ -1,0 +1,21 @@
+PHASE 3A — QUALITY LAB EXECUTION EFFICIENCY DIAGNOSTIC
+PASS A1: Gate registry completeness
+PASS A2: Five gates rerun alone in clean processes
+PASS A3: Controlled failed-gate rerun and compatible resume
+PASS A4: Live progress and copyable rerun output
+PASS A5: Duration ledger and ranked runtime breakdown
+PASS A6: Cost-aware process sharding
+PASS A7: DEV runtime target
+PASS A8: RELEASE runtime target
+PASS A9: EXTENDED and long-soak separation
+PASS A10: Frozen visual fixture differential
+PASS A11: Legacy coverage and runtime comparison
+PASS A12: Optimized final RELEASE acceptance
+PASS A13: Mature and direct diagnostics retained
+PASS A14: Lean hosted Pages policy
+PASS PRESERVATION: Prohibited-change and command policy
+PASS: DEV 5/5 in 53.413 s.
+PASS: RELEASE 11/11 in 72.004 s.
+PASS: legacy baseline 115/115 in 1298.597 s was not re-executed.
+Long soaks completed or counted as acceptance evidence: NO
+Unit tests run: NO

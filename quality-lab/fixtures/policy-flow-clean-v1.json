@@ -1,0 +1,39 @@
+{
+  "fixtureId": "policy-flow-clean-v1",
+  "fixtureVersion": 1,
+  "sourceAppCommit": "df49b94ecca555671d8c78268d3149c2b8c84c7b",
+  "normalizedRequest": {
+    "baseType": "Large Cluster Jewel",
+    "clusterType": "10% increased Attack Damage",
+    "itemLevel": 84,
+    "passiveCount": 8,
+    "finalRarity": "magic",
+    "extraAffixes": "allow-extra",
+    "targetMods": [
+      "AfflictionJewelSmallPassivesGrantES3"
+    ],
+    "searchBudget": {
+      "maxStates": 1200,
+      "maxWallTimeMs": 10000,
+      "maxExpansionRounds": 2
+    }
+  },
+  "selectedBundleId": "core:clean-open-policy",
+  "selectedPolicyFingerprint": "policy-b29143bf",
+  "policyFlowVersion": "SELECTED_POLICY_FLOW_V1",
+  "topologyFingerprint": "topology-4481a40d",
+  "serializedSummary": {
+    "path": "quality-lab/reports/evidence/phase2z-browser-flow.json",
+    "selector": "clean",
+    "artifactSha256": "240b9065365eef61e9209df60fa6676d02bc61547f50288377bec55c0ee67be4",
+    "normalizedSummarySha256": "12c4d104b9fd3f9c43499995e024d05df4fb9de90b9b0e72ca4233a8564d0746",
+    "nodeCount": 5,
+    "edgeCount": 14
+  },
+  "certificationScope": "RENDERER_INTERACTION_ONLY",
+  "limitations": [
+    "This fixture cannot certify current solver mechanics or Worker correctness.",
+    "RELEASE must separately compare it with a real Worker-generated PolicyFlowSummary.",
+    "Regeneration requires an explicit command and reviewed metadata/hash diff."
+  ]
+}

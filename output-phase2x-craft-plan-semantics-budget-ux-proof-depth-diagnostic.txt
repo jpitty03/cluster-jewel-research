@@ -1,7 +1,7 @@
 PHASE 2X — CRAFT-PLAN SEMANTICS, BUDGET UX, AND PROOF-DEPTH DIAGNOSTIC
 
 X2/X5/X6/X7 — exact 3-notable semantic correction
-status=PROVISIONAL_RESOLVED; route=Self-fracture Riot Queller; bundle=bundle:family_fracture_Riot Queller; elapsed=24709ms
+status=PROVISIONAL_RESOLVED; route=Self-fracture Riot Queller; bundle=bundle:family_fracture_Riot Queller; elapsed=24712ms
 selected physical mechanics=fracturing_orb,alteration_orb,exalted_orb,augmentation_orb,restart_reacquire,scouring_orb,regal_orb,transmutation_orb
 selected Harvest mechanics=NONE
 plan Harvest mechanics=NONE

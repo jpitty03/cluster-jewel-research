@@ -2943,7 +2943,8 @@ async function runPhase2W(page: Page, evidence: BrowserEvidence): Promise<void> 
       objective: await page.getByLabel('Optimization goal').inputValue(),
       sale: await page.getByLabel('Expected sale value (chaos, optional)').inputValue(),
       targetIds: await page.locator('.target-summary li[data-mod-id]').evaluateAll((nodes) =>
-        nodes.map((node) => node.getAttribute('data-mod-id')).filter(Boolean)
+        nodes.map((node) => node.getAttribute('data-mod-id'))
+          .filter((id): id is string => typeof id === 'string')
       ),
       provenance: await page.locator('.optimizer-source-banner').innerText(),
     };

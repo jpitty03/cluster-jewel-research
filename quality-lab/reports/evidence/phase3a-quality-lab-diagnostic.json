@@ -1,0 +1,466 @@
+{
+  "version": "PHASE3A_QUALITY_LAB_DIAGNOSTIC_V1",
+  "generatedAt": "2026-08-27T06:53:38.004Z",
+  "committedEvidenceMode": false,
+  "status": "PASSED",
+  "checks": [
+    {
+      "id": "A1",
+      "title": "Gate registry completeness",
+      "passed": true,
+      "details": {
+        "legacyBaselineGates": 115,
+        "phase2zAdditionalUniqueGates": 9,
+        "mappedHistoricalGates": 124,
+        "phase3aRegisteredGates": 15,
+        "requiredTags": [
+          "worker",
+          "solver",
+          "objectives",
+          "harvest",
+          "fracture",
+          "handoff",
+          "constellation",
+          "responsive",
+          "accessibility",
+          "share-export",
+          "proof",
+          "visual",
+          "soak"
+        ]
+      }
+    },
+    {
+      "id": "A2",
+      "title": "Five gates rerun alone in clean processes",
+      "passed": true,
+      "details": {
+        "rerunCount": 5,
+        "gateIds": [
+          "A-clean-worker-canonical",
+          "C-cluster-handoff",
+          "C-share-export-roundtrip",
+          "D-real-policy-flow-differential",
+          "D-frozen-policy-flow-renderer"
+        ],
+        "distinctProcesses": true
+      }
+    },
+    {
+      "id": "A3",
+      "title": "Controlled failed-gate rerun and compatible resume",
+      "passed": true,
+      "details": {
+        "failure": {
+          "runId": "2026-08-27T06-30-35-260Z",
+          "selectedGateIds": [
+            "A-clean-worker-canonical",
+            "C-cluster-handoff"
+          ],
+          "passedGateIds": [
+            "A-clean-worker-canonical"
+          ],
+          "failedGateIds": [
+            "C-cluster-handoff"
+          ],
+          "rerunCommand": "npm run -- lab:gate -- --gate C-cluster-handoff"
+        },
+        "failedOnly": {
+          "runId": "2026-08-27T06-30-38-167Z",
+          "selectedGateIds": [
+            "C-cluster-handoff"
+          ],
+          "passed": true
+        },
+        "resume": {
+          "runId": "2026-08-27T06-30-40-288Z",
+          "resumedFrom": "2026-08-27T06-30-35-260Z",
+          "resumedGateIds": [
+            "A-clean-worker-canonical"
+          ],
+          "executedGateIds": [
+            "C-cluster-handoff"
+          ]
+        }
+      }
+    },
+    {
+      "id": "A4",
+      "title": "Live progress and copyable rerun output",
+      "passed": true,
+      "details": {
+        "capturedTerminalLines": 19
+      }
+    },
+    {
+      "id": "A5",
+      "title": "Duration ledger and ranked runtime breakdown",
+      "passed": true,
+      "details": {
+        "devSlowest": [
+          {
+            "id": "B-self-fracture-policy",
+            "durationMs": 26747,
+            "status": "PASS"
+          },
+          {
+            "id": "B-harvest-objective-policy",
+            "durationMs": 21286,
+            "status": "PASS"
+          },
+          {
+            "id": "A-clean-worker-canonical",
+            "durationMs": 1972,
+            "status": "PASS"
+          },
+          {
+            "id": "D-real-policy-flow-differential",
+            "durationMs": 1869,
+            "status": "PASS"
+          },
+          {
+            "id": "D-frozen-policy-flow-renderer",
+            "durationMs": 1695,
+            "status": "PASS"
+          }
+        ],
+        "releaseSlowest": [
+          {
+            "id": "B-self-fracture-policy",
+            "durationMs": 26782,
+            "status": "PASS"
+          },
+          {
+            "id": "B-harvest-objective-policy",
+            "durationMs": 21571,
+            "status": "PASS"
+          },
+          {
+            "id": "D-constellation-interaction-short-replay",
+            "durationMs": 12151,
+            "status": "PASS"
+          },
+          {
+            "id": "C-responsive-accessibility",
+            "durationMs": 2294,
+            "status": "PASS"
+          },
+          {
+            "id": "C-share-export-roundtrip",
+            "durationMs": 1961,
+            "status": "PASS"
+          },
+          {
+            "id": "A-cancel-replace-recover",
+            "durationMs": 1948,
+            "status": "PASS"
+          },
+          {
+            "id": "A-clean-worker-canonical",
+            "durationMs": 1904,
+            "status": "PASS"
+          },
+          {
+            "id": "D-real-policy-flow-differential",
+            "durationMs": 1696,
+            "status": "PASS"
+          },
+          {
+            "id": "A-proof-accounting-no-fallback",
+            "durationMs": 1670,
+            "status": "PASS"
+          },
+          {
+            "id": "D-frozen-policy-flow-renderer",
+            "durationMs": 1669,
+            "status": "PASS"
+          }
+        ],
+        "releaseCategoryTotalsMs": {
+          "worker": 57532,
+          "solver": 55571,
+          "proof": 55584,
+          "clean": 1904,
+          "cancellation": 1948,
+          "fracture": 26782,
+          "handoff": 29801,
+          "objectives": 21571,
+          "harvest": 21571,
+          "responsive": 15503,
+          "accessibility": 17172,
+          "share-export": 1961,
+          "visual": 17810,
+          "constellation": 17810
+        }
+      }
+    },
+    {
+      "id": "A6",
+      "title": "Cost-aware process sharding",
+      "passed": true,
+      "details": {
+        "browserLight": {
+          "shards": [
+            "A",
+            "C"
+          ],
+          "concurrency": 2,
+          "wallMs": 2700,
+          "summedGateMs": 2840
+        },
+        "devShardPlan": [
+          {
+            "shard": "A",
+            "gateIds": [
+              "A-clean-worker-canonical"
+            ],
+            "mode": "PARALLEL_BROWSER_LIGHT"
+          },
+          {
+            "shard": "B",
+            "gateIds": [
+              "B-self-fracture-policy",
+              "B-harvest-objective-policy"
+            ],
+            "mode": "SERIAL_SOLVER_HEAVY"
+          },
+          {
+            "shard": "D",
+            "gateIds": [
+              "D-real-policy-flow-differential",
+              "D-frozen-policy-flow-renderer"
+            ],
+            "mode": "PARALLEL_BROWSER_LIGHT"
+          }
+        ],
+        "releaseShardPlan": [
+          {
+            "shard": "A",
+            "gateIds": [
+              "A-clean-worker-canonical",
+              "A-proof-accounting-no-fallback",
+              "A-cancel-replace-recover"
+            ],
+            "mode": "PARALLEL_BROWSER_LIGHT"
+          },
+          {
+            "shard": "B",
+            "gateIds": [
+              "B-self-fracture-policy",
+              "B-harvest-objective-policy"
+            ],
+            "mode": "SERIAL_SOLVER_HEAVY"
+          },
+          {
+            "shard": "C",
+            "gateIds": [
+              "C-cluster-handoff",
+              "C-share-export-roundtrip",
+              "C-responsive-accessibility"
+            ],
+            "mode": "PARALLEL_BROWSER_LIGHT"
+          },
+          {
+            "shard": "D",
+            "gateIds": [
+              "D-real-policy-flow-differential",
+              "D-frozen-policy-flow-renderer",
+              "D-constellation-interaction-short-replay"
+            ],
+            "mode": "PARALLEL_BROWSER_LIGHT"
+          }
+        ]
+      }
+    },
+    {
+      "id": "A7",
+      "title": "DEV runtime target",
+      "passed": true,
+      "details": {
+        "gates": 5,
+        "wallMs": 53413,
+        "targetMs": 180000
+      }
+    },
+    {
+      "id": "A8",
+      "title": "RELEASE runtime target",
+      "passed": true,
+      "details": {
+        "gates": 11,
+        "wallMs": 72004,
+        "targetMs": 600000
+      }
+    },
+    {
+      "id": "A9",
+      "title": "EXTENDED and long-soak separation",
+      "passed": true,
+      "details": {
+        "releaseLongSoakGateIds": [],
+        "extendedGateIds": [
+          "E-five-minute-replay-memory-soak",
+          "E-exhaustive-viewport-matrix",
+          "E-research-field-proof",
+          "E-generated-fuzz-matrix"
+        ],
+        "automaticExtendedRun": false
+      }
+    },
+    {
+      "id": "A10",
+      "title": "Frozen visual fixture differential",
+      "passed": true,
+      "details": {
+        "realWorkerGate": "D-real-policy-flow-differential",
+        "frozenRendererGate": "D-frozen-policy-flow-renderer",
+        "normalizedSummarySha256": "12c4d104b9fd3f9c43499995e024d05df4fb9de90b9b0e72ca4233a8564d0746",
+        "topologyFingerprint": "topology-4481a40d"
+      }
+    },
+    {
+      "id": "A11",
+      "title": "Legacy coverage and runtime comparison",
+      "passed": true,
+      "details": {
+        "legacyGateCount": 115,
+        "legacyWallMs": 1298597,
+        "releaseGateCount": 11,
+        "releaseWallMs": 72004,
+        "speedup": 18.035067496250207,
+        "dispositions": {
+          "RETAINED_LEGACY": 23,
+          "REPLACED_BY_PHASE3A": 94,
+          "MOVED_TO_EXTENDED": 7
+        },
+        "legacyReexecutedDuringPhase3a": false
+      }
+    },
+    {
+      "id": "A12",
+      "title": "Optimized final RELEASE acceptance",
+      "passed": true,
+      "details": {
+        "runId": "2026-08-27T06-31-52-056Z",
+        "compatibilityHash": "compatible-93284ec92f863ae208ecd116",
+        "passed": 11,
+        "failed": 0,
+        "runtimeErrors": {
+          "console": [],
+          "page": [],
+          "network": []
+        }
+      }
+    },
+    {
+      "id": "A13",
+      "title": "Mature and direct diagnostics retained",
+      "passed": true,
+      "details": {
+        "diagnostics": [
+          {
+            "id": "mature",
+            "path": "output-phase2t-mature-regression-matrix.txt",
+            "sha256": "3898d1f4948afd755f07500bd84b88f62f12899a3174527f76dff8e6b70cb3e1",
+            "bytes": 1231
+          },
+          {
+            "id": "phase2x",
+            "path": "output-phase2x-craft-plan-semantics-budget-ux-proof-depth-diagnostic.txt",
+            "sha256": "64d09c3908cdf2887aed79444a653e69313307dc95677092d99979ba55dc72fa",
+            "bytes": 1792
+          },
+          {
+            "id": "phase2y",
+            "path": "output-phase2y-proof-efficiency-budget-telemetry-policy-equivalence-diagnostic.txt",
+            "sha256": "7f49030dc456373149dd08388577693cc1f8df65f84ca9d299ff7c8925f7bf92",
+            "bytes": 2129
+          },
+          {
+            "id": "phase2z",
+            "path": "output-phase2z-selected-policy-flow-diagnostic.txt",
+            "sha256": "8a8d5484a33f2a6a3455fb21eef19b54330fdc809e4ac67f11e21e325b584f13",
+            "bytes": 1592
+          }
+        ],
+        "releaseRerunAfterPassingDiagnostics": false
+      }
+    },
+    {
+      "id": "A14",
+      "title": "Lean hosted Pages policy",
+      "passed": true,
+      "details": {
+        "pagesBrowserSuite": false,
+        "extendedManualOnly": true,
+        "committedEvidenceAudit": true
+      }
+    },
+    {
+      "id": "PRESERVATION",
+      "title": "Prohibited-change and command policy",
+      "passed": true,
+      "details": {
+        "protectedPathDiff": [],
+        "unitTestsAddedOrRun": false,
+        "mechanicsProbabilitiesChanged": false,
+        "stateIdentityWeakened": false,
+        "hardcodedWinnerAdded": false,
+        "marketFracturedRankingRestored": false,
+        "legacyReleaseAutomatic": false,
+        "impactRecommendation": {
+          "tags": [
+            "accessibility",
+            "constellation",
+            "fracture",
+            "handoff",
+            "harvest",
+            "responsive",
+            "share-export",
+            "solver",
+            "visual",
+            "worker"
+          ],
+          "suites": [
+            "DEV",
+            "RELEASE"
+          ],
+          "reasons": [
+            "Mechanics rules affect solver transitions and selected browser controls.",
+            "Constellation presentation changes require renderer, interaction, and responsive coverage.",
+            "Handoff/share changes require exact round-trip and responsive controls."
+          ],
+          "commands": [
+            "npm run -- lab:tag -- --tag accessibility",
+            "npm run -- lab:tag -- --tag constellation",
+            "npm run -- lab:tag -- --tag fracture",
+            "npm run -- lab:tag -- --tag handoff",
+            "npm run -- lab:tag -- --tag harvest",
+            "npm run -- lab:tag -- --tag responsive",
+            "npm run -- lab:tag -- --tag share-export",
+            "npm run -- lab:tag -- --tag solver",
+            "npm run -- lab:tag -- --tag visual",
+            "npm run -- lab:tag -- --tag worker",
+            "npm run lab:dev",
+            "npm run lab:release  # once on final source; advisory final acceptance"
+          ]
+        }
+      }
+    }
+  ],
+  "runtimes": {
+    "devWallMs": 53413,
+    "releaseWallMs": 72004,
+    "legacyWallMs": 1298597,
+    "legacySpeedup": 18.035067496250207
+  },
+  "gateCounts": {
+    "registry": 15,
+    "dev": 5,
+    "release": 11,
+    "extended": 4,
+    "legacyBaseline": 115,
+    "mappedHistorical": 124
+  },
+  "unitTestsRun": false
+}

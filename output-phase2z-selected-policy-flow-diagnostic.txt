@@ -1,9 +1,9 @@
 PHASE 2Z — SELECTED-POLICY BRANCHING CONSTELLATION DIRECT DIAGNOSTIC
-PASS clean-one-mod: 5 nodes / 14 edges / 3 SCCs / 4 branch nodes / 0 recovery edges / 399ms solve / 44.78ms aggregation / 0.87ms layout.
-PASS conventional-two-mod: 20 nodes / 73 edges / 2 SCCs / 11 branch nodes / 16 recovery edges / 2627ms solve / 49.67ms aggregation / 0.67ms layout.
-PASS selected-harvest: 11 nodes / 18 edges / 11 SCCs / 3 branch nodes / 0 recovery edges / 28255ms solve / 2.86ms aggregation / 0.37ms layout.
-PASS self-fracture-three-notable: 18 nodes / 37 edges / 4 SCCs / 9 branch nodes / 10 recovery edges / 24698ms solve / 93.85ms aggregation / 0.32ms layout.
-PASS four-mod-provisional: 28 nodes / 64 edges / 4 SCCs / 16 branch nodes / 21 recovery edges / 24687ms solve / 47.45ms aggregation / 0.41ms layout.
+PASS clean-one-mod: 5 nodes / 14 edges / 3 SCCs / 4 branch nodes / 0 recovery edges / 392ms solve / 41.84ms aggregation / 0.85ms layout.
+PASS conventional-two-mod: 20 nodes / 73 edges / 2 SCCs / 11 branch nodes / 16 recovery edges / 2851ms solve / 45.85ms aggregation / 0.69ms layout.
+PASS selected-harvest: 11 nodes / 18 edges / 11 SCCs / 3 branch nodes / 0 recovery edges / 28214ms solve / 2.03ms aggregation / 0.26ms layout.
+PASS self-fracture-three-notable: 18 nodes / 37 edges / 4 SCCs / 9 branch nodes / 10 recovery edges / 24701ms solve / 88.15ms aggregation / 0.32ms layout.
+PASS four-mod-provisional: 28 nodes / 64 edges / 4 SCCs / 16 branch nodes / 21 recovery edges / 24679ms solve / 49.63ms aggregation / 0.47ms layout.
 PASS Regal control: 1 Regal macro state(s) branch into real next-policy classes.
 PASS recovery: 4 Scour and 2 reacquire branches are distinct; 4 one-fractured Scour branch(es) reach Magic non-Transmute policy states.
 PASS Harvest control: certified misses repeat Harvest and certified success reaches Goal from exact flow.

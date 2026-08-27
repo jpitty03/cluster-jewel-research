@@ -1,4 +1,4 @@
-name: Manual Phase 2Y Quality Matrix
+name: Manual Phase 3A Extended Quality Matrix
 
 on:
   workflow_dispatch:
@@ -24,8 +24,8 @@ jobs:
       - run: git diff --check
       - run: npm run diagnostic:mature
       - run: npm run lab:no-fallback-probe
-      - name: Extended fixtures, objectives, method matrix, viewports, frames, and soak
-        run: npm run lab:nightly
+      - name: Explicit extended fixtures, Research proof, viewport matrix, fuzz, and soak
+        run: npm run lab:extended
       - run: npm run diagnostic:phase2t
       - run: npm run diagnostic:phase2u
       - run: npm run diagnostic:phase2v
@@ -36,7 +36,7 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v6
         with:
-          name: phase2y-nightly-quality-lab
+          name: phase3a-extended-quality-lab
           path: |
             quality-lab/artifacts/
             quality-lab/reports/

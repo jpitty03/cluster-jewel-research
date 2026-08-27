@@ -12,6 +12,7 @@ export interface RunningProductionApp {
 export interface ProductionAppLaunchOptions {
   distDirectory?: string;
   viteCliPath?: string;
+  port?: number;
 }
 
 const qualityLabDirectory = resolve(dirname(fileURLToPath(import.meta.url)), '..');
@@ -53,7 +54,7 @@ export async function launchProductionApp(
   }
 
   const host = '127.0.0.1';
-  const port = 4173;
+  const port = options.port ?? 4173;
   const url = `http://${host}:${port}/`;
   const child = spawn(
     process.execPath,

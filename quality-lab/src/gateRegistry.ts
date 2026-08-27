@@ -1,0 +1,481 @@
+import type {
+  LegacyGateCoverage,
+  QualityGateDefinition,
+  QualityTier,
+} from './qualityTypes.ts';
+
+const gate = (definition: QualityGateDefinition): QualityGateDefinition => definition;
+
+export const QUALITY_GATE_REGISTRY: QualityGateDefinition[] = [
+  gate({
+    id: 'A-clean-worker-canonical',
+    version: 1,
+    phase: '3A',
+    title: 'Cheap clean Worker result, protocol, canonical identity, and DOM binding',
+    tags: ['worker', 'solver', 'proof', 'clean'],
+    fixtureIds: ['cheap_one_mod'],
+    costClass: 'FAST',
+    isolation: 'SELF_CONTAINED',
+    dependencies: [],
+    sourceAreas: ['worker', 'optimizer-service', 'canonical-result', 'proof'],
+    defaultSuites: ['DEV', 'RELEASE'],
+    shard: 'A',
+    operation: 'clean-worker-canonical',
+  }),
+  gate({
+    id: 'A-proof-accounting-no-fallback',
+    version: 1,
+    phase: '3A',
+    title: 'Canonical accounting, proof surfaces, and strict no-fallback startup',
+    tags: ['worker', 'solver', 'proof'],
+    fixtureIds: ['cheap_one_mod'],
+    costClass: 'FAST',
+    isolation: 'SELF_CONTAINED',
+    dependencies: [],
+    sourceAreas: ['optimizer-service', 'proof', 'release-harness'],
+    defaultSuites: ['RELEASE'],
+    shard: 'A',
+    operation: 'proof-accounting-no-fallback',
+  }),
+  gate({
+    id: 'A-cancel-replace-recover',
+    version: 1,
+    phase: '3A',
+    title: 'Cancellation replaces the Worker and a clean request recovers',
+    tags: ['worker', 'solver', 'cancellation'],
+    fixtureIds: ['four_mod_release', 'cheap_one_mod'],
+    costClass: 'MEDIUM',
+    isolation: 'SELF_CONTAINED',
+    dependencies: [],
+    sourceAreas: ['worker', 'optimizer-ui'],
+    defaultSuites: ['RELEASE'],
+    shard: 'A',
+    operation: 'cancel-replace-recover',
+  }),
+  gate({
+    id: 'B-self-fracture-policy',
+    version: 1,
+    phase: '3A',
+    title: 'Real self-fracture route preserves Scour and reacquire semantics',
+    tags: ['worker', 'solver', 'fracture', 'handoff', 'proof'],
+    fixtureIds: ['phase2x_three_notable_handoff'],
+    costClass: 'SOLVER_HEAVY',
+    isolation: 'SELF_CONTAINED',
+    dependencies: [],
+    sourceAreas: ['solver', 'acquisition-synthesis', 'policy-flow'],
+    defaultSuites: ['DEV', 'RELEASE'],
+    shard: 'B',
+    operation: 'self-fracture-policy',
+  }),
+  gate({
+    id: 'B-harvest-objective-policy',
+    version: 1,
+    phase: '3A',
+    title: 'Fewest-actions objective selects real Harvest repeat and success flow',
+    tags: ['worker', 'solver', 'objectives', 'harvest', 'proof'],
+    fixtureIds: ['phase2w_armour_evasion_12'],
+    costClass: 'SOLVER_HEAVY',
+    isolation: 'SELF_CONTAINED',
+    dependencies: [],
+    sourceAreas: ['solver', 'objectives', 'harvest', 'policy-flow'],
+    defaultSuites: ['DEV', 'RELEASE'],
+    shard: 'B',
+    operation: 'harvest-objective-policy',
+  }),
+  gate({
+    id: 'C-cluster-handoff',
+    version: 1,
+    phase: '3A',
+    title: 'Cluster Jewels group handoff retains SKU controls without auto-search',
+    tags: ['handoff', 'responsive', 'accessibility'],
+    fixtureIds: [],
+    costClass: 'FAST',
+    isolation: 'SELF_CONTAINED',
+    dependencies: [],
+    sourceAreas: ['cluster-jewels', 'optimizer-seed', 'optimizer-ui'],
+    defaultSuites: ['RELEASE'],
+    shard: 'C',
+    operation: 'cluster-handoff',
+  }),
+  gate({
+    id: 'C-share-export-roundtrip',
+    version: 1,
+    phase: '3A',
+    title: 'Export and share round-trip retain exact target and canonical summary',
+    tags: ['worker', 'handoff', 'share-export', 'proof'],
+    fixtureIds: ['cheap_one_mod'],
+    costClass: 'FAST',
+    isolation: 'SELF_CONTAINED',
+    dependencies: [],
+    sourceAreas: ['share-bundle', 'optimizer-ui', 'canonical-result'],
+    defaultSuites: ['RELEASE'],
+    shard: 'C',
+    operation: 'share-export-roundtrip',
+  }),
+  gate({
+    id: 'C-responsive-accessibility',
+    version: 1,
+    phase: '3A',
+    title: 'Desktop/mobile responsive and keyboard-accessibility smoke',
+    tags: ['responsive', 'accessibility', 'visual', 'constellation'],
+    fixtureIds: ['cheap_one_mod'],
+    costClass: 'FAST',
+    isolation: 'SELF_CONTAINED',
+    dependencies: [],
+    sourceAreas: ['optimizer-ui', 'responsive-css', 'constellation'],
+    defaultSuites: ['RELEASE'],
+    shard: 'C',
+    operation: 'responsive-accessibility',
+  }),
+  gate({
+    id: 'D-real-policy-flow-differential',
+    version: 1,
+    phase: '3A',
+    title: 'Real Worker policy-flow summary matches frozen serialization and DOM topology',
+    tags: ['worker', 'solver', 'constellation', 'proof', 'visual'],
+    fixtureIds: ['cheap_one_mod', 'policy-flow-clean-v1'],
+    costClass: 'FAST',
+    isolation: 'SELF_CONTAINED',
+    dependencies: [],
+    sourceAreas: ['worker', 'policy-flow', 'visualization-graph'],
+    defaultSuites: ['DEV', 'RELEASE'],
+    shard: 'D',
+    operation: 'real-policy-flow-differential',
+  }),
+  gate({
+    id: 'D-frozen-policy-flow-renderer',
+    version: 1,
+    phase: '3A',
+    title: 'Frozen PolicyFlowSummary drives the production renderer through a harness-only Worker wrapper',
+    tags: ['constellation', 'visual', 'accessibility'],
+    fixtureIds: ['cheap_one_mod', 'policy-flow-clean-v1'],
+    costClass: 'FAST',
+    isolation: 'SELF_CONTAINED',
+    dependencies: [],
+    sourceAreas: ['visualization-graph', 'constellation', 'quality-fixtures'],
+    defaultSuites: ['DEV', 'RELEASE'],
+    shard: 'D',
+    operation: 'frozen-policy-flow-renderer',
+  }),
+  gate({
+    id: 'D-constellation-interaction-short-replay',
+    version: 1,
+    phase: '3A',
+    title: 'Branch explanation, keyboard camera, and bounded short replay',
+    tags: ['constellation', 'visual', 'responsive', 'accessibility'],
+    fixtureIds: ['cheap_one_mod'],
+    costClass: 'MEDIUM',
+    isolation: 'SELF_CONTAINED',
+    dependencies: [],
+    sourceAreas: ['constellation', 'visualization-graph', 'responsive-css'],
+    defaultSuites: ['RELEASE'],
+    shard: 'D',
+    operation: 'constellation-interaction-short-replay',
+  }),
+  gate({
+    id: 'E-five-minute-replay-memory-soak',
+    version: 1,
+    phase: '3A',
+    title: 'Five-minute Constellation replay and memory soak',
+    tags: ['constellation', 'visual', 'soak'],
+    fixtureIds: ['cheap_one_mod'],
+    costClass: 'LONG_SOAK',
+    isolation: 'SELF_CONTAINED',
+    dependencies: [],
+    sourceAreas: ['constellation', 'animation-lifecycle'],
+    defaultSuites: ['EXTENDED'],
+    shard: 'E',
+    operation: 'five-minute-replay-memory-soak',
+  }),
+  gate({
+    id: 'E-exhaustive-viewport-matrix',
+    version: 1,
+    phase: '3A',
+    title: 'Exhaustive visual viewport matrix',
+    tags: ['responsive', 'accessibility', 'visual', 'soak'],
+    fixtureIds: ['cheap_one_mod'],
+    costClass: 'LONG_SOAK',
+    isolation: 'SELF_CONTAINED',
+    dependencies: [],
+    sourceAreas: ['optimizer-ui', 'responsive-css', 'constellation'],
+    defaultSuites: ['EXTENDED'],
+    shard: 'E',
+    operation: 'exhaustive-viewport-matrix',
+  }),
+  gate({
+    id: 'E-research-field-proof',
+    version: 1,
+    phase: '3A',
+    title: 'Research-depth field proof and accounting run',
+    tags: ['worker', 'solver', 'proof', 'handoff', 'soak'],
+    fixtureIds: ['phase2y_field_three_notable'],
+    costClass: 'SOLVER_HEAVY',
+    isolation: 'SELF_CONTAINED',
+    dependencies: [],
+    sourceAreas: ['solver', 'proof', 'market-handoff'],
+    defaultSuites: ['EXTENDED'],
+    shard: 'E',
+    operation: 'research-field-proof',
+  }),
+  gate({
+    id: 'E-generated-fuzz-matrix',
+    version: 1,
+    phase: '3A',
+    title: 'Generated target/action proof-debt fuzz matrix',
+    tags: ['worker', 'solver', 'proof', 'harvest', 'fracture', 'soak'],
+    fixtureIds: ['phase2y_field_three_notable'],
+    costClass: 'LONG_SOAK',
+    isolation: 'SELF_CONTAINED',
+    dependencies: [],
+    sourceAreas: ['solver', 'proof', 'generated-fixtures'],
+    defaultSuites: ['EXTENDED'],
+    shard: 'E',
+    operation: 'generated-fuzz-matrix',
+  }),
+];
+
+export const LEGACY_RELEASE_GATE_IDS = [
+  'built-app-and-guide',
+  'presets-observed-through-dom',
+  'import-and-real-worker-result',
+  'ui-result-export-differential',
+  'share-url-reload',
+  'retry-deeper-retains-work',
+  'cancel-worker-replacement-and-recovery',
+  'host-guard-worker-replacement-and-recovery',
+  'real-worker-error-response',
+  'exact-input-and-search',
+  'canonical-dom-and-accounting',
+  'independent-method-family-matrix',
+  'four-mod-export-and-real-images',
+  'U2-display-descriptor-identity',
+  'U3-public-no-id-leakage-and-technical-reveal',
+  'U4-player-vocabulary-consistency',
+  'U5-mouse-pointer-capture-pan',
+  'U6-touch-pan-and-scroll-boundary',
+  'U7-pointer-centered-wheel-and-button-zoom',
+  'U8-route-focus-fit-all-and-reset',
+  'U9-keyboard-camera-and-node-access',
+  'U10-dom-label-collision-and-readability',
+  'U11-long-label-mobile-and-fullscreen-stress',
+  'U12-concise-route-rail-and-active-step',
+  'U13-reduced-motion-fullscreen-screensaver-and-soak',
+  'U14-stable-visual-evidence',
+  'U15-worker-semantics-and-interaction-performance',
+  'U8-graph-replacement-resets-camera',
+  'armour_evasion',
+  'armour_energy_shield',
+  'harvest_one_mod_math_witness',
+  'V2-initial-result-does-not-reclaim-document-scroll',
+  'V3-replay-three-steps-window-scroll-and-focus-stable',
+  'V5-pause-resume-and-speed-controls-preserve-scroll-focus',
+  'V6-mobile-replay-and-touch-scroll-ownership',
+  'V7-clean-one-mod-chronology-and-accounting',
+  'V8-self-fracture-chronology-and-exact-target',
+  'V4-route-rail-horizontal-following-only',
+  'V9-single-terminal-one-two-and-four-mod',
+  'V14-four-mod-solver-proof-accounting-regression',
+  'V10-V13-harvest-certified-mechanics-math-and-methods',
+  'V15-V16-performance-memory-worker-and-evidence-audit',
+  'V1-phase2t-phase2u-preservation-and-no-fallback',
+  'W0-phase-session-worker-lifecycle-isolation',
+  'W2-eldritch-canonical-selected-policy-binding',
+  'W2b-fail-closed-reconciliation-invariant',
+  'W3-selected-policy-action-evidence',
+  'W4-final-progress-result-dom-export-differential',
+  'W5-armour-evasion-cheapest-baseline',
+  'W6-armour-evasion-fewest-at-600',
+  'W7-armour-evasion-fastest-at-600',
+  'W8-armour-evasion-500-ceiling',
+  'W12-final-unified-pareto-policy-set',
+  'W10-objective-proof-truthfulness',
+  'W11-objective-aware-acquisition-pruning',
+  'W1-phase2v-mechanics-proof-worker-and-label-preservation',
+  'W13-signed-tradeoff-copy',
+  'W9-dynamic-open-conventional-harvest-ceiling-boundaries',
+  'W21-objective-transition-reuse-and-runtime',
+  'W14-cluster-group-handoff',
+  'W15-three-real-notable-combo-handoffs',
+  'W16-eldritch-market-sku-passive-range-handoff',
+  'W17-exact-sale-value-provenance-and-profit-only',
+  'W18-handoff-export-share-import-round-trip',
+  'W19-mobile-keyboard-focus-overflow-and-labels',
+  'W20-autonomous-generated-cluster-snapshot-matrix',
+  'W22-browser-release-hygiene-and-stable-evidence',
+  'X1-phase2w-preservation',
+  'X9-budget-preset-contract',
+  'X14-responsive-budget-ux',
+  'X10-retry-deeper-preview-request-and-reuse',
+  'X12-compatible-incumbent-monotonicity',
+  'X11-research-cancel-host-guard-and-recovery',
+  'X8-real-three-notable-cluster-handoff',
+  'X2-phantom-harvest-before-after',
+  'X3-unknown-action-fail-closed',
+  'X4-actual-harvest-positive-control',
+  'X5-harvest-not-selected-negative-control',
+  'X6-acquisition-resource-exclusion',
+  'X7-full-selected-action-coverage',
+  'X13-proof-honest-market-spread-wording',
+  'X15-generated-action-semantic-matrix',
+  'X16-stable-real-screenshots',
+  'X17-worker-dom-export-share-differential',
+  'X18-performance-memory-and-no-extra-worker-jobs',
+  'X19-local-release-command-contract',
+  'X20-final-static-prohibited-change-review',
+  'real-dom-viewport-matrix',
+  'semantic-controls-and-keyboard-primary-path',
+  'controls-focus-fullscreen-and-real-frame',
+  'deterministic-reduced-motion-frames',
+  'fps-long-task-and-memory-soak',
+  'herald_envoy_endbringer',
+  'three_notable',
+  'Y1-phase2x-preservation',
+  'Y2-relaxed-bound-admissibility-corpus',
+  'Y3-bound-strength-comparison',
+  'Y4-field-research-proof-telemetry',
+  'Y5-proof-scheduler-ab',
+  'Y6-depth-continuation-monotonicity',
+  'Y7-requested-used-worker-dom-differential',
+  'Y14-cross-surface-route-name-differential',
+  'Y15-market-handoff-regression',
+  'Y8-wall-time-stop-witness',
+  'Y9-state-cap-stop-witness',
+  'Y10-proof-closed-real-worker-witness',
+  'Y11-equivalent-policy-identity',
+  'Y12-equal-metrics-non-equivalent-counterexample',
+  'Y13-player-route-naming-controls',
+  'Y16-harvest-semantics-preservation',
+  'Y17-constellation-interaction-regression',
+  'Y18-generated-proof-debt-browser-fuzz',
+  'Y19-performance-memory-and-bound-cache',
+  'Y20-local-release-and-prohibited-change-contract',
+  'runtime-error-audit',
+  'Z1-real-worker-policy-flow-boundary',
+  'Z2-flow-conservation-and-exact-state-differential',
+  'Z3-selected-branch-click-and-explanation',
+  'Z4-pan-zoom-keyboard-and-route-focus',
+  'Z5-reduced-motion-deterministic-render',
+  'Z6-replay-scroll-ownership-and-particle-budget',
+  'Z7-regal-recovery-and-reacquire-destinations',
+  'Z8-selected-harvest-repeat-and-success-flow',
+  'Z9-topology-diversity-worker-dom-and-performance',
+] as const;
+
+const MOVED_TO_EXTENDED = new Map<string, string[]>([
+  ['U13-reduced-motion-fullscreen-screensaver-and-soak', ['E-five-minute-replay-memory-soak']],
+  ['W20-autonomous-generated-cluster-snapshot-matrix', ['E-generated-fuzz-matrix']],
+  ['X15-generated-action-semantic-matrix', ['E-generated-fuzz-matrix']],
+  ['real-dom-viewport-matrix', ['E-exhaustive-viewport-matrix']],
+  ['fps-long-task-and-memory-soak', ['E-five-minute-replay-memory-soak']],
+  ['Y4-field-research-proof-telemetry', ['E-research-field-proof']],
+  ['Y18-generated-proof-debt-browser-fuzz', ['E-generated-fuzz-matrix']],
+]);
+
+function legacyTags(id: string): string[] {
+  const lower = id.toLowerCase();
+  const tags = new Set<string>();
+  if (/worker|canonical|result|protocol|cancel|host-guard|runtime/.test(lower)) tags.add('worker');
+  if (/solver|search|proof|bound|budget|state-cap|wall-time|accounting|policy|pareto/.test(lower)) tags.add('proof');
+  if (/objective|fewest|fastest|cheapest|ceiling|pareto|tradeoff/.test(lower)) tags.add('objectives');
+  if (/harvest|armour_evasion|armour_energy_shield/.test(lower)) tags.add('harvest');
+  if (/fracture|reacquire|scour/.test(lower)) tags.add('fracture');
+  if (/handoff|market|cluster-group|combo|sale-value/.test(lower)) tags.add('handoff');
+  if (/share|export|import|round-trip/.test(lower)) tags.add('share-export');
+  if (/constellation|camera|route|replay|graph|node|pointer|touch|wheel|animation|frame/.test(lower) || /^[uv]/i.test(id)) tags.add('constellation');
+  if (/responsive|mobile|viewport|overflow|touch/.test(lower)) tags.add('responsive');
+  if (/keyboard|focus|label|vocabulary|descriptor|readability|pointer|touch/.test(lower)) tags.add('accessibility');
+  if (/visual|screenshot|frame|fullscreen|display|readability/.test(lower)) tags.add('visual');
+  if (/soak|memory|fuzz|generated|field-research|viewport-matrix/.test(lower)) tags.add('soak');
+  if (tags.size === 0) tags.add('solver');
+  return [...tags].sort();
+}
+
+function replacementsFor(tags: readonly string[], id: string): string[] {
+  const replacements = new Set<string>();
+  const has = (tag: string) => tags.includes(tag);
+  if (has('worker') || has('proof')) {
+    replacements.add('A-clean-worker-canonical');
+    replacements.add('A-proof-accounting-no-fallback');
+  }
+  if (/cancel|host-guard|replacement/i.test(id)) replacements.add('A-cancel-replace-recover');
+  if (has('fracture')) replacements.add('B-self-fracture-policy');
+  if (has('harvest') || has('objectives')) replacements.add('B-harvest-objective-policy');
+  if (has('handoff')) replacements.add('C-cluster-handoff');
+  if (has('share-export')) replacements.add('C-share-export-roundtrip');
+  if (has('responsive') || has('accessibility')) replacements.add('C-responsive-accessibility');
+  if (has('constellation')) {
+    replacements.add('D-real-policy-flow-differential');
+    replacements.add('D-constellation-interaction-short-replay');
+  }
+  if (has('visual')) replacements.add('D-frozen-policy-flow-renderer');
+  return [...replacements];
+}
+
+export const LEGACY_GATE_COVERAGE: LegacyGateCoverage[] = LEGACY_RELEASE_GATE_IDS.map((legacyId) => {
+  const tags = legacyTags(legacyId);
+  const moved = MOVED_TO_EXTENDED.get(legacyId);
+  if (moved) {
+    return {
+      legacyId,
+      tags,
+      tier: 'EXTENDED' as const,
+      isolation: 'SHARED_FIXTURE' as const,
+      disposition: 'MOVED_TO_EXTENDED' as const,
+      replacementGateIds: moved,
+      rationale: 'Long soak, generated matrix, exhaustive viewport, or Research-depth coverage is manual-only.',
+    };
+  }
+  const replacementGateIds = replacementsFor(tags, legacyId);
+  if (replacementGateIds.length > 0) {
+    return {
+      legacyId,
+      tags,
+      tier: 'RELEASE' as const,
+      isolation: 'SHARED_FIXTURE' as const,
+      disposition: 'REPLACED_BY_PHASE3A' as const,
+      replacementGateIds,
+      rationale: 'Representative behavior is covered by self-contained Phase 3A gates; the historical assertion remains in lab:legacy-release.',
+    };
+  }
+  return {
+    legacyId,
+    tags,
+    tier: 'EXTENDED' as const,
+    isolation: 'SHARED_FIXTURE' as const,
+    disposition: 'RETAINED_LEGACY' as const,
+    replacementGateIds: [],
+    rationale: 'Specialized historical coverage remains available in the explicit manual legacy matrix.',
+  };
+});
+
+export function gateById(id: string): QualityGateDefinition {
+  const definition = QUALITY_GATE_REGISTRY.find((entry) => entry.id === id);
+  if (!definition) throw new Error(`Unknown Quality Lab gate: ${id}`);
+  return definition;
+}
+
+export function gatesForTier(tier: QualityTier): QualityGateDefinition[] {
+  return QUALITY_GATE_REGISTRY.filter((definition) => definition.defaultSuites.includes(tier));
+}
+
+export function gatesForTags(tags: readonly string[]): QualityGateDefinition[] {
+  const required = new Set(tags.map((tag) => tag.toLowerCase()));
+  return QUALITY_GATE_REGISTRY.filter((definition) =>
+    [...required].every((tag) => definition.tags.includes(tag))
+  );
+}
+
+export function dependencyClosure(definitions: readonly QualityGateDefinition[]): QualityGateDefinition[] {
+  const selected = new Map(definitions.map((definition) => [definition.id, definition]));
+  const visit = (definition: QualityGateDefinition): void => {
+    for (const dependencyId of definition.dependencies) {
+      const dependency = gateById(dependencyId);
+      if (!selected.has(dependency.id)) {
+        selected.set(dependency.id, dependency);
+        visit(dependency);
+      }
+    }
+  };
+  definitions.forEach(visit);
+  return QUALITY_GATE_REGISTRY.filter((definition) => selected.has(definition.id));
+}

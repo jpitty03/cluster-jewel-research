@@ -1,58 +1,57 @@
 PHASE 2L — PORTFOLIO PROOF CLOSURE DIAGNOSTIC
 
 L1-L4 EXACT FIXTURE
-L1 exact RECOMMEND: elapsed=24689ms; selected=Self-fracture of the Prodigy (T1); U=3926.335455c; bestCompetitiveL=10.556500c; gap=3915.778955c; status=BEST_RESOLVED_UNPROVEN; competitive=4; dominated=0; reuse=COLD/FRACTURE_DOWNSTREAM
+L1 exact RECOMMEND: elapsed=24707ms; selected=Self-fracture of the Prodigy (T1); U=3926.335455c; bestCompetitiveL=10.556500c; gap=3915.778955c; status=BEST_RESOLVED_UNPROVEN; competitive=4; dominated=0; reuse=COLD/FRACTURE_DOWNSTREAM
   Clean Base; status=COMPETITIVE_UNRESOLVED; acqL=10.000000c; acqU=10.000000c; downL=0.556500c; downU=213856.185599c; fullL=10.556500c; fullU=213866.185599c; reason=CAN_STILL_BEAT_INCUMBENT; retained=0+3334
-  of the Meteor (T1); status=COMPETITIVE_UNRESOLVED; acqL=369.000000c; acqU=NONE; downL=0.521500c; downU=NONE; fullL=369.521500c; fullU=NONE; reason=CAN_STILL_BEAT_INCUMBENT; retained=1+1667
+  of the Meteor (T1); status=COMPETITIVE_UNRESOLVED; acqL=369.000000c; acqU=1505.670333c; downL=1.762500c; downU=2420.665122c; fullL=370.762500c; fullU=3926.335455c; reason=CAN_STILL_BEAT_INCUMBENT; retained=1667+3706
   Glowing (T1); status=COMPETITIVE_UNRESOLVED; acqL=369.000000c; acqU=NONE; downL=0.556500c; downU=NONE; fullL=369.556500c; fullU=NONE; reason=CAN_STILL_BEAT_INCUMBENT; retained=1+0
   of the Prodigy (T1); status=SELECTED; acqL=369.000000c; acqU=1505.670333c; downL=1.762500c; downU=2420.665122c; fullL=370.762500c; fullU=3926.335455c; reason=SELECTED_EXECUTABLE_ROUTE; retained=1667+2158
   Powerful (T1); status=COMPETITIVE_UNRESOLVED; acqL=369.000000c; acqU=NONE; downL=0.556500c; downU=NONE; fullL=369.556500c; fullU=NONE; reason=CAN_STILL_BEAT_INCUMBENT; retained=1+0
-L3 exact DEEPEN 1: elapsed=37079ms; selected=Self-fracture of the Prodigy (T1); U=3926.335455c; bestCompetitiveL=10.556500c; gap=3915.778955c; status=BEST_RESOLVED_UNPROVEN; competitive=4; dominated=0; reuse=RESUMED/FRACTURE_DOWNSTREAM
+L3 exact DEEPEN 1: elapsed=37439ms; selected=Self-fracture of the Prodigy (T1); U=3926.335455c; bestCompetitiveL=10.556500c; gap=3915.778955c; status=BEST_RESOLVED_UNPROVEN; competitive=4; dominated=0; reuse=RESUMED/FRACTURE_DOWNSTREAM
   Clean Base; status=COMPETITIVE_UNRESOLVED; acqL=10.000000c; acqU=10.000000c; downL=0.556500c; downU=213856.185599c; fullL=10.556500c; fullU=213866.185599c; reason=CAN_STILL_BEAT_INCUMBENT; retained=0+4834
-  of the Meteor (T1); status=COMPETITIVE_UNRESOLVED; acqL=369.000000c; acqU=NONE; downL=0.521500c; downU=NONE; fullL=369.521500c; fullU=NONE; reason=CAN_STILL_BEAT_INCUMBENT; retained=5001+1667
-  Glowing (T1); status=COMPETITIVE_UNRESOLVED; acqL=369.000000c; acqU=NONE; downL=0.556500c; downU=NONE; fullL=369.556500c; fullU=NONE; reason=CAN_STILL_BEAT_INCUMBENT; retained=10000+1667
+  of the Meteor (T1); status=COMPETITIVE_UNRESOLVED; acqL=369.000000c; acqU=1505.670333c; downL=1.762500c; downU=2420.665122c; fullL=370.762500c; fullU=3926.335455c; reason=CAN_STILL_BEAT_INCUMBENT; retained=4445+3706
+  Glowing (T1); status=COMPETITIVE_UNRESOLVED; acqL=369.000000c; acqU=NONE; downL=0.556500c; downU=NONE; fullL=369.556500c; fullU=NONE; reason=CAN_STILL_BEAT_INCUMBENT; retained=5001+0
   of the Prodigy (T1); status=SELECTED; acqL=369.000000c; acqU=1505.670333c; downL=1.762500c; downU=2420.665122c; fullL=370.762500c; fullU=3926.335455c; reason=SELECTED_EXECUTABLE_ROUTE; retained=1667+2158
   Powerful (T1); status=COMPETITIVE_UNRESOLVED; acqL=369.000000c; acqU=NONE; downL=0.556500c; downU=NONE; fullL=369.556500c; fullU=NONE; reason=CAN_STILL_BEAT_INCUMBENT; retained=1+0
-L3 exact DEEPEN 2: elapsed=50195ms; selected=Self-fracture of the Prodigy (T1); U=3926.335455c; bestCompetitiveL=10.556500c; gap=3915.778955c; status=BEST_RESOLVED_UNPROVEN; competitive=4; dominated=0; reuse=RESUMED/FRACTURE_DOWNSTREAM
+L3 exact DEEPEN 2: elapsed=50337ms; selected=Self-fracture of the Prodigy (T1); U=3926.335455c; bestCompetitiveL=10.556500c; gap=3915.778955c; status=BEST_RESOLVED_UNPROVEN; competitive=4; dominated=0; reuse=RESUMED/FRACTURE_DOWNSTREAM
   Clean Base; status=COMPETITIVE_UNRESOLVED; acqL=10.000000c; acqU=10.000000c; downL=0.556500c; downU=213856.185599c; fullL=10.556500c; fullU=213866.185599c; reason=CAN_STILL_BEAT_INCUMBENT; retained=0+4834
-  of the Meteor (T1); status=COMPETITIVE_UNRESOLVED; acqL=369.000000c; acqU=NONE; downL=0.521500c; downU=NONE; fullL=369.521500c; fullU=NONE; reason=CAN_STILL_BEAT_INCUMBENT; retained=12418+1667
-  Glowing (T1); status=COMPETITIVE_UNRESOLVED; acqL=369.000000c; acqU=NONE; downL=0.556500c; downU=NONE; fullL=369.556500c; fullU=NONE; reason=CAN_STILL_BEAT_INCUMBENT; retained=12417+1667
+  of the Meteor (T1); status=COMPETITIVE_UNRESOLVED; acqL=369.000000c; acqU=1505.670333c; downL=1.762500c; downU=2420.665122c; fullL=370.762500c; fullU=3926.335455c; reason=CAN_STILL_BEAT_INCUMBENT; retained=4445+3706
+  Glowing (T1); status=COMPETITIVE_UNRESOLVED; acqL=369.000000c; acqU=NONE; downL=0.556500c; downU=NONE; fullL=369.556500c; fullU=NONE; reason=CAN_STILL_BEAT_INCUMBENT; retained=5001+0
   of the Prodigy (T1); status=SELECTED; acqL=369.000000c; acqU=1505.670333c; downL=1.762500c; downU=2420.665122c; fullL=370.762500c; fullU=3926.335455c; reason=SELECTED_EXECUTABLE_ROUTE; retained=1667+2158
   Powerful (T1); status=COMPETITIVE_UNRESOLVED; acqL=369.000000c; acqU=NONE; downL=0.556500c; downU=NONE; fullL=369.556500c; fullU=NONE; reason=CAN_STILL_BEAT_INCUMBENT; retained=5001+1667
-admissibility resolved candidates audited=6; violations=0
+admissibility resolved candidates audited=9; violations=0
 final exact status=BEST_RESOLVED_UNPROVEN
 final exact blocker=4 candidate(s) retain full-route L below incumbent U
 
 L3 TRANCHE EVIDENCE
-  Clean Base/DOWNSTREAM: reason=DEEPEST_COMPETITOR_LOWER_BOUND; retained=3334->4834; generated=10722->16757; L=10.556500c->10.556500c; U=213866.185599c->213866.185599c; outcome=RESOLVED
-  of the Meteor (T1)/ACQUISITION: reason=RESOLVE_ACQUISITION_BEFORE_DOWNSTREAM; retained=1->5001; generated=5026->20026; L=369.521500c->369.521500c; U=NONE->NONE; outcome=NO_PROOF_CHANGE
-  of the Meteor (T1)/DOWNSTREAM_BOUND: reason=DEEPEST_DOWNSTREAM_PROOF_DEBT; retained=1667->1667; generated=6488->6488; L=369.521500c->369.521500c; U=NONE->NONE; outcome=NO_PROOF_CHANGE
-  Glowing (T1)/ACQUISITION: reason=RESOLVE_ACQUISITION_BEFORE_DOWNSTREAM; retained=1->10000; generated=5026->35023; L=369.556500c->369.556500c; U=NONE->NONE; outcome=NO_PROOF_CHANGE
-  Glowing (T1)/DOWNSTREAM_BOUND: reason=DEEPEST_DOWNSTREAM_PROOF_DEBT; retained=0->1667; generated=0->8271; L=369.556500c->369.556500c; U=NONE->NONE; outcome=NO_PROOF_CHANGE
-  Clean Base/DOWNSTREAM: reason=DEEPEST_COMPETITOR_LOWER_BOUND; retained=4834->4834; generated=16757->22758; L=10.556500c->10.556500c; U=213866.185599c->213866.185599c; outcome=RESOLVED
+  Clean Base/DOWNSTREAM: reason=DEEPEST_COMPETITOR_LOWER_BOUND; retained=3334->4834; generated=17386->23421; L=10.556500c->10.556500c; U=213866.185599c->213866.185599c; outcome=RESOLVED
+  Glowing (T1)/ACQUISITION: reason=RESOLVE_ACQUISITION_BEFORE_DOWNSTREAM; retained=1->5001; generated=5026->20026; L=369.556500c->369.556500c; U=NONE->NONE; outcome=NO_PROOF_CHANGE
+  of the Meteor (T1)/DOWNSTREAM_BOUND: reason=DEEPEST_DOWNSTREAM_PROOF_DEBT; retained=1667->1667; generated=6488->6488; L=370.762500c->370.762500c; U=3926.335455c->3926.335455c; outcome=NO_PROOF_CHANGE
+  of the Meteor (T1)/ACQUISITION: reason=DEEPEST_ACQUISITION_PROOF_DEBT; retained=1667->4445; generated=10027->26695; L=370.762500c->370.762500c; U=3926.335455c->3926.335455c; outcome=NO_PROOF_CHANGE
+  of the Meteor (T1)/DOWNSTREAM: reason=RESOLVE_DOWNSTREAM_AFTER_ACQUISITION; retained=2039->2039; generated=6487->6487; L=370.762500c->370.762500c; U=3926.335455c->3926.335455c; outcome=NO_PROOF_CHANGE
+  Clean Base/DOWNSTREAM: reason=DEEPEST_COMPETITOR_LOWER_BOUND; retained=4834->4834; generated=23421->29150; L=10.556500c->10.556500c; U=213866.185599c->213866.185599c; outcome=RESOLVED
   Powerful (T1)/ACQUISITION: reason=RESOLVE_ACQUISITION_BEFORE_DOWNSTREAM; retained=1->5001; generated=5026->20026; L=369.556500c->369.556500c; U=NONE->NONE; outcome=NO_PROOF_CHANGE
   Powerful (T1)/DOWNSTREAM_BOUND: reason=DEEPEST_DOWNSTREAM_PROOF_DEBT; retained=0->1667; generated=0->8271; L=369.556500c->369.556500c; U=NONE->NONE; outcome=NO_PROOF_CHANGE
-  Glowing (T1)/DOWNSTREAM_BOUND: reason=SWITCH_AFTER_NO_PROOF_CHANGE; retained=1667->1667; generated=8271->8271; L=369.556500c->369.556500c; U=NONE->NONE; outcome=NO_PROOF_CHANGE
-  Glowing (T1)/ACQUISITION: reason=SWITCH_AFTER_NO_PROOF_CHANGE; retained=10000->12417; generated=35023->42274; L=369.556500c->369.556500c; U=NONE->NONE; outcome=NO_PROOF_CHANGE
-  of the Meteor (T1)/DOWNSTREAM_BOUND: reason=SWITCH_AFTER_NO_PROOF_CHANGE; retained=1667->1667; generated=6488->6488; L=369.521500c->369.521500c; U=NONE->NONE; outcome=NO_PROOF_CHANGE
-  of the Meteor (T1)/ACQUISITION: reason=SWITCH_AFTER_NO_PROOF_CHANGE; retained=5001->12418; generated=20026->42277; L=369.521500c->369.521500c; U=NONE->NONE; outcome=NO_PROOF_CHANGE
+  of the Meteor (T1)/DOWNSTREAM: reason=SWITCH_AFTER_NO_PROOF_CHANGE; retained=2039->2039; generated=6487->6488; L=370.762500c->370.762500c; U=3926.335455c->3926.335455c; outcome=NO_PROOF_CHANGE
+  of the Meteor (T1)/DOWNSTREAM_BOUND: reason=SWITCH_AFTER_NO_PROOF_CHANGE; retained=1667->1667; generated=6488->6488; L=370.762500c->370.762500c; U=3926.335455c->3926.335455c; outcome=NO_PROOF_CHANGE
+  of the Meteor (T1)/ACQUISITION: reason=SWITCH_AFTER_NO_PROOF_CHANGE; retained=4445->4445; generated=26695->26695; L=370.762500c->370.762500c; U=3926.335455c->3926.335455c; outcome=NO_PROOF_CHANGE
 
 L5 COLD VS RESUMED CANDIDATE-STAGE CONTROL
-L1 exact RECOMMEND: elapsed=24689ms; selected=Self-fracture of the Prodigy (T1); U=3926.335455c; bestCompetitiveL=10.556500c; gap=3915.778955c; status=BEST_RESOLVED_UNPROVEN; competitive=4; dominated=0; reuse=COLD/FRACTURE_DOWNSTREAM
-L3 exact DEEPEN 2: elapsed=50195ms; selected=Self-fracture of the Prodigy (T1); U=3926.335455c; bestCompetitiveL=10.556500c; gap=3915.778955c; status=BEST_RESOLVED_UNPROVEN; competitive=4; dominated=0; reuse=RESUMED/FRACTURE_DOWNSTREAM
+L1 exact RECOMMEND: elapsed=24707ms; selected=Self-fracture of the Prodigy (T1); U=3926.335455c; bestCompetitiveL=10.556500c; gap=3915.778955c; status=BEST_RESOLVED_UNPROVEN; competitive=4; dominated=0; reuse=COLD/FRACTURE_DOWNSTREAM
+L3 exact DEEPEN 2: elapsed=50337ms; selected=Self-fracture of the Prodigy (T1); U=3926.335455c; bestCompetitiveL=10.556500c; gap=3915.778955c; status=BEST_RESOLVED_UNPROVEN; competitive=4; dominated=0; reuse=RESUMED/FRACTURE_DOWNSTREAM
   current-request transition distributions: resumed=24201; cold=42666; savings=18465
   Powerful (T1): acquisition U=1496.542933c; downstream U=18.713993c; resumed retained acq/down=5001/2132; generated resumed acq/down=10033/2132; generated cold acq/down=15024/6309
   Glowing (T1): acquisition U=1496.542933c; downstream U=40.190794c; resumed retained acq/down=5001/2132; generated resumed acq/down=10033/2003; generated cold acq/down=15024/6309
 
 L7 PRICE SENSITIVITY
-L7 cheap fracture: elapsed=14464ms; selected=Self-fracture of the Prodigy (T1); U=77.238467c; bestCompetitiveL=10.531500c; gap=66.706967c; status=BEST_RESOLVED_UNPROVEN; competitive=2; dominated=0; reuse=COLD/FRACTURE_DOWNSTREAM
-L7 frozen fixture: elapsed=5964ms; selected=Start clean base; U=185.786086c; bestCompetitiveL=NONE; gap=NONE; status=SELECTED_ACQUISITION_SAFE; competitive=0; dominated=2; reuse=COLD/CLEAN_DOWNSTREAM
-L7 expensive fracture: elapsed=5907ms; selected=Start clean base; U=129.881929c; bestCompetitiveL=NONE; gap=NONE; status=SELECTED_ACQUISITION_SAFE; competitive=0; dominated=2; reuse=COLD/CLEAN_DOWNSTREAM
+L7 cheap fracture: elapsed=14466ms; selected=Self-fracture Powerful (T1); U=70.247267c; bestCompetitiveL=10.531500c; gap=59.715767c; status=BEST_RESOLVED_UNPROVEN; competitive=2; dominated=0; reuse=COLD/FRACTURE_DOWNSTREAM
+L7 frozen fixture: elapsed=4256ms; selected=Start clean base; U=129.881929c; bestCompetitiveL=NONE; gap=NONE; status=SELECTED_ACQUISITION_SAFE; competitive=0; dominated=2; reuse=COLD/CLEAN_DOWNSTREAM
+L7 expensive fracture: elapsed=3886ms; selected=Start clean base; U=129.881929c; bestCompetitiveL=NONE; gap=NONE; status=SELECTED_ACQUISITION_SAFE; competitive=0; dominated=2; reuse=COLD/CLEAN_DOWNSTREAM
 
 L8 TARGET PERMUTATION
-  evidence={"comparisonMode":"DIRECT_EQUAL_DEPTH","cold":{"orderA":{"expectedCostChaos":169.4256216408081,"selected":"Start clean base","elapsedMs":8099,"states":2667,"rounds":2,"newStatesByRound":[1333,1333],"budget":{"state":true,"wall":true,"round":false},"identity":"phase2j-69449f61"},"orderB":{"expectedCostChaos":169.4256216408081,"selected":"Start clean base","elapsedMs":8075,"states":2667,"rounds":2,"newStatesByRound":[1333,1333],"budget":{"state":true,"wall":true,"round":false},"identity":"phase2j-69449f61"}},"comparable":{"orderA":{"expectedCostChaos":169.4256216408081,"selected":"Start clean base","elapsedMs":8099,"states":2667,"rounds":2,"newStatesByRound":[1333,1333],"budget":{"state":true,"wall":true,"round":false},"identity":"phase2j-69449f61"},"orderB":{"expectedCostChaos":169.4256216408081,"selected":"Start clean base","elapsedMs":8075,"states":2667,"rounds":2,"newStatesByRound":[1333,1333],"budget":{"state":true,"wall":true,"round":false},"identity":"phase2j-69449f61"}}}
-L8 target order A: elapsed=8099ms; selected=Start clean base; U=169.425622c; bestCompetitiveL=NONE; gap=NONE; status=SELECTED_ACQUISITION_SAFE; competitive=0; dominated=2; reuse=COLD/CLEAN_DOWNSTREAM
-L8 target order B: elapsed=8075ms; selected=Start clean base; U=169.425622c; bestCompetitiveL=NONE; gap=NONE; status=SELECTED_ACQUISITION_SAFE; competitive=0; dominated=2; reuse=COLD/CLEAN_DOWNSTREAM
+  evidence={"comparisonMode":"DIRECT_EQUAL_DEPTH","cold":{"orderA":{"expectedCostChaos":134.03460804854973,"selected":"Start clean base","elapsedMs":5758,"states":4000,"rounds":3,"newStatesByRound":[1333,1333,1333],"budget":{"state":true,"wall":false,"round":true},"identity":"phase2j-69449f61"},"orderB":{"expectedCostChaos":134.03460804854973,"selected":"Start clean base","elapsedMs":5524,"states":4000,"rounds":3,"newStatesByRound":[1333,1333,1333],"budget":{"state":true,"wall":false,"round":true},"identity":"phase2j-69449f61"}},"comparable":{"orderA":{"expectedCostChaos":134.03460804854973,"selected":"Start clean base","elapsedMs":5758,"states":4000,"rounds":3,"newStatesByRound":[1333,1333,1333],"budget":{"state":true,"wall":false,"round":true},"identity":"phase2j-69449f61"},"orderB":{"expectedCostChaos":134.03460804854973,"selected":"Start clean base","elapsedMs":5524,"states":4000,"rounds":3,"newStatesByRound":[1333,1333,1333],"budget":{"state":true,"wall":false,"round":true},"identity":"phase2j-69449f61"}}}
+L8 target order A: elapsed=5758ms; selected=Start clean base; U=134.034608c; bestCompetitiveL=NONE; gap=NONE; status=SELECTED_ACQUISITION_SAFE; competitive=0; dominated=2; reuse=COLD/CLEAN_DOWNSTREAM
+L8 target order B: elapsed=5524ms; selected=Start clean base; U=134.034608c; bestCompetitiveL=NONE; gap=NONE; status=SELECTED_ACQUISITION_SAFE; competitive=0; dominated=2; reuse=COLD/CLEAN_DOWNSTREAM
 
 INVARIANTS
 market-fractured ranking=ABSENT

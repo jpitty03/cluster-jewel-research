@@ -2,7 +2,7 @@
   "phase": "2Z",
   "version": "SELECTED_POLICY_FLOW_V1",
   "fixtureCorpusVersion": "Phase2Y-Frozen-Browser-Corpus-1",
-  "generatedAt": "2026-08-27T05:51:54.954Z",
+  "generatedAt": "2026-08-27T06:52:21.185Z",
   "fixtures": [
     {
       "id": "clean-one-mod",
@@ -279,7 +279,7 @@
             "exactExpectedFlow": 0.03282994090610456
           }
         ],
-        "aggregationMs": 44.782399999999996
+        "aggregationMs": 41.84010000000001
       },
       "reconciliation": {
         "tolerance": 1e-7,
@@ -293,7 +293,7 @@
         "terminalAbsorptionReconciled": true,
         "certified": true
       },
-      "solveMs": 398.6681,
+      "solveMs": 391.99559999999997,
       "actions": [
         "transmutation_orb",
         "alteration_orb",
@@ -579,7 +579,7 @@
             "exactExpectedFlow": 0.1506003043787877
           }
         ],
-        "aggregationMs": 49.67360000000008
+        "aggregationMs": 45.85149999999976
       },
       "reconciliation": {
         "tolerance": 1e-7,
@@ -593,7 +593,7 @@
         "terminalAbsorptionReconciled": true,
         "certified": true
       },
-      "solveMs": 2627.4682000000003,
+      "solveMs": 2851.0459,
       "actions": [
         "transmutation_orb",
         "alteration_orb",
@@ -891,7 +891,7 @@
             "exactExpectedFlow": 0.011484474691621093
           }
         ],
-        "aggregationMs": 2.861299999996845
+        "aggregationMs": 2.0340999999971245
       },
       "reconciliation": {
         "tolerance": 1e-7,
@@ -905,7 +905,7 @@
         "terminalAbsorptionReconciled": true,
         "certified": true
       },
-      "solveMs": 28254.782099999997,
+      "solveMs": 28214.318900000002,
       "actions": [
         "transmutation_orb",
         "harvest_reforge_defences",
@@ -1199,7 +1199,7 @@
             "exactExpectedFlow": 1.412476879104645
           }
         ],
-        "aggregationMs": 93.85330000000977
+        "aggregationMs": 88.14680000000226
       },
       "reconciliation": {
         "tolerance": 1e-7,
@@ -1213,7 +1213,7 @@
         "terminalAbsorptionReconciled": true,
         "certified": true
       },
-      "solveMs": 24698.314399999996,
+      "solveMs": 24700.895399999998,
       "actions": [
         "transmutation_orb",
         "alteration_orb",
@@ -1515,7 +1515,7 @@
             "exactExpectedFlow": 0.07443641003826633
           }
         ],
-        "aggregationMs": 47.45260000000417
+        "aggregationMs": 49.630099999994854
       },
       "reconciliation": {
         "tolerance": 1e-7,
@@ -1529,7 +1529,7 @@
         "terminalAbsorptionReconciled": true,
         "certified": true
       },
-      "solveMs": 24687.037899999996,
+      "solveMs": 24679.477500000008,
       "actions": [
         "transmutation_orb",
         "alteration_orb",

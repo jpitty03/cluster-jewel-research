@@ -1,0 +1,634 @@
+{
+  "schemaVersion": "PHASE3A_QUALITY_REPORT_V1",
+  "runId": "2026-08-27T06-31-52-056Z",
+  "suite": "RELEASE",
+  "requestedGateIds": [
+    "A-clean-worker-canonical",
+    "A-proof-accounting-no-fallback",
+    "A-cancel-replace-recover",
+    "B-self-fracture-policy",
+    "B-harvest-objective-policy",
+    "C-cluster-handoff",
+    "C-share-export-roundtrip",
+    "C-responsive-accessibility",
+    "D-real-policy-flow-differential",
+    "D-frozen-policy-flow-renderer",
+    "D-constellation-interaction-short-replay"
+  ],
+  "selectedGateIds": [
+    "A-clean-worker-canonical",
+    "A-proof-accounting-no-fallback",
+    "A-cancel-replace-recover",
+    "B-self-fracture-policy",
+    "B-harvest-objective-policy",
+    "C-cluster-handoff",
+    "C-share-export-roundtrip",
+    "C-responsive-accessibility",
+    "D-real-policy-flow-differential",
+    "D-frozen-policy-flow-renderer",
+    "D-constellation-interaction-short-replay"
+  ],
+  "startedAt": "2026-08-27T06:31:52.056Z",
+  "finishedAt": "2026-08-27T06:33:04.060Z",
+  "status": "PASSED",
+  "identity": {
+    "applicationSourceBuildHash": "app-a689ed3470c02ec44283",
+    "fixtureCorpusVersion": "Phase2Y-Frozen-Browser-Corpus-1",
+    "fixtureCorpusHash": "corpus-606784355f3ddfef06ac",
+    "priceSnapshotIdentity": "prices-34734839cce7da56",
+    "browserVersion": "151.0.7922.34",
+    "harnessVersion": "PHASE3A_QUALITY_LAB_V1",
+    "compatibilityHash": "compatible-93284ec92f863ae208ecd116"
+  },
+  "scheduling": {
+    "processLevelShards": [
+      "A",
+      "B",
+      "C",
+      "D"
+    ],
+    "browserLightParallelism": 2,
+    "solverHeavyConcurrency": 1,
+    "longSoakAutomatic": false,
+    "shardPlan": [
+      {
+        "shard": "A",
+        "gateIds": [
+          "A-clean-worker-canonical",
+          "A-proof-accounting-no-fallback",
+          "A-cancel-replace-recover"
+        ],
+        "mode": "PARALLEL_BROWSER_LIGHT"
+      },
+      {
+        "shard": "B",
+        "gateIds": [
+          "B-self-fracture-policy",
+          "B-harvest-objective-policy"
+        ],
+        "mode": "SERIAL_SOLVER_HEAVY"
+      },
+      {
+        "shard": "C",
+        "gateIds": [
+          "C-cluster-handoff",
+          "C-share-export-roundtrip",
+          "C-responsive-accessibility"
+        ],
+        "mode": "PARALLEL_BROWSER_LIGHT"
+      },
+      {
+        "shard": "D",
+        "gateIds": [
+          "D-real-policy-flow-differential",
+          "D-frozen-policy-flow-renderer",
+          "D-constellation-interaction-short-replay"
+        ],
+        "mode": "PARALLEL_BROWSER_LIGHT"
+      }
+    ]
+  },
+  "counts": {
+    "passed": 11,
+    "failed": 0,
+    "resumed": 0,
+    "skipped": 0,
+    "total": 11
+  },
+  "results": [
+    {
+      "id": "A-clean-worker-canonical",
+      "title": "Cheap clean Worker result, protocol, canonical identity, and DOM binding",
+      "phase": "3A",
+      "shard": "A",
+      "tags": [
+        "worker",
+        "solver",
+        "proof",
+        "clean"
+      ],
+      "costClass": "FAST",
+      "status": "PASS",
+      "passed": true,
+      "startedAt": "2026-08-27T06:31:52.914Z",
+      "finishedAt": "2026-08-27T06:31:54.819Z",
+      "durationMs": 1904,
+      "details": {
+        "fixture": "cheap_one_mod",
+        "protocol": {
+          "messageTypes": [
+            "PROGRESS",
+            "PROGRESS",
+            "PROGRESS",
+            "PROGRESS",
+            "PROGRESS",
+            "PROGRESS",
+            "COMPLETE",
+            "RESULT"
+          ],
+          "completeIndex": 6,
+          "resultIndex": 7
+        },
+        "flow": {
+          "nodes": 5,
+          "edges": 14,
+          "samples": 24
+        },
+        "accounting": {
+          "selectedBundleId": "core:clean-open-policy",
+          "maximumDifferenceChaos": 8.881784197001252e-16,
+          "acquisitionCostChaos": 2,
+          "downstreamCostChaos": 4.368169699999769,
+          "fullRouteCostChaos": 6.368169699999769
+        }
+      },
+      "executionIdentity": {
+        "applicationSourceBuildHash": "app-a689ed3470c02ec44283",
+        "gateIdVersion": "A-clean-worker-canonical@1",
+        "fixtureCorpusVersion": "Phase2Y-Frozen-Browser-Corpus-1",
+        "fixtureInputHash": "fixture-a8a605222b9c93d082e9",
+        "priceSnapshotIdentity": "prices-34734839cce7da56",
+        "browserVersion": "151.0.7922.34",
+        "harnessVersion": "PHASE3A_QUALITY_LAB_V1",
+        "compatibilityHash": "compatible-93284ec92f863ae208ecd116"
+      }
+    },
+    {
+      "id": "A-proof-accounting-no-fallback",
+      "title": "Canonical accounting, proof surfaces, and strict no-fallback startup",
+      "phase": "3A",
+      "shard": "A",
+      "tags": [
+        "worker",
+        "solver",
+        "proof"
+      ],
+      "costClass": "FAST",
+      "status": "PASS",
+      "passed": true,
+      "startedAt": "2026-08-27T06:31:54.819Z",
+      "finishedAt": "2026-08-27T06:31:56.488Z",
+      "durationMs": 1670,
+      "details": {
+        "accounting": {
+          "selectedBundleId": "core:clean-open-policy",
+          "maximumDifferenceChaos": 8.881784197001252e-16,
+          "acquisitionCostChaos": 2,
+          "downstreamCostChaos": 4.368169699999769,
+          "fullRouteCostChaos": 6.368169699999769
+        },
+        "proofStatus": "UNCONSTRAINED_RESOLVED",
+        "noFallback": {
+          "appRejected": true,
+          "browserRejected": true
+        }
+      },
+      "executionIdentity": {
+        "applicationSourceBuildHash": "app-a689ed3470c02ec44283",
+        "gateIdVersion": "A-proof-accounting-no-fallback@1",
+        "fixtureCorpusVersion": "Phase2Y-Frozen-Browser-Corpus-1",
+        "fixtureInputHash": "fixture-a8a605222b9c93d082e9",
+        "priceSnapshotIdentity": "prices-34734839cce7da56",
+        "browserVersion": "151.0.7922.34",
+        "harnessVersion": "PHASE3A_QUALITY_LAB_V1",
+        "compatibilityHash": "compatible-93284ec92f863ae208ecd116"
+      }
+    },
+    {
+      "id": "A-cancel-replace-recover",
+      "title": "Cancellation replaces the Worker and a clean request recovers",
+      "phase": "3A",
+      "shard": "A",
+      "tags": [
+        "worker",
+        "solver",
+        "cancellation"
+      ],
+      "costClass": "MEDIUM",
+      "status": "PASS",
+      "passed": true,
+      "startedAt": "2026-08-27T06:31:56.488Z",
+      "finishedAt": "2026-08-27T06:31:58.437Z",
+      "durationMs": 1948,
+      "details": {
+        "terminated": true,
+        "replacementSpawned": true,
+        "recovered": "BEST_RESOLVED_ACQUISITION_SAFE"
+      },
+      "executionIdentity": {
+        "applicationSourceBuildHash": "app-a689ed3470c02ec44283",
+        "gateIdVersion": "A-cancel-replace-recover@1",
+        "fixtureCorpusVersion": "Phase2Y-Frozen-Browser-Corpus-1",
+        "fixtureInputHash": "fixture-41b8cfceeef9062a5af9",
+        "priceSnapshotIdentity": "prices-34734839cce7da56",
+        "browserVersion": "151.0.7922.34",
+        "harnessVersion": "PHASE3A_QUALITY_LAB_V1",
+        "compatibilityHash": "compatible-93284ec92f863ae208ecd116"
+      }
+    },
+    {
+      "id": "B-self-fracture-policy",
+      "title": "Real self-fracture route preserves Scour and reacquire semantics",
+      "phase": "3A",
+      "shard": "B",
+      "tags": [
+        "worker",
+        "solver",
+        "fracture",
+        "handoff",
+        "proof"
+      ],
+      "costClass": "SOLVER_HEAVY",
+      "status": "PASS",
+      "passed": true,
+      "startedAt": "2026-08-27T06:32:15.614Z",
+      "finishedAt": "2026-08-27T06:32:42.396Z",
+      "durationMs": 26782,
+      "details": {
+        "conserved": {
+          "nodes": 18,
+          "edges": 37,
+          "samples": 24
+        },
+        "scourEdges": 4,
+        "reacquireEdges": 1,
+        "fracturedDestination": {
+          "rarity": "magic",
+          "selectedActionId": "augmentation_orb"
+        },
+        "accounting": {
+          "selectedBundleId": "bundle:family_fracture_Riot Queller",
+          "maximumDifferenceChaos": 0,
+          "acquisitionCostChaos": 1652.3740800069322,
+          "downstreamCostChaos": 105.2366922587018,
+          "fullRouteCostChaos": 1757.610772265634
+        }
+      },
+      "executionIdentity": {
+        "applicationSourceBuildHash": "app-a689ed3470c02ec44283",
+        "gateIdVersion": "B-self-fracture-policy@1",
+        "fixtureCorpusVersion": "Phase2Y-Frozen-Browser-Corpus-1",
+        "fixtureInputHash": "fixture-2f70c545c1e6acdbe389",
+        "priceSnapshotIdentity": "prices-34734839cce7da56",
+        "browserVersion": "151.0.7922.34",
+        "harnessVersion": "PHASE3A_QUALITY_LAB_V1",
+        "compatibilityHash": "compatible-93284ec92f863ae208ecd116"
+      }
+    },
+    {
+      "id": "B-harvest-objective-policy",
+      "title": "Fewest-actions objective selects real Harvest repeat and success flow",
+      "phase": "3A",
+      "shard": "B",
+      "tags": [
+        "worker",
+        "solver",
+        "objectives",
+        "harvest",
+        "proof"
+      ],
+      "costClass": "SOLVER_HEAVY",
+      "status": "PASS",
+      "passed": true,
+      "startedAt": "2026-08-27T06:32:42.397Z",
+      "finishedAt": "2026-08-27T06:33:03.967Z",
+      "durationMs": 21571,
+      "details": {
+        "objective": {
+          "kind": "FEWEST_ACTIONS_WITHIN_COST",
+          "maxExpectedCostChaos": 600
+        },
+        "conserved": {
+          "nodes": 11,
+          "edges": 18,
+          "samples": 24
+        },
+        "harvestNodes": 2,
+        "repeatEdges": 2,
+        "successEdges": 2,
+        "accounting": {
+          "selectedBundleId": "bundle:family_harvest_defences",
+          "maximumDifferenceChaos": 1.1368683772161603e-13,
+          "acquisitionCostChaos": 4,
+          "downstreamCostChaos": 572.57990101593,
+          "fullRouteCostChaos": 576.57990101593
+        }
+      },
+      "executionIdentity": {
+        "applicationSourceBuildHash": "app-a689ed3470c02ec44283",
+        "gateIdVersion": "B-harvest-objective-policy@1",
+        "fixtureCorpusVersion": "Phase2Y-Frozen-Browser-Corpus-1",
+        "fixtureInputHash": "fixture-00e49a73585df6bded7e",
+        "priceSnapshotIdentity": "prices-34734839cce7da56",
+        "browserVersion": "151.0.7922.34",
+        "harnessVersion": "PHASE3A_QUALITY_LAB_V1",
+        "compatibilityHash": "compatible-93284ec92f863ae208ecd116"
+      }
+    },
+    {
+      "id": "C-cluster-handoff",
+      "title": "Cluster Jewels group handoff retains SKU controls without auto-search",
+      "phase": "3A",
+      "shard": "C",
+      "tags": [
+        "handoff",
+        "responsive",
+        "accessibility"
+      ],
+      "costClass": "FAST",
+      "status": "PASS",
+      "passed": true,
+      "startedAt": "2026-08-27T06:31:52.947Z",
+      "finishedAt": "2026-08-27T06:31:54.005Z",
+      "durationMs": 1058,
+      "details": {
+        "passiveChoice": "8",
+        "targetIds": [],
+        "automaticSearch": false,
+        "focusedBanner": true
+      },
+      "executionIdentity": {
+        "applicationSourceBuildHash": "app-a689ed3470c02ec44283",
+        "gateIdVersion": "C-cluster-handoff@1",
+        "fixtureCorpusVersion": "Phase2Y-Frozen-Browser-Corpus-1",
+        "fixtureInputHash": "fixture-4f53cda18c2baa0c0354",
+        "priceSnapshotIdentity": "prices-34734839cce7da56",
+        "browserVersion": "151.0.7922.34",
+        "harnessVersion": "PHASE3A_QUALITY_LAB_V1",
+        "compatibilityHash": "compatible-93284ec92f863ae208ecd116"
+      }
+    },
+    {
+      "id": "C-share-export-roundtrip",
+      "title": "Export and share round-trip retain exact target and canonical summary",
+      "phase": "3A",
+      "shard": "C",
+      "tags": [
+        "worker",
+        "handoff",
+        "share-export",
+        "proof"
+      ],
+      "costClass": "FAST",
+      "status": "PASS",
+      "passed": true,
+      "startedAt": "2026-08-27T06:31:54.005Z",
+      "finishedAt": "2026-08-27T06:31:55.966Z",
+      "durationMs": 1961,
+      "details": {
+        "exportVersion": "2Y.1",
+        "shareHashLength": 4351,
+        "targetIds": [
+          "AfflictionJewelSmallPassivesGrantES3"
+        ],
+        "policyFlowExported": true
+      },
+      "executionIdentity": {
+        "applicationSourceBuildHash": "app-a689ed3470c02ec44283",
+        "gateIdVersion": "C-share-export-roundtrip@1",
+        "fixtureCorpusVersion": "Phase2Y-Frozen-Browser-Corpus-1",
+        "fixtureInputHash": "fixture-a8a605222b9c93d082e9",
+        "priceSnapshotIdentity": "prices-34734839cce7da56",
+        "browserVersion": "151.0.7922.34",
+        "harnessVersion": "PHASE3A_QUALITY_LAB_V1",
+        "compatibilityHash": "compatible-93284ec92f863ae208ecd116"
+      }
+    },
+    {
+      "id": "C-responsive-accessibility",
+      "title": "Desktop/mobile responsive and keyboard-accessibility smoke",
+      "phase": "3A",
+      "shard": "C",
+      "tags": [
+        "responsive",
+        "accessibility",
+        "visual",
+        "constellation"
+      ],
+      "costClass": "FAST",
+      "status": "PASS",
+      "passed": true,
+      "startedAt": "2026-08-27T06:31:55.966Z",
+      "finishedAt": "2026-08-27T06:31:58.260Z",
+      "durationMs": 2294,
+      "details": {
+        "geometry": {
+          "viewport": 390,
+          "documentWidth": 390,
+          "bodyWidth": 390
+        },
+        "keyboardNodeFocus": true,
+        "screenshot": "quality-lab\\artifacts\\phase3a-2026-08-27T06-31-52-056Z\\shard-C\\phase3a-responsive-mobile.png"
+      },
+      "executionIdentity": {
+        "applicationSourceBuildHash": "app-a689ed3470c02ec44283",
+        "gateIdVersion": "C-responsive-accessibility@1",
+        "fixtureCorpusVersion": "Phase2Y-Frozen-Browser-Corpus-1",
+        "fixtureInputHash": "fixture-a8a605222b9c93d082e9",
+        "priceSnapshotIdentity": "prices-34734839cce7da56",
+        "browserVersion": "151.0.7922.34",
+        "harnessVersion": "PHASE3A_QUALITY_LAB_V1",
+        "compatibilityHash": "compatible-93284ec92f863ae208ecd116"
+      }
+    },
+    {
+      "id": "D-real-policy-flow-differential",
+      "title": "Real Worker policy-flow summary matches frozen serialization and DOM topology",
+      "phase": "3A",
+      "shard": "D",
+      "tags": [
+        "worker",
+        "solver",
+        "constellation",
+        "proof",
+        "visual"
+      ],
+      "costClass": "FAST",
+      "status": "PASS",
+      "passed": true,
+      "startedAt": "2026-08-27T06:31:59.207Z",
+      "finishedAt": "2026-08-27T06:32:00.904Z",
+      "durationMs": 1696,
+      "details": {
+        "sourceAppCommit": "df49b94ecca555671d8c78268d3149c2b8c84c7b",
+        "normalizedSummarySha256": "12c4d104b9fd3f9c43499995e024d05df4fb9de90b9b0e72ca4233a8564d0746",
+        "topologyFingerprint": "topology-4481a40d",
+        "conservation": {
+          "nodes": 5,
+          "edges": 14,
+          "samples": 24
+        },
+        "workerToDom": true
+      },
+      "executionIdentity": {
+        "applicationSourceBuildHash": "app-a689ed3470c02ec44283",
+        "gateIdVersion": "D-real-policy-flow-differential@1",
+        "fixtureCorpusVersion": "Phase2Y-Frozen-Browser-Corpus-1",
+        "fixtureInputHash": "fixture-eae470b544f63a5880cc",
+        "priceSnapshotIdentity": "prices-34734839cce7da56",
+        "browserVersion": "151.0.7922.34",
+        "harnessVersion": "PHASE3A_QUALITY_LAB_V1",
+        "compatibilityHash": "compatible-93284ec92f863ae208ecd116"
+      }
+    },
+    {
+      "id": "D-frozen-policy-flow-renderer",
+      "title": "Frozen PolicyFlowSummary drives the production renderer through a harness-only Worker wrapper",
+      "phase": "3A",
+      "shard": "D",
+      "tags": [
+        "constellation",
+        "visual",
+        "accessibility"
+      ],
+      "costClass": "FAST",
+      "status": "PASS",
+      "passed": true,
+      "startedAt": "2026-08-27T06:32:00.904Z",
+      "finishedAt": "2026-08-27T06:32:02.573Z",
+      "durationMs": 1669,
+      "details": {
+        "certificationScope": "RENDERER_INTERACTION_ONLY",
+        "topologyFingerprint": "topology-4481a40d",
+        "nodeCount": 5,
+        "edgeCount": 14,
+        "branchInteraction": true
+      },
+      "executionIdentity": {
+        "applicationSourceBuildHash": "app-a689ed3470c02ec44283",
+        "gateIdVersion": "D-frozen-policy-flow-renderer@1",
+        "fixtureCorpusVersion": "Phase2Y-Frozen-Browser-Corpus-1",
+        "fixtureInputHash": "fixture-eae470b544f63a5880cc",
+        "priceSnapshotIdentity": "prices-34734839cce7da56",
+        "browserVersion": "151.0.7922.34",
+        "harnessVersion": "PHASE3A_QUALITY_LAB_V1",
+        "compatibilityHash": "compatible-93284ec92f863ae208ecd116"
+      }
+    },
+    {
+      "id": "D-constellation-interaction-short-replay",
+      "title": "Branch explanation, keyboard camera, and bounded short replay",
+      "phase": "3A",
+      "shard": "D",
+      "tags": [
+        "constellation",
+        "visual",
+        "responsive",
+        "accessibility"
+      ],
+      "costClass": "MEDIUM",
+      "status": "PASS",
+      "passed": true,
+      "startedAt": "2026-08-27T06:32:02.573Z",
+      "finishedAt": "2026-08-27T06:32:14.724Z",
+      "durationMs": 12151,
+      "details": {
+        "selectedEdge": "flow_downstream_7a37989d",
+        "keyboardCamera": true,
+        "replayMs": 10000,
+        "particles": 52,
+        "scrollDelta": 0,
+        "memoryDeltaBytes": 0
+      },
+      "executionIdentity": {
+        "applicationSourceBuildHash": "app-a689ed3470c02ec44283",
+        "gateIdVersion": "D-constellation-interaction-short-replay@1",
+        "fixtureCorpusVersion": "Phase2Y-Frozen-Browser-Corpus-1",
+        "fixtureInputHash": "fixture-a8a605222b9c93d082e9",
+        "priceSnapshotIdentity": "prices-34734839cce7da56",
+        "browserVersion": "151.0.7922.34",
+        "harnessVersion": "PHASE3A_QUALITY_LAB_V1",
+        "compatibilityHash": "compatible-93284ec92f863ae208ecd116"
+      }
+    }
+  ],
+  "runtime": {
+    "totalWallMs": 72004,
+    "summedGateMs": 74704,
+    "appStartupMs": 1372,
+    "browserStartupMs": 271,
+    "solverHeavyMs": 48353,
+    "visualInteractionMs": 18868,
+    "harnessOverheadMs": 1856,
+    "categoryTotalsMs": {
+      "worker": 57532,
+      "solver": 55571,
+      "proof": 55584,
+      "clean": 1904,
+      "cancellation": 1948,
+      "fracture": 26782,
+      "handoff": 29801,
+      "objectives": 21571,
+      "harvest": 21571,
+      "responsive": 15503,
+      "accessibility": 17172,
+      "share-export": 1961,
+      "visual": 17810,
+      "constellation": 17810
+    },
+    "slowestGates": [
+      {
+        "id": "B-self-fracture-policy",
+        "durationMs": 26782,
+        "status": "PASS"
+      },
+      {
+        "id": "B-harvest-objective-policy",
+        "durationMs": 21571,
+        "status": "PASS"
+      },
+      {
+        "id": "D-constellation-interaction-short-replay",
+        "durationMs": 12151,
+        "status": "PASS"
+      },
+      {
+        "id": "C-responsive-accessibility",
+        "durationMs": 2294,
+        "status": "PASS"
+      },
+      {
+        "id": "C-share-export-roundtrip",
+        "durationMs": 1961,
+        "status": "PASS"
+      },
+      {
+        "id": "A-cancel-replace-recover",
+        "durationMs": 1948,
+        "status": "PASS"
+      },
+      {
+        "id": "A-clean-worker-canonical",
+        "durationMs": 1904,
+        "status": "PASS"
+      },
+      {
+        "id": "D-real-policy-flow-differential",
+        "durationMs": 1696,
+        "status": "PASS"
+      },
+      {
+        "id": "A-proof-accounting-no-fallback",
+        "durationMs": 1670,
+        "status": "PASS"
+      },
+      {
+        "id": "D-frozen-policy-flow-renderer",
+        "durationMs": 1669,
+        "status": "PASS"
+      }
+    ]
+  },
+  "runtimeErrors": {
+    "console": [],
+    "page": [],
+    "network": []
+  },
+  "artifacts": {
+    "phase3aShareExport": "quality-lab\\artifacts\\phase3a-2026-08-27T06-31-52-056Z\\shard-C\\phase3a-share-export.json",
+    "phase3aResponsiveMobile": "quality-lab\\artifacts\\phase3a-2026-08-27T06-31-52-056Z\\shard-C\\phase3a-responsive-mobile.png",
+    "runReport": "quality-lab\\artifacts\\phase3a-2026-08-27T06-31-52-056Z\\report.json",
+    "stableReport": "quality-lab\\reports\\phase3a-release-gate.json",
+    "summary": "quality-lab\\reports\\phase3a-release-summary.md"
+  }
+}
