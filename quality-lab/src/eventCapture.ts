@@ -4,11 +4,18 @@
  */
 export const WORKER_CAPTURE_INIT_SCRIPT = String.raw`
 (() => {
-  const events = [];
+  const historyKey = '__quality_lab_worker_protocol_history_v1__';
   const clone = (value) => {
     try { return JSON.parse(JSON.stringify(value)); }
     catch { return { uncloneable: true, text: String(value) }; }
   };
+  const readProtocolHistory = () => {
+    try {
+      const parsed = JSON.parse(sessionStorage.getItem(historyKey) ?? '[]');
+      return Array.isArray(parsed) ? parsed : [];
+    } catch { return []; }
+  };
+  const events = readProtocolHistory();
   const compactRoute = (route) => route && ({
     actionId: route.actionId,
     actionName: route.actionName,
@@ -32,6 +39,50 @@ export const WORKER_CAPTURE_INIT_SCRIPT = String.raw`
     expectedActionUsage: result.expectedActionUsage,
     presentation: result.presentation,
     internalConsistency: result.internalConsistency,
+    acquisition: result.acquisition && ({
+      selectedCandidateId: result.acquisition.selectedCandidateId,
+      selectedMethodId: result.acquisition.selectedMethodId,
+      selectionSafe: result.acquisition.selectionSafe,
+      portfolioProof: result.acquisition.portfolioProof && ({
+        status: result.acquisition.portfolioProof.status,
+        selectedFullRouteUpperBoundChaos:
+          result.acquisition.portfolioProof.selectedFullRouteUpperBoundChaos,
+        bestCompetitiveLowerBoundChaos:
+          result.acquisition.portfolioProof.bestCompetitiveLowerBoundChaos,
+        potentialGapChaos: result.acquisition.portfolioProof.potentialGapChaos,
+        unresolvedCompetitiveCandidates:
+          result.acquisition.portfolioProof.unresolvedCompetitiveCandidates,
+        candidateEvidence: (result.acquisition.portfolioProof.candidateEvidence ?? [])
+          .map((candidate) => ({
+            candidateId: candidate.candidateId,
+            label: candidate.label,
+            kind: candidate.kind,
+            fullRouteLowerBoundChaos: candidate.fullRouteLowerBoundChaos,
+            fullRouteUpperBoundChaos: candidate.fullRouteUpperBoundChaos,
+            proofDebtChaos: candidate.proofDebtChaos,
+            status: candidate.status,
+            proofReason: candidate.proofReason,
+            downstreamLowerBoundEvidence: candidate.downstreamLowerBoundEvidence && ({
+              partialGraphLowerBoundChaos:
+                candidate.downstreamLowerBoundEvidence.partialGraphLowerBoundChaos,
+              relaxedTargetProgressLowerBoundChaos:
+                candidate.downstreamLowerBoundEvidence.relaxedTargetProgressLowerBoundChaos,
+              combinedLowerBoundChaos:
+                candidate.downstreamLowerBoundEvidence.combinedLowerBoundChaos,
+              combinationRule: candidate.downstreamLowerBoundEvidence.combinationRule,
+              relaxedTargetProgress: candidate.downstreamLowerBoundEvidence.relaxedTargetProgress && ({
+                version: candidate.downstreamLowerBoundEvidence.relaxedTargetProgress.version,
+                proven: candidate.downstreamLowerBoundEvidence.relaxedTargetProgress.proven,
+                lowerBoundChaos:
+                  candidate.downstreamLowerBoundEvidence.relaxedTargetProgress.lowerBoundChaos,
+                identityHash:
+                  candidate.downstreamLowerBoundEvidence.relaxedTargetProgress.identityHash,
+                cache: candidate.downstreamLowerBoundEvidence.relaxedTargetProgress.cache,
+              }),
+            }),
+          })),
+      }),
+    }),
     fullRouteUsage: result.fullRouteUsage,
     expectedCurrencies: result.expectedCurrencies,
     harvestComparison: compactHarvestComparison(result.harvestComparison),
@@ -41,9 +92,14 @@ export const WORKER_CAPTURE_INIT_SCRIPT = String.raw`
       spec: family.spec && { id: family.spec.id, kind: family.spec.kind },
       status: family.status,
       objectiveEligibility: family.objectiveEligibility,
+      playerRouteName: family.playerRouteName,
       evaluationSource: family.evaluationSource,
       acquisitionStatus: family.acquisitionStatus,
+      acquisitionL: family.acquisitionL,
+      acquisitionU: family.acquisitionU,
       downstreamStatus: family.downstreamStatus,
+      downstreamL: family.downstreamL,
+      downstreamU: family.downstreamU,
       fullRouteStatus: family.fullRouteStatus,
       fullRouteL: family.fullRouteL,
       fullRouteU: family.fullRouteU,
@@ -55,6 +111,10 @@ export const WORKER_CAPTURE_INIT_SCRIPT = String.raw`
       repeatableRerollCertification: family.repeatableRerollCertification,
       retainedStates: family.retainedStates,
       budget: family.budget,
+      duplicateOfMethodFamilyId: family.duplicateOfMethodFamilyId,
+      policyEquivalenceFingerprint: family.policyEquivalenceFingerprint,
+      equivalentToSelectedPolicy: family.equivalentToSelectedPolicy,
+      policyEquivalenceEvidence: family.policyEquivalenceEvidence,
     })),
     paretoAlternatives: (result.paretoAlternatives ?? []).map((entry) => ({
       ...entry,
@@ -86,6 +146,27 @@ export const WORKER_CAPTURE_INIT_SCRIPT = String.raw`
       };
     }
   };
+  const compactProtocolHistory = () => events.map((event) => ({
+    sequence: event.sequence,
+    kind: event.kind,
+    elapsedMs: event.elapsedMs,
+    scriptUrl: event.scriptUrl,
+    message: event.message,
+    payload: event.payload && ({
+      type: event.payload.type,
+      requestId: event.payload.requestId,
+      sequence: event.payload.sequence,
+      completion: clone(event.payload.completion),
+      error: clone(event.payload.error),
+      __qualityLabHistorical: true,
+      __qualityLabCompacted: true,
+    }),
+  }));
+  const persistProtocolHistory = () => {
+    compactCompletedResults();
+    try { sessionStorage.setItem(historyKey, JSON.stringify(compactProtocolHistory())); }
+    catch { /* Evidence stays available in the current document if storage is unavailable. */ }
+  };
   const record = (kind, detail = {}) => {
     events.push({
       sequence: events.length + 1,
@@ -106,6 +187,7 @@ export const WORKER_CAPTURE_INIT_SCRIPT = String.raw`
     value: compactCompletedResults,
     writable: false,
   });
+  window.addEventListener('pagehide', persistProtocolHistory, { capture: true });
 
   const NativeWorker = window.Worker;
   window.Worker = new Proxy(NativeWorker, {

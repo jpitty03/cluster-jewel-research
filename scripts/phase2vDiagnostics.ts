@@ -185,7 +185,7 @@ lines.push(`PASS: compression ratio=${Number(phasePerformance.compressionRatio).
 lines.push('\nV17 — Local-heavy / hosted-lean validation policy');
 const deploy = readFileSync(join(repositoryRoot, '.github', 'workflows', 'deploy.yml'), 'utf8');
 const nightly = readFileSync(join(repositoryRoot, '.github', 'workflows', 'nightly-quality.yml'), 'utf8');
-for (const command of ['npm run build', 'npm run lint', 'git diff --check', 'npm run diagnostic:phase2x:committed']) {
+for (const command of ['npm run build', 'npm run lint', 'git diff --check', 'npm run diagnostic:phase2y:committed']) {
   assert(deploy.includes(command), `Deploy audit lacks ${command}`);
 }
 for (const heavy of ['npm run diagnostic:mature', 'npm run lab:no-fallback-probe', 'npm run lab:release']) {
@@ -194,11 +194,11 @@ for (const heavy of ['npm run diagnostic:mature', 'npm run lab:no-fallback-probe
 assert(!nightly.includes('schedule:'), 'Heavy remote workflow regained a schedule');
 assert(nightly.includes('npm run diagnostic:phase2v'));
 assert(nightly.includes('npm run diagnostic:phase2w'));
-lines.push('PASS: full diagnostics/browser work remains local; automatic deploy runs build/lint/diff plus committed Phase 2X evidence audit, and the heavy remote workflow is manual only.');
+lines.push('PASS: full diagnostics/browser work remains local; automatic deploy runs build/lint/diff plus committed Phase 2Y evidence audit, and the heavy remote workflow is manual only.');
 
 lines.push('\n=== ALL PHASE 2V DIAGNOSTIC GATES PASS ===');
 lines.push(`Real browser: ${report.browser} ${report.browserVersion}; run=${report.runId}; scenario=${report.requestedScenario}`);
-lines.push('Release label/schema: 2X.1 (Phase 2V behavior retained)');
+lines.push('Release label/schema: 2Y.1 (Phase 2V behavior retained)');
 lines.push('Unit tests added/run: NO');
 lines.push('Mechanics probabilities changed: NO');
 lines.push('State identity weakened: NO — quotient is family-scoped and enabled-action audited');

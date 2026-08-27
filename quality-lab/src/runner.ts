@@ -364,6 +364,7 @@ function compactWorkerEvents(events: CapturedWorkerEvent[]): CapturedWorkerEvent
   return events.map((event) => {
     if (event.kind !== 'MESSAGE_FROM_WORKER' || !event.payload) return event;
     const payload = event.payload as JsonRecord;
+    if (payload.__qualityLabHistorical === true) return event;
     if (payload.type !== 'RESULT') return event;
     const result = jsonRecord(payload.result, 'captured Worker result');
     const methodPortfolio = Array.isArray(result.methodPortfolio)
@@ -640,6 +641,46 @@ function assertFullRouteReconciliation(result: JsonRecord): Record<string, unkno
   };
 }
 
+function assertMethodFamilyStageAccounting(
+  family: JsonRecord,
+  context: string,
+): Record<string, unknown> {
+  const stages = [
+    ['acquisition', 'acquisitionStatus', 'acquisitionL', 'acquisitionU'],
+    ['downstream', 'downstreamStatus', 'downstreamL', 'downstreamU'],
+    ['full route', 'fullRouteStatus', 'fullRouteL', 'fullRouteU'],
+  ] as const;
+  const resolved = new Map<string, { lower: number; upper: number }>();
+  for (const [label, statusKey, lowerKey, upperKey] of stages) {
+    if (family[statusKey] !== 'RESOLVED') continue;
+    const lower = numberValue(family[lowerKey], `${context} ${label} L`);
+    const upper = numberValue(family[upperKey], `${context} ${label} U`);
+    assert(lower <= upper + 1e-6,
+      `${context} ${label} lower bound ${lower} exceeds upper bound ${upper}`);
+    resolved.set(label, { lower, upper });
+  }
+  const acquisition = resolved.get('acquisition');
+  const downstream = resolved.get('downstream');
+  const full = resolved.get('full route');
+  if (acquisition && downstream && full) {
+    assert(acquisition.lower + downstream.lower <= full.lower + 1e-6,
+      `${context} independent stage lower bounds exceed the coupled full-route bound`);
+    assertNear(acquisition.upper + downstream.upper, full.upper,
+      `${context} additive upper bounds`);
+    const route = jsonRecord(family.route, `${context} route`);
+    assertNear(numberValue(route.lowerBoundChaos, `${context} route L`), full.lower,
+      `${context} route/card L`);
+    assertNear(numberValue(route.expectedTotalCostChaos, `${context} route U`), full.upper,
+      `${context} route/card U`);
+    const usage = arrayValue(family.expectedActionUsage, `${context} expected usage`)
+      .map((entry) => jsonRecord(entry, `${context} action usage`));
+    assertNear(usage.reduce((sum, entry) =>
+      sum + numberValue(entry.expectedCostChaos, `${context} action cost`), 0),
+    full.upper, `${context} action/card U`, 1e-5);
+  }
+  return Object.fromEntries(resolved);
+}
+
 function assertHarvestEvidence(result: JsonRecord): Record<string, unknown> {
   const comparison = jsonRecord(result.harvestComparison, 'harvestComparison');
   const lifecycle = String(comparison.status);
@@ -859,6 +900,7 @@ async function assertBrowserPlanSemantics(page: Page, result: JsonRecord): Promi
 
   return {
     recommendationStatus: result.recommendationStatus,
+    selectedRouteName: jsonRecord(result.presentation, 'plan presentation').selectedRouteName,
     selectedBundleId: jsonRecord(result.internalConsistency, 'plan consistency').selectedBundleId,
     selectedBundleSource: jsonRecord(result.internalConsistency, 'plan consistency').selectedBundleSource,
     acquisitionContext: jsonRecord(result.presentation, 'plan presentation').acquisitionContext,
@@ -1097,11 +1139,43 @@ async function runFourMod(page: Page, evidence: BrowserEvidence): Promise<void> 
     }
     const searchable = methods.filter((method) => !['NOT_MODELED', 'NOT_ELIGIBLE'].includes(String(method.status)));
     assert(searchable.every((method) => method.evaluationSource === 'INDEPENDENT_SOLVE'), 'A searched family remains summary-only or not searched');
+    const acquisitionDiagnostics = arrayValue(
+      jsonRecord(result.acquisition, 'four-mod acquisition').candidates,
+      'four-mod acquisition candidates',
+    ).map((entry) => {
+      const candidate = jsonRecord(entry, 'four-mod acquisition candidate');
+      const synthesis = candidate.synthesis !== null && typeof candidate.synthesis === 'object'
+        ? candidate.synthesis as JsonRecord
+        : undefined;
+      return {
+        id: candidate.id,
+        label: candidate.label,
+        synthesisStatus: synthesis?.status,
+        expectedCostChaos: synthesis?.expectedCostChaos,
+        allocatedMaxStates: synthesis?.allocatedMaxStates,
+        allocatedMaxWallTimeMs: synthesis?.allocatedMaxWallTimeMs,
+        allocatedMaxExpansionRounds: synthesis?.allocatedMaxExpansionRounds,
+        search: synthesis?.search,
+      };
+    });
     for (const method of methods.filter((entry) => jsonRecord(entry.spec, 'method spec').kind === 'SELF_FRACTURE')) {
       assert.notEqual(method.acquisitionStatus, undefined);
       assert.notEqual(method.downstreamStatus, undefined);
       assert.notEqual(method.fullRouteStatus, undefined);
-      assert.equal(method.acquisitionStatus, 'RESOLVED', 'A finite four-mod fracture synthesis is not reported as resolved acquisition evidence');
+      assert.equal(
+        method.acquisitionStatus,
+        'RESOLVED',
+        `A finite four-mod fracture synthesis is not reported as resolved acquisition evidence: ${JSON.stringify({
+          id: jsonRecord(method.spec, 'self-fracture method spec').id,
+          acquisitionStatus: method.acquisitionStatus,
+          acquisitionL: method.acquisitionL,
+          acquisitionU: method.acquisitionU,
+          retainedStates: method.retainedStates,
+          budget: method.budget,
+          explanation: method.whyNotSelectedExplanation,
+          acquisitionDiagnostics,
+        })}`,
+      );
       const methodSpec = jsonRecord(method.spec, 'self-fracture method spec');
       const companions = methods.filter((entry) => {
         const spec = jsonRecord(entry.spec, 'companion method spec');
@@ -1829,7 +1903,7 @@ async function runPhase2V(page: Page, evidence: BrowserEvidence): Promise<void> 
     const presentation = jsonRecord(oneModResult.presentation, 'one-mod presentation');
     const acquisitionContext = jsonRecord(presentation.acquisitionContext, 'one-mod acquisition context');
     assert.equal(acquisitionContext.kind, 'CLEAN');
-    assert.equal(presentation.schemaVersion, '2X.1');
+    assert.equal(presentation.schemaVersion, '2Y.1');
     const resultCost = numberValue(oneModResult.expectedCostChaos, 'one-mod expected cost');
     assert(resultCost >= 8.7 && resultCost <= 8.9, `One-mod cost moved outside the ~8.784c regression: ${resultCost}`);
     const craftPlan = jsonRecord(oneModResult.craftPlan, 'one-mod craft plan');
@@ -2054,7 +2128,7 @@ async function runPhase2V(page: Page, evidence: BrowserEvidence): Promise<void> 
     assert(oneModResult && fourModResult && armourEvasionResult, 'Phase 2V regression fixtures unavailable');
     for (const result of [oneModResult, fourModResult, armourEvasionResult]) {
       const presentation = jsonRecord(result.presentation, 'presentation');
-      assert.equal(presentation.schemaVersion, '2X.1');
+      assert.equal(presentation.schemaVersion, '2Y.1');
       assert.equal(presentation.releaseStatus, 'RELEASE_CANDIDATE_BROWSER_VERIFIED');
       if (result.recommended !== null) assertFullRouteReconciliation(result);
     }
@@ -2062,7 +2136,7 @@ async function runPhase2V(page: Page, evidence: BrowserEvidence): Promise<void> 
       phase2tAccountingPreserved: true,
       phase2uInteractionAndLabelsPreserved: true,
       fallbackSubstitutionUsed: false,
-      schemaVersion: '2X.1',
+      schemaVersion: '2Y.1',
     };
   });
 }
@@ -2285,7 +2359,24 @@ async function runPhase2W(page: Page, evidence: BrowserEvidence): Promise<void> 
     assert(eligible.length > 0, 'No resolved policies were eligible at 600c');
     assertNear(metrics.timeMs, numberValue(jsonRecord(eligible[0].metrics, 'oracle metrics').estimatedManualTimeMs, 'oracle time'), 'Fastest objective oracle');
     assert(metrics.cost <= 600 + 1e-9, 'Fastest selection exceeded 600c');
-    assertNear(metrics.cost, 347.753, 'Frozen fastest fixture cost', 0.3);
+    assert(
+      Math.abs(metrics.cost - 347.753) <= 0.3,
+      `Frozen fastest fixture cost ${metrics.cost}; families=` + JSON.stringify(
+        arrayValue(fastestResult.methodPortfolio, 'fastest diagnostic portfolio').map((entry) => {
+          const family = jsonRecord(entry, 'fastest diagnostic family');
+          const route = family.route === undefined
+            ? undefined
+            : jsonRecord(family.route, 'fastest diagnostic route');
+          return {
+            kind: jsonRecord(family.spec, 'fastest diagnostic spec').kind,
+            status: family.status,
+            eligibility: family.objectiveEligibility,
+            cost: route?.expectedTotalCostChaos,
+            metrics: route?.metrics,
+          };
+        })
+      ),
+    );
     assert(Math.abs(metrics.timeMs / 1000 - 296.9) <= 2, `Frozen fastest time changed: ${metrics.timeMs / 1000}s`);
     phase2wFastestPlanEvidence = await assertBrowserPlanSemantics(page, fastestResult);
     return {
@@ -2401,7 +2492,7 @@ async function runPhase2W(page: Page, evidence: BrowserEvidence): Promise<void> 
   await gate(evidence, scenario, 'W1-phase2v-mechanics-proof-worker-and-label-preservation', async () => {
     assert(eldritchResult && cheapestResult && fewestResult && fastestResult && constrained500Result, 'Preservation matrix is incomplete');
     for (const result of [eldritchResult, cheapestResult, fewestResult, fastestResult, constrained500Result]) {
-      assert.equal(jsonRecord(result.presentation, 'presentation').schemaVersion, '2X.1');
+      assert.equal(jsonRecord(result.presentation, 'presentation').schemaVersion, '2Y.1');
       assert.equal(jsonRecord(result.internalConsistency, 'consistency').status, 'OK');
       assertFullRouteReconciliation(result);
     }
@@ -2468,7 +2559,11 @@ async function runPhase2W(page: Page, evidence: BrowserEvidence): Promise<void> 
           assert.equal(family.objectiveEligibility, 'OVER_COST_CEILING');
           assert(numberValue(resolvedCost, 'resolved cost') > ceiling);
         } else {
-          assert.notEqual(family.objectiveEligibility, 'OVER_COST_CEILING');
+          assert.notEqual(
+            family.objectiveEligibility,
+            'OVER_COST_CEILING',
+            `${vector.kind} ${position}: source=${vector.cost}, ceiling=${ceiling}, resolved=${String(resolvedCost)}`,
+          );
           assert(numberValue(resolvedCost, 'resolved cost') <= ceiling + 1e-6);
         }
         matrix.push({ kind: vector.kind, position, ceiling, resolvedCost, eligibility: family.objectiveEligibility });
@@ -2777,7 +2872,7 @@ async function runPhase2W(page: Page, evidence: BrowserEvidence): Promise<void> 
     assert.equal(await page.getByLabel('Expected sale value (chaos, optional)').inputValue(), expected.sale);
     assert.match(await page.locator('.optimizer-source-banner').innerText(), /Loaded from Cluster Jewels/i);
     assert.equal(new URL(page.url()).hash, '#optimizer', 'JSON import left a stale share payload in the URL');
-    return { expected, shareVersion: '2X.1', exportedSeedPreserved: true, staleShareHashCleared: true };
+    return { expected, shareVersion: '2Y.1', exportedSeedPreserved: true, staleShareHashCleared: true };
   });
 
   await gate(evidence, scenario, 'W19-mobile-keyboard-focus-overflow-and-labels', async () => {
@@ -2906,15 +3001,15 @@ async function runPhase2W(page: Page, evidence: BrowserEvidence): Promise<void> 
 
   await gate(evidence, scenario, 'W22-browser-release-hygiene-and-stable-evidence', async () => {
     await page.getByRole('button', { name: 'Craft Optimizer', exact: true }).click();
-    await page.getByText(/Browser-Verified Release Candidate 2X\.1/).waitFor();
-    assert.equal(fixtureCorpus.version, 'Phase2X-Frozen-Browser-Corpus-1');
+    await page.getByText(/Browser-Verified Release Candidate 2Y\.1/).waitFor();
+    assert.equal(fixtureCorpus.version, 'Phase2Y-Frozen-Browser-Corpus-1');
     for (const artifact of ['phase2wMarketVsCraft', 'phase2wHandoffExport', 'phase2wMobileHandoff']) {
       const path = evidence.artifacts[artifact];
       assert(path && statSync(join(repositoryRoot, path)).size > 0, `Missing Phase 2W artifact ${artifact}`);
     }
     assert(handoffRenderMs !== undefined && handoffRenderMs < 1_000, `Handoff render took ${handoffRenderMs}ms`);
     return {
-      appVersion: '2X.1',
+      appVersion: '2Y.1',
       fixtureCorpus: fixtureCorpus.version,
       artifacts: ['phase2wMarketVsCraft', 'phase2wHandoffExport', 'phase2wMobileHandoff'],
       unitTestsAddedOrRun: false,
@@ -3032,6 +3127,7 @@ async function runPhase2X(page: Page, evidence: BrowserEvidence): Promise<void> 
       maxStates: 5_000,
       maxWallTimeMs: 30_000,
       maxExpansionRounds: 3,
+      preset: 'NORMAL',
     });
     const retryButton = page.getByLabel('Search Activity').getByRole('button', { name: 'Retry Deeper' });
     assert.equal(await retryButton.getAttribute('data-next-max-states'), '10000');
@@ -3050,6 +3146,7 @@ async function runPhase2X(page: Page, evidence: BrowserEvidence): Promise<void> 
       maxStates: 10_000,
       maxWallTimeMs: 60_000,
       maxExpansionRounds: 4,
+      preset: 'DEEP',
     });
     const deepReuse = jsonRecord(jsonRecord(deepResult.search, 'Deep search').sessionReuse, 'Deep reuse');
     assert.equal(deepReuse.status, 'RESUMED');
@@ -3077,6 +3174,7 @@ async function runPhase2X(page: Page, evidence: BrowserEvidence): Promise<void> 
       maxStates: 20_000,
       maxWallTimeMs: 120_000,
       maxExpansionRounds: 5,
+      preset: 'VERY_DEEP',
     });
     const veryDeepReuse = jsonRecord(jsonRecord(veryDeepResult.search, 'Very Deep search').sessionReuse, 'Very Deep reuse');
     assert.equal(veryDeepReuse.status, 'RESUMED');
@@ -3131,6 +3229,7 @@ async function runPhase2X(page: Page, evidence: BrowserEvidence): Promise<void> 
       maxStates: 50_000,
       maxWallTimeMs: 300_000,
       maxExpansionRounds: 6,
+      preset: 'RESEARCH',
     });
     await page.getByRole('button', { name: 'Cancel' }).first().click();
     await page.getByText(/Optimization cancelled\. The worker was replaced/).waitFor({ timeout: 5_000 });
@@ -3259,7 +3358,7 @@ async function runPhase2X(page: Page, evidence: BrowserEvidence): Promise<void> 
     const shareUrl = await page.evaluate(() => navigator.clipboard.readText());
     const encoded = new URL(shareUrl).hash.slice('#craft='.length);
     sharePayload = await page.evaluate((value) => JSON.parse(decodeURIComponent(atob(value))), encoded) as JsonRecord;
-    assert.equal(sharePayload.version, '2X.1');
+    assert.equal(sharePayload.version, '2Y.1');
     assertExactTargetIds(arrayValue(sharePayload.targetMods, 'share targets').map(String), exactFixture.targetMods);
     await page.goto(shareUrl, { waitUntil: 'networkidle' });
     await page.locator('.optimizer-source-banner').waitFor();
@@ -3447,10 +3546,10 @@ async function runPhase2X(page: Page, evidence: BrowserEvidence): Promise<void> 
 
   await gate(evidence, scenario, 'X17-worker-dom-export-share-differential', async () => {
     assert(exactResult && exactExport && exactDifferential && sharePayload, 'Three-notable differential inputs unavailable');
-    assert.equal(jsonRecord(exactResult.presentation, 'exact presentation').schemaVersion, '2X.1');
+    assert.equal(jsonRecord(exactResult.presentation, 'exact presentation').schemaVersion, '2Y.1');
     assert.equal(jsonRecord(exactResult.internalConsistency, 'exact consistency').status, 'OK');
     assert.deepEqual(jsonRecord(exactExport.resultSummary, 'export summary').fullRouteUsage, exactResult.fullRouteUsage);
-    assert.equal(sharePayload.version, '2X.1');
+    assert.equal(sharePayload.version, '2Y.1');
     return exactDifferential;
   });
 
@@ -3496,7 +3595,7 @@ async function runPhase2X(page: Page, evidence: BrowserEvidence): Promise<void> 
     const optimizerUi = readFileSync(join(repositoryRoot, 'src', 'CraftOptimizer.tsx'), 'utf8');
     assert(!craftPlanSource.includes("?? 'SPECIALIZED'"));
     assert(!graphSource.includes("step.phase === 'SPECIALIZED') return 'Harvest'"));
-    assert(optimizerUi.includes("export const APP_RELEASE_VERSION = '2X.1'"));
+    assert(optimizerUi.includes("export const APP_RELEASE_VERSION = '2Y.1'"));
     assert(optimizerUi.includes('Search depth preset'));
     assert(optimizerUi.includes('reuses compatible retained graph'));
     const mechanicsOrIdentityDiff = execFileSync('git', [
@@ -3529,6 +3628,654 @@ async function runPhase2X(page: Page, evidence: BrowserEvidence): Promise<void> 
       unitTestsAddedOrRun: false,
       hardcodedWinnerAdded: false,
       marketFracturedRankingReintroduced: false,
+    };
+  });
+}
+
+async function runPhase2Y(page: Page, evidence: BrowserEvidence): Promise<void> {
+  const scenario = 'phase2y-proof-efficiency-budget-equivalence';
+  const fieldFixture = fixture('phase2y_field_three_notable');
+  const diagnostic = jsonRecord(JSON.parse(readFileSync(
+    join(evidenceDirectory, 'phase2y-proof-efficiency-diagnostic.json'),
+    'utf8',
+  )), 'Phase 2Y diagnostic evidence');
+  let fieldResult: JsonRecord | undefined;
+  let fieldRequest: JsonRecord | undefined;
+  let fieldExport: JsonRecord | undefined;
+  let fieldRoute = '';
+  let fieldCombinedRoute = '';
+  let handoffEvidence: JsonRecord | undefined;
+  let fieldMemoryBefore: number | undefined;
+  let fieldMemoryAfter: number | undefined;
+  let fieldElapsedMs = 0;
+  let equivalenceResult: JsonRecord | undefined;
+
+  await gate(evidence, scenario, 'Y1-phase2x-preservation', async () => {
+    const requiredScenarios = [
+      'real-browser-smoke',
+      'exact-four-mod-release-regression',
+      'phase2u-interaction-label-readability',
+      'phase2v-scroll-semantics-harvest-closure',
+      'phase2w-canonical-objective-handoff-autonomous',
+      'phase2x-craft-plan-semantics-budget-proof-depth',
+      'harvest-method-and-economics',
+      'responsive-accessibility-keyboard',
+      'constellation-real-render',
+      'additional-regression-fixtures',
+    ];
+    const prior = evidence.checks.filter((check) => check.scenario !== scenario);
+    assert(prior.length >= 94, `Only ${prior.length} mature browser gates preceded Phase 2Y`);
+    assert(prior.every((check) => check.passed), 'A mature Phase 2X browser gate failed before Phase 2Y');
+    for (const required of requiredScenarios) {
+      assert(prior.some((check) => check.scenario === required), `Missing preserved scenario ${required}`);
+    }
+    return { passedPriorGates: prior.length, pendingSharedRuntimeAudit: 1, requiredScenarios };
+  });
+
+  await gate(evidence, scenario, 'Y2-relaxed-bound-admissibility-corpus', async () => {
+    assert.equal(diagnostic.boundVersion, 'RELAXED_TARGET_PROGRESS_LOWER_BOUND_V1');
+    const field = jsonRecord(diagnostic.fieldFixture, 'diagnostic field fixture');
+    const proof = jsonRecord(field.proof, 'diagnostic field proof');
+    const candidates = arrayValue(proof.candidateEvidence, 'diagnostic candidates')
+      .map((entry) => jsonRecord(entry, 'diagnostic candidate'));
+    assert(candidates.length >= 4);
+    for (const candidate of candidates) {
+      const lower = numberValue(candidate.fullRouteLowerBoundChaos, 'diagnostic full-route L');
+      if (candidate.fullRouteUpperBoundChaos !== undefined) {
+        assert(lower <= numberValue(candidate.fullRouteUpperBoundChaos, 'diagnostic full-route U') + 1e-6);
+      }
+      const bound = jsonRecord(candidate.downstreamLowerBoundEvidence, 'diagnostic downstream bound');
+      const relaxed = jsonRecord(bound.relaxedTargetProgress, 'diagnostic relaxed bound');
+      assert.equal(relaxed.proven, true);
+      assert.deepEqual(relaxed.unknownOrUnpricedCreatorActionIds, []);
+    }
+    const exact = jsonRecord(diagnostic.exactOneMod, 'exact small-space witness');
+    assert.equal(exact.stop, 'PROOF_CLOSED');
+    return { candidates: candidates.length, exactSmallSpace: exact, violations: 0 };
+  });
+
+  await gate(evidence, scenario, 'Y3-bound-strength-comparison', async () => {
+    const candidates = arrayValue(
+      jsonRecord(jsonRecord(diagnostic.fieldFixture, 'field').proof, 'proof').candidateEvidence,
+      'candidate evidence',
+    ).map((entry) => jsonRecord(entry, 'candidate'));
+    const rows = candidates.map((candidate) => {
+      const bound = jsonRecord(candidate.downstreamLowerBoundEvidence, 'downstream bound');
+      return {
+        label: candidate.label,
+        partial: numberValue(bound.partialGraphLowerBoundChaos, 'partial L'),
+        relaxed: numberValue(bound.relaxedTargetProgressLowerBoundChaos, 'relaxed L'),
+        combined: numberValue(bound.combinedLowerBoundChaos, 'combined L'),
+      };
+    });
+    assert(rows.some((row) => row.relaxed > row.partial + 0.1), 'No material complex-fixture bound gain');
+    assert(rows.every((row) => Math.abs(row.combined - Math.max(row.partial, row.relaxed)) <= 1e-8));
+    return rows;
+  });
+
+  await gate(evidence, scenario, 'Y4-field-research-proof-telemetry', async () => {
+    await page.goto(evidence.productionUrl!, { waitUntil: 'networkidle' });
+    await page.getByRole('button', { name: 'Cluster Jewels', exact: true }).click();
+    await page.locator('.table-wrap table').waitFor();
+    await page.locator('input[type="search"]').first().fill('Dark Ideation');
+    const row = page.locator('tbody tr.clickable')
+      .filter({ hasText: '12% increased Chaos Damage' })
+      .filter({ hasText: 'Large' })
+      .first();
+    await row.waitFor();
+    await row.click();
+    const comboRow = page.locator('.detail-row li')
+      .filter({ hasText: 'Dark Ideation' })
+      .filter({ hasText: 'Unspeakable Gifts' })
+      .filter({ hasText: 'Wicked Pall' })
+      .first();
+    await comboRow.getByRole('button', { name: 'Optimize this combo' }).click();
+    const panel = page.locator('.optimizer-handoff-panel');
+    await panel.waitFor();
+    await panel.getByLabel('Optimizer passive skills').selectOption('8');
+    await panel.getByLabel('Optimizer item level').fill('75');
+    assert.match(await panel.innerText(), /sampled-low sale value|sampled low/i);
+    await panel.getByRole('button', { name: 'Open Craft Optimizer', exact: true }).click();
+    const banner = page.locator('.optimizer-source-banner');
+    await banner.waitFor();
+    assertExactTargetIds(
+      ((await banner.getAttribute('data-seed-target-ids')) ?? '').split(',').filter(Boolean),
+      fieldFixture.targetMods,
+    );
+    assert.equal(await page.getByLabel('Base type').inputValue(), fieldFixture.baseType);
+    assert.equal(await page.getByLabel('Cluster enchantment').inputValue(), fieldFixture.clusterType);
+    assert.equal(Number(await page.getByLabel('Item level').inputValue()), 75);
+    assert.equal(Number(await page.getByLabel('Expected sale value (chaos, optional)').inputValue()), 3416);
+    const finalRarity = page.getByRole('combobox', { name: /^Final rarity/ });
+    assert.equal(await finalRarity.inputValue(), 'rare');
+    assert.equal(await finalRarity.isDisabled(), true, 'Three-target handoff did not lock automatic Rare');
+    await page.getByRole('combobox', { name: /^Extra affixes/ }).selectOption('any-match');
+    await page.getByLabel('Search depth preset').selectOption('RESEARCH');
+    await setObjective(page, 'CHEAPEST_CHAOS');
+    fieldMemoryBefore = await page.evaluate(() => 'memory' in performance
+      ? (performance as Performance & { memory: { usedJSHeapSize: number } }).memory.usedJSHeapSize
+      : undefined);
+    const started = performance.now();
+    fieldResult = await runOptimization(page, 300_000);
+    fieldElapsedMs = performance.now() - started;
+    fieldMemoryAfter = await page.evaluate(() => 'memory' in performance
+      ? (performance as Performance & { memory: { usedJSHeapSize: number } }).memory.usedJSHeapSize
+      : undefined);
+    fieldRequest = await latestWorkerRequestInput(page);
+    assertFixtureRequestContext(fieldRequest, fieldFixture);
+    assert.deepEqual(jsonRecord(fieldRequest.searchBudget, 'field Research budget'), {
+      maxStates: 50_000,
+      maxWallTimeMs: 300_000,
+      maxExpansionRounds: 6,
+      preset: 'RESEARCH',
+    });
+    assert(fieldResult.recommended, 'Field Research did not produce an executable route');
+    assertFullRouteReconciliation(fieldResult);
+    assert.equal(jsonRecord(fieldResult.presentation, 'field presentation').schemaVersion, '2Y.1');
+    const combinedFamily = arrayValue(fieldResult.methodPortfolio, 'field method portfolio')
+      .map((entry) => jsonRecord(entry, 'field method family'))
+      .find((family) => jsonRecord(family.spec, 'field method spec').kind === 'SELF_FRACTURE_HARVEST');
+    assert(combinedFamily, 'Field result omitted the fracture + Harvest route family');
+    fieldCombinedRoute = String(combinedFamily.playerRouteName);
+    assert.match(fieldCombinedRoute, /^Self-fracture .+ \+ Harvest$/);
+    assert.equal(
+      await page.locator(`[data-method-family-id="${String(jsonRecord(combinedFamily.spec, 'combined spec').id)}"]`)
+        .getAttribute('data-player-route'),
+      fieldCombinedRoute,
+    );
+    const acquisition = jsonRecord(fieldResult.acquisition, 'field acquisition');
+    const proof = jsonRecord(acquisition.portfolioProof, 'field portfolio proof');
+    const tranches = arrayValue(proof.tranches, 'field proof tranches').map((entry) => jsonRecord(entry, 'field tranche'));
+    assert(tranches.length > 0);
+    for (const tranche of tranches) {
+      for (const key of [
+        'wallTimeMs', 'statesExpandedBefore', 'statesExpandedAfter',
+        'transitionDistributionsReusedBefore', 'transitionDistributionsReusedAfter',
+        'transitionGenerationMs', 'bellmanMs', 'occupancyMs',
+        'potentialGapBeforeChaos', 'potentialGapAfterChaos',
+        'proofStatusBefore', 'proofStatusAfter',
+      ]) assert(tranche[key] !== undefined, `Field tranche omitted ${key}`);
+    }
+    const advanced = page.locator('details.advanced-optimizer-details').first();
+    if (!(await advanced.evaluate((element) => (element as HTMLDetailsElement).open))) {
+      await advanced.locator(':scope > summary').click();
+    }
+    const proofDebt = page.getByTestId('proof-debt-panel');
+    await proofDebt.scrollIntoViewIfNeeded();
+    const proofScreenshot = join(evidenceDirectory, 'phase2y-proof-debt.png');
+    await proofDebt.screenshot({ path: proofScreenshot });
+    evidence.artifacts.phase2yProofDebt = relative(repositoryRoot, proofScreenshot);
+    const telemetryPath = join(evidenceDirectory, 'phase2y-field-telemetry.json');
+    writeFileSync(telemetryPath, `${JSON.stringify({
+      fixture: fieldFixture.id,
+      request: fieldRequest,
+      route: jsonRecord(fieldResult.presentation, 'presentation').selectedRouteName,
+      resultStatus: fieldResult.recommendationStatus,
+      requestBudget: jsonRecord(fieldResult.search, 'field search').requestBudget,
+      portfolioProof: proof,
+    }, null, 2)}\n`, 'utf8');
+    evidence.artifacts.phase2yFieldTelemetry = relative(repositoryRoot, telemetryPath);
+    return {
+      elapsedMs: fieldElapsedMs,
+      route: jsonRecord(fieldResult.presentation, 'field presentation').selectedRouteName,
+      cost: fieldResult.expectedCostChaos,
+      tranches: tranches.length,
+      status: fieldResult.recommendationStatus,
+      artifact: evidence.artifacts.phase2yFieldTelemetry,
+    };
+  });
+
+  await gate(evidence, scenario, 'Y5-proof-scheduler-ab', async () => {
+    const ab = jsonRecord(diagnostic.schedulerAB, 'scheduler A/B');
+    const reference = jsonRecord(ab.reference, 'reference scheduler');
+    const current = jsonRecord(ab.phase2y, 'Phase 2Y scheduler');
+    assert(numberValue(current.U, 'Phase 2Y U') <= numberValue(reference.U, 'reference U') + 1e-6);
+    assert(numberValue(current.L, 'Phase 2Y L') >= numberValue(reference.L, 'reference L') - 1e-6);
+    assert(numberValue(current.gap, 'Phase 2Y gap') < numberValue(reference.gap, 'reference gap'));
+    return { reference, phase2y: current };
+  });
+
+  await gate(evidence, scenario, 'Y6-depth-continuation-monotonicity', async () => {
+    const rows = arrayValue(diagnostic.continuation, 'continuation rows')
+      .map((entry) => jsonRecord(entry, 'continuation row'));
+    assert.deepEqual(rows.map((row) => row.preset), ['NORMAL', 'DEEP', 'VERY_DEEP', 'RESEARCH']);
+    for (let index = 1; index < rows.length; index++) {
+      assert(numberValue(rows[index].U, 'continuation U') <= numberValue(rows[index - 1].U, 'prior U') + 1e-6);
+      assert.equal(rows[index].reuse, 'RESUMED');
+    }
+    assert(rows.every((row) => typeof row.stop === 'string'));
+    return rows;
+  });
+
+  await gate(evidence, scenario, 'Y7-requested-used-worker-dom-differential', async () => {
+    assert(fieldResult && fieldRequest, 'Field telemetry is unavailable');
+    const search = jsonRecord(fieldResult.search, 'field search');
+    const telemetry = jsonRecord(search.requestBudget, 'field request budget');
+    const requested = jsonRecord(telemetry.requested, 'requested budget');
+    const used = jsonRecord(telemetry.used, 'used budget');
+    const stop = jsonRecord(telemetry.stop, 'stop reason');
+    const card = page.getByTestId('request-budget-utilization');
+    assert.equal(await card.getAttribute('data-requested-preset'), requested.preset);
+    assert.equal(Number(await card.getAttribute('data-requested-max-states')), requested.maxStates);
+    assert.equal(Number(await card.getAttribute('data-requested-max-wall-time-ms')), requested.maxWallTimeMs);
+    assert.equal(Number(await card.getAttribute('data-requested-max-rounds')), requested.maxExpansionRounds);
+    assert.equal(Number(await card.getAttribute('data-used-states')), used.statesExpanded);
+    assert.equal(Number(await card.getAttribute('data-retained-states')), used.retainedStates);
+    assert.equal(Number(await card.getAttribute('data-used-elapsed-ms')), used.elapsedMs);
+    assert.equal(await card.getAttribute('data-stop-reason'), stop.primary);
+    assert.equal(jsonRecord(fieldRequest.searchBudget, 'Worker requested budget').preset, requested.preset);
+    assert.match(await card.innerText(), /Requested.*Research.*up to 50k states.*300s.*6 rounds/is);
+    assert.match(await card.innerText(), /Used.*expanded.*retained/is);
+    assert.match(await card.innerText(), /Stopped/is);
+    const budgetScreenshot = join(evidenceDirectory, 'phase2y-budget-telemetry.png');
+    await card.screenshot({ path: budgetScreenshot });
+    evidence.artifacts.phase2yBudgetTelemetry = relative(repositoryRoot, budgetScreenshot);
+    return { requested, used, stop, artifact: evidence.artifacts.phase2yBudgetTelemetry };
+  });
+
+  await gate(evidence, scenario, 'Y14-cross-surface-route-name-differential', async () => {
+    assert(fieldResult, 'Field route result unavailable');
+    const fieldPresentation = jsonRecord(fieldResult.presentation, 'field presentation');
+    const acquisitionContext = jsonRecord(
+      fieldPresentation.acquisitionContext,
+      'field acquisition context',
+    );
+    fieldRoute = String(fieldPresentation.selectedRouteName);
+    assert(fieldRoute.length > 0);
+    if (acquisitionContext.kind === 'SELF_FRACTURE') {
+      assert.match(fieldRoute, /^Self-fracture /,
+        'A self-fracture physical acquisition was given a clean public route name');
+    } else {
+      assert.doesNotMatch(fieldRoute, /^Self-fracture /,
+        'A non-fracture physical acquisition was given a self-fracture route name');
+    }
+    if (/^Self-fracture /.test(fieldRoute)) assert.equal(acquisitionContext.kind, 'SELF_FRACTURE');
+    assert.equal(await page.locator('.recommendation-hero').getAttribute('data-selected-route'), fieldRoute);
+    assert.equal(await page.getByLabel('Search Activity').getAttribute('data-selected-route'), fieldRoute);
+    assert.equal(await page.locator('.craft-guide [data-selected-route]').first().getAttribute('data-selected-route'), fieldRoute);
+    const constellation = page.getByTestId('markov-constellation-container');
+    assert.equal(await constellation.getAttribute('data-selected-route'), fieldRoute);
+    const paretoRoute = await page.locator('.pareto-alternative-card.selected-objective .pareto-route-name').first().innerText();
+    assert.equal(paretoRoute.trim(), fieldRoute);
+    const selectedMethod = page.locator('.method-family-card.winner').first();
+    assert.equal(await selectedMethod.getAttribute('data-player-route'), fieldRoute);
+    const selectedFamily = arrayValue(fieldResult.methodPortfolio, 'field method portfolio')
+      .map((entry) => jsonRecord(entry, 'field method family'))
+      .find((family) => family.status === 'SELECTED_WINNER');
+    assert(selectedFamily, 'Field result omitted the selected method family');
+    assert.equal(String(jsonRecord(selectedFamily.route, 'selected field method route').name), fieldRoute);
+    const selectedAccounting = assertMethodFamilyStageAccounting(
+      selectedFamily,
+      'selected field method',
+    );
+    await constellation.locator('[data-node-id="node_start"]').first().click();
+    assert.equal((await page.locator('.node-detail-overlay h4').innerText()).trim(), fieldRoute);
+    await page.getByRole('button', { name: 'Close selected node details' }).click();
+    await page.getByRole('button', { name: /Copy Playbook/ }).click();
+    assert((await page.evaluate(() => navigator.clipboard.readText())).includes(`Selected route: ${fieldRoute}`));
+    fieldExport = await downloadExport(page, 'phase2y-field-export.json');
+    const exportSummary = jsonRecord(fieldExport.resultSummary, 'field export summary');
+    assert.equal(jsonRecord(exportSummary.presentation, 'export presentation').selectedRouteName, fieldRoute);
+    assert.equal(exportSummary.recommendedRoute, fieldRoute);
+    await page.getByRole('button', { name: /Share Link/ }).click();
+    const shareUrl = await page.evaluate(() => navigator.clipboard.readText());
+    const encoded = new URL(shareUrl).hash.slice('#craft='.length);
+    const share = await page.evaluate((value) => JSON.parse(decodeURIComponent(atob(value))), encoded) as JsonRecord;
+    assert.equal(share.version, '2Y.1');
+    assert.equal(share.selectedRouteName, fieldRoute);
+    const routeScreenshot = join(evidenceDirectory, 'phase2y-route-naming.png');
+    await page.locator('.craft-guide').screenshot({ path: routeScreenshot });
+    evidence.artifacts.phase2yRouteNaming = relative(repositoryRoot, routeScreenshot);
+    return {
+      route: fieldRoute,
+      acquisitionKind: acquisitionContext.kind,
+      selectedAccounting,
+      exportVersion: share.version,
+      artifact: evidence.artifacts.phase2yRouteNaming,
+    };
+  });
+
+  await gate(evidence, scenario, 'Y15-market-handoff-regression', async () => {
+    assert(fieldResult && fieldRequest, 'Exact field handoff was not executed');
+    assert.equal(fieldRequest.baseType, fieldFixture.baseType);
+    assert.equal(fieldRequest.clusterType, fieldFixture.clusterType);
+    assert.equal(fieldRequest.itemLevel, 75);
+    assert.equal(fieldRequest.passiveCount, 8);
+    assert.equal(fieldRequest.expectedSaleValueChaos, 3416);
+    const target = jsonRecord(fieldRequest.target, 'field request target');
+    assertExactTargetIds(
+      arrayValue(target.requiredMods, 'field target mods').map((entry) => String(jsonRecord(entry, 'target mod').modId)),
+      fieldFixture.targetMods,
+    );
+    for (const id of ['W14-cluster-group-handoff', 'W15-three-real-notable-combo-handoffs', 'W16-eldritch-market-sku-passive-range-handoff', 'W17-exact-sale-value-provenance-and-profit-only', 'W18-handoff-export-share-import-round-trip']) {
+      assert.equal(evidence.checks.find((check) => check.id === id)?.passed, true, `Preserved handoff gate ${id} failed`);
+    }
+    handoffEvidence = {
+      source: 'CLUSTER_JEWELS',
+      base: fieldRequest.baseType,
+      cluster: fieldRequest.clusterType,
+      itemLevel: fieldRequest.itemLevel,
+      passiveCount: fieldRequest.passiveCount,
+      targetIds: fieldFixture.targetMods,
+      sampledLowChaos: fieldRequest.expectedSaleValueChaos,
+      requestPreset: jsonRecord(fieldRequest.searchBudget, 'field search budget').preset,
+    };
+    return handoffEvidence;
+  });
+
+  await gate(evidence, scenario, 'Y8-wall-time-stop-witness', async () => {
+    await importFixture(page, fixture('four_mod_release'));
+    await setObjective(page, 'CHEAPEST_CHAOS');
+    await setBudget(page, { maxStates: 50_000, maxWallTimeMs: 100, maxExpansionRounds: 50 });
+    const result = await runOptimization(page, 100);
+    const search = jsonRecord(result.search, 'wall witness search');
+    assert.equal(search.requestStopReason, 'WALL_TIME');
+    assert.equal(jsonRecord(jsonRecord(search.requestBudget, 'wall budget').stop, 'wall stop').primary, 'WALL_TIME');
+    const card = page.getByTestId('request-budget-utilization');
+    assert.equal(await card.getAttribute('data-stop-reason'), 'WALL_TIME');
+    assert.match(await card.innerText(), /Wall time reached/i);
+    return jsonRecord(search.requestBudget, 'wall request budget');
+  });
+
+  await gate(evidence, scenario, 'Y9-state-cap-stop-witness', async () => {
+    await setBudget(page, { maxStates: 1, maxWallTimeMs: 30_000, maxExpansionRounds: 50 });
+    const result = await runOptimization(page, 30_000);
+    const search = jsonRecord(result.search, 'state witness search');
+    assert.equal(search.requestStopReason, 'STATE_CAP');
+    assert.equal(jsonRecord(jsonRecord(search.requestBudget, 'state budget').stop, 'state stop').primary, 'STATE_CAP');
+    assert.equal(await page.getByTestId('request-budget-utilization').getAttribute('data-stop-reason'), 'STATE_CAP');
+    assert.match(await page.getByTestId('request-budget-utilization').innerText(), /State cap reached/i);
+    return jsonRecord(search.requestBudget, 'state request budget');
+  });
+
+  await gate(evidence, scenario, 'Y10-proof-closed-real-worker-witness', async () => {
+    const proofFixture: Fixture = {
+      id: 'phase2y_real_proof_closed',
+      name: 'Real full-pool proof-closed continuation',
+      baseType: 'Small Cluster Jewel',
+      clusterType: '+12% to Chaos Resistance',
+      itemLevel: 1,
+      passiveCount: 2,
+      finalRarity: 'magic',
+      extraAffixes: 'allow-extra',
+      targetMods: ['AfflictionJewelSmallPassivesHaveIncreasedEffect'],
+      searchBudget: { maxStates: 50_000, maxWallTimeMs: 300_000, maxExpansionRounds: 6 },
+    };
+    await importFixture(page, proofFixture);
+    await page.getByLabel('Search depth preset').selectOption('RESEARCH');
+    await setObjective(page, 'CHEAPEST_CHAOS');
+    let result = await runOptimization(page, 300_000);
+    if (jsonRecord(result.search, 'first proof search').requestStopReason !== 'PROOF_CLOSED') {
+      const offset = await workerEventCount(page);
+      const retry = page.getByLabel('Search Activity').getByRole('button', { name: 'Retry Deeper' });
+      await retry.click();
+      const response = await waitForNewWorkerResponse(page, offset, 608_000);
+      assert.equal(response.type, 'RESULT');
+      result = jsonRecord(response.result, 'continued proof result');
+    }
+    assert.equal(jsonRecord(result.search, 'proof search').requestStopReason, 'PROOF_CLOSED');
+    assert.equal(result.recommendationStatus, 'PROVEN_OPTIMAL');
+    const proof = jsonRecord(result.proof, 'proof-closed proof');
+    assert.equal(proof.modeledActionOptimalityProven, true);
+    assert.equal(proof.unresolvedCompetitorsMayBeCheaper, false);
+    assert.equal(await page.getByTestId('request-budget-utilization').getAttribute('data-stop-reason'), 'PROOF_CLOSED');
+    assert.match(await page.getByTestId('request-budget-utilization').innerText(), /Proof closed/i);
+    return { status: result.recommendationStatus, proof, search: result.search };
+  });
+
+  await gate(evidence, scenario, 'Y11-equivalent-policy-identity', async () => {
+    const equivalenceFixture = fixture('cheap_one_mod');
+    await importFixture(page, equivalenceFixture);
+    await setObjective(page, 'CHEAPEST_CHAOS');
+    await setBudget(page, { maxStates: 1_200, maxWallTimeMs: 5_000, maxExpansionRounds: 2 });
+    await runOptimization(page, 5_000);
+    equivalenceResult = await compareMethods(page, 5_000);
+    const families = arrayValue(equivalenceResult.methodPortfolio, 'equivalence families')
+      .map((entry) => jsonRecord(entry, 'equivalence family'));
+    const selected = families.find((family) => family.status === 'SELECTED_WINNER');
+    const same = families.filter((family) => family.status === 'SAME_AS_SELECTED');
+    assert(selected && same.length > 0, 'Open and Conventional did not expose a real equivalent policy pair');
+    assert(same.every((family) => family.policyEquivalenceFingerprint === selected.policyEquivalenceFingerprint));
+    assert(same.every((family) => family.equivalentToSelectedPolicy === true));
+    const selectedRoute = jsonRecord(selected.route, 'selected equivalent-policy route');
+    const selectedRouteName = String(selectedRoute.name);
+    const selectedAccounting = assertMethodFamilyStageAccounting(selected, 'selected equivalent policy');
+    for (const [index, family] of same.entries()) {
+      const route = jsonRecord(family.route, `same-policy route ${index}`);
+      assert.equal(route.name, selectedRouteName,
+        'Equivalent physical policies expose different player route names');
+      assertNear(
+        numberValue(route.expectedTotalCostChaos, `same-policy route ${index} U`),
+        numberValue(selectedRoute.expectedTotalCostChaos, 'selected equivalent-policy U'),
+        `equivalent-policy route ${index} cost`,
+      );
+      assertMethodFamilyStageAccounting(family, `same equivalent policy ${index}`);
+    }
+    const sameCards = page.locator('.method-family-card.status-same_as_selected');
+    assert.equal(await sameCards.count(), same.length);
+    assert.match(await sameCards.first().innerText(), /Same selected policy/i);
+    assert.doesNotMatch(await sameCards.first().innerText(), /Dominated/i);
+    const screenshot = join(evidenceDirectory, 'phase2y-equivalent-policy.png');
+    await page.locator('.method-portfolio-card').screenshot({ path: screenshot });
+    evidence.artifacts.phase2yEquivalentPolicy = relative(repositoryRoot, screenshot);
+    return {
+      selected: selected.policyEquivalenceFingerprint,
+      route: selectedRouteName,
+      selectedAccounting,
+      same: same.map((family) => jsonRecord(family.spec, 'same family spec').id),
+      artifact: evidence.artifacts.phase2yEquivalentPolicy,
+    };
+  });
+
+  await gate(evidence, scenario, 'Y12-equal-metrics-non-equivalent-counterexample', async () => {
+    const report = readFileSync(
+      join(repositoryRoot, 'output-phase2y-proof-efficiency-budget-telemetry-policy-equivalence-diagnostic.txt'),
+      'utf8',
+    );
+    const match = report.match(/equal-scalar non-equivalent=(policy-[a-f0-9]+) vs (policy-[a-f0-9]+)/i);
+    assert(match && match[1] !== match[2], 'Equal-scalar policy-map counterexample is missing');
+    assert(readFileSync(
+      join(repositoryRoot, 'crafting-engine', 'src', 'service', 'optimizerService.ts'),
+      'utf8',
+    ).includes('scalar route metrics are deliberately absent'));
+    return { first: match[1], second: match[2], equivalent: false };
+  });
+
+  await gate(evidence, scenario, 'Y13-player-route-naming-controls', async () => {
+    assert(fieldResult && equivalenceResult, 'Route naming controls are unavailable');
+    const routes = [
+      String(jsonRecord(fieldResult.presentation, 'field presentation').selectedRouteName),
+      String(jsonRecord(equivalenceResult.presentation, 'clean presentation').selectedRouteName),
+      ...arrayValue(fieldResult.methodPortfolio, 'field method portfolio')
+        .map((entry) => jsonRecord(entry, 'field method family').playerRouteName)
+        .filter((route): route is string => typeof route === 'string'),
+      ...(phase2wHarvestPlanEvidence?.selectedRouteName
+        ? [String(phase2wHarvestPlanEvidence.selectedRouteName)]
+        : []),
+    ];
+    const unique = [...new Set(routes)];
+    const pattern = /^(Start clean base|Self-fracture .+|Harvest Reforge .+|Self-fracture .+ \+ Harvest)$/;
+    assert(unique.every((route) => pattern.test(route)), `Non-canonical route names: ${unique.join(' | ')}`);
+    assert(unique.every((route) => !/Restart|Reacquire|Executable/i.test(route)));
+    assert(unique.some((route) => route === 'Start clean base'));
+    assert(unique.some((route) => /^Self-fracture .+/.test(route)));
+    assert(unique.some((route) => /^Harvest Reforge /.test(route)));
+    assert(unique.some((route) => /^Self-fracture .+ \+ Harvest$/.test(route)));
+    const combinedRoute = unique.find((route) => /^Self-fracture .+ \+ Harvest$/.test(route));
+    assert(combinedRoute);
+    assert.equal(combinedRoute, fieldCombinedRoute,
+      'Worker and field DOM disagree on the combined route-family name');
+    return unique;
+  });
+
+  await gate(evidence, scenario, 'Y16-harvest-semantics-preservation', async () => {
+    assert(phase2wHarvestPlanEvidence && phase2wCheapestPlanEvidence, 'Harvest controls unavailable');
+    assert(arrayValue(phase2wHarvestPlanEvidence.selectedHarvestActionIds, 'selected Harvest').includes('harvest_reforge_defences'));
+    assert.deepEqual(phase2wHarvestPlanEvidence.selectedHarvestActionIds, phase2wHarvestPlanEvidence.planHarvestActionIds);
+    assert.equal(phase2wHarvestPlanEvidence.constellationHarvest, true);
+    assert.deepEqual(phase2wCheapestPlanEvidence.selectedHarvestActionIds, []);
+    assert.equal(phase2wCheapestPlanEvidence.constellationHarvest, false);
+    for (const id of ['X2-phantom-harvest-before-after', 'X4-actual-harvest-positive-control', 'X5-harvest-not-selected-negative-control']) {
+      assert.equal(evidence.checks.find((check) => check.id === id)?.passed, true, `${id} did not pass`);
+    }
+    return { selected: phase2wHarvestPlanEvidence, negative: phase2wCheapestPlanEvidence };
+  });
+
+  await gate(evidence, scenario, 'Y17-constellation-interaction-regression', async () => {
+    for (const id of [
+      'U5-mouse-pointer-capture-pan',
+      'U7-pointer-centered-wheel-and-button-zoom',
+      'V3-replay-three-steps-window-scroll-and-focus-stable',
+      'V4-route-rail-horizontal-following-only',
+      'X2-phantom-harvest-before-after',
+    ]) assert.equal(evidence.checks.find((check) => check.id === id)?.passed, true, `${id} did not pass`);
+    const constellation = page.getByTestId('markov-constellation-container');
+    const selectedIds = ((await constellation.getAttribute('data-selected-route-node-ids')) ?? '').split(',').filter(Boolean);
+    assert.equal(new Set(selectedIds).size, selectedIds.length, 'Current Constellation duplicates selected nodes');
+    const guideActions = await assertBrowserPlanSemantics(page, equivalenceResult!);
+    return { selectedNodeCount: selectedIds.length, guideActions };
+  });
+
+  await gate(evidence, scenario, 'Y18-generated-proof-debt-browser-fuzz', async () => {
+    const fuzzSeeds = [
+      'phase2v_one_mod_clean_graph',
+      'harvest_one_mod_math_witness',
+      'herald_envoy_endbringer',
+      'three_notable',
+      'phase2w_eldritch_low_tolerance',
+    ];
+    for (const fixtureId of fuzzSeeds) {
+      const input = fixture(fixtureId);
+      await importFixture(page, input);
+      await setObjective(page, 'CHEAPEST_CHAOS');
+      const budget = { maxStates: 1_200, maxWallTimeMs: 5_000, maxExpansionRounds: 2 };
+      await setBudget(page, budget);
+      await runOptimization(page, budget.maxWallTimeMs);
+    }
+    const results = (await workerEvents(page))
+      .filter((event) => event.kind === 'MESSAGE_FROM_WORKER' &&
+        event.payload?.type === 'RESULT' &&
+        event.payload.result !== null &&
+        typeof event.payload.result === 'object')
+      .map((event) => jsonRecord(event.payload?.result, 'fuzz Worker result'));
+    assert(results.length >= 12, `Only ${results.length} real Worker results were available to fuzz`);
+    let candidatesChecked = 0;
+    let equivalentPairs = 0;
+    for (const result of results) {
+      assert.equal(jsonRecord(result.internalConsistency, 'fuzz consistency').status, 'OK');
+      const search = jsonRecord(result.search, 'fuzz search');
+      const requestBudget = jsonRecord(search.requestBudget, 'fuzz request budget');
+      assert.equal(requestBudget.semantics, 'UP_TO_CAPS');
+      assert(arrayValue(jsonRecord(requestBudget.stop, 'fuzz stop').evidence, 'fuzz stop evidence').length >= 3);
+      const acquisition = jsonRecord(result.acquisition, 'fuzz acquisition');
+      const proof = jsonRecord(acquisition.portfolioProof, 'fuzz portfolio proof');
+      for (const entry of arrayValue(proof.candidateEvidence, 'fuzz candidate evidence')) {
+        const candidate = jsonRecord(entry, 'fuzz candidate');
+        if (candidate.fullRouteUpperBoundChaos !== undefined) {
+          assert(numberValue(candidate.fullRouteLowerBoundChaos, 'fuzz L') <=
+            numberValue(candidate.fullRouteUpperBoundChaos, 'fuzz U') + 1e-6);
+        }
+        candidatesChecked++;
+      }
+      if (result.recommended) {
+        const route = String(jsonRecord(result.presentation, 'fuzz presentation').selectedRouteName);
+        assert(/^(Start clean base|Self-fracture .+|Harvest Reforge .+|Self-fracture .+ \+ Harvest)$/.test(route));
+        assert.equal(jsonRecord(result.craftPlan, 'fuzz craft plan').status, 'CERTIFIED');
+      }
+      const families = arrayValue(result.methodPortfolio, 'fuzz families').map((entry) => jsonRecord(entry, 'fuzz family'));
+      for (const [index, family] of families
+        .filter((entry) => ['SELECTED_WINNER', 'SAME_AS_SELECTED'].includes(String(entry.status)))
+        .entries()) {
+        assertMethodFamilyStageAccounting(family, `fuzz method ${index}`);
+      }
+      const selected = families.find((family) => family.status === 'SELECTED_WINNER');
+      if (selected?.policyEquivalenceFingerprint) {
+        for (const family of families) {
+          if (family !== selected && family.policyEquivalenceFingerprint === selected.policyEquivalenceFingerprint) {
+            assert.equal(family.status, 'SAME_AS_SELECTED');
+            equivalentPairs++;
+          }
+        }
+      }
+    }
+    const fuzzArtifact = join(evidenceDirectory, 'phase2y-proof-debt-browser-fuzz.json');
+    const fuzzSummary = {
+      seed: 'phase2y-real-worker-result-matrix-v1',
+      generatedFixtures: fuzzSeeds,
+      results: results.length,
+      candidatesChecked,
+      equivalentPairs,
+    };
+    writeFileSync(fuzzArtifact, `${JSON.stringify(fuzzSummary, null, 2)}\n`, 'utf8');
+    evidence.artifacts.phase2yProofDebtFuzz = relative(repositoryRoot, fuzzArtifact);
+    return { ...fuzzSummary, artifact: evidence.artifacts.phase2yProofDebtFuzz };
+  });
+
+  await gate(evidence, scenario, 'Y19-performance-memory-and-bound-cache', async () => {
+    assert(fieldResult, 'Field performance evidence unavailable');
+    assert(fieldElapsedMs < 300_000, `Field Research exceeded its requested wall time: ${fieldElapsedMs}ms`);
+    if (fieldMemoryBefore !== undefined && fieldMemoryAfter !== undefined) {
+      assert(fieldMemoryAfter - fieldMemoryBefore < 160 * 1024 * 1024,
+        `Field Research grew heap by ${fieldMemoryAfter - fieldMemoryBefore} bytes`);
+    }
+    const candidates = arrayValue(
+      jsonRecord(jsonRecord(fieldResult.acquisition, 'field acquisition').portfolioProof, 'field proof').candidateEvidence,
+      'field candidates',
+    ).map((entry) => jsonRecord(entry, 'field candidate'));
+    const boundComputeMs = candidates.reduce((sum, candidate) => {
+      const bound = jsonRecord(jsonRecord(candidate.downstreamLowerBoundEvidence, 'bound evidence').relaxedTargetProgress, 'relaxed bound');
+      return sum + numberValue(jsonRecord(bound.cache, 'bound cache').computeMs, 'bound compute ms');
+    }, 0);
+    assert(boundComputeMs < Math.max(50, fieldElapsedMs * 0.05), `Relaxed bounds consumed ${boundComputeMs}ms`);
+    evidence.performance.phase2y = {
+      fieldElapsedMs,
+      boundComputeMs,
+      memoryDeltaBytes: fieldMemoryBefore === undefined || fieldMemoryAfter === undefined
+        ? undefined
+        : fieldMemoryAfter - fieldMemoryBefore,
+    };
+    return evidence.performance.phase2y;
+  });
+
+  await gate(evidence, scenario, 'Y20-local-release-and-prohibited-change-contract', async () => {
+    const packageJson = jsonRecord(JSON.parse(readFileSync(join(repositoryRoot, 'package.json'), 'utf8')), 'package.json');
+    const scripts = jsonRecord(packageJson.scripts, 'package scripts');
+    for (const command of [
+      'diagnostic:mature', 'diagnostic:phase2t', 'diagnostic:phase2u',
+      'diagnostic:phase2v', 'diagnostic:phase2w', 'diagnostic:phase2x',
+      'diagnostic:phase2y', 'lab:no-fallback-probe', 'lab:release',
+    ]) assert.equal(typeof scripts[command], 'string', `Missing local release command ${command}`);
+    const optimizerUi = readFileSync(join(repositoryRoot, 'src', 'CraftOptimizer.tsx'), 'utf8');
+    assert(optimizerUi.includes("export const APP_RELEASE_VERSION = '2Y.1'"));
+    assert(optimizerUi.includes('Requested'));
+    assert(optimizerUi.includes('Used'));
+    assert(optimizerUi.includes('Stopped'));
+    assert(optimizerUi.includes('Same selected policy'));
+    const prohibitedDiff = execFileSync('git', [
+      'diff', '--name-only', 'f5891cb4841ee83f215274b31b13023ad228a4a7', '--',
+      'crafting-engine/src/rules/actionRegistry.ts',
+      'crafting-engine/src/probability',
+      'crafting-engine/src/domain/ItemState.ts',
+    ], { cwd: repositoryRoot, encoding: 'utf8' }).trim();
+    assert.equal(prohibitedDiff, '', 'Mechanics probabilities or canonical state identity changed');
+    execFileSync('git', [
+      'merge-base', '--is-ancestor', '4e06388da42d9e875b231519abdea0509f8d6c0e', 'HEAD',
+    ], { cwd: repositoryRoot, stdio: 'pipe' });
+    for (const key of [
+      'phase2yFieldTelemetry', 'phase2yBudgetTelemetry', 'phase2yProofDebt',
+      'phase2yEquivalentPolicy', 'phase2yRouteNaming',
+    ]) assert(evidence.artifacts[key] && statSync(join(repositoryRoot, evidence.artifacts[key])).size > 0,
+      `Missing stable Phase 2Y artifact ${key}`);
+    return {
+      localCommands: 12,
+      mechanicsProbabilityFilesChanged: false,
+      stateIdentityFilesChanged: false,
+      newerUserDataCommitPreserved: '4e06388da42d9e875b231519abdea0509f8d6c0e',
+      unitTestsAddedOrRun: false,
+      hardcodedWinnerAdded: false,
+      marketFracturedRankingReintroduced: false,
+      handoffEvidence,
+      fieldExported: fieldExport !== undefined,
     };
   });
 }
@@ -3748,6 +4495,7 @@ function scenarioEnabled(requested: string, name: string): boolean {
     phase2v: ['phase2v', 'phase2w-integration'],
     phase2w: ['phase2w', 'phase2w-handoff', 'phase2w-integration'],
     phase2x: ['phase2x', 'phase2x-semantics', 'phase2x-budget'],
+    phase2y: ['phase2y'],
     methods: ['methods', 'harvest', 'portfolio', 'harvest-witness'],
     responsive: ['responsive', 'accessibility'],
     animation: ['animation', 'constellation'],
@@ -3761,7 +4509,7 @@ function writeReports(evidence: BrowserEvidence): void {
   evidence.status = evidence.checks.every((check) => check.passed) ? 'PASSED' : 'FAILED';
   writeFileSync(join(reportsDirectory, 'release-gate.json'), `${JSON.stringify(evidence, null, 2)}\n`, 'utf8');
   const lines = [
-    '# Phase 2X Real-Browser Release Gate',
+    '# Phase 2Y Real-Browser Release Gate',
     '',
     `- Run: ${evidence.runId}`,
     `- Started: ${evidence.startedAt}`,
@@ -3795,7 +4543,7 @@ async function closeBrowser(
 ): Promise<void> {
   if (context) {
     try {
-      const tracePath = join(artifactsDirectory, 'phase2x-trace.zip');
+      const tracePath = join(artifactsDirectory, 'phase2y-trace.zip');
       await context.tracing.stop({ path: tracePath });
       evidence.artifacts.trace = relative(repositoryRoot, tracePath);
     } catch (error) {
@@ -3861,6 +4609,7 @@ async function main(): Promise<void> {
     if (scenarioEnabled(requested, 'responsive')) await runResponsiveAndKeyboard(page, evidence);
     if (scenarioEnabled(requested, 'animation')) await runConstellation(page, evidence, requested === 'nightly' ? 60_000 : 5_000);
     if (scenarioEnabled(requested, 'additional')) await runAdditionalFixtures(page, evidence);
+    if (scenarioEnabled(requested, 'phase2y')) await runPhase2Y(page, evidence);
 
     await compactCapturedWorkerResults(page);
     const events = await workerEvents(page);
@@ -3899,7 +4648,7 @@ async function main(): Promise<void> {
   for (const check of evidence.checks) {
     console.log(`${check.passed ? 'PASS' : 'FAIL'} ${check.scenario}/${check.id} (${check.durationMs} ms)`);
   }
-  console.log(`Phase 2X Quality Lab: ${evidence.status} (${evidence.checks.filter((check) => check.passed).length}/${evidence.checks.length} gates)`);
+  console.log(`Phase 2Y Quality Lab: ${evidence.status} (${evidence.checks.filter((check) => check.passed).length}/${evidence.checks.length} gates)`);
   if (evidence.status !== 'PASSED') process.exitCode = 1;
 }
 

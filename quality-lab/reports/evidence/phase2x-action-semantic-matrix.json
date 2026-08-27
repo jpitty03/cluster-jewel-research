@@ -1,6 +1,6 @@
 {
   "seed": "phase2x-action-semantic-matrix-v1",
-  "fixtureCorpus": "Phase2X-Frozen-Browser-Corpus-1",
+  "fixtureCorpus": "Phase2Y-Frozen-Browser-Corpus-1",
   "browserVersion": "151.0.7922.34",
   "cases": [
     {
@@ -8,6 +8,7 @@
       "fixture": "cheap_one_mod",
       "evidence": {
         "recommendationStatus": "BEST_RESOLVED_ACQUISITION_SAFE",
+        "selectedRouteName": "Start clean base",
         "selectedBundleId": "core:clean-open-policy",
         "selectedBundleSource": "OPEN",
         "acquisitionContext": {
@@ -44,6 +45,7 @@
       "fixture": "phase2w_eldritch_low_tolerance",
       "evidence": {
         "recommendationStatus": "PROVISIONAL_RESOLVED",
+        "selectedRouteName": "Start clean base",
         "selectedBundleId": "core:clean-open-policy",
         "selectedBundleSource": "OPEN",
         "acquisitionContext": {
@@ -86,6 +88,7 @@
       "fixture": "phase2x_three_notable_handoff",
       "evidence": {
         "recommendationStatus": "PROVISIONAL_RESOLVED",
+        "selectedRouteName": "Self-fracture Riot Queller",
         "selectedBundleId": "bundle:family_fracture_Riot Queller",
         "selectedBundleSource": "SELF_FRACTURE",
         "acquisitionContext": {
@@ -125,9 +128,7 @@
         "planHarvestActionIds": [],
         "constellationHarvest": false,
         "acquisitionResourceInPlan": false,
-        "unresolvedMethodFamilies": [
-          "family_fracture_Smite the Weak"
-        ]
+        "unresolvedMethodFamilies": []
       }
     },
     {
@@ -135,6 +136,7 @@
       "fixture": "generated-current-data",
       "evidence": {
         "recommendationStatus": "PROVISIONAL_RESOLVED",
+        "selectedRouteName": "Self-fracture Riot Queller",
         "selectedBundleId": "bundle:family_fracture_Riot Queller",
         "selectedBundleSource": "SELF_FRACTURE",
         "acquisitionContext": {
@@ -174,9 +176,7 @@
         "planHarvestActionIds": [],
         "constellationHarvest": false,
         "acquisitionResourceInPlan": false,
-        "unresolvedMethodFamilies": [
-          "family_fracture_Smite the Weak"
-        ]
+        "unresolvedMethodFamilies": []
       }
     },
     {
@@ -184,6 +184,7 @@
       "fixture": "phase2w_armour_evasion_12",
       "evidence": {
         "recommendationStatus": "PROVISIONAL_RESOLVED",
+        "selectedRouteName": "Harvest Reforge Defences",
         "selectedBundleId": "bundle:family_harvest_defences",
         "selectedBundleSource": "HARVEST",
         "acquisitionContext": {
@@ -224,6 +225,7 @@
       "fixture": "harvest_one_mod_math_witness",
       "evidence": {
         "recommendationStatus": "BEST_RESOLVED_ACQUISITION_SAFE",
+        "selectedRouteName": "Start clean base",
         "selectedBundleId": "core:clean-open-policy",
         "selectedBundleSource": "OPEN",
         "acquisitionContext": {
@@ -263,6 +265,7 @@
       "fixture": "phase2w_armour_evasion_12",
       "evidence": {
         "recommendationStatus": "BEST_RESOLVED_ACQUISITION_SAFE",
+        "selectedRouteName": "Start clean base",
         "selectedBundleId": "core:clean-open-policy",
         "selectedBundleSource": "OPEN",
         "acquisitionContext": {
@@ -305,6 +308,7 @@
       "fixture": "phase2w_armour_evasion_12",
       "evidence": {
         "recommendationStatus": "PROVISIONAL_RESOLVED",
+        "selectedRouteName": "Harvest Reforge Defences",
         "selectedBundleId": "bundle:family_harvest_defences",
         "selectedBundleSource": "HARVEST",
         "acquisitionContext": {
@@ -344,7 +348,8 @@
       "case": "fastest-conventional-selected",
       "fixture": "phase2w_armour_evasion_12",
       "evidence": {
-        "recommendationStatus": "PROVISIONAL_RESOLVED",
+        "recommendationStatus": "BEST_RESOLVED_ACQUISITION_SAFE",
+        "selectedRouteName": "Start clean base",
         "selectedBundleId": "bundle:family_conventional",
         "selectedBundleSource": "CONVENTIONAL",
         "acquisitionContext": {
@@ -389,13 +394,14 @@
       "fixture": "four_mod_release",
       "evidence": {
         "recommendationStatus": "PROVISIONAL_RESOLVED",
-        "selectedBundleId": "bundle:family_fracture_AfflictionJewelSmallPassivesGrantES3",
+        "selectedRouteName": "Self-fracture of the Prodigy (T1)",
+        "selectedBundleId": "bundle:family_fracture_AfflictionJewelSmallPassivesGrantInt3",
         "selectedBundleSource": "SELF_FRACTURE",
         "acquisitionContext": {
           "kind": "SELF_FRACTURE",
-          "candidateId": "candidate_2",
+          "candidateId": "candidate_3",
           "methodId": "self-fracture_executable",
-          "targetModId": "AfflictionJewelSmallPassivesGrantES3"
+          "targetModId": "AfflictionJewelSmallPassivesGrantInt3"
         },
         "selectedPhysicalActionIds": [
           "alteration_orb",
@@ -423,7 +429,7 @@
           "clean_base_initial"
         ],
         "excludedVirtualActionIds": [
-          "method:family_fracture_AfflictionJewelSmallPassivesGrantES3"
+          "method:family_fracture_AfflictionJewelSmallPassivesGrantInt3"
         ],
         "unknownActionIds": [],
         "selectedHarvestActionIds": [],
@@ -431,14 +437,9 @@
         "constellationHarvest": false,
         "acquisitionResourceInPlan": false,
         "unresolvedMethodFamilies": [
-          "family_conventional",
-          "family_harvest_defences",
-          "family_fracture_AfflictionJewelSmallPassivesGrantAttributes3",
-          "family_fracture_harvest_AfflictionJewelSmallPassivesGrantAttributes3_defences",
+          "family_fracture_AfflictionJewelSmallPassivesGrantES3",
           "family_fracture_harvest_AfflictionJewelSmallPassivesGrantES3_defences",
-          "family_fracture_AfflictionJewelSmallPassivesGrantInt3",
-          "family_fracture_harvest_AfflictionJewelSmallPassivesGrantInt3_defences",
-          "family_fracture_harvest_AfflictionJewelSmallPassivesHaveIncreasedEffect2_defences"
+          "family_fracture_AfflictionJewelSmallPassivesHaveIncreasedEffect2"
         ]
       }
     },
@@ -447,13 +448,14 @@
       "fixture": "four_mod_release",
       "evidence": {
         "recommendationStatus": "PROVISIONAL_RESOLVED",
-        "selectedBundleId": "bundle:family_fracture_AfflictionJewelSmallPassivesGrantES3",
+        "selectedRouteName": "Self-fracture of the Prodigy (T1)",
+        "selectedBundleId": "bundle:family_fracture_AfflictionJewelSmallPassivesGrantInt3",
         "selectedBundleSource": "SELF_FRACTURE",
         "acquisitionContext": {
           "kind": "SELF_FRACTURE",
-          "candidateId": "candidate_2",
+          "candidateId": "candidate_3",
           "methodId": "self-fracture_executable",
-          "targetModId": "AfflictionJewelSmallPassivesGrantES3"
+          "targetModId": "AfflictionJewelSmallPassivesGrantInt3"
         },
         "selectedPhysicalActionIds": [
           "alteration_orb",
@@ -481,7 +483,7 @@
           "clean_base_initial"
         ],
         "excludedVirtualActionIds": [
-          "method:family_fracture_AfflictionJewelSmallPassivesGrantES3"
+          "method:family_fracture_AfflictionJewelSmallPassivesGrantInt3"
         ],
         "unknownActionIds": [],
         "selectedHarvestActionIds": [],
@@ -489,14 +491,9 @@
         "constellationHarvest": false,
         "acquisitionResourceInPlan": false,
         "unresolvedMethodFamilies": [
-          "family_conventional",
-          "family_harvest_defences",
-          "family_fracture_AfflictionJewelSmallPassivesGrantAttributes3",
-          "family_fracture_harvest_AfflictionJewelSmallPassivesGrantAttributes3_defences",
+          "family_fracture_AfflictionJewelSmallPassivesGrantES3",
           "family_fracture_harvest_AfflictionJewelSmallPassivesGrantES3_defences",
-          "family_fracture_AfflictionJewelSmallPassivesGrantInt3",
-          "family_fracture_harvest_AfflictionJewelSmallPassivesGrantInt3_defences",
-          "family_fracture_harvest_AfflictionJewelSmallPassivesHaveIncreasedEffect2_defences"
+          "family_fracture_AfflictionJewelSmallPassivesHaveIncreasedEffect2"
         ]
       }
     }

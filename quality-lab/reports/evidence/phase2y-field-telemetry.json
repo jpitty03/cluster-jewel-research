@@ -1,0 +1,949 @@
+{
+  "fixture": "phase2y_field_three_notable",
+  "request": {
+    "baseType": "Large Cluster Jewel",
+    "clusterType": "12% increased Chaos Damage",
+    "itemLevel": 75,
+    "passiveCount": 8,
+    "target": {
+      "requiredMods": [
+        {
+          "modId": "Dark Ideation"
+        },
+        {
+          "modId": "Unspeakable Gifts"
+        },
+        {
+          "modId": "Wicked Pall"
+        }
+      ],
+      "requiredRarity": "rare"
+    },
+    "prices": {
+      "currencyRates": {
+        "chaos": 1,
+        "divine": 213.5,
+        "fracturing": 298.6,
+        "annul": 11.66,
+        "exalt": 1.17,
+        "scour": 0.5391,
+        "alteration": 0.1336,
+        "transmutation": 0.005012,
+        "augmentation": 0.03941,
+        "regal": 0.03638,
+        "wildLifeforce": 0.02377,
+        "vividLifeforce": 0.08208,
+        "primalLifeforce": 0.04085
+      }
+    },
+    "marketContext": {
+      "league": "Allflame",
+      "snapshotAt": "2026-08-26T06:31:33.498Z",
+      "snapshotAgeMs": 74736944,
+      "snapshotStale": false,
+      "currencyRatesAt": "2026-08-26T05:36:32.599Z",
+      "currencyRatesAgeMs": 78037843,
+      "currencyRatesStale": false,
+      "stale": false,
+      "cleanBaseQuote": {
+        "status": "UNAVAILABLE",
+        "provenance": "Allflame trade snapshot has no exact clean-base quote for Large Cluster Jewel||12% increased Chaos Damage||8-8||i75; no market value was invented."
+      },
+      "currencyMappings": {
+        "chaos": "chaos",
+        "divine": "divine",
+        "fracturing": "fracturing-orb",
+        "annul": "annul",
+        "exalt": "exalted",
+        "scour": "scour",
+        "alteration": "alt",
+        "transmutation": "transmute",
+        "augmentation": "aug",
+        "regal": "regal",
+        "wildLifeforce": "wild-lifeforce",
+        "vividLifeforce": "vivid-lifeforce",
+        "primalLifeforce": "primal-lifeforce"
+      },
+      "currencyCoverage": {
+        "mappedAndPresent": [
+          "chaos -> chaos",
+          "divine -> divine",
+          "fracturing -> fracturing-orb",
+          "annul -> annul",
+          "exalt -> exalted",
+          "scour -> scour",
+          "alteration -> alt",
+          "transmutation -> transmute",
+          "augmentation -> aug",
+          "regal -> regal",
+          "wildLifeforce -> wild-lifeforce",
+          "vividLifeforce -> vivid-lifeforce",
+          "primalLifeforce -> primal-lifeforce"
+        ],
+        "mappedButMissing": [],
+        "unmappedEngineCurrencies": [
+          "crystallisedRancour"
+        ]
+      }
+    },
+    "expectedSaleValueChaos": 3416,
+    "allowResearchFallbackPrices": true,
+    "objective": {
+      "kind": "CHEAPEST_CHAOS"
+    },
+    "searchBudget": {
+      "maxStates": 50000,
+      "maxWallTimeMs": 300000,
+      "maxExpansionRounds": 6,
+      "preset": "RESEARCH"
+    },
+    "searchIntent": "RECOMMEND",
+    "compareMethodFamilies": false
+  },
+  "route": "Self-fracture Unspeakable Gifts",
+  "resultStatus": "PROVISIONAL_RESOLVED",
+  "requestBudget": {
+    "semantics": "UP_TO_CAPS",
+    "requested": {
+      "preset": "RESEARCH",
+      "maxStates": 50000,
+      "maxWallTimeMs": 300000,
+      "maxExpansionRounds": 6
+    },
+    "used": {
+      "statesExpanded": 35000,
+      "retainedStates": 23610,
+      "elapsedMs": 254202,
+      "expansionRounds": 5,
+      "transitionsGenerated": 428210,
+      "transitionsReused": 4866
+    },
+    "stop": {
+      "primary": "HOST_RESERVE",
+      "secondary": [
+        "STATE_CAP"
+      ],
+      "evidence": [
+        "requested up to 50,000 states / 300000ms / 6 rounds",
+        "used 35,000 expanded; 23,610 retained; 254202ms elapsed",
+        "selected graph limits: state=true; wall=true; round=false",
+        "Expanded states is the request high-water distinct-state graph; retained totals and stage allocations include independent reusable scopes and are intentionally non-additive.",
+        "3 acquisition candidate(s) and 0 objective family/families retain proof debt."
+      ]
+    },
+    "allocations": {
+      "cleanRoute": {
+        "statesExpanded": 5000,
+        "retainedStates": 5000,
+        "wallTimeMs": 4005,
+        "transitionsGenerated": 17250,
+        "transitionsReused": 232,
+        "transitionGenerationMs": 62,
+        "bellmanMs": 2958,
+        "occupancyMs": 288
+      },
+      "fractureAcquisition": {
+        "statesExpanded": 10002,
+        "retainedStates": 10002,
+        "wallTimeMs": 4461,
+        "transitionsGenerated": 30075,
+        "transitionsReused": 657,
+        "transitionGenerationMs": 95,
+        "bellmanMs": 3477,
+        "occupancyMs": 2
+      },
+      "fractureDownstream": {
+        "statesExpanded": 9972,
+        "retainedStates": 9972,
+        "wallTimeMs": 7409,
+        "transitionsGenerated": 33007,
+        "transitionsReused": 278,
+        "transitionGenerationMs": 101,
+        "bellmanMs": 5855,
+        "occupancyMs": 293
+      },
+      "lowerBoundProbes": {
+        "statesExpanded": 3636,
+        "retainedStates": 3636,
+        "wallTimeMs": 3222,
+        "transitionsGenerated": 11512,
+        "transitionsReused": 3602,
+        "transitionGenerationMs": 131,
+        "bellmanMs": 2067,
+        "occupancyMs": 3
+      },
+      "bellmanAndOccupancy": {
+        "bellmanMs": 102767,
+        "occupancyMs": 304
+      },
+      "methodFamilyComparison": {
+        "statesExpanded": 0,
+        "retainedStates": 0,
+        "wallTimeMs": 1,
+        "transitionsGenerated": 0,
+        "transitionsReused": 0,
+        "transitionGenerationMs": 0,
+        "bellmanMs": 0,
+        "occupancyMs": 0
+      },
+      "serializationAndPresentationReserve": {
+        "usedMs": 6,
+        "reservedMs": 1000
+      }
+    }
+  },
+  "portfolioProof": {
+    "status": "BEST_RESOLVED_UNPROVEN",
+    "selectedFullRouteUpperBoundChaos": 1648.1712565453913,
+    "bestCompetitiveLowerBoundChaos": 10.59110275,
+    "potentialGapChaos": 1637.5801538034277,
+    "unresolvedCompetitiveCandidates": 3,
+    "resolvedCompetitiveCandidates": 2,
+    "dominatedCandidates": 0,
+    "candidateEvidence": [
+      {
+        "candidateId": "candidate_0",
+        "label": "Clean Base",
+        "kind": "clean",
+        "acquisitionLowerBoundChaos": 10,
+        "downstreamLowerBoundChaos": 0.59110275,
+        "fullRouteLowerBoundChaos": 10.59110275,
+        "acquisitionUpperBoundChaos": 10,
+        "status": "COMPETITIVE_UNRESOLVED",
+        "proofReason": "CAN_STILL_BEAT_INCUMBENT",
+        "acquisitionModeledOptimal": true,
+        "downstreamModeledOptimal": false,
+        "retainedAcquisitionStates": 0,
+        "retainedDownstreamStates": 5000,
+        "acquisitionTransitionDistributionsGenerated": 0,
+        "downstreamTransitionDistributionsGenerated": 17250,
+        "proofDebtChaos": 1637.5801538034277,
+        "consecutiveNoProofChange": 0,
+        "downstreamLowerBoundEvidence": {
+          "partialGraphLowerBoundChaos": 0.14769488050725946,
+          "relaxedTargetProgressLowerBoundChaos": 0.59110275,
+          "combinedLowerBoundChaos": 0.59110275,
+          "combinationRule": "MAX_OF_ADMISSIBLE_DOWNSTREAM_BOUNDS",
+          "relaxedTargetProgress": {
+            "identityHash": "r2y-30ef6009",
+            "computeMs": 1,
+            "version": "RELAXED_TARGET_PROGRESS_LOWER_BOUND_V1",
+            "proven": true,
+            "lowerBoundChaos": 0.59110275,
+            "scenarioCount": 1,
+            "selectedScenarioIndex": 0,
+            "matchedTargetIds": [],
+            "relaxedState": {
+              "rarity": "normal",
+              "prefixTargetOccupancy": 0,
+              "suffixTargetOccupancy": 0,
+              "fracturedTargetIds": []
+            },
+            "requirements": [
+              {
+                "requirementIdentity": "Dark Ideation|||||",
+                "matchedAtStart": false,
+                "candidateModIds": [
+                  "Dark Ideation"
+                ],
+                "lowerBoundChaos": 0.12119222680412371,
+                "selectedAction": {
+                  "actionId": "transmutation_orb",
+                  "actionName": "Orb of Transmutation",
+                  "actionCostChaos": 0.005012,
+                  "successProbabilityUpperBound": 0.04135578767853336,
+                  "expectedCostLowerBoundChaos": 0.12119222680412371,
+                  "priceConfidence": "known",
+                  "transitionClass": "MAGIC_REROLL"
+                }
+              },
+              {
+                "requirementIdentity": "Unspeakable Gifts|||||",
+                "matchedAtStart": false,
+                "candidateModIds": [
+                  "Unspeakable Gifts"
+                ],
+                "lowerBoundChaos": 0.59110275,
+                "selectedAction": {
+                  "actionId": "transmutation_orb",
+                  "actionName": "Orb of Transmutation",
+                  "actionCostChaos": 0.005012,
+                  "successProbabilityUpperBound": 0.008479067302596715,
+                  "expectedCostLowerBoundChaos": 0.59110275,
+                  "priceConfidence": "known",
+                  "transitionClass": "MAGIC_REROLL"
+                }
+              },
+              {
+                "requirementIdentity": "Wicked Pall|||||",
+                "matchedAtStart": false,
+                "candidateModIds": [
+                  "Wicked Pall"
+                ],
+                "lowerBoundChaos": 0.04538859459459459,
+                "selectedAction": {
+                  "actionId": "transmutation_orb",
+                  "actionName": "Orb of Transmutation",
+                  "actionCostChaos": 0.005012,
+                  "successProbabilityUpperBound": 0.1104242165849499,
+                  "expectedCostLowerBoundChaos": 0.04538859459459459,
+                  "priceConfidence": "known",
+                  "transitionClass": "MAGIC_REROLL"
+                }
+              }
+            ],
+            "enabledActionIds": [
+              "alteration_orb",
+              "annulment_orb",
+              "augmentation_orb",
+              "exalted_orb",
+              "fracturing_orb",
+              "harvest_reforge_chaos",
+              "regal_orb",
+              "scouring_orb",
+              "transmutation_orb"
+            ],
+            "unknownOrUnpricedCreatorActionIds": [],
+            "provenance": "Optimistic target-progress hitting-cost bound from shared eligible weights and action prices. It ignores target loss, cleanup, ordering, and recovery; permits three favorable exclusion blockers; union-bounds every possible affix draw for magic, rare, and Harvest rerolls; and takes the maximum unavoidable single-target hitting cost.",
+            "cache": {
+              "identityHash": "r2y-30ef6009",
+              "hit": false,
+              "computeMs": 1
+            }
+          }
+        }
+      },
+      {
+        "candidateId": "candidate_1",
+        "label": "Dark Ideation",
+        "kind": "self-fracture",
+        "acquisitionLowerBoundChaos": 308.6,
+        "downstreamLowerBoundChaos": 66.05067510167723,
+        "fullRouteLowerBoundChaos": 374.6506751016773,
+        "acquisitionUpperBoundChaos": 1283.011633774707,
+        "downstreamUpperBoundChaos": 1138.248552254292,
+        "fullRouteUpperBoundChaos": 2421.2601860289988,
+        "status": "COMPETITIVE_UNRESOLVED",
+        "proofReason": "CAN_STILL_BEAT_INCUMBENT",
+        "acquisitionModeledOptimal": false,
+        "downstreamModeledOptimal": false,
+        "retainedAcquisitionStates": 3334,
+        "retainedDownstreamStates": 3636,
+        "acquisitionTransitionDistributionsGenerated": 10025,
+        "downstreamTransitionDistributionsGenerated": 11511,
+        "proofDebtChaos": 1273.5205814517503,
+        "lastWorkStage": "DOWNSTREAM_BOUND",
+        "schedulerPriorityScore": 0.22731295283302527,
+        "consecutiveNoProofChange": 0,
+        "downstreamLowerBoundEvidence": {
+          "partialGraphLowerBoundChaos": 66.05067510167723,
+          "relaxedTargetProgressLowerBoundChaos": 0.59110275,
+          "combinedLowerBoundChaos": 66.05067510167723,
+          "combinationRule": "MAX_OF_ADMISSIBLE_DOWNSTREAM_BOUNDS",
+          "relaxedTargetProgress": {
+            "identityHash": "r2y-eb4a8fdc",
+            "computeMs": 1,
+            "version": "RELAXED_TARGET_PROGRESS_LOWER_BOUND_V1",
+            "proven": true,
+            "lowerBoundChaos": 0.59110275,
+            "scenarioCount": 1,
+            "selectedScenarioIndex": 0,
+            "matchedTargetIds": [
+              "Dark Ideation|||||"
+            ],
+            "relaxedState": {
+              "rarity": "magic",
+              "prefixTargetOccupancy": 1,
+              "suffixTargetOccupancy": 0,
+              "fracturedTargetIds": [
+                "Dark Ideation"
+              ]
+            },
+            "requirements": [
+              {
+                "requirementIdentity": "Dark Ideation|||||",
+                "matchedAtStart": true,
+                "candidateModIds": [
+                  "Dark Ideation"
+                ],
+                "lowerBoundChaos": 0
+              },
+              {
+                "requirementIdentity": "Unspeakable Gifts|||||",
+                "matchedAtStart": false,
+                "candidateModIds": [
+                  "Unspeakable Gifts"
+                ],
+                "lowerBoundChaos": 0.59110275,
+                "selectedAction": {
+                  "actionId": "transmutation_orb",
+                  "actionName": "Orb of Transmutation",
+                  "actionCostChaos": 0.005012,
+                  "successProbabilityUpperBound": 0.008479067302596715,
+                  "expectedCostLowerBoundChaos": 0.59110275,
+                  "priceConfidence": "known",
+                  "transitionClass": "MAGIC_REROLL"
+                }
+              },
+              {
+                "requirementIdentity": "Wicked Pall|||||",
+                "matchedAtStart": false,
+                "candidateModIds": [
+                  "Wicked Pall"
+                ],
+                "lowerBoundChaos": 0.04445005405405405,
+                "selectedAction": {
+                  "actionId": "transmutation_orb",
+                  "actionName": "Orb of Transmutation",
+                  "actionCostChaos": 0.005012,
+                  "successProbabilityUpperBound": 0.11275576839355682,
+                  "expectedCostLowerBoundChaos": 0.04445005405405405,
+                  "priceConfidence": "known",
+                  "transitionClass": "MAGIC_REROLL"
+                }
+              }
+            ],
+            "enabledActionIds": [
+              "alteration_orb",
+              "annulment_orb",
+              "augmentation_orb",
+              "exalted_orb",
+              "fracturing_orb",
+              "harvest_reforge_chaos",
+              "regal_orb",
+              "scouring_orb",
+              "transmutation_orb"
+            ],
+            "unknownOrUnpricedCreatorActionIds": [],
+            "provenance": "Optimistic target-progress hitting-cost bound from shared eligible weights and action prices. It ignores target loss, cleanup, ordering, and recovery; permits three favorable exclusion blockers; union-bounds every possible affix draw for magic, rare, and Harvest rerolls; and takes the maximum unavoidable single-target hitting cost.",
+            "cache": {
+              "identityHash": "r2y-eb4a8fdc",
+              "hit": false,
+              "computeMs": 1
+            }
+          }
+        }
+      },
+      {
+        "candidateId": "candidate_2",
+        "label": "Unspeakable Gifts",
+        "kind": "self-fracture",
+        "acquisitionLowerBoundChaos": 308.6,
+        "downstreamLowerBoundChaos": 6.192380000000001,
+        "fullRouteLowerBoundChaos": 314.79238000000004,
+        "acquisitionUpperBoundChaos": 1440.9838929989774,
+        "downstreamUpperBoundChaos": 207.18736355445026,
+        "fullRouteUpperBoundChaos": 1648.1712565534276,
+        "status": "SELECTED",
+        "proofReason": "SELECTED_EXECUTABLE_ROUTE",
+        "acquisitionModeledOptimal": false,
+        "downstreamModeledOptimal": false,
+        "retainedAcquisitionStates": 3334,
+        "retainedDownstreamStates": 1336,
+        "acquisitionTransitionDistributionsGenerated": 10025,
+        "downstreamTransitionDistributionsGenerated": 4247,
+        "proofDebtChaos": 1333.3788765534275,
+        "lastWorkStage": "DOWNSTREAM",
+        "schedulerPriorityScore": 0.19099494591252486,
+        "consecutiveNoProofChange": 0,
+        "downstreamLowerBoundEvidence": {
+          "partialGraphLowerBoundChaos": 6.192380000000001,
+          "relaxedTargetProgressLowerBoundChaos": 0.12119222680412371,
+          "combinedLowerBoundChaos": 6.192380000000001,
+          "combinationRule": "MAX_OF_ADMISSIBLE_DOWNSTREAM_BOUNDS",
+          "relaxedTargetProgress": {
+            "identityHash": "r2y-c67b47d5",
+            "computeMs": 0,
+            "version": "RELAXED_TARGET_PROGRESS_LOWER_BOUND_V1",
+            "proven": true,
+            "lowerBoundChaos": 0.12119222680412371,
+            "scenarioCount": 1,
+            "selectedScenarioIndex": 0,
+            "matchedTargetIds": [
+              "Unspeakable Gifts|||||"
+            ],
+            "relaxedState": {
+              "rarity": "magic",
+              "prefixTargetOccupancy": 0,
+              "suffixTargetOccupancy": 1,
+              "fracturedTargetIds": [
+                "Unspeakable Gifts"
+              ]
+            },
+            "requirements": [
+              {
+                "requirementIdentity": "Dark Ideation|||||",
+                "matchedAtStart": false,
+                "candidateModIds": [
+                  "Dark Ideation"
+                ],
+                "lowerBoundChaos": 0.12119222680412371,
+                "selectedAction": {
+                  "actionId": "transmutation_orb",
+                  "actionName": "Orb of Transmutation",
+                  "actionCostChaos": 0.005012,
+                  "successProbabilityUpperBound": 0.04135578767853336,
+                  "expectedCostLowerBoundChaos": 0.12119222680412371,
+                  "priceConfidence": "known",
+                  "transitionClass": "MAGIC_REROLL"
+                }
+              },
+              {
+                "requirementIdentity": "Unspeakable Gifts|||||",
+                "matchedAtStart": true,
+                "candidateModIds": [
+                  "Unspeakable Gifts"
+                ],
+                "lowerBoundChaos": 0
+              },
+              {
+                "requirementIdentity": "Wicked Pall|||||",
+                "matchedAtStart": false,
+                "candidateModIds": [
+                  "Wicked Pall"
+                ],
+                "lowerBoundChaos": 0.04538859459459459,
+                "selectedAction": {
+                  "actionId": "transmutation_orb",
+                  "actionName": "Orb of Transmutation",
+                  "actionCostChaos": 0.005012,
+                  "successProbabilityUpperBound": 0.1104242165849499,
+                  "expectedCostLowerBoundChaos": 0.04538859459459459,
+                  "priceConfidence": "known",
+                  "transitionClass": "MAGIC_REROLL"
+                }
+              }
+            ],
+            "enabledActionIds": [
+              "alteration_orb",
+              "annulment_orb",
+              "augmentation_orb",
+              "exalted_orb",
+              "fracturing_orb",
+              "harvest_reforge_chaos",
+              "regal_orb",
+              "scouring_orb",
+              "transmutation_orb"
+            ],
+            "unknownOrUnpricedCreatorActionIds": [],
+            "provenance": "Optimistic target-progress hitting-cost bound from shared eligible weights and action prices. It ignores target loss, cleanup, ordering, and recovery; permits three favorable exclusion blockers; union-bounds every possible affix draw for magic, rare, and Harvest rerolls; and takes the maximum unavoidable single-target hitting cost.",
+            "cache": {
+              "identityHash": "r2y-c67b47d5",
+              "hit": false,
+              "computeMs": 0
+            }
+          }
+        }
+      },
+      {
+        "candidateId": "candidate_3",
+        "label": "Wicked Pall",
+        "kind": "self-fracture",
+        "acquisitionLowerBoundChaos": 308.6,
+        "downstreamLowerBoundChaos": 66.70306345515672,
+        "fullRouteLowerBoundChaos": 375.30306345515675,
+        "acquisitionUpperBoundChaos": 1255.6643100849142,
+        "downstreamUpperBoundChaos": 2960.3750112234893,
+        "fullRouteUpperBoundChaos": 4216.0393213084035,
+        "status": "COMPETITIVE_UNRESOLVED",
+        "proofReason": "CAN_STILL_BEAT_INCUMBENT",
+        "acquisitionModeledOptimal": false,
+        "downstreamModeledOptimal": false,
+        "retainedAcquisitionStates": 3334,
+        "retainedDownstreamStates": 3636,
+        "acquisitionTransitionDistributionsGenerated": 10025,
+        "downstreamTransitionDistributionsGenerated": 11511,
+        "proofDebtChaos": 1272.868193098271,
+        "lastWorkStage": "DOWNSTREAM_BOUND",
+        "schedulerPriorityScore": 0.22770877841904094,
+        "consecutiveNoProofChange": 0,
+        "downstreamLowerBoundEvidence": {
+          "partialGraphLowerBoundChaos": 66.70306345515672,
+          "relaxedTargetProgressLowerBoundChaos": 0.59110275,
+          "combinedLowerBoundChaos": 66.70306345515672,
+          "combinationRule": "MAX_OF_ADMISSIBLE_DOWNSTREAM_BOUNDS",
+          "relaxedTargetProgress": {
+            "identityHash": "r2y-9250ca5f",
+            "computeMs": 1,
+            "version": "RELAXED_TARGET_PROGRESS_LOWER_BOUND_V1",
+            "proven": true,
+            "lowerBoundChaos": 0.59110275,
+            "scenarioCount": 1,
+            "selectedScenarioIndex": 0,
+            "matchedTargetIds": [
+              "Wicked Pall|||||"
+            ],
+            "relaxedState": {
+              "rarity": "magic",
+              "prefixTargetOccupancy": 1,
+              "suffixTargetOccupancy": 0,
+              "fracturedTargetIds": [
+                "Wicked Pall"
+              ]
+            },
+            "requirements": [
+              {
+                "requirementIdentity": "Dark Ideation|||||",
+                "matchedAtStart": false,
+                "candidateModIds": [
+                  "Dark Ideation"
+                ],
+                "lowerBoundChaos": 0.11450094845360825,
+                "selectedAction": {
+                  "actionId": "transmutation_orb",
+                  "actionName": "Orb of Transmutation",
+                  "actionCostChaos": 0.005012,
+                  "successProbabilityUpperBound": 0.043772563176895304,
+                  "expectedCostLowerBoundChaos": 0.11450094845360825,
+                  "priceConfidence": "known",
+                  "transitionClass": "MAGIC_REROLL"
+                }
+              },
+              {
+                "requirementIdentity": "Unspeakable Gifts|||||",
+                "matchedAtStart": false,
+                "candidateModIds": [
+                  "Unspeakable Gifts"
+                ],
+                "lowerBoundChaos": 0.59110275,
+                "selectedAction": {
+                  "actionId": "transmutation_orb",
+                  "actionName": "Orb of Transmutation",
+                  "actionCostChaos": 0.005012,
+                  "successProbabilityUpperBound": 0.008479067302596715,
+                  "expectedCostLowerBoundChaos": 0.59110275,
+                  "priceConfidence": "known",
+                  "transitionClass": "MAGIC_REROLL"
+                }
+              },
+              {
+                "requirementIdentity": "Wicked Pall|||||",
+                "matchedAtStart": true,
+                "candidateModIds": [
+                  "Wicked Pall"
+                ],
+                "lowerBoundChaos": 0
+              }
+            ],
+            "enabledActionIds": [
+              "alteration_orb",
+              "annulment_orb",
+              "augmentation_orb",
+              "exalted_orb",
+              "fracturing_orb",
+              "harvest_reforge_chaos",
+              "regal_orb",
+              "scouring_orb",
+              "transmutation_orb"
+            ],
+            "unknownOrUnpricedCreatorActionIds": [],
+            "provenance": "Optimistic target-progress hitting-cost bound from shared eligible weights and action prices. It ignores target loss, cleanup, ordering, and recovery; permits three favorable exclusion blockers; union-bounds every possible affix draw for magic, rare, and Harvest rerolls; and takes the maximum unavoidable single-target hitting cost.",
+            "cache": {
+              "identityHash": "r2y-9250ca5f",
+              "hit": false,
+              "computeMs": 1
+            }
+          }
+        }
+      }
+    ],
+    "tranches": [
+      {
+        "candidateId": "candidate_0",
+        "label": "Clean Base",
+        "stage": "DOWNSTREAM",
+        "reason": "RESOLVE_DOWNSTREAM_AFTER_ACQUISITION",
+        "allocatedMaxStates": 50000,
+        "allocatedMaxWallTimeMs": 4000,
+        "retainedStatesBefore": 0,
+        "retainedStatesAfter": 5000,
+        "transitionDistributionsGeneratedBefore": 0,
+        "transitionDistributionsGeneratedAfter": 17250,
+        "lowerBoundBeforeChaos": 10.59110275,
+        "lowerBoundAfterChaos": 10.59110275,
+        "outcome": "NO_PROOF_CHANGE",
+        "wallTimeMs": 4005,
+        "statesExpandedBefore": 0,
+        "statesExpandedAfter": 5000,
+        "transitionDistributionsReusedBefore": 0,
+        "transitionDistributionsReusedAfter": 232,
+        "transitionGenerationMs": 62,
+        "bellmanMs": 2958,
+        "occupancyMs": 288,
+        "potentialGapBeforeChaos": 1637.5801538034277,
+        "potentialGapAfterChaos": 1637.5801538034277,
+        "proofStatusBefore": "COMPETITIVE_UNRESOLVED",
+        "proofStatusAfter": "COMPETITIVE_UNRESOLVED",
+        "lowerBoundGainPerSecond": 0,
+        "upperBoundImprovementPerSecond": 0,
+        "potentialGapReductionPerSecond": 0,
+        "transitionsGeneratedPerSecond": 4307.116104868914,
+        "consecutiveNoProofChange": 1
+      },
+      {
+        "candidateId": "candidate_2",
+        "label": "Unspeakable Gifts",
+        "stage": "ACQUISITION",
+        "reason": "RESOLVE_ACQUISITION_BEFORE_DOWNSTREAM",
+        "allocatedMaxStates": 5001,
+        "allocatedMaxWallTimeMs": 5000,
+        "retainedStatesBefore": 0,
+        "retainedStatesAfter": 3334,
+        "transitionDistributionsGeneratedBefore": 0,
+        "transitionDistributionsGeneratedAfter": 10025,
+        "lowerBoundBeforeChaos": 308.72119222680413,
+        "lowerBoundAfterChaos": 308.72119222680413,
+        "outcome": "RESOLVED",
+        "wallTimeMs": 1673,
+        "statesExpandedBefore": 0,
+        "statesExpandedAfter": 3334,
+        "transitionDistributionsReusedBefore": 0,
+        "transitionDistributionsReusedAfter": 223,
+        "transitionGenerationMs": 28,
+        "bellmanMs": 1277,
+        "occupancyMs": 1,
+        "potentialGapBeforeChaos": 1339.4500643266235,
+        "potentialGapAfterChaos": 1339.4500643266235,
+        "proofStatusBefore": "COMPETITIVE_UNRESOLVED",
+        "proofStatusAfter": "COMPETITIVE_UNRESOLVED",
+        "lowerBoundGainPerSecond": 0,
+        "upperBoundImprovementPerSecond": 0,
+        "potentialGapReductionPerSecond": 0,
+        "transitionsGeneratedPerSecond": 5992.229527794381,
+        "consecutiveNoProofChange": 0
+      },
+      {
+        "candidateId": "candidate_2",
+        "label": "Unspeakable Gifts",
+        "stage": "DOWNSTREAM",
+        "reason": "RESOLVE_DOWNSTREAM_AFTER_ACQUISITION",
+        "allocatedMaxStates": 50000,
+        "allocatedMaxWallTimeMs": 8000,
+        "retainedStatesBefore": 0,
+        "retainedStatesAfter": 1336,
+        "transitionDistributionsGeneratedBefore": 0,
+        "transitionDistributionsGeneratedAfter": 4247,
+        "lowerBoundBeforeChaos": 308.72119222680413,
+        "lowerBoundAfterChaos": 314.79238000000004,
+        "upperBoundAfterChaos": 1648.1712565534276,
+        "outcome": "RESOLVED",
+        "wallTimeMs": 843,
+        "statesExpandedBefore": 0,
+        "statesExpandedAfter": 1336,
+        "transitionDistributionsReusedBefore": 0,
+        "transitionDistributionsReusedAfter": 12,
+        "transitionGenerationMs": 10,
+        "bellmanMs": 715,
+        "occupancyMs": 2,
+        "potentialGapBeforeChaos": 1339.4500643266235,
+        "potentialGapAfterChaos": 1333.3788765534275,
+        "proofStatusBefore": "COMPETITIVE_UNRESOLVED",
+        "proofStatusAfter": "FULL_ROUTE_RESOLVED",
+        "lowerBoundGainPerSecond": 7.201883479473194,
+        "upperBoundImprovementPerSecond": 0,
+        "potentialGapReductionPerSecond": 7.201883479473328,
+        "transitionsGeneratedPerSecond": 5037.959667852906,
+        "consecutiveNoProofChange": 0
+      },
+      {
+        "candidateId": "candidate_1",
+        "label": "Dark Ideation",
+        "stage": "ACQUISITION",
+        "reason": "RESOLVE_ACQUISITION_BEFORE_DOWNSTREAM",
+        "allocatedMaxStates": 5001,
+        "allocatedMaxWallTimeMs": 5000,
+        "retainedStatesBefore": 0,
+        "retainedStatesAfter": 3334,
+        "transitionDistributionsGeneratedBefore": 0,
+        "transitionDistributionsGeneratedAfter": 10025,
+        "lowerBoundBeforeChaos": 309.19110275,
+        "lowerBoundAfterChaos": 309.19110275,
+        "outcome": "RESOLVED",
+        "wallTimeMs": 1411,
+        "statesExpandedBefore": 0,
+        "statesExpandedAfter": 3334,
+        "transitionDistributionsReusedBefore": 0,
+        "transitionDistributionsReusedAfter": 217,
+        "transitionGenerationMs": 40,
+        "bellmanMs": 1102,
+        "occupancyMs": 0,
+        "potentialGapBeforeChaos": 1338.9801538034276,
+        "potentialGapAfterChaos": 1338.9801538034276,
+        "proofStatusBefore": "COMPETITIVE_UNRESOLVED",
+        "proofStatusAfter": "COMPETITIVE_UNRESOLVED",
+        "lowerBoundGainPerSecond": 0,
+        "upperBoundImprovementPerSecond": 0,
+        "potentialGapReductionPerSecond": 0,
+        "transitionsGeneratedPerSecond": 7104.890148830616,
+        "consecutiveNoProofChange": 0
+      },
+      {
+        "candidateId": "candidate_1",
+        "label": "Dark Ideation",
+        "stage": "DOWNSTREAM",
+        "reason": "RESOLVE_DOWNSTREAM_AFTER_ACQUISITION",
+        "allocatedMaxStates": 50000,
+        "allocatedMaxWallTimeMs": 8000,
+        "retainedStatesBefore": 0,
+        "retainedStatesAfter": 1818,
+        "transitionDistributionsGeneratedBefore": 0,
+        "transitionDistributionsGeneratedAfter": 5755,
+        "lowerBoundBeforeChaos": 309.19110275,
+        "lowerBoundAfterChaos": 314.79238000000004,
+        "upperBoundAfterChaos": 2421.2601860289988,
+        "outcome": "RESOLVED",
+        "wallTimeMs": 1213,
+        "statesExpandedBefore": 0,
+        "statesExpandedAfter": 1818,
+        "transitionDistributionsReusedBefore": 0,
+        "transitionDistributionsReusedAfter": 17,
+        "transitionGenerationMs": 8,
+        "bellmanMs": 1021,
+        "occupancyMs": 2,
+        "potentialGapBeforeChaos": 1338.9801538034276,
+        "potentialGapAfterChaos": 2106.467806028999,
+        "proofStatusBefore": "COMPETITIVE_UNRESOLVED",
+        "proofStatusAfter": "FULL_ROUTE_RESOLVED",
+        "lowerBoundGainPerSecond": 4.617705894476512,
+        "upperBoundImprovementPerSecond": 0,
+        "potentialGapReductionPerSecond": 0,
+        "transitionsGeneratedPerSecond": 4744.435284418796,
+        "consecutiveNoProofChange": 0
+      },
+      {
+        "candidateId": "candidate_3",
+        "label": "Wicked Pall",
+        "stage": "ACQUISITION",
+        "reason": "RESOLVE_ACQUISITION_BEFORE_DOWNSTREAM",
+        "allocatedMaxStates": 5001,
+        "allocatedMaxWallTimeMs": 5000,
+        "retainedStatesBefore": 0,
+        "retainedStatesAfter": 3334,
+        "transitionDistributionsGeneratedBefore": 0,
+        "transitionDistributionsGeneratedAfter": 10025,
+        "lowerBoundBeforeChaos": 309.19110275,
+        "lowerBoundAfterChaos": 309.19110275,
+        "outcome": "RESOLVED",
+        "wallTimeMs": 1377,
+        "statesExpandedBefore": 0,
+        "statesExpandedAfter": 3334,
+        "transitionDistributionsReusedBefore": 0,
+        "transitionDistributionsReusedAfter": 217,
+        "transitionGenerationMs": 27,
+        "bellmanMs": 1098,
+        "occupancyMs": 1,
+        "potentialGapBeforeChaos": 1338.9801538034276,
+        "potentialGapAfterChaos": 1338.9801538034276,
+        "proofStatusBefore": "COMPETITIVE_UNRESOLVED",
+        "proofStatusAfter": "COMPETITIVE_UNRESOLVED",
+        "lowerBoundGainPerSecond": 0,
+        "upperBoundImprovementPerSecond": 0,
+        "potentialGapReductionPerSecond": 0,
+        "transitionsGeneratedPerSecond": 7280.319535221496,
+        "consecutiveNoProofChange": 0
+      },
+      {
+        "candidateId": "candidate_3",
+        "label": "Wicked Pall",
+        "stage": "DOWNSTREAM",
+        "reason": "RESOLVE_DOWNSTREAM_AFTER_ACQUISITION",
+        "allocatedMaxStates": 50000,
+        "allocatedMaxWallTimeMs": 8000,
+        "retainedStatesBefore": 0,
+        "retainedStatesAfter": 1818,
+        "transitionDistributionsGeneratedBefore": 0,
+        "transitionDistributionsGeneratedAfter": 5755,
+        "lowerBoundBeforeChaos": 309.19110275,
+        "lowerBoundAfterChaos": 314.79238000000004,
+        "upperBoundAfterChaos": 4216.0393213084035,
+        "outcome": "RESOLVED",
+        "wallTimeMs": 1348,
+        "statesExpandedBefore": 0,
+        "statesExpandedAfter": 1818,
+        "transitionDistributionsReusedBefore": 0,
+        "transitionDistributionsReusedAfter": 17,
+        "transitionGenerationMs": 21,
+        "bellmanMs": 1161,
+        "occupancyMs": 1,
+        "potentialGapBeforeChaos": 1338.9801538034276,
+        "potentialGapAfterChaos": 3901.2469413084036,
+        "proofStatusBefore": "COMPETITIVE_UNRESOLVED",
+        "proofStatusAfter": "FULL_ROUTE_RESOLVED",
+        "lowerBoundGainPerSecond": 4.1552501854599475,
+        "upperBoundImprovementPerSecond": 0,
+        "potentialGapReductionPerSecond": 0,
+        "transitionsGeneratedPerSecond": 4269.287833827893,
+        "consecutiveNoProofChange": 0
+      },
+      {
+        "candidateId": "candidate_1",
+        "label": "Dark Ideation",
+        "stage": "DOWNSTREAM_BOUND",
+        "reason": "DEEPEST_DOWNSTREAM_PROOF_DEBT",
+        "allocatedMaxStates": 50000,
+        "allocatedMaxWallTimeMs": 12000,
+        "retainedStatesBefore": 0,
+        "retainedStatesAfter": 1818,
+        "transitionDistributionsGeneratedBefore": 0,
+        "transitionDistributionsGeneratedAfter": 5756,
+        "lowerBoundBeforeChaos": 314.79238000000004,
+        "lowerBoundAfterChaos": 374.6506751016773,
+        "upperBoundBeforeChaos": 2421.2601860289988,
+        "upperBoundAfterChaos": 2421.2601860289988,
+        "outcome": "LOWER_BOUND_IMPROVED",
+        "wallTimeMs": 1651,
+        "statesExpandedBefore": 0,
+        "statesExpandedAfter": 1818,
+        "transitionDistributionsReusedBefore": 0,
+        "transitionDistributionsReusedAfter": 1801,
+        "transitionGenerationMs": 84,
+        "bellmanMs": 1061,
+        "occupancyMs": 2,
+        "potentialGapBeforeChaos": 2106.467806028999,
+        "potentialGapAfterChaos": 2046.6095109273215,
+        "proofStatusBefore": "FULL_ROUTE_RESOLVED",
+        "proofStatusAfter": "FULL_ROUTE_RESOLVED",
+        "lowerBoundGainPerSecond": 36.255781406224855,
+        "upperBoundImprovementPerSecond": 0,
+        "potentialGapReductionPerSecond": 36.25578140622496,
+        "transitionsGeneratedPerSecond": 3486.3718958207146,
+        "consecutiveNoProofChange": 0
+      },
+      {
+        "candidateId": "candidate_3",
+        "label": "Wicked Pall",
+        "stage": "DOWNSTREAM_BOUND",
+        "reason": "DEEPEST_DOWNSTREAM_PROOF_DEBT",
+        "allocatedMaxStates": 50000,
+        "allocatedMaxWallTimeMs": 12000,
+        "retainedStatesBefore": 0,
+        "retainedStatesAfter": 1818,
+        "transitionDistributionsGeneratedBefore": 0,
+        "transitionDistributionsGeneratedAfter": 5756,
+        "lowerBoundBeforeChaos": 314.79238000000004,
+        "lowerBoundAfterChaos": 375.30306345515675,
+        "upperBoundBeforeChaos": 4216.0393213084035,
+        "upperBoundAfterChaos": 4216.0393213084035,
+        "outcome": "LOWER_BOUND_IMPROVED",
+        "wallTimeMs": 1571,
+        "statesExpandedBefore": 0,
+        "statesExpandedAfter": 1818,
+        "transitionDistributionsReusedBefore": 0,
+        "transitionDistributionsReusedAfter": 1801,
+        "transitionGenerationMs": 47,
+        "bellmanMs": 1006,
+        "occupancyMs": 1,
+        "potentialGapBeforeChaos": 3901.2469413084036,
+        "potentialGapAfterChaos": 3840.7362578532466,
+        "proofStatusBefore": "FULL_ROUTE_RESOLVED",
+        "proofStatusAfter": "FULL_ROUTE_RESOLVED",
+        "lowerBoundGainPerSecond": 38.51730328144921,
+        "upperBoundImprovementPerSecond": 0,
+        "potentialGapReductionPerSecond": 38.51730328144943,
+        "transitionsGeneratedPerSecond": 3663.9083386378106,
+        "consecutiveNoProofChange": 0
+      }
+    ],
+    "schedulerPolicy": "Proof-debt/productivity scheduling: prioritize non-selected families whose admissible full-route L can beat incumbent U, retained work, stage readiness, and recent proof gain; after two consecutive NO_PROOF_CHANGE tranches switch between executable-policy and relaxed/partial-bound work. Exact mechanics identity is only a stable tie-breaker."
+  }
+}

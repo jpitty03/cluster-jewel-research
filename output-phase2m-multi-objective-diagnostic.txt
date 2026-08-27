@@ -2,7 +2,7 @@ PHASE 2M — COST-CONSTRAINED MULTI-OBJECTIVE & HARVEST TRANSPARENCY DIAGNOSTIC
 
 --- M1: Phase 2L Cheapest Regression ---
 Cheapest Status: BEST_RESOLVED_ACQUISITION_SAFE
-Cheapest Route: Start clean base: Clean Base
+Cheapest Route: Start clean base
 Cheapest Cost: 264.743c
 Cheapest Lower Bound: 5.576c
 M1 PASS: Cheapest objective resolves honest executable policy with valid lower bounds.
@@ -18,8 +18,8 @@ M2 PASS: Exact 3-vector (chaos, actions, time) reconciled from policy occupancy.
 M3 PASS: Virtual acquire menu transition has 0 physical actions; full route accounts for complete synthesis + downstream usage.
 
 --- M4: Wrong-Fracture Effort Accounting ---
-Fracture Route Resolved: Start self-fracture: Glowing (T1)
-Fracture Total Physical Actions: 280.3
+Fracture Route Resolved: Self-fracture of the Prodigy (T1)
+Fracture Total Physical Actions: 338.5
 M4 PASS: Wrong-fracture expected visits, repeated base prep, and recovery loops are fully accounted.
 
 --- M5: Multi-Objective Matrix ---
@@ -36,18 +36,18 @@ Harvest Comparison Explanation: Harvest crafts are enabled and eligible, but the
 M6 PASS: Harvest economic crossover dynamically adapts to lifeforce market pricing.
 
 --- M7: Fracture Cost Guardrail ---
-Constrained Recommended Route: Start clean base: Clean Base
+Constrained Recommended Route: Start clean base
 Constrained Expected Cost: 644.3c
 M7 PASS: Practical cost-constrained objectives strictly enforce the executable cost ceiling.
 
 --- M8: Cheap-Fracture Reversal ---
-Cheap Fracture Winner: Start self-fracture: Glowing (T1)
-Cheap Fracture Cost: 109.75c
+Cheap Fracture Winner: Self-fracture of the Prodigy (T1)
+Cheap Fracture Cost: 112.83c
 M8 PASS: Cheap fracturing orbs naturally reverse route optimality without hardcoded heuristics.
 
 --- M10: Pareto Pruning ---
 Pareto Frontier Count: 1
-  - Start clean base: Clean Base: 264.7c | 2816 actions | Dominates the currently resolved alternatives: 264.7c (2816 actions, 1126.3s)
+  - Start clean base: 264.7c | 2816 actions | Dominates the currently resolved alternatives: 264.7c (2816 actions, 1126.3s)
 M10 PASS: Pareto alternatives are verified non-dominated across (chaos, actions, time).
 
 --- M11: Cost-Ceiling Safety ---

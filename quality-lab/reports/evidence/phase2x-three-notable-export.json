@@ -1,6 +1,6 @@
 {
-  "appVersion": "2X.1",
-  "exportedAt": "2026-08-26T17:48:03.234Z",
+  "appVersion": "2Y.1",
+  "exportedAt": "2026-08-27T03:16:44.916Z",
   "requestInput": {
     "baseType": "Large Cluster Jewel",
     "clusterType": "12% increased Attack Damage while holding a Shield",
@@ -43,10 +43,10 @@
     "marketContext": {
       "league": "Allflame",
       "snapshotAt": "2026-08-26T06:31:33.498Z",
-      "snapshotAgeMs": 40562842,
+      "snapshotAgeMs": 74684862,
       "snapshotStale": false,
       "currencyRatesAt": "2026-08-26T05:36:32.599Z",
-      "currencyRatesAgeMs": 43863741,
+      "currencyRatesAgeMs": 77985761,
       "currencyRatesStale": false,
       "stale": false,
       "cleanBaseQuote": {
@@ -57,7 +57,7 @@
         "listed": 70,
         "sampled": 10,
         "at": "2026-08-26T05:47:03.029Z",
-        "ageMs": 43233311,
+        "ageMs": 77355331,
         "stale": false,
         "provenance": "Allflame sampled low listing for Large Cluster Jewel||12% increased Attack Damage while holding a Shield||8-8||i84; midpoint 50.000c; 10 sampled of 70 listed at 2026-08-26T05:47:03.029Z"
       },
@@ -106,12 +106,13 @@
     "searchBudget": {
       "maxStates": 5000,
       "maxWallTimeMs": 30000,
-      "maxExpansionRounds": 3
+      "maxExpansionRounds": 3,
+      "preset": "NORMAL"
     },
     "searchIntent": "RECOMMEND"
   },
   "optimizerSeedContext": {
-    "id": "cluster-jewels:1787766456326:Large Cluster Jewel||12% increased Attack Damage while holding a Shield:Prodigious Defence + Riot Queller + Smite the Weak",
+    "id": "cluster-jewels:1787800578345:Large Cluster Jewel||12% increased Attack Damage while holding a Shield:Prodigious Defence + Riot Queller + Smite the Weak",
     "source": "CLUSTER_JEWELS",
     "league": "Allflame",
     "baseType": "Large Cluster Jewel",
@@ -143,7 +144,7 @@
   "resultSummary": {
     "expectedCostChaos": 1669.6299301428464,
     "recommendationStatus": "PROVISIONAL_RESOLVED",
-    "recommendedRoute": "Start self-fracture: Riot Queller",
+    "recommendedRoute": "Self-fracture Riot Queller",
     "metrics": {
       "expectedChaosCost": 1669.6299301428464,
       "expectedPhysicalActions": 2275.1572958322936,
@@ -152,9 +153,9 @@
       "effortConfidence": "DEFAULT_APPROXIMATE"
     },
     "presentation": {
-      "schemaVersion": "2X.1",
+      "schemaVersion": "2Y.1",
       "releaseStatus": "RELEASE_CANDIDATE_BROWSER_VERIFIED",
-      "selectedRouteName": "Start self-fracture: Riot Queller",
+      "selectedRouteName": "Self-fracture Riot Queller",
       "selectedRouteStatus": "PROVISIONAL_RESOLVED",
       "proofLabel": "Best among resolved alternatives",
       "pricingLabel": "CURRENT_PRICING",
@@ -172,24 +173,25 @@
         "fullRouteU": 1669.6299301428464
       },
       "timingScopes": {
-        "firstCompletedRoundMs": 138,
-        "firstCertifiedDownstreamPolicyMs": 3063,
-        "firstUsefulExecutableFullRouteMs": 3063
+        "firstCompletedRoundMs": 98,
+        "firstCertifiedDownstreamPolicyMs": 3904,
+        "firstUsefulExecutableFullRouteMs": 3904
       },
       "workScopes": {
-        "portfolioTotalStatesExpanded": 11669,
+        "portfolioTotalStatesExpanded": 10002,
         "portfolioRetainedStates": 19340,
         "selectedPolicyGraphStates": 3002,
         "acquisitionSynthesisStates": 3334,
-        "methodFamilyStates": 24592,
+        "methodFamilyStates": 0,
         "proofBoundStates": 0
       },
       "methodFamilyCounts": {
         "SELECTED_WINNER": 1,
-        "MORE_EXPENSIVE": 2,
+        "SAME_AS_SELECTED": 0,
+        "MORE_EXPENSIVE": 3,
         "DOMINATED": 1,
         "NOT_ELIGIBLE": 0,
-        "UNRESOLVED_AT_BUDGET": 1,
+        "UNRESOLVED_AT_BUDGET": 0,
         "DISABLED": 0,
         "NOT_MODELED": 1,
         "NOT_SEARCHED": 4
@@ -439,55 +441,69 @@
         "onPolicyActionIds": [
           "alteration_orb",
           "augmentation_orb",
+          "clean_base_initial",
           "exalted_orb",
           "regal_orb",
-          "scouring_orb"
+          "scouring_orb",
+          "transmutation_orb"
         ],
         "expectedActionUsage": [
           {
             "actionId": "alteration_orb",
             "actionName": "Orb of Alteration",
-            "expectedCount": 538.6851703776111,
-            "expectedCostChaos": 71.96833876244887
+            "expectedCount": 89877.42470801221,
+            "expectedCostChaos": 12007.623940990356
           },
           {
             "actionId": "exalted_orb",
             "actionName": "Exalted Orb Slam",
-            "expectedCount": 11.044663209828558,
-            "expectedCostChaos": 12.92225595549941
+            "expectedCount": 92.38809217190588,
+            "expectedCostChaos": 108.09406784112983
           },
           {
             "actionId": "scouring_orb",
             "actionName": "Orb of Scouring",
-            "expectedCount": 20.475820745955122,
-            "expectedCostChaos": 11.038514964144438
+            "expectedCount": 175.18918172811175,
+            "expectedCostChaos": 94.44448786962474
           },
           {
             "actionId": "augmentation_orb",
             "actionName": "Orb of Augmentation",
-            "expectedCount": 21.475820745952554,
-            "expectedCostChaos": 0.8463620955979901
+            "expectedCount": 2012.0339686411912,
+            "expectedCostChaos": 79.29425870414934
+          },
+          {
+            "actionId": "clean_base_initial",
+            "actionName": "Initial clean cluster jewel base",
+            "expectedCount": 1,
+            "expectedCostChaos": 46
           },
           {
             "actionId": "regal_orb",
             "actionName": "Regal Orb",
-            "expectedCount": 21.475820745951278,
-            "expectedCostChaos": 0.7812903587377076
+            "expectedCount": 176.1891817283287,
+            "expectedCostChaos": 6.409762431276599
+          },
+          {
+            "actionId": "transmutation_orb",
+            "actionName": "Orb of Transmutation",
+            "expectedCount": 176.18918172810967,
+            "expectedCostChaos": 0.8830601788212856
           }
         ],
         "policyHealth": {
           "selectedPolicyStatus": "FULLY RESOLVED / PROPER / ABSORBING / COST-RECONCILED",
           "proofLevel": "BEST FULLY RESOLVED POLICY FOUND",
-          "onPolicyReachableStates": 319,
+          "onPolicyReachableStates": 965,
           "onPolicyTerminalStates": 15,
           "onPolicyUnresolvedTransitions": 0,
-          "terminalAbsorptionProbability": 1,
+          "terminalAbsorptionProbability": 0.9999999988807918,
           "proper": true,
           "fullyResolved": true,
           "bellmanConverged": true,
           "occupancyConverged": true,
           "costReconciled": true,
-          "reconciliationDifferenceChaos": 1.8390267086942913e-10
+          "reconciliationDifferenceChaos": 0.000014412864402402192
         },
         "sessionIdentity": "phase2j-0b5708fd:family_open",
         "retainedStates": 3002,
@@ -496,7 +512,7 @@
           "maxStates": 5000,
           "maxWallTimeMs": 8000,
           "maxExpansionRounds": 3,
-          "elapsedMs": 5396
+          "elapsedMs": 6302
         }
       },
       {
@@ -593,6 +609,7 @@
         "onPolicyActionIds": [
           "alteration_orb",
           "augmentation_orb",
+          "clean_base_initial",
           "exalted_orb",
           "fracturing_orb",
           "regal_orb",
@@ -608,81 +625,71 @@
             "expectedCostChaos": 1194.400000000111
           },
           {
+            "actionId": "alteration_orb",
+            "actionName": "Orb of Alteration",
+            "expectedCount": 8207.118947533201,
+            "expectedCostChaos": 1096.4710913904357
+          },
+          {
+            "actionId": "exalted_orb",
+            "actionName": "Exalted Orb Slam",
+            "expectedCount": 174.11856852089227,
+            "expectedCostChaos": 203.7187251694439
+          },
+          {
+            "actionId": "scouring_orb",
+            "actionName": "Orb of Scouring",
+            "expectedCount": 324.03078860606996,
+            "expectedCostChaos": 174.6849981375321
+          },
+          {
             "actionId": "restart_reacquire",
             "actionName": "Abandon attempt and reacquire a clean base",
             "expectedCount": 3.0000000000002824,
             "expectedCostChaos": 138.000000000013
           },
           {
-            "actionId": "alteration_orb",
-            "actionName": "Orb of Alteration",
-            "expectedCount": 79.34666666667414,
-            "expectedCostChaos": 10.600714666667663
-          },
-          {
-            "actionId": "exalted_orb",
-            "actionName": "Exalted Orb Slam",
-            "expectedCount": 4.000000000000375,
-            "expectedCostChaos": 4.6800000000004385
+            "actionId": "clean_base_initial",
+            "actionName": "Initial clean cluster jewel base",
+            "expectedCount": 1,
+            "expectedCostChaos": 46
           },
           {
             "actionId": "augmentation_orb",
             "actionName": "Orb of Augmentation",
-            "expectedCount": 21.83666666666871,
-            "expectedCostChaos": 0.8605830333334139
-          },
-          {
-            "actionId": "scouring_orb",
-            "actionName": "Orb of Scouring",
-            "expectedCount": 1.0000000000000941,
-            "expectedCostChaos": 0.5391000000000508
+            "expectedCount": 345.86745527268187,
+            "expectedCostChaos": 13.630636412296393
           },
           {
             "actionId": "regal_orb",
             "actionName": "Regal Orb",
-            "expectedCount": 4.00000000000037,
-            "expectedCostChaos": 0.14552000000001347
+            "expectedCount": 328.0307886059749,
+            "expectedCostChaos": 11.933760089485368
           },
           {
             "actionId": "transmutation_orb",
             "actionName": "Orb of Transmutation",
             "expectedCount": 4.000000000000287,
             "expectedCostChaos": 0.020048000000001436
-          },
-          {
-            "actionId": "alteration_orb",
-            "actionName": "Orb of Alteration",
-            "expectedCount": 8127.772280866528,
-            "expectedCostChaos": 1085.870376723768
-          },
-          {
-            "actionId": "exalted_orb",
-            "actionName": "Exalted Orb Slam",
-            "expectedCount": 170.1185685208919,
-            "expectedCostChaos": 199.03872516944347
-          },
-          {
-            "actionId": "scouring_orb",
-            "actionName": "Orb of Scouring",
-            "expectedCount": 323.03078860606985,
-            "expectedCostChaos": 174.14589813753204
-          },
-          {
-            "actionId": "augmentation_orb",
-            "actionName": "Orb of Augmentation",
-            "expectedCount": 324.0307886060132,
-            "expectedCostChaos": 12.770053378962979
-          },
-          {
-            "actionId": "regal_orb",
-            "actionName": "Regal Orb",
-            "expectedCount": 324.0307886059745,
-            "expectedCostChaos": 11.788240089485354
           }
         ],
+        "policyHealth": {
+          "selectedPolicyStatus": "FULLY RESOLVED / PROPER / ABSORBING / COST-RECONCILED",
+          "proofLevel": "BEST FULLY RESOLVED POLICY FOUND",
+          "onPolicyReachableStates": 319,
+          "onPolicyTerminalStates": 15,
+          "onPolicyUnresolvedTransitions": 0,
+          "terminalAbsorptionProbability": 0.999999999999712,
+          "proper": true,
+          "fullyResolved": true,
+          "bellmanConverged": true,
+          "occupancyConverged": true,
+          "costReconciled": true,
+          "reconciliationDifferenceChaos": 9.012433110910933e-8
+        },
         "sessionIdentity": "phase2j-0b5708fd:family_fracture_Prodigious Defence",
-        "retainedStates": 7086,
-        "transitionDistributionsGenerated": 21757
+        "retainedStates": 4669,
+        "transitionDistributionsGenerated": 19484
       },
       {
         "id": "family_fracture_harvest_Prodigious Defence_attack",
@@ -693,8 +700,8 @@
         "fullRouteStatus": "NOT_SEARCHED",
         "requiredActionObservedOnPolicy": false,
         "onPolicyActionIds": [],
-        "retainedStates": 0,
-        "transitionDistributionsGenerated": 0
+        "retainedStates": 1667,
+        "transitionDistributionsGenerated": 10033
       },
       {
         "id": "family_fracture_Riot Queller",
@@ -707,6 +714,7 @@
         "onPolicyActionIds": [
           "alteration_orb",
           "augmentation_orb",
+          "clean_base_initial",
           "exalted_orb",
           "fracturing_orb",
           "regal_orb",
@@ -724,8 +732,8 @@
           {
             "actionId": "alteration_orb",
             "actionName": "Orb of Alteration",
-            "expectedCount": 1312.0000000055252,
-            "expectedCostChaos": 175.28320000073813
+            "expectedCount": 1850.6851703831362,
+            "expectedCostChaos": 247.251538763187
           },
           {
             "actionId": "restart_reacquire",
@@ -734,69 +742,59 @@
             "expectedCostChaos": 138.0000000005802
           },
           {
-            "actionId": "augmentation_orb",
-            "actionName": "Orb of Augmentation",
-            "expectedCount": 330.0000000013878,
-            "expectedCostChaos": 13.00530000005469
+            "actionId": "clean_base_initial",
+            "actionName": "Initial clean cluster jewel base",
+            "expectedCount": 1,
+            "expectedCostChaos": 46
           },
           {
             "actionId": "exalted_orb",
             "actionName": "Exalted Orb Slam",
-            "expectedCount": 4.000000000016878,
-            "expectedCostChaos": 4.6800000000197475
+            "expectedCount": 15.044663209845435,
+            "expectedCostChaos": 17.602255955519155
+          },
+          {
+            "actionId": "augmentation_orb",
+            "actionName": "Orb of Augmentation",
+            "expectedCount": 351.4758207473403,
+            "expectedCostChaos": 13.851662095652681
           },
           {
             "actionId": "scouring_orb",
             "actionName": "Orb of Scouring",
-            "expectedCount": 1.0000000000042044,
-            "expectedCostChaos": 0.5391000000022667
+            "expectedCount": 21.475820745959325,
+            "expectedCostChaos": 11.577614964146704
           },
           {
             "actionId": "regal_orb",
             "actionName": "Regal Orb",
-            "expectedCount": 4.000000000016876,
-            "expectedCostChaos": 0.14552000000061396
+            "expectedCount": 25.475820745968154,
+            "expectedCostChaos": 0.9268103587383215
           },
           {
             "actionId": "transmutation_orb",
             "actionName": "Orb of Transmutation",
             "expectedCount": 4.00000000001261,
             "expectedCostChaos": 0.020048000000063203
-          },
-          {
-            "actionId": "alteration_orb",
-            "actionName": "Orb of Alteration",
-            "expectedCount": 538.6851703776111,
-            "expectedCostChaos": 71.96833876244887
-          },
-          {
-            "actionId": "exalted_orb",
-            "actionName": "Exalted Orb Slam",
-            "expectedCount": 11.044663209828558,
-            "expectedCostChaos": 12.92225595549941
-          },
-          {
-            "actionId": "scouring_orb",
-            "actionName": "Orb of Scouring",
-            "expectedCount": 20.475820745955122,
-            "expectedCostChaos": 11.038514964144438
-          },
-          {
-            "actionId": "augmentation_orb",
-            "actionName": "Orb of Augmentation",
-            "expectedCount": 21.475820745952554,
-            "expectedCostChaos": 0.8463620955979901
-          },
-          {
-            "actionId": "regal_orb",
-            "actionName": "Regal Orb",
-            "expectedCount": 21.475820745951278,
-            "expectedCostChaos": 0.7812903587377076
           }
         ],
+        "policyHealth": {
+          "selectedPolicyStatus": "FULLY RESOLVED / PROPER / ABSORBING / COST-RECONCILED",
+          "proofLevel": "BEST FULLY RESOLVED POLICY FOUND",
+          "onPolicyReachableStates": 319,
+          "onPolicyTerminalStates": 15,
+          "onPolicyUnresolvedTransitions": 0,
+          "terminalAbsorptionProbability": 1,
+          "proper": true,
+          "fullyResolved": true,
+          "bellmanConverged": true,
+          "occupancyConverged": true,
+          "costReconciled": true,
+          "reconciliationDifferenceChaos": 1.8390267086942913e-10
+        },
         "sessionIdentity": "phase2j-0b5708fd:family_fracture_Riot Queller",
-        "retainedStates": 7086,
-        "transitionDistributionsGenerated": 21757
+        "retainedStates": 6336,
+        "transitionDistributionsGenerated": 19484
       },
       {
         "id": "family_fracture_harvest_Riot Queller_attack",
@@ -807,20 +805,22 @@
         "fullRouteStatus": "NOT_SEARCHED",
         "requiredActionObservedOnPolicy": false,
         "onPolicyActionIds": [],
-        "retainedStates": 0,
-        "transitionDistributionsGenerated": 0
+        "retainedStates": 3334,
+        "transitionDistributionsGenerated": 10033
       },
       {
         "id": "family_fracture_Smite the Weak",
-        "status": "UNRESOLVED_AT_BUDGET",
+        "status": "MORE_EXPENSIVE",
         "evaluationSource": "INDEPENDENT_SOLVE",
         "acquisitionStatus": "RESOLVED",
-        "downstreamStatus": "UNRESOLVED",
-        "fullRouteStatus": "UNRESOLVED",
+        "downstreamStatus": "RESOLVED",
+        "fullRouteStatus": "RESOLVED",
         "requiredActionObservedOnPolicy": true,
         "onPolicyActionIds": [
           "alteration_orb",
+          "annulment_orb",
           "augmentation_orb",
+          "clean_base_initial",
           "exalted_orb",
           "fracturing_orb",
           "regal_orb",
@@ -836,40 +836,52 @@
             "expectedCostChaos": 1194.4000000000756
           },
           {
+            "actionId": "alteration_orb",
+            "actionName": "Orb of Alteration",
+            "expectedCount": 2955.3533689689443,
+            "expectedCostChaos": 394.835210094251
+          },
+          {
             "actionId": "restart_reacquire",
             "actionName": "Abandon attempt and reacquire a clean base",
             "expectedCount": 3.0000000000001967,
             "expectedCostChaos": 138.00000000000904
           },
           {
-            "actionId": "alteration_orb",
-            "actionName": "Orb of Alteration",
-            "expectedCount": 100.3333333333393,
-            "expectedCostChaos": 13.40453333333415
-          },
-          {
             "actionId": "exalted_orb",
             "actionName": "Exalted Orb Slam",
-            "expectedCount": 4.000000000000252,
-            "expectedCostChaos": 4.680000000000295
-          },
-          {
-            "actionId": "augmentation_orb",
-            "actionName": "Orb of Augmentation",
-            "expectedCount": 27.083333333335062,
-            "expectedCostChaos": 1.067354166666735
+            "expectedCount": 88.68934680260257,
+            "expectedCostChaos": 103.76653575904494
           },
           {
             "actionId": "scouring_orb",
             "actionName": "Orb of Scouring",
-            "expectedCount": 1.0000000000000655,
-            "expectedCostChaos": 0.5391000000000353
+            "expectedCount": 153.53192706817265,
+            "expectedCostChaos": 82.7690618824515
+          },
+          {
+            "actionId": "annulment_orb",
+            "actionName": "Orb of Annulment",
+            "expectedCount": 5.523416747638768,
+            "expectedCostChaos": 64.40303927746801
+          },
+          {
+            "actionId": "clean_base_initial",
+            "actionName": "Initial clean cluster jewel base",
+            "expectedCount": 1,
+            "expectedCostChaos": 46
+          },
+          {
+            "actionId": "augmentation_orb",
+            "actionName": "Orb of Augmentation",
+            "expectedCount": 180.61526040143343,
+            "expectedCostChaos": 7.118047412420491
           },
           {
             "actionId": "regal_orb",
             "actionName": "Regal Orb",
-            "expectedCount": 4.000000000000254,
-            "expectedCostChaos": 0.14552000000000925
+            "expectedCount": 157.5319270680647,
+            "expectedCostChaos": 5.731011506736194
           },
           {
             "actionId": "transmutation_orb",
@@ -878,9 +890,23 @@
             "expectedCostChaos": 0.020048000000001023
           }
         ],
+        "policyHealth": {
+          "selectedPolicyStatus": "FULLY RESOLVED / PROPER / ABSORBING / COST-RECONCILED",
+          "proofLevel": "BEST FULLY RESOLVED POLICY FOUND",
+          "onPolicyReachableStates": 629,
+          "onPolicyTerminalStates": 15,
+          "onPolicyUnresolvedTransitions": 0,
+          "terminalAbsorptionProbability": 1,
+          "proper": true,
+          "fullyResolved": true,
+          "bellmanConverged": true,
+          "occupancyConverged": true,
+          "costReconciled": true,
+          "reconciliationDifferenceChaos": 7.909056876087561e-8
+        },
         "sessionIdentity": "phase2j-0b5708fd:family_fracture_Smite the Weak",
-        "retainedStates": 4084,
-        "transitionDistributionsGenerated": 17700
+        "retainedStates": 5001,
+        "transitionDistributionsGenerated": 20888
       },
       {
         "id": "family_fracture_harvest_Smite the Weak_attack",
@@ -891,8 +917,8 @@
         "fullRouteStatus": "NOT_SEARCHED",
         "requiredActionObservedOnPolicy": false,
         "onPolicyActionIds": [],
-        "retainedStates": 0,
-        "transitionDistributionsGenerated": 0
+        "retainedStates": 1667,
+        "transitionDistributionsGenerated": 10033
       },
       {
         "id": "family_chaos_reforge",

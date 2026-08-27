@@ -13,12 +13,14 @@ const VALID_BASE_TYPES = new Set<string>([
 ]);
 
 export interface CraftSharePayload {
-  version: '2R.1' | '2W.1' | '2X.1';
+  version: '2R.1' | '2W.1' | '2X.1' | '2Y.1';
   baseType: BaseType;
   clusterType: string;
   itemLevel: number;
   passiveCount?: number;
   targetMods: string[];
+  /** Presentation-only evidence; never used to reconstruct or rank a policy. */
+  selectedRouteName?: string;
   finalRarity?: 'magic' | 'rare' | 'any';
   objectiveSpec?: OptimizationObjectiveSpec;
   cleanBaseCostChaos?: number;
@@ -108,11 +110,15 @@ export function decodeCraftFromUrl(encoded: string): CraftSharePayload | null {
     const parsed = JSON.parse(json) as Partial<CraftSharePayload>;
 
     // Strict schema & enum validation
-    if (parsed.version !== '2R.1' && parsed.version !== '2W.1' && parsed.version !== '2X.1') return null;
+    if (parsed.version !== '2R.1' && parsed.version !== '2W.1' && parsed.version !== '2X.1' && parsed.version !== '2Y.1') return null;
     if (!parsed.baseType || !VALID_BASE_TYPES.has(parsed.baseType)) return null;
     if (typeof parsed.clusterType !== 'string' || parsed.clusterType.trim().length === 0) return null;
     if (typeof parsed.itemLevel !== 'number' || parsed.itemLevel < 1 || parsed.itemLevel > 100 || !Number.isFinite(parsed.itemLevel)) return null;
     if (!Array.isArray(parsed.targetMods) || !parsed.targetMods.every((m) => typeof m === 'string')) return null;
+    if (parsed.selectedRouteName !== undefined &&
+      (typeof parsed.selectedRouteName !== 'string' || parsed.selectedRouteName.trim().length === 0)) {
+      return null;
+    }
 
     if (parsed.passiveCount !== undefined && (!Number.isFinite(parsed.passiveCount) || parsed.passiveCount < 1)) {
       return null;

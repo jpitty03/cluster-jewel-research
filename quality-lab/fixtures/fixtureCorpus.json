@@ -1,5 +1,5 @@
 {
-  "version": "Phase2X-Frozen-Browser-Corpus-1",
+  "version": "Phase2Y-Frozen-Browser-Corpus-1",
   "fixtures": [
     {
       "id": "cheap_one_mod",
@@ -226,6 +226,53 @@
         "cleanBasePriceProvenance": "Phase 2X frozen exact 8-passive ilvl 84 shield-attack base quote"
       },
       "searchBudget": { "maxStates": 5000, "maxWallTimeMs": 30000, "maxExpansionRounds": 3 }
+    },
+    {
+      "id": "phase2y_field_three_notable",
+      "name": "Phase 2Y Dark Ideation plus Unspeakable Gifts plus Wicked Pall field handoff",
+      "baseType": "Large Cluster Jewel",
+      "clusterType": "12% increased Chaos Damage",
+      "itemLevel": 75,
+      "passiveCount": 8,
+      "finalRarity": "rare",
+      "extraAffixes": "allow-extra",
+      "targetMods": ["Dark Ideation", "Unspeakable Gifts", "Wicked Pall"],
+      "priceContext": {
+        "currencyRates": {
+          "chaos": 1,
+          "divine": 213.5,
+          "fracturing": 298.6,
+          "annul": 11.66,
+          "exalt": 1.17,
+          "scour": 0.5391,
+          "alteration": 0.1336,
+          "transmutation": 0.005012,
+          "augmentation": 0.03941,
+          "regal": 0.03638,
+          "wildLifeforce": 0.02377,
+          "vividLifeforce": 0.08208,
+          "primalLifeforce": 0.04085
+        }
+      },
+      "marketContext": {
+        "league": "Allflame",
+        "snapshotAt": "2026-08-26T06:31:33.498Z",
+        "snapshotStale": false,
+        "currencyRatesAt": "2026-08-26T05:36:32.599Z",
+        "currencyRatesStale": false,
+        "stale": false,
+        "cleanBaseQuote": {
+          "status": "UNAVAILABLE",
+          "provenance": "Allflame has no exact ilvl 75 clean-base quote; the unchanged optimizer research fallback remains explicit."
+        },
+        "currencyMappings": {},
+        "currencyCoverage": {
+          "mappedAndPresent": [],
+          "mappedButMissing": [],
+          "unmappedEngineCurrencies": []
+        }
+      },
+      "searchBudget": { "maxStates": 50000, "maxWallTimeMs": 300000, "maxExpansionRounds": 6 }
     }
   ]
 }

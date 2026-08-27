@@ -186,7 +186,7 @@ export function buildVisualizationGraph(
     id: startNodeId,
     label: startsClean ? 'Clean Base' : 'Starting Base',
     sublabel: startsClean ? 'Normal start' : 'Selected acquisition',
-    fullLabel: startsClean ? 'Clean base' : 'Selected starting base',
+    fullLabel: recommendedRoute?.name ?? (startsClean ? 'Clean base' : 'Selected starting base'),
     kind: 'CLEAN_BASE',
     x: 90,
     y: centerY,
@@ -197,11 +197,11 @@ export function buildVisualizationGraph(
     isUnresolved: false,
     occupancyWeight: 1.0,
     details: {
-      title: startsClean ? 'Clean base' : 'Selected starting base',
+      title: recommendedRoute?.name ?? (startsClean ? 'Clean base' : 'Selected starting base'),
       phase: 'ACQUIRE',
       actions: [],
       targetTexts: [],
-      routeStatus: 'Selected route start',
+      routeStatus: recommendedRoute?.name ?? 'Selected route start',
       technicalModifiers: [],
     },
   };
@@ -439,6 +439,7 @@ export function buildVisualizationGraph(
     if (isWinner) return; // Already modeled in main chain
 
     const altNodeId = `node_alt_${family.spec.id || fIdx}`;
+    const isSameSelectedPolicy = family.status === 'SAME_AS_SELECTED';
     const isDominated = family.status === 'DOMINATED' || family.status === 'MORE_EXPENSIVE';
     const isUnresolved = family.status === 'UNRESOLVED_AT_BUDGET';
     const targetDescriptor = family.spec.targetFractureModId
@@ -457,7 +458,9 @@ export function buildVisualizationGraph(
     const altNode: VisualizationNode = {
       id: altNodeId,
       label: familyLabel,
-      sublabel: isUnresolved ? 'Unresolved' : isDominated ? 'Dominated' : 'Alternative',
+      sublabel: isSameSelectedPolicy
+        ? 'Same selected policy'
+        : isUnresolved ? 'Unresolved' : isDominated ? 'Dominated' : 'Alternative',
       fullLabel: familyLabel,
       kind: family.spec.kind === 'SELF_FRACTURE' ? 'FRACTURE_FAMILY' : family.spec.kind === 'HARVEST' ? 'HARVEST_REFORGE' : 'DOMINATED_BRANCH',
       x: 120 + laneWidth * (column + 0.5),
@@ -474,7 +477,9 @@ export function buildVisualizationGraph(
         instruction: playerText(family.spec.description, 'primary'),
         actions: [],
         targetTexts: targetDescriptor ? [targetDescriptor.primaryText] : [],
-        routeStatus: isUnresolved ? 'Unresolved at budget' : isDominated ? 'Dominated alternative' : 'Explored alternative',
+        routeStatus: isSameSelectedPolicy
+          ? 'Independently found the same selected policy'
+          : isUnresolved ? 'Unresolved at budget' : isDominated ? 'Dominated alternative' : 'Explored alternative',
         technicalModifiers: targetDescriptor ? [targetDescriptor] : [],
       },
     };

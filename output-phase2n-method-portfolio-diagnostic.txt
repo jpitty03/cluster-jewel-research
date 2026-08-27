@@ -1,13 +1,13 @@
 PHASE 2N — METHOD PORTFOLIO & RESULT EXPLAINABILITY DIAGNOSTIC
 
 --- N1: Open Policy Primary Match ---
-Open Family Winner: Start clean base: Clean Base
+Open Family Winner: Start clean base
 Open Family Cost: 264.74c
 N1 PASS: Open policy correctly matches the primary recommendation.
 
 --- N2: Conventional Alt/Aug/Regal Family ---
 Conventional Status: DOMINATED
-Conventional Route: Start clean base: Clean Base
+Conventional Route: Start clean base
 Conventional Cost: 264.74c
 N2 PASS: Conventional family correctly isolated and evaluated.
 
@@ -42,7 +42,7 @@ N4 PASS: Self-fracture families generated for target affixes.
 N5 PASS: All non-winning method families provide clear deterministic explanations.
 
 --- N6: Independent Evaluation Before Deduplication Annotation ---
-Independent Methods: 5, Post-solve Duplicate Annotations: 0
+Independent Methods: 7, Post-solve Duplicate Annotations: 0
 N6 PASS: cards retain family identity; duplicate-policy annotations are assigned only after independent solves.
 
 --- N7: Graph and Session Reuse ---

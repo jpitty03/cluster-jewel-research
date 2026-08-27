@@ -53,6 +53,10 @@ import {
   type AcquisitionSynthesisResult,
 } from '../solver/acquisitionSynthesis.ts';
 import { evaluateMandatoryMechanicsLowerBound } from '../solver/mandatoryMechanicsLowerBound.ts';
+import {
+  evaluateRelaxedTargetProgressLowerBound,
+  type RelaxedTargetProgressLowerBoundResult,
+} from '../solver/relaxedTargetProgressLowerBound.ts';
 import { buildCraftPlan, type CraftPlanSummary } from './craftPlan.ts';
 import {
   OptimizerInputValidationError,
@@ -131,6 +135,8 @@ export interface OptimizerMarketContext {
 }
 
 export interface SearchBudget {
+  /** Player-facing request identity. Numeric values remain authoritative. */
+  preset?: 'NORMAL' | 'DEEP' | 'VERY_DEEP' | 'RESEARCH' | 'CUSTOM';
   maxStates?: number;
   maxWallTimeMs?: number;
   maxExpansionRounds?: number;
@@ -338,6 +344,8 @@ export interface AcquisitionSynthesisSummary {
   search?: AcquisitionSynthesisResult['search'];
   priceConfidence?: AcquisitionSynthesisResult['priceConfidence'];
   mechanicsConfidence?: AcquisitionSynthesisResult['mechanicsConfidence'];
+  terminalStateSemantics?: AcquisitionSynthesisResult['terminalStateSemantics'];
+  terminalPhysicalStateSignatures?: AcquisitionSynthesisResult['terminalPhysicalStateSignatures'];
   explanation: string;
   cacheHit: boolean;
   cacheIdentity?: string;
@@ -415,6 +423,9 @@ export type AcquisitionPortfolioProofReason =
   | 'RESOLVE_DOWNSTREAM_AFTER_ACQUISITION'
   | 'DEEPEST_ACQUISITION_PROOF_DEBT'
   | 'DEEPEST_DOWNSTREAM_PROOF_DEBT'
+  | 'PROOF_PRODUCTIVITY_PRIORITY'
+  | 'SWITCH_AFTER_NO_PROOF_CHANGE'
+  | 'DEPRIORITIZED_REPEATED_NO_CHANGE'
   | 'DOMINATED_BY_FULL_ROUTE_BOUND'
   | 'SELECTED_EXECUTABLE_ROUTE'
   | 'CLEAN_ROUTE_PROVEN'
@@ -438,6 +449,18 @@ export interface AcquisitionPortfolioCandidateProofEvidence {
   retainedDownstreamStates: number;
   acquisitionTransitionDistributionsGenerated: number;
   downstreamTransitionDistributionsGenerated: number;
+  proofDebtChaos?: number;
+  lastWorkStage?: 'ACQUISITION' | 'DOWNSTREAM' | 'DOWNSTREAM_BOUND';
+  schedulerPriorityScore?: number;
+  consecutiveNoProofChange: number;
+  deprioritizedReason?: string;
+  downstreamLowerBoundEvidence: {
+    partialGraphLowerBoundChaos: number;
+    relaxedTargetProgressLowerBoundChaos: number;
+    combinedLowerBoundChaos: number;
+    combinationRule: 'MAX_OF_ADMISSIBLE_DOWNSTREAM_BOUNDS';
+    relaxedTargetProgress: RelaxedTargetProgressLowerBoundResult;
+  };
 }
 
 export interface AcquisitionPortfolioProofTranche {
@@ -456,6 +479,24 @@ export interface AcquisitionPortfolioProofTranche {
   upperBoundBeforeChaos?: number;
   upperBoundAfterChaos?: number;
   outcome: 'RESOLVED' | 'LOWER_BOUND_IMPROVED' | 'UPPER_BOUND_IMPROVED' | 'DOMINATED' | 'NO_PROOF_CHANGE';
+  wallTimeMs?: number;
+  statesExpandedBefore?: number;
+  statesExpandedAfter?: number;
+  transitionDistributionsReusedBefore?: number;
+  transitionDistributionsReusedAfter?: number;
+  transitionGenerationMs?: number;
+  bellmanMs?: number;
+  occupancyMs?: number;
+  potentialGapBeforeChaos?: number;
+  potentialGapAfterChaos?: number;
+  proofStatusBefore?: AcquisitionPortfolioCandidateLifecycle;
+  proofStatusAfter?: AcquisitionPortfolioCandidateLifecycle;
+  lowerBoundGainPerSecond?: number;
+  upperBoundImprovementPerSecond?: number;
+  potentialGapReductionPerSecond?: number;
+  transitionsGeneratedPerSecond?: number;
+  consecutiveNoProofChange?: number;
+  deprioritizedReason?: string;
 }
 
 export interface AcquisitionPortfolioProofSummary {
@@ -638,6 +679,60 @@ export interface SearchSessionReuseSummary {
   scope: 'CLEAN_DOWNSTREAM' | 'FRACTURE_DOWNSTREAM' | 'ACQUISITION_PORTFOLIO';
 }
 
+export type OptimizationRequestStopReason =
+  | 'PROOF_CLOSED'
+  | 'STATE_CAP'
+  | 'WALL_TIME'
+  | 'ROUND_CAP'
+  | 'NO_PRODUCTIVE_PROOF_WORK'
+  | 'HOST_RESERVE'
+  | 'CANCELLED'
+  | 'ERROR';
+
+export interface OptimizationBudgetAllocation {
+  statesExpanded: number;
+  retainedStates: number;
+  wallTimeMs: number;
+  transitionsGenerated: number;
+  transitionsReused: number;
+  transitionGenerationMs: number;
+  bellmanMs: number;
+  occupancyMs: number;
+}
+
+export interface OptimizationRequestBudgetTelemetry {
+  semantics: 'UP_TO_CAPS';
+  requested: {
+    preset: NonNullable<SearchBudget['preset']>;
+    maxStates: number;
+    maxWallTimeMs: number;
+    maxExpansionRounds: number;
+  };
+  used: {
+    /** High-water distinct states in any request-owned search scope; allocation rows may overlap. */
+    statesExpanded: number;
+    retainedStates: number;
+    elapsedMs: number;
+    expansionRounds: number;
+    transitionsGenerated: number;
+    transitionsReused: number;
+  };
+  stop: {
+    primary: OptimizationRequestStopReason;
+    secondary: OptimizationRequestStopReason[];
+    evidence: string[];
+  };
+  allocations: {
+    cleanRoute: OptimizationBudgetAllocation;
+    fractureAcquisition: OptimizationBudgetAllocation;
+    fractureDownstream: OptimizationBudgetAllocation;
+    lowerBoundProbes: OptimizationBudgetAllocation;
+    bellmanAndOccupancy: { bellmanMs: number; occupancyMs: number };
+    methodFamilyComparison: OptimizationBudgetAllocation;
+    serializationAndPresentationReserve: { usedMs: number; reservedMs: number };
+  };
+}
+
 export interface OptimizationSearchSummary {
   intent: SearchIntent;
   statesExpanded: number;
@@ -705,6 +800,9 @@ export interface OptimizationSearchSummary {
     rawInferredTags: string[];
     enabledCrafts: Array<{ actionId: string; actionName: string; tag: string }>;
   };
+  requestStopReason: OptimizationRequestStopReason;
+  secondaryStopReasons: OptimizationRequestStopReason[];
+  requestBudget: OptimizationRequestBudgetTelemetry;
 }
 
 export type OptimizationWarningCategory =
@@ -785,7 +883,7 @@ export interface InternalResultConsistency {
 }
 
 export interface CanonicalResultPresentation {
-  schemaVersion: '2X.1';
+  schemaVersion: '2Y.1';
   releaseStatus: 'RELEASE_CANDIDATE_BROWSER_VERIFIED';
   selectedRouteName?: string;
   selectedRouteStatus: RecommendationStatus;
@@ -1126,6 +1224,68 @@ function stageStatus(
   return 'NOT_SEARCHED';
 }
 
+function canonicalMethodFamilyRouteName(family: MethodFamilyResult): string | undefined {
+  switch (family.spec.kind) {
+    case 'OPEN':
+      // Open is an action-policy family, not an acquisition promise. Its independently
+      // resolved canonical bundle may start clean or self-fracture, so preserve the
+      // bundle's physical route name instead of relabelling it as a clean start.
+      return family.route?.name;
+    case 'CONVENTIONAL':
+      return 'Start clean base';
+    case 'HARVEST':
+      return family.route?.name ?? family.spec.name;
+    case 'SELF_FRACTURE':
+      return family.route?.name ??
+        `Self-fracture ${family.spec.targetFractureModName ?? family.spec.name
+        .replace(/^Self-Fracture\s*/i, '')}`;
+    case 'SELF_FRACTURE_HARVEST':
+      return family.route?.name ??
+        `Self-fracture ${family.spec.targetFractureModName ?? family.spec.name
+        .replace(/^Self-Fracture\s*/i, '')
+        .replace(/\s*\+\s*Harvest.*$/i, '')} + Harvest`;
+    default:
+      return family.route?.name;
+  }
+}
+
+/**
+ * A finite acquisition incumbent is not, by itself, an executable fractured base.
+ * Unified policy selection may consume a self-fracture synthesis only after the
+ * acquisition policy, absorption, accounting, and physical Fracturing Orb evidence
+ * all certify. This keeps a deadline-interrupted provisional synthesis out of every
+ * downstream method-family bundle without special-casing a route winner.
+ */
+type CertifiedAcquisitionSynthesis = (
+  AcquisitionSynthesisSummary | AcquisitionSynthesisResult
+) & {
+  status: 'RESOLVED';
+  expectedCostChaos: number;
+};
+
+function isCertifiedAcquisitionSynthesis(
+  synthesis: AcquisitionSynthesisSummary | AcquisitionSynthesisResult | undefined,
+): synthesis is CertifiedAcquisitionSynthesis {
+  if (
+    synthesis?.status !== 'RESOLVED' ||
+    synthesis.expectedCostChaos === undefined ||
+    !Number.isFinite(synthesis.expectedCostChaos) ||
+    synthesis.proof?.selectedPolicyStatus !==
+      'FULLY RESOLVED / PROPER / ABSORBING / COST-RECONCILED' ||
+    synthesis.risk?.selectedPolicyProper !== true ||
+    (synthesis.risk?.terminalAbsorptionProbability ?? 0) < 1 - 1e-8 ||
+    synthesis.solver?.costReconciled !== true
+  ) return false;
+  const positiveUsage = (synthesis.expectedActionUsage ?? [])
+    .filter((usage) => usage.expectedCount > 1e-9);
+  return positiveUsage.some((usage) => usage.actionId === 'fracturing_orb') &&
+    positiveUsage.every((usage) => usage.actionId.length > 0 && usage.actionName.length > 0) &&
+    (synthesis.policy ?? []).every((rule) =>
+      rule.expectedVisits <= 1e-9 ||
+      (rule.selectedActionId.length > 0 && rule.selectedAction.length > 0)
+    );
+}
+
 function methodPolicyHealth(
   result: GenericSearchResult,
 ): NonNullable<MethodFamilyResult['policyHealth']> {
@@ -1224,7 +1384,7 @@ function buildMethodPortfolio(context: MethodPortfolioBuildContext): MethodPortf
       priceBook.evaluateRate(definition.lifeforceType).confidence !== 'unavailable';
   }).length;
   const independentlyRunnableFractureHarvestCount = starts.reduce((count, _start, index) =>
-    count + (synthesisSummaries.get(index)?.expectedCostChaos !== undefined
+    count + (isCertifiedAcquisitionSynthesis(synthesisSummaries.get(index))
       ? independentlyRunnableHarvestCount
       : 0), 0);
   let remainingConstrainedFamilies = Math.max(
@@ -1233,6 +1393,10 @@ function buildMethodPortfolio(context: MethodPortfolioBuildContext): MethodPortf
       independentlyRunnableHarvestCount +
       independentlyRunnableFractureHarvestCount,
   );
+  let remainingFractureAcquisitionDependencies = starts.filter((start, index) =>
+    start.fracturedRequirement?.modId !== undefined &&
+    !isCertifiedAcquisitionSynthesis(synthesisSummaries.get(index))
+  ).length;
   const runConstrainedFamily = (
     spec: MethodFamilySpec,
     startState: ItemState,
@@ -1338,9 +1502,18 @@ function buildMethodPortfolio(context: MethodPortfolioBuildContext): MethodPortf
       requiredRepeatableKernelCertified;
     const rawLower = genericSearchStartLowerBound(familyResult, startState, input.target);
     const searchIncludesAcquisition = startState.flags?.acquisitionMenu === true;
-    const downstreamLower = searchIncludesAcquisition
+    const partialDownstreamLower = searchIncludesAcquisition
       ? Math.max(0, rawLower - acquisitionLowerBoundChaos)
       : rawLower;
+    const relaxedDownstreamLower = evaluateRelaxedTargetProgressLowerBound(
+      { pool, priceBook },
+      startState,
+      input.target,
+      enabledMechanics,
+      enabledActionIds,
+      input.allowResearchFallbackPrices ?? true,
+    ).lowerBoundChaos;
+    const downstreamLower = Math.max(partialDownstreamLower, relaxedDownstreamLower);
     const downstreamUpper = certified
       ? searchIncludesAcquisition
         ? Math.max(0, familyResult.totalExpectedCostChaos - acquisitionCostChaos)
@@ -1454,6 +1627,145 @@ function buildMethodPortfolio(context: MethodPortfolioBuildContext): MethodPortf
           : `Independent constrained search remained unresolved after ${continuation.expansion.nodes.size.toLocaleString()} retained states.`,
     };
   };
+
+  const restartedSaturatedAcquisitions = new Set<string>();
+  const continueFractureAcquisitionDependency = (
+    candidateIndex: number,
+  ): AcquisitionSynthesisSummary | undefined => {
+    const start = starts[candidateIndex];
+    const requirement = start?.fracturedRequirement;
+    if (!start || !requirement?.modId) return synthesisSummaries.get(candidateIndex);
+    let synthesis = synthesisSummaries.get(candidateIndex);
+    if (!compare || isCertifiedAcquisitionSynthesis(synthesis)) return synthesis;
+
+    const sessionKey = JSON.stringify(requirement);
+    const proofRecord = session.fractureProofs.get(sessionKey);
+    const evidence = acquisition.portfolioProof.candidateEvidence.find(
+      (candidate) => candidate.candidateId === `candidate_${candidateIndex}`
+    );
+    const remainingMs = Math.max(1, deadlineMs - Date.now());
+    const allocatedWallTimeMs = Math.max(
+      1,
+      Math.min(5_000, Math.floor(
+        remainingMs / Math.max(1, remainingFractureAcquisitionDependencies)
+      )),
+    );
+    const maxStates = Math.max(100, input.searchBudget?.maxStates ?? 5_000);
+    let continuation = session.fractureAcquisitions.get(sessionKey);
+    if (
+      continuation &&
+      continuation.expansion.nodes.size >= maxStates &&
+      !restartedSaturatedAcquisitions.has(sessionKey)
+    ) {
+      const retired = session.retiredFractureAcquisitionWork;
+      retired.statesExpanded += continuation.expansion.statesExpandedTotal;
+      retired.transitionsGenerated +=
+        continuation.expansion.transitionDistributionsGeneratedTotal;
+      retired.transitionsReused +=
+        continuation.expansion.transitionDistributionsReusedTotal;
+      retired.transitionGenerationMs += continuation.expansion.transitionGenerationMs;
+      retired.highWaterStates = Math.max(
+        retired.highWaterStates,
+        continuation.expansion.nodes.size,
+      );
+      continuation = createGenericSearchContinuationSession();
+      session.fractureAcquisitions.set(sessionKey, continuation);
+      restartedSaturatedAcquisitions.add(sessionKey);
+    }
+    if (!continuation) {
+      continuation = createGenericSearchContinuationSession();
+      session.fractureAcquisitions.set(sessionKey, continuation);
+    }
+    const allocation = {
+      maxStates,
+      maxWallTimeMs: allocatedWallTimeMs,
+      maxExpansionRounds: input.searchBudget?.maxExpansionRounds ?? 3,
+    };
+    const continued = synthesizeAcquisition(
+      { pool, priceBook },
+      {
+        cleanStartingState: cleanStart.state,
+        desiredPhysicalState: { fracturedMod: requirement },
+        cleanBaseAcquisition: cleanEvidence,
+        searchBudget: allocation,
+        allowResearchFallbackPrices: input.allowResearchFallbackPrices ?? true,
+        // A dependent family needs a certified acquisition before any
+        // downstream work is legal. Include the full proof action set, then
+        // stop at that first certificate; later proof-debt tranches may deepen
+        // the retained graph if it still blocks.
+        searchIntent: 'DEEPEN',
+        stopAfterFirstCertifiedPolicy: true,
+        continuationSession: continuation,
+        persistentExpansion: true,
+      },
+    );
+    synthesis = summarizeSynthesis(continued, allocation, false, sessionKey);
+    synthesisSummaries.set(candidateIndex, synthesis);
+    const candidateSummary = acquisition.candidates.find(
+      (candidate) => candidate.id === `candidate_${candidateIndex}`
+    );
+    if (candidateSummary) candidateSummary.synthesis = synthesis;
+    if (proofRecord) {
+      proofRecord.acquisitionLowerBoundChaos = Math.max(
+        proofRecord.acquisitionLowerBoundChaos,
+        continued.lowerBoundChaos,
+      );
+      if (
+        !isCertifiedAcquisitionSynthesis(proofRecord.acquisition) ||
+        isCertifiedAcquisitionSynthesis(continued)
+      ) proofRecord.acquisition = continued;
+      if (isCertifiedAcquisitionSynthesis(continued)) {
+        proofRecord.acquisitionUpperBoundChaos = continued.expectedCostChaos;
+        if (evidence) {
+          evidence.acquisitionUpperBoundChaos = continued.expectedCostChaos;
+          evidence.retainedAcquisitionStates = continuation.expansion.nodes.size;
+          evidence.acquisitionTransitionDistributionsGenerated =
+            continuation.expansion.transitionDistributionsGeneratedTotal;
+        }
+      }
+    }
+    remainingFractureAcquisitionDependencies = Math.max(
+      0,
+      remainingFractureAcquisitionDependencies - 1,
+    );
+    return synthesis;
+  };
+
+  // Acquisition proof debt precedes every dependent constrained downstream
+  // family. Rank by current full-route debt/readiness, with a stable identity
+  // tie-break, so input target order cannot decide which prerequisite runs.
+  if (compare && remainingFractureAcquisitionDependencies > 0) {
+    const incumbent = recommended?.expectedTotalCostChaos ?? Infinity;
+    const pendingDependencies = starts
+      .map((start, candidateIndex) => ({ start, candidateIndex }))
+      .filter(({ start, candidateIndex }) =>
+        start.fracturedRequirement?.modId !== undefined &&
+        !isCertifiedAcquisitionSynthesis(synthesisSummaries.get(candidateIndex))
+      )
+      .sort((left, right) => {
+        const leftEvidence = acquisition.portfolioProof.candidateEvidence.find(
+          (candidate) => candidate.candidateId === `candidate_${left.candidateIndex}`
+        );
+        const rightEvidence = acquisition.portfolioProof.candidateEvidence.find(
+          (candidate) => candidate.candidateId === `candidate_${right.candidateIndex}`
+        );
+        const leftDebt = Number.isFinite(incumbent)
+          ? Math.max(0, incumbent - (leftEvidence?.fullRouteLowerBoundChaos ?? 0))
+          : 0;
+        const rightDebt = Number.isFinite(incumbent)
+          ? Math.max(0, incumbent - (rightEvidence?.fullRouteLowerBoundChaos ?? 0))
+          : 0;
+        const leftKey = JSON.stringify(left.start.fracturedRequirement);
+        const rightKey = JSON.stringify(right.start.fracturedRequirement);
+        const retainedDelta =
+          (session.fractureAcquisitions.get(rightKey)?.expansion.nodes.size ?? 0) -
+          (session.fractureAcquisitions.get(leftKey)?.expansion.nodes.size ?? 0);
+        return rightDebt - leftDebt || retainedDelta || leftKey.localeCompare(rightKey);
+      });
+    for (const { candidateIndex } of pendingDependencies) {
+      continueFractureAcquisitionDependency(candidateIndex);
+    }
+  }
 
   const conventionalSpec: MethodFamilySpec = {
     id: 'family_conventional',
@@ -1577,11 +1889,16 @@ function buildMethodPortfolio(context: MethodPortfolioBuildContext): MethodPortf
     if (!requirement?.modId) continue;
     const mod = pool.findModById(requirement.modId);
     const modName = mod ? `${mod.name} (T${mod.tier})` : requirement.modId;
-    const synthesis = synthesisSummaries.get(index);
     const evidence = acquisition.portfolioProof.candidateEvidence.find(
       (candidate) => candidate.candidateId === `candidate_${index}`
     );
-    const proofRecord = session.fractureProofs.get(JSON.stringify(requirement));
+    const sessionKey = JSON.stringify(requirement);
+    const proofRecord = session.fractureProofs.get(sessionKey);
+    const synthesis = continueFractureAcquisitionDependency(index);
+    const certifiedSynthesis = isCertifiedAcquisitionSynthesis(synthesis)
+      ? synthesis
+      : undefined;
+    const synthesisCertified = certifiedSynthesis !== undefined;
     const downstreamUsage = proofRecord?.downstream?.expectedActionUsage ?? [];
     const allUsage = [
       ...(synthesis?.expectedActionUsage ?? []),
@@ -1591,10 +1908,12 @@ function buildMethodPortfolio(context: MethodPortfolioBuildContext): MethodPortf
       .filter((usage) => usage.expectedCount > 0)
       .map((usage) => usage.actionId))].sort();
     const acquisitionL = synthesis?.lowerBoundChaos ?? evidence?.acquisitionLowerBoundChaos;
-    const acquisitionU = synthesis?.expectedCostChaos ?? evidence?.acquisitionUpperBoundChaos;
+    const acquisitionU = synthesisCertified
+      ? certifiedSynthesis.expectedCostChaos
+      : evidence?.acquisitionUpperBoundChaos;
     const fullU = evidence?.fullRouteUpperBoundChaos;
     const fullL = evidence?.fullRouteLowerBoundChaos ?? 0;
-    const route: RouteSummary | undefined = fullU === undefined ? undefined : {
+    const route: RouteSummary | undefined = fullU === undefined || !synthesisCertified ? undefined : {
       actionId: `method:family_fracture_${requirement.modId}`,
       name: recommended?.acquisitionCandidateId === `candidate_${index}`
         ? recommended.name
@@ -1609,11 +1928,11 @@ function buildMethodPortfolio(context: MethodPortfolioBuildContext): MethodPortf
       couldBeatResolvedIncumbent: recommended?.expectedTotalCostChaos !== null &&
         recommended?.expectedTotalCostChaos !== undefined &&
         fullL < recommended.expectedTotalCostChaos,
-      metrics: proofRecord?.downstream?.metrics && synthesis?.expectedCostChaos !== undefined ? {
+      metrics: proofRecord?.downstream?.metrics && certifiedSynthesis ? {
         expectedChaosCost: fullU,
-        expectedPhysicalActions: (synthesis.expectedPhysicalActions ?? 0) +
+        expectedPhysicalActions: (certifiedSynthesis.expectedPhysicalActions ?? 0) +
           proofRecord.downstream.metrics.expectedPhysicalActions,
-        estimatedManualTimeMs: (synthesis.estimatedManualTimeMs ?? 0) +
+        estimatedManualTimeMs: (certifiedSynthesis.estimatedManualTimeMs ?? 0) +
           proofRecord.downstream.metrics.estimatedManualTimeMs,
         objectiveScore: fullU,
         effortConfidence: proofRecord.downstream.metrics.effortConfidence,
@@ -1623,7 +1942,7 @@ function buildMethodPortfolio(context: MethodPortfolioBuildContext): MethodPortf
     const dominated = evidence?.status === 'DOMINATED';
     if (
       route && proofRecord?.downstream &&
-      synthesis?.status === 'RESOLVED' && synthesis.expectedCostChaos !== undefined
+      synthesisCertified
     ) {
       resolvedPolicies.push({
         id: `bundle:family_fracture_${requirement.modId}`,
@@ -1633,7 +1952,7 @@ function buildMethodPortfolio(context: MethodPortfolioBuildContext): MethodPortf
         solverResult: proofRecord.downstream,
         acquisitionCandidateId: `candidate_${index}`,
         acquisitionMethodId: 'self-fracture_executable',
-        acquisitionSynthesis: synthesis,
+        acquisitionSynthesis: certifiedSynthesis,
         actionEvidence: onPolicyActionIds,
       });
     }
@@ -1672,8 +1991,8 @@ function buildMethodPortfolio(context: MethodPortfolioBuildContext): MethodPortf
       retainedStates: (evidence?.retainedAcquisitionStates ?? 0) + (evidence?.retainedDownstreamStates ?? 0),
       transitionDistributionsGenerated: (evidence?.acquisitionTransitionDistributionsGenerated ?? 0) +
         (evidence?.downstreamTransitionDistributionsGenerated ?? 0),
-      whyNotSelectedExplanation: synthesis?.expectedCostChaos !== undefined && evidence?.downstreamUpperBoundChaos === undefined
-        ? `Acquisition synthesis produced a finite executable upper bound at ${synthesis.expectedCostChaos.toFixed(1)}c; the independent downstream/full-route solve remains unresolved.`
+      whyNotSelectedExplanation: synthesisCertified && evidence?.downstreamUpperBoundChaos === undefined
+        ? `Acquisition synthesis produced a finite executable upper bound at ${certifiedSynthesis.expectedCostChaos.toFixed(1)}c; the independent downstream/full-route solve remains unresolved.`
         : route
           ? comparison.status === 'SELECTED_WINNER'
             ? 'The independently synthesized acquisition and downstream policy form the selected full route.'
@@ -1696,7 +2015,7 @@ function buildMethodPortfolio(context: MethodPortfolioBuildContext): MethodPortf
         targetFractureModId: requirement.modId,
         targetFractureModName: modName,
       };
-      if (compare && synthesis?.expectedCostChaos !== undefined) {
+      if (compare && isCertifiedAcquisitionSynthesis(synthesis)) {
         results.push(runConstrainedFamily(
           spec,
           start.state,
@@ -1708,20 +2027,52 @@ function buildMethodPortfolio(context: MethodPortfolioBuildContext): MethodPortf
           [craft.tag]
         ));
       } else {
+        const acquisitionWasIndependentlyAttempted = compare && synthesis !== undefined;
+        const acquisitionContinuation = session.fractureAcquisitions.get(sessionKey);
+        const downstreamContinuation = session.methodFamilies.get(spec.id);
         results.push({
           spec,
-          status: 'NOT_SEARCHED',
-          evaluationSource: 'NOT_SEARCHED',
-          acquisitionStatus: stageStatus(synthesis?.expectedCostChaos, synthesis?.lowerBoundChaos),
+          status: acquisitionWasIndependentlyAttempted
+            ? 'UNRESOLVED_AT_BUDGET'
+            : 'NOT_SEARCHED',
+          evaluationSource: acquisitionWasIndependentlyAttempted
+            ? 'INDEPENDENT_SOLVE'
+            : 'NOT_SEARCHED',
+          acquisitionStatus: stageStatus(
+            isCertifiedAcquisitionSynthesis(synthesis) ? synthesis.expectedCostChaos : undefined,
+            synthesis?.lowerBoundChaos,
+          ),
           acquisitionL: synthesis?.lowerBoundChaos,
-          acquisitionU: synthesis?.expectedCostChaos,
+          acquisitionU: isCertifiedAcquisitionSynthesis(synthesis)
+            ? synthesis.expectedCostChaos
+            : undefined,
           downstreamStatus: 'NOT_SEARCHED',
-          fullRouteStatus: 'NOT_SEARCHED',
+          fullRouteStatus: acquisitionWasIndependentlyAttempted
+            ? 'UNRESOLVED'
+            : 'NOT_SEARCHED',
           requiredActionObservedOnPolicy: false,
           onPolicyActionIds: [],
-          retainedStates: session.methodFamilies.get(spec.id)?.expansion.nodes.size ?? 0,
-          transitionDistributionsGenerated: session.methodFamilies.get(spec.id)?.expansion.transitionDistributionsGeneratedTotal ?? 0,
-          whyNotSelectedExplanation: synthesis?.status === 'RESOLVED'
+          // The combined family has a stable identity as soon as Compare Methods
+          // schedules its prerequisite. Its downstream continuation deliberately
+          // remains empty until acquisition is certified, but the exact retained
+          // acquisition work still belongs to this independently evaluated family.
+          sessionIdentity: acquisitionWasIndependentlyAttempted
+            ? `${searchIdentityHash}:${spec.id}`
+            : undefined,
+          retainedStates:
+            (acquisitionContinuation?.expansion.nodes.size ?? 0) +
+            (downstreamContinuation?.expansion.nodes.size ?? 0),
+          transitionDistributionsGenerated:
+            (acquisitionContinuation?.expansion.transitionDistributionsGeneratedTotal ?? 0) +
+            (downstreamContinuation?.expansion.transitionDistributionsGeneratedTotal ?? 0),
+          budget: acquisitionWasIndependentlyAttempted ? {
+            maxStates: synthesis?.allocatedMaxStates ?? input.searchBudget?.maxStates ?? 5_000,
+            maxWallTimeMs: synthesis?.allocatedMaxWallTimeMs ?? 0,
+            maxExpansionRounds:
+              synthesis?.allocatedMaxExpansionRounds ?? input.searchBudget?.maxExpansionRounds ?? 3,
+            elapsedMs: synthesis?.search?.elapsedMs ?? 0,
+          } : undefined,
+          whyNotSelectedExplanation: isCertifiedAcquisitionSynthesis(synthesis)
             ? 'Acquisition is resolved; the required-Harvest downstream family has not been searched. Use Compare Methods.'
             : 'Required self-fracture acquisition is unresolved, so its Harvest downstream family has not started.',
         });
@@ -1750,20 +2101,8 @@ function buildMethodPortfolio(context: MethodPortfolioBuildContext): MethodPortf
     whyNotSelectedExplanation: 'Chaos Reforge is advertised only as not modeled; it is never assigned a synthetic route.',
   });
 
-  const fingerprints = new Map<string, string>();
-  for (const family of results) {
-    if (family.evaluationSource !== 'INDEPENDENT_SOLVE' || family.fullRouteStatus !== 'RESOLVED') continue;
-    const fingerprint = JSON.stringify({
-      actions: family.expectedActionUsage
-        ?.filter((usage) => usage.expectedCount > 1e-9)
-        .map((usage) => [usage.actionId, usage.expectedCount.toFixed(6)])
-        .sort(),
-      cost: family.fullRouteU?.toFixed(6),
-    });
-    const original = fingerprints.get(fingerprint);
-    if (original) family.duplicateOfMethodFamilyId = original;
-    else fingerprints.set(fingerprint, family.spec.id);
-  }
+  // Equivalence is assigned only after canonical bundles exist. Scalar cost or
+  // usage equality here is deliberately insufficient (Phase 2Y contract).
   return { families: results, resolvedPolicies };
 }
 
@@ -1969,10 +2308,7 @@ function buildAcquisitionPortfolio(
       })
       .filter((method): method is AcquisitionMethodDefinition => method !== undefined);
     const synthesis = syntheses.get(candidateIndex);
-    if (
-      synthesis?.status === 'RESOLVED' &&
-      synthesis.expectedCostChaos !== undefined
-    ) {
+    if (isCertifiedAcquisitionSynthesis(synthesis)) {
       methods.push({
         id: 'self-fracture_executable',
         label: `Executable self-fracture: ${start.label}`,
@@ -2124,6 +2460,8 @@ function summarizeSynthesis(
     search: result.search,
     priceConfidence: result.priceConfidence,
     mechanicsConfidence: result.mechanicsConfidence,
+    terminalStateSemantics: result.terminalStateSemantics,
+    terminalPhysicalStateSignatures: [...result.terminalPhysicalStateSignatures],
     explanation: result.explanation,
     cacheHit,
     cacheIdentity,
@@ -2334,6 +2672,152 @@ interface ResolvedPolicyBundle {
   policyExplanation: PolicyExplanationRule[];
   actionEvidence: string[];
   consistency: InternalResultConsistency;
+  policyEquivalenceFingerprint: string;
+  policyEquivalenceEvidence: NonNullable<MethodFamilyResult['policyEquivalenceEvidence']>;
+}
+
+const POLICY_EQUIVALENCE_USAGE_TOLERANCE = 1e-6;
+
+function equivalencePhysicalStateSignature(state: ItemState): string {
+  const normalized = normalizeItemState(state);
+  if (normalized.flags?.methodFamilyActionEvidence) {
+    normalized.flags = {
+      ...normalized.flags,
+      methodFamilyActionEvidence: undefined,
+    };
+    if (!normalized.flags.influenced && !normalized.flags.synthesised &&
+        !normalized.flags.acquisitionMenu) {
+      normalized.flags = undefined;
+    }
+  }
+  return getPhysicalStateSignature(normalized);
+}
+
+function quantizeEquivalenceValue(value: number): string {
+  return (Math.round(value / POLICY_EQUIVALENCE_USAGE_TOLERANCE) *
+    POLICY_EQUIVALENCE_USAGE_TOLERANCE).toFixed(6);
+}
+
+interface PolicyEquivalenceBuildInput {
+  acquisitionStart: StartingStateCandidate;
+  acquisitionMethodId: string;
+  acquisitionSynthesis?: AcquisitionSynthesisSummary;
+  solverResult: GenericSearchResult;
+  fullRouteUsage: FullRouteUsageSummary;
+  actionEvidence: string[];
+  target: TargetDefinition;
+}
+
+export interface CanonicalPolicyEquivalencePayload {
+  version: 'CANONICAL_POLICY_EQUIVALENCE_V1';
+  physicalAcquisitionIdentity: string;
+  normalizedPolicy: ReadonlyArray<readonly [string, string]>;
+  synthesisPolicy: ReadonlyArray<readonly [string, string]>;
+  requiredActionEvidence: readonly string[];
+  usage: ReadonlyArray<readonly [string, string, string]>;
+  recovery: ReadonlyArray<readonly [string, string]>;
+  terminal: {
+    states: readonly string[];
+    target: TargetDefinition;
+    acquisition: string;
+  };
+}
+
+/** Hashes the complete normalized policy evidence; scalar route metrics are deliberately absent. */
+export function fingerprintCanonicalPolicyEquivalencePayload(
+  payload: CanonicalPolicyEquivalencePayload,
+): { fingerprint: string; canonical: string } {
+  const canonical = JSON.stringify(payload);
+  return {
+    fingerprint: `policy-${hashIdentity(canonical).replace('phase2j-', '')}`,
+    canonical,
+  };
+}
+
+/**
+ * Presentation-only equivalence identity. Solver state identity is untouched:
+ * method-family evidence is normalized only after independent solves complete.
+ */
+export function buildCanonicalPolicyEquivalenceFingerprint(
+  options: PolicyEquivalenceBuildInput,
+): {
+  fingerprint: string;
+  evidence: NonNullable<MethodFamilyResult['policyEquivalenceEvidence']>;
+  canonical: string;
+} {
+  const physicalAcquisitionIdentity = JSON.stringify({
+    state: equivalencePhysicalStateSignature(options.acquisitionStart.state),
+    kind: options.acquisitionSynthesis ? 'SELF_FRACTURE' : 'CLEAN',
+    method: options.acquisitionMethodId.replace(/_\d+$/, ''),
+    synthesisTerminalSemantics: options.acquisitionSynthesis?.terminalStateSemantics ?? 'CLEAN_BASE',
+  });
+  const normalizedPolicy = options.solverResult.onPolicyRules
+    .filter((rule) => rule.state.flags?.acquisitionMenu !== true)
+    .filter((rule) => !rule.selectedActionId.startsWith('acquire_'))
+    .map((rule) => [
+      equivalencePhysicalStateSignature(rule.state),
+      rule.selectedActionId,
+    ] as const)
+    .sort((left, right) => left[0].localeCompare(right[0]) || left[1].localeCompare(right[1]));
+  const synthesisPolicy = (options.acquisitionSynthesis?.policy ?? [])
+    .map((rule) => [rule.stateKey, rule.selectedActionId] as const)
+    .sort((left, right) => left[0].localeCompare(right[0]) || left[1].localeCompare(right[1]));
+  const requiredActionEvidence = [...new Set(options.actionEvidence)]
+    .filter((actionId) => !actionId.startsWith('acquire_') && !actionId.startsWith('method:'))
+    .sort();
+  const usage = options.fullRouteUsage.combinedActions
+    .filter((entry) => entry.expectedCount > POLICY_EQUIVALENCE_USAGE_TOLERANCE)
+    .map((entry) => [
+      entry.actionId,
+      quantizeEquivalenceValue(entry.expectedCount),
+      quantizeEquivalenceValue(entry.expectedCostChaos),
+    ] as const)
+    .sort((left, right) => left[0].localeCompare(right[0]));
+  const recovery = [
+    ...normalizedPolicy.filter(([, actionId]) =>
+      actionId === 'restart_reacquire' || actionId === 'scouring_orb'
+    ),
+    ...synthesisPolicy.filter(([, actionId]) =>
+      actionId === 'restart_reacquire' || actionId === 'scouring_orb'
+    ),
+  ];
+  // The expanded graph can contain off-policy terminal nodes and an Open
+  // acquisition menu that a constrained re-solve never materializes. Those
+  // are search-scope artifacts, not selected-policy semantics. Canonicalize
+  // the terminal contract itself plus physical acquisition terminal states;
+  // the exact target definition below remains the authoritative downstream
+  // terminal predicate.
+  const terminalStates = [...new Set(
+    options.acquisitionSynthesis?.terminalPhysicalStateSignatures ?? []
+  )].sort();
+  const payload: CanonicalPolicyEquivalencePayload = {
+    version: 'CANONICAL_POLICY_EQUIVALENCE_V1',
+    physicalAcquisitionIdentity,
+    normalizedPolicy,
+    synthesisPolicy,
+    requiredActionEvidence,
+    usage,
+    recovery,
+    terminal: {
+      states: terminalStates,
+      target: options.target,
+      acquisition: options.acquisitionSynthesis?.terminalStateSemantics ?? 'CLEAN_BASE',
+    },
+  };
+  const { fingerprint, canonical } = fingerprintCanonicalPolicyEquivalencePayload(payload);
+  return {
+    fingerprint,
+    canonical,
+    evidence: {
+      version: 'CANONICAL_POLICY_EQUIVALENCE_V1',
+      physicalAcquisitionIdentity,
+      normalizedPolicyDecisionCount: normalizedPolicy.length + synthesisPolicy.length,
+      requiredActionEvidence,
+      recoveryDecisionCount: recovery.length,
+      terminalStateCount: terminalStates.length,
+      usageTolerance: POLICY_EQUIVALENCE_USAGE_TOLERANCE,
+    },
+  };
 }
 
 function objectiveScoreForMetrics(
@@ -2426,6 +2910,37 @@ function synthesisPolicyExplanation(
   }));
 }
 
+function canonicalPlayerRouteName(options: {
+  source: ResolvedPolicySourceKind;
+  acquisitionStart: StartingStateCandidate;
+  acquisitionSynthesis?: AcquisitionSynthesisSummary;
+  fullRouteUsage: FullRouteUsageSummary;
+  fallbackName: string;
+}): string {
+  const harvestAction = options.fullRouteUsage.combinedActions.find((usage) =>
+    usage.expectedCount > 1e-9 && usage.actionId.startsWith('harvest_reforge_')
+  );
+  const isSelfFracture = options.acquisitionSynthesis !== undefined ||
+    options.acquisitionStart.fracturedRequirement !== undefined;
+  if (isSelfFracture) {
+    const targetLabel = options.acquisitionStart.label
+      .replace(/^Executable self-fracture:\s*/i, '')
+      .replace(/^Start self-fracture:\s*/i, '');
+    return harvestAction
+      ? `Self-fracture ${targetLabel} + Harvest`
+      : `Self-fracture ${targetLabel}`;
+  }
+  if (harvestAction) return harvestAction.actionName;
+  if (
+    options.source === 'CONVENTIONAL' ||
+    options.source === 'CLEAN_DIRECT' ||
+    options.source === 'OPEN'
+  ) return 'Start clean base';
+  return options.fallbackName
+    .replace(/^Restart\/Reacquire:\s*/i, '')
+    .replace(/^Start clean base:\s*Clean Base$/i, 'Start clean base');
+}
+
 function createResolvedPolicyBundle(options: {
   id: string;
   familyId?: string;
@@ -2440,6 +2955,10 @@ function createResolvedPolicyBundle(options: {
   target: TargetDefinition;
   objective: OptimizationObjectiveSpec;
 }): ResolvedPolicyBundle | undefined {
+  if (
+    options.acquisitionStart.fracturedRequirement !== undefined &&
+    !isCertifiedAcquisitionSynthesis(options.acquisitionSynthesis)
+  ) return undefined;
   if (
     options.solverResult.optimalityProof.selectedPolicyStatus !==
       'FULLY RESOLVED / PROPER / ABSORBING / COST-RECONCILED' ||
@@ -2504,6 +3023,13 @@ function createResolvedPolicyBundle(options: {
   };
   const route: RouteSummary = {
     ...options.route,
+    name: canonicalPlayerRouteName({
+      source: options.source,
+      acquisitionStart: options.acquisitionStart,
+      acquisitionSynthesis: options.acquisitionSynthesis,
+      fullRouteUsage,
+      fallbackName: options.route.name,
+    }),
     acquisitionCandidateId: options.acquisitionCandidateId,
     acquisitionMethodId: options.acquisitionMethodId,
     expectedTotalCostChaos: fullRouteUsage.fullRouteCostChaos,
@@ -2538,6 +3064,15 @@ function createResolvedPolicyBundle(options: {
       .filter((usage) => usage.expectedCount > 1e-9)
       .map((usage) => usage.actionId),
   ])].sort();
+  const policyEquivalence = buildCanonicalPolicyEquivalenceFingerprint({
+    acquisitionStart: options.acquisitionStart,
+    acquisitionMethodId: options.acquisitionMethodId,
+    acquisitionSynthesis: options.acquisitionSynthesis,
+    solverResult: options.solverResult,
+    fullRouteUsage,
+    actionEvidence,
+    target: options.target,
+  });
   return {
     id: options.id,
     familyId: options.familyId,
@@ -2554,6 +3089,8 @@ function createResolvedPolicyBundle(options: {
     policyExplanation,
     actionEvidence,
     consistency,
+    policyEquivalenceFingerprint: policyEquivalence.fingerprint,
+    policyEquivalenceEvidence: policyEquivalence.evidence,
   };
 }
 
@@ -2588,6 +3125,13 @@ interface OptimizerSearchSessionRecord {
   }>;
   fractureProofs: Map<string, FracturePortfolioProofRecord>;
   methodFamilies: Map<string, GenericSearchContinuationSession>;
+  retiredFractureAcquisitionWork: {
+    statesExpanded: number;
+    transitionsGenerated: number;
+    transitionsReused: number;
+    transitionGenerationMs: number;
+    highWaterStates: number;
+  };
 }
 
 interface FracturePortfolioProofRecord {
@@ -2595,6 +3139,9 @@ interface FracturePortfolioProofRecord {
   downstream?: GenericSearchResult;
   acquisitionLowerBoundChaos: number;
   downstreamLowerBoundChaos: number;
+  partialGraphDownstreamLowerBoundChaos: number;
+  relaxedDownstreamLowerBoundChaos: number;
+  relaxedDownstreamBound: RelaxedTargetProgressLowerBoundResult;
   fullRouteLowerBoundChaos: number;
   acquisitionUpperBoundChaos?: number;
   downstreamUpperBoundChaos?: number;
@@ -2602,16 +3149,26 @@ interface FracturePortfolioProofRecord {
   acquisitionModeledOptimal: boolean;
   downstreamModeledOptimal: boolean;
   lastAllocatedStage?: 'ACQUISITION' | 'DOWNSTREAM' | 'DOWNSTREAM_BOUND';
+  noProofChangeByStage?: Partial<Record<'ACQUISITION' | 'DOWNSTREAM' | 'DOWNSTREAM_BOUND', number>>;
+  lastProofGainPerSecond?: number;
+  deprioritizedReason?: string;
 }
 
 /** Serializable optimizer boundary intended for the thin Developer UI. */
+export interface OptimizerServiceDiagnosticOptions {
+  /** Diagnostic A/B reference only. Product callers always use PHASE2Y. */
+  proofEfficiencyMode?: 'PHASE2Y' | 'LEGACY_BEST_BOUND_REFERENCE';
+}
+
 export class OptimizerService {
   private readonly repo: ClusterModRepository;
+  private readonly proofEfficiencyMode: NonNullable<OptimizerServiceDiagnosticOptions['proofEfficiencyMode']>;
   private readonly searchSessions = new Map<string, OptimizerSearchSessionRecord>();
   private lastSearchIdentityComponents?: SearchIdentityComponents;
 
-  constructor(repo: ClusterModRepository) {
+  constructor(repo: ClusterModRepository, options: OptimizerServiceDiagnosticOptions = {}) {
     this.repo = repo;
+    this.proofEfficiencyMode = options.proofEfficiencyMode ?? 'PHASE2Y';
   }
 
   optimize(
@@ -2624,7 +3181,8 @@ export class OptimizerService {
     input = validation.normalizedInput;
     const runtimeBudget = getSearchRuntimeBudget(input.searchBudget?.maxWallTimeMs);
     const requestedObjective = input.objective ?? { kind: 'CHEAPEST_CHAOS' as const };
-    const objectiveNeedsUnifiedFamilies = requestedObjective.kind !== 'CHEAPEST_CHAOS';
+    const objectiveNeedsUnifiedFamilies = requestedObjective.kind !== 'CHEAPEST_CHAOS' ||
+      input.compareMethodFamilies === true;
     const searchStopDeadline = optimizationStarted + Math.floor(
       runtimeBudget.engineDeadlineMs * (objectiveNeedsUnifiedFamilies ? 0.48 : 0.85)
     );
@@ -2694,6 +3252,13 @@ export class OptimizerService {
         fractureDownstreamBounds: new Map(),
         fractureProofs: new Map(),
         methodFamilies: new Map(),
+        retiredFractureAcquisitionWork: {
+          statesExpanded: 0,
+          transitionsGenerated: 0,
+          transitionsReused: 0,
+          transitionGenerationMs: 0,
+          highWaterStates: 0,
+        },
       };
       if (this.searchSessions.size >= 8) {
         const oldest = this.searchSessions.keys().next().value;
@@ -2729,6 +3294,43 @@ export class OptimizerService {
             tag: String(mechanic.parameters?.harvestTag ?? ''),
           }))
       : [];
+    const relaxedBoundHarvestMechanics = harvestTags.length > 0
+      ? createHarvestReforgeMechanics({ pool, priceBook }, harvestTags)
+      : [];
+    const relaxedDownstreamMechanics = [
+      ...CRAFT_MECHANICS,
+      ...relaxedBoundHarvestMechanics,
+    ].filter((mechanic) => typeof mechanic.getTransitions === 'function');
+    const relaxedDownstreamActionIds = relaxedDownstreamMechanics
+      .map((mechanic) => mechanic.id);
+    const relaxedDownstreamBounds = new Map<number, RelaxedTargetProgressLowerBoundResult>();
+    const relaxedDownstreamBoundFor = (
+      start: StartingStateCandidate,
+      candidateIndex: number,
+    ): RelaxedTargetProgressLowerBoundResult => {
+      const existing = relaxedDownstreamBounds.get(candidateIndex);
+      if (existing) return existing;
+      const evaluated = evaluateRelaxedTargetProgressLowerBound(
+        { pool, priceBook },
+        start.state,
+        input.target,
+        relaxedDownstreamMechanics,
+        relaxedDownstreamActionIds,
+        input.allowResearchFallbackPrices ?? true,
+      );
+      relaxedDownstreamBounds.set(candidateIndex, evaluated);
+      return evaluated;
+    };
+    const combinedDownstreamLowerBound = (
+      partialGraphLowerBoundChaos: number,
+      start: StartingStateCandidate,
+      candidateIndex: number,
+    ): number => this.proofEfficiencyMode === 'LEGACY_BEST_BOUND_REFERENCE'
+      ? partialGraphLowerBoundChaos
+      : Math.max(
+          partialGraphLowerBoundChaos,
+          relaxedDownstreamBoundFor(start, candidateIndex).lowerBoundChaos,
+        );
     const startState = virtualAcquisitionState(input);
     const runDownstreamSearch = (
       portfolio: AcquisitionPortfolioCandidate[],
@@ -2872,15 +3474,38 @@ export class OptimizerService {
       const structuralLowerBound = structuralBounds.get(candidateIndex)?.combinedLowerBoundChaos ?? 0;
       let proofRecord = searchSessionRecord.fractureProofs.get(sessionKey);
       if (!proofRecord) {
+        const relaxedDownstreamBound = relaxedDownstreamBoundFor(start, candidateIndex);
+        const initialDownstreamLowerBound = this.proofEfficiencyMode ===
+            'LEGACY_BEST_BOUND_REFERENCE'
+          ? 0
+          : relaxedDownstreamBound.lowerBoundChaos;
         proofRecord = {
           acquisitionLowerBoundChaos: structuralLowerBound,
-          downstreamLowerBoundChaos: 0,
-          fullRouteLowerBoundChaos: structuralLowerBound,
+          downstreamLowerBoundChaos: initialDownstreamLowerBound,
+          partialGraphDownstreamLowerBoundChaos: 0,
+          relaxedDownstreamLowerBoundChaos: initialDownstreamLowerBound,
+          relaxedDownstreamBound,
+          fullRouteLowerBoundChaos:
+            structuralLowerBound + initialDownstreamLowerBound,
           acquisitionModeledOptimal: false,
           downstreamModeledOptimal: false,
         };
         searchSessionRecord.fractureProofs.set(sessionKey, proofRecord);
       } else {
+        const relaxedDownstreamBound = relaxedDownstreamBoundFor(start, candidateIndex);
+        proofRecord.relaxedDownstreamLowerBoundChaos = this.proofEfficiencyMode ===
+            'LEGACY_BEST_BOUND_REFERENCE'
+          ? 0
+          : Math.max(
+              proofRecord.relaxedDownstreamLowerBoundChaos ?? 0,
+              relaxedDownstreamBound.lowerBoundChaos,
+            );
+        proofRecord.relaxedDownstreamBound = relaxedDownstreamBound;
+        proofRecord.downstreamLowerBoundChaos = Math.max(
+          proofRecord.downstreamLowerBoundChaos,
+          proofRecord.relaxedDownstreamLowerBoundChaos,
+        );
+        proofRecord.partialGraphDownstreamLowerBoundChaos ??= 0;
         proofRecord.acquisitionLowerBoundChaos = Math.max(
           proofRecord.acquisitionLowerBoundChaos,
           structuralLowerBound
@@ -3069,10 +3694,16 @@ export class OptimizerService {
           : requestedCleanStates;
       const generatedCleanTransitions =
         searchSessionRecord.cleanDownstream.expansion.transitionDistributionsGeneratedTotal;
+      const reusedCleanTransitions =
+        searchSessionRecord.cleanDownstream.expansion.transitionDistributionsReusedTotal;
       const previousCleanResult = searchSessionRecord.cleanDownstream.lastResult;
-      const cleanLowerBoundBefore = cleanEvidence.costChaos + (previousCleanResult
-        ? genericSearchStartLowerBound(previousCleanResult, cleanStart.state, input.target)
-        : 0);
+      const cleanLowerBoundBefore = cleanEvidence.costChaos + combinedDownstreamLowerBound(
+        previousCleanResult
+          ? genericSearchStartLowerBound(previousCleanResult, cleanStart.state, input.target)
+          : 0,
+        cleanStart,
+        cleanCandidateIndex,
+      );
       selectedSessionReuse = {
         status: retainedCleanStates > 0
           ? 'RESUMED'
@@ -3127,10 +3758,10 @@ export class OptimizerService {
       cleanProg.elapsedMs = fastCleanResult.searchSummary.elapsedMs;
       cleanProg.isActive = false;
 
-      const cleanDownstreamLowerBound = genericSearchStartLowerBound(
-        fastCleanResult,
-        cleanStart.state,
-        input.target
+      const cleanDownstreamLowerBound = combinedDownstreamLowerBound(
+        genericSearchStartLowerBound(fastCleanResult, cleanStart.state, input.target),
+        cleanStart,
+        cleanCandidateIndex,
       );
       const cleanFullRouteLowerBound = cleanEvidence.costChaos + cleanDownstreamLowerBound;
       cleanProg.acquisitionLowerBoundChaos = cleanEvidence.costChaos;
@@ -3222,6 +3853,15 @@ export class OptimizerService {
           : cleanFullRouteLowerBound > cleanLowerBoundBefore + 1e-9
             ? 'LOWER_BOUND_IMPROVED'
             : 'NO_PROOF_CHANGE',
+        wallTimeMs: fastCleanResult.searchSummary.elapsedMs,
+        statesExpandedBefore: retainedCleanStates,
+        statesExpandedAfter: searchSessionRecord.cleanDownstream.expansion.nodes.size,
+        transitionDistributionsReusedBefore: reusedCleanTransitions,
+        transitionDistributionsReusedAfter:
+          searchSessionRecord.cleanDownstream.expansion.transitionDistributionsReusedTotal,
+        transitionGenerationMs: fastCleanResult.stageTiming.transitionGenerationMs,
+        bellmanMs: fastCleanResult.stageTiming.bellmanMs,
+        occupancyMs: fastCleanResult.stageTiming.occupancyMs,
       });
       if (
         requestedObjective.kind === 'CHEAPEST_CHAOS' &&
@@ -3328,6 +3968,7 @@ export class OptimizerService {
           const continuation = boundRecord.continuation;
           const retainedStatesBefore = continuation.expansion.nodes.size;
           const generatedBefore = continuation.expansion.transitionDistributionsGeneratedTotal;
+          const reusedBefore = continuation.expansion.transitionDistributionsReusedTotal;
           const lowerBoundBefore = proofRecord.fullRouteLowerBoundChaos;
           const pCand = progressCandidates.get(`candidate_${candidateIndex}`)!;
           pCand.status = 'DOWNSTREAM_PROBING';
@@ -3367,10 +4008,14 @@ export class OptimizerService {
               },
             }
           ).search(start.state);
-          const downstreamLowerBound = genericSearchStartLowerBound(
-            boundResult,
-            start.state,
-            input.target
+          const downstreamLowerBound = combinedDownstreamLowerBound(
+            genericSearchStartLowerBound(boundResult, start.state, input.target),
+            start,
+            candidateIndex,
+          );
+          proofRecord.partialGraphDownstreamLowerBoundChaos = Math.max(
+            proofRecord.partialGraphDownstreamLowerBoundChaos,
+            genericSearchStartLowerBound(boundResult, start.state, input.target),
           );
           proofRecord.downstreamLowerBoundChaos = Math.max(
             proofRecord.downstreamLowerBoundChaos,
@@ -3399,6 +4044,15 @@ export class OptimizerService {
             upperBoundBeforeChaos: proofRecord.fullRouteUpperBoundChaos,
             upperBoundAfterChaos: proofRecord.fullRouteUpperBoundChaos,
             outcome: improved ? 'LOWER_BOUND_IMPROVED' : 'NO_PROOF_CHANGE',
+            wallTimeMs: boundResult.searchSummary.elapsedMs,
+            statesExpandedBefore: retainedStatesBefore,
+            statesExpandedAfter: continuation.expansion.nodes.size,
+            transitionDistributionsReusedBefore: reusedBefore,
+            transitionDistributionsReusedAfter:
+              continuation.expansion.transitionDistributionsReusedTotal,
+            transitionGenerationMs: boundResult.stageTiming.transitionGenerationMs,
+            bellmanMs: boundResult.stageTiming.bellmanMs,
+            occupancyMs: boundResult.stageTiming.occupancyMs,
           });
           stageTotalStateBudget += allocation.maxStates;
           stageTotalWallTimeBudgetMs += allocation.maxWallTimeMs;
@@ -3438,13 +4092,51 @@ export class OptimizerService {
           stagesAllocatedThisRequest.add(`${sessionKey}:DOWNSTREAM_BOUND`);
         }
 
-        // Generic best-bound order; exact target identity is only a stable tie-breaker.
+        const proofPriorityScore = (
+          start: StartingStateCandidate,
+          candidateIndex: number,
+        ): number => {
+          const sessionKey = JSON.stringify(start.fracturedRequirement);
+          const proofRecord = searchSessionRecord.fractureProofs.get(sessionKey)!;
+          const lowerRelativeToIncumbent = Number.isFinite(incumbentFullRouteU)
+            ? proofRecord.fullRouteLowerBoundChaos / Math.max(1e-9, incumbentFullRouteU)
+            : proofRecord.fullRouteLowerBoundChaos;
+          const retained =
+            (searchSessionRecord.fractureAcquisitions.get(sessionKey)?.expansion.nodes.size ?? 0) +
+            (searchSessionRecord.fractureDownstreams.get(sessionKey)?.expansion.nodes.size ?? 0) +
+            (searchSessionRecord.fractureDownstreamBounds.get(sessionKey)?.continuation.expansion.nodes.size ?? 0);
+          const readinessPenalty = proofRecord.acquisitionUpperBoundChaos === undefined
+            ? 0.04
+            : proofRecord.downstreamUpperBoundChaos === undefined
+              ? 0.02
+              : 0;
+          const retainedCredit = Math.min(0.025, retained / 1_000_000);
+          const productivityCredit = Math.min(
+            0.025,
+            Math.max(0, proofRecord.lastProofGainPerSecond ?? 0) / 1_000,
+          );
+          const repeatedNoChange = Math.max(
+            0,
+            ...Object.values(proofRecord.noProofChangeByStage ?? {}),
+          );
+          const noChangePenalty = Math.min(0.2, repeatedNoChange * 0.05);
+          if (
+            this.proofEfficiencyMode === 'LEGACY_BEST_BOUND_REFERENCE' ||
+            requestedObjective.kind !== 'CHEAPEST_CHAOS'
+          ) {
+            return proofRecord.fullRouteLowerBoundChaos + candidateIndex * Number.EPSILON;
+          }
+          return lowerRelativeToIncumbent + readinessPenalty + noChangePenalty -
+            retainedCredit - productivityCredit + candidateIndex * Number.EPSILON;
+        };
+
+        // Generic proof-debt/productivity order; target identity is only a stable tie-breaker.
         const sortedFractureEntries = [...fractureEntries].sort(
           (a, b) => {
             const aKey = JSON.stringify(a.start.fracturedRequirement);
             const bKey = JSON.stringify(b.start.fracturedRequirement);
-            return searchSessionRecord.fractureProofs.get(aKey)!.fullRouteLowerBoundChaos -
-              searchSessionRecord.fractureProofs.get(bKey)!.fullRouteLowerBoundChaos ||
+            return proofPriorityScore(a.start, a.candidateIndex) -
+              proofPriorityScore(b.start, b.candidateIndex) ||
               aKey.localeCompare(bKey);
           }
         );
@@ -3482,6 +4174,8 @@ export class OptimizerService {
           const retainedAcquisitionStatesBefore = acqSession.expansion.nodes.size;
           const generatedAcquisitionBefore =
             acqSession.expansion.transitionDistributionsGeneratedTotal;
+          const reusedAcquisitionBefore =
+            acqSession.expansion.transitionDistributionsReusedTotal;
           const acquisitionLowerBoundBefore = proofRecord.fullRouteLowerBoundChaos;
           const acquisitionUpperBoundBefore = proofRecord.fullRouteUpperBoundChaos;
           pCand.status = 'ACQUISITION_PROBING';
@@ -3515,6 +4209,7 @@ export class OptimizerService {
               } : undefined,
             }
           );
+          const synthesisCertified = isCertifiedAcquisitionSynthesis(synthesis);
           stagesAllocatedThisRequest.add(`${sessionKey}:ACQUISITION`);
 
           stageAttemptedCandidates++;
@@ -3522,7 +4217,7 @@ export class OptimizerService {
           stageTotalWallTimeBudgetMs += probeAllocation.maxWallTimeMs;
           pCand.statesExpanded = synthesis.search.statesExpanded;
           pCand.elapsedMs = synthesis.search.elapsedMs;
-          if (proofRecord.acquisition?.status !== 'RESOLVED' || synthesis.status === 'RESOLVED') {
+          if (!isCertifiedAcquisitionSynthesis(proofRecord.acquisition) || synthesisCertified) {
             proofRecord.acquisition = synthesis;
           }
           proofRecord.acquisitionLowerBoundChaos = Math.max(
@@ -3530,7 +4225,7 @@ export class OptimizerService {
             synthesis.lowerBoundChaos
           );
           proofRecord.acquisitionModeledOptimal = synthesis.proof.modeledActionOptimalityProven;
-          if (synthesis.status === 'RESOLVED' && synthesis.expectedCostChaos !== undefined) {
+          if (synthesisCertified) {
             proofRecord.acquisitionUpperBoundChaos = synthesis.expectedCostChaos;
           }
           proofRecord.fullRouteLowerBoundChaos =
@@ -3557,14 +4252,23 @@ export class OptimizerService {
             lowerBoundAfterChaos: proofRecord.fullRouteLowerBoundChaos,
             upperBoundBeforeChaos: acquisitionUpperBoundBefore,
             upperBoundAfterChaos: proofRecord.fullRouteUpperBoundChaos,
-            outcome: synthesis.status === 'RESOLVED'
+            outcome: synthesisCertified
               ? 'RESOLVED'
               : proofRecord.fullRouteLowerBoundChaos > acquisitionLowerBoundBefore + 1e-9
                 ? 'LOWER_BOUND_IMPROVED'
                 : 'NO_PROOF_CHANGE',
+            wallTimeMs: synthesis.search.elapsedMs,
+            statesExpandedBefore: retainedAcquisitionStatesBefore,
+            statesExpandedAfter: acqSession.expansion.nodes.size,
+            transitionDistributionsReusedBefore: reusedAcquisitionBefore,
+            transitionDistributionsReusedAfter:
+              acqSession.expansion.transitionDistributionsReusedTotal,
+            transitionGenerationMs: synthesis.search.stageTimingMs.transitionGenerationMs,
+            bellmanMs: synthesis.search.stageTimingMs.bellmanMs,
+            occupancyMs: synthesis.search.stageTimingMs.occupancyMs,
           });
 
-          if (synthesis.status === 'RESOLVED' && synthesis.expectedCostChaos !== undefined) {
+          if (synthesisCertified) {
             synthesisResults.set(candidateIndex, synthesis);
             pCand.status = 'ACQUISITION_RESOLVED';
             pCand.acquisitionUpperBoundChaos = synthesis.expectedCostChaos;
@@ -3579,6 +4283,8 @@ export class OptimizerService {
             const retainedDownstreamStates = downSession.expansion.nodes.size;
             const generatedDownstreamBefore =
               downSession.expansion.transitionDistributionsGeneratedTotal;
+            const reusedDownstreamBefore =
+              downSession.expansion.transitionDistributionsReusedTotal;
             const downstreamLowerBoundBefore = proofRecord.fullRouteLowerBoundChaos;
             const downstreamUpperBoundBefore = proofRecord.fullRouteUpperBoundChaos;
             const downstreamSessionReuse: SearchSessionReuseSummary = {
@@ -3627,6 +4333,17 @@ export class OptimizerService {
             stagesAllocatedThisRequest.add(`${sessionKey}:DOWNSTREAM`);
 
             proofRecord.downstream = downstreamResult;
+            proofRecord.partialGraphDownstreamLowerBoundChaos = Math.max(
+              proofRecord.partialGraphDownstreamLowerBoundChaos,
+              genericSearchStartLowerBound(downstreamResult, start.state, input.target),
+            );
+            proofRecord.downstreamLowerBoundChaos = combinedDownstreamLowerBound(
+              proofRecord.partialGraphDownstreamLowerBoundChaos,
+              start,
+              candidateIndex,
+            );
+            proofRecord.fullRouteLowerBoundChaos =
+              proofRecord.acquisitionLowerBoundChaos + proofRecord.downstreamLowerBoundChaos;
             proofRecord.downstreamModeledOptimal = genericSearchModeledOptimal(downstreamResult);
             proofRecord.lastAllocatedStage = 'DOWNSTREAM';
             stageTotalStateBudget += input.searchBudget?.maxStates ?? 5_000;
@@ -3687,6 +4404,15 @@ export class OptimizerService {
                       proofRecord.fullRouteUpperBoundChaos + 1e-9
                   ? 'UPPER_BOUND_IMPROVED'
                   : 'NO_PROOF_CHANGE',
+              wallTimeMs: downstreamResult.searchSummary.elapsedMs,
+              statesExpandedBefore: retainedDownstreamStates,
+              statesExpandedAfter: downSession.expansion.nodes.size,
+              transitionDistributionsReusedBefore: reusedDownstreamBefore,
+              transitionDistributionsReusedAfter:
+                downSession.expansion.transitionDistributionsReusedTotal,
+              transitionGenerationMs: downstreamResult.stageTiming.transitionGenerationMs,
+              bellmanMs: downstreamResult.stageTiming.bellmanMs,
+              occupancyMs: downstreamResult.stageTiming.occupancyMs,
             });
           }
           pCand.isActive = false;
@@ -3708,8 +4434,8 @@ export class OptimizerService {
             .sort((a, b) => {
               const aKey = JSON.stringify(a.start.fracturedRequirement);
               const bKey = JSON.stringify(b.start.fracturedRequirement);
-              return searchSessionRecord.fractureProofs.get(aKey)!.fullRouteLowerBoundChaos -
-                searchSessionRecord.fractureProofs.get(bKey)!.fullRouteLowerBoundChaos ||
+              return proofPriorityScore(a.start, a.candidateIndex) -
+                proofPriorityScore(b.start, b.candidateIndex) ||
                 aKey.localeCompare(bKey);
             });
           if (competitive.length === 0) break;
@@ -3731,13 +4457,30 @@ export class OptimizerService {
               ? Infinity
               : Math.max(0, proofRecord.downstreamUpperBoundChaos -
                   proofRecord.downstreamLowerBoundChaos);
-            const preferredStage = proofRecord.acquisitionUpperBoundChaos === undefined
+            let preferredStage = proofRecord.acquisitionUpperBoundChaos === undefined
               ? 'ACQUISITION' as const
               : proofRecord.downstreamUpperBoundChaos === undefined
                 ? 'DOWNSTREAM' as const
                 : acquisitionGap >= downstreamGap
                   ? 'ACQUISITION' as const
                   : 'DOWNSTREAM_BOUND' as const;
+            const repeatedNoChange = proofRecord.noProofChangeByStage?.[preferredStage] ?? 0;
+            let switchedAfterNoChange = false;
+            if (
+              this.proofEfficiencyMode === 'PHASE2Y' &&
+              requestedObjective.kind === 'CHEAPEST_CHAOS' &&
+              repeatedNoChange >= 2
+            ) {
+              preferredStage = preferredStage === 'DOWNSTREAM_BOUND'
+                ? proofRecord.acquisitionUpperBoundChaos === undefined
+                  ? 'ACQUISITION'
+                  : 'DOWNSTREAM'
+                : 'DOWNSTREAM_BOUND';
+              switchedAfterNoChange = true;
+              proofRecord.deprioritizedReason =
+                `${proofRecord.lastAllocatedStage ?? 'previous stage'} produced ${repeatedNoChange} ` +
+                'consecutive NO_PROOF_CHANGE tranches; switched generic proof-work mode.';
+            }
             const fallbacks: Array<'ACQUISITION' | 'DOWNSTREAM' | 'DOWNSTREAM_BOUND'> =
               preferredStage === 'ACQUISITION'
                 ? ['ACQUISITION', 'DOWNSTREAM_BOUND', 'DOWNSTREAM']
@@ -3754,7 +4497,9 @@ export class OptimizerService {
               start,
               candidateIndex,
               stage,
-              reason: stage === 'ACQUISITION'
+              reason: switchedAfterNoChange
+                ? 'SWITCH_AFTER_NO_PROOF_CHANGE'
+                : stage === 'ACQUISITION'
                 ? proofRecord.acquisitionUpperBoundChaos === undefined
                   ? 'RESOLVE_ACQUISITION_BEFORE_DOWNSTREAM'
                   : 'DEEPEST_ACQUISITION_PROOF_DEBT'
@@ -3793,6 +4538,7 @@ export class OptimizerService {
             }
             const retainedBefore = acqSession.expansion.nodes.size;
             const generatedBefore = acqSession.expansion.transitionDistributionsGeneratedTotal;
+            const reusedBefore = acqSession.expansion.transitionDistributionsReusedTotal;
             const lowerBefore = proofRecord.fullRouteLowerBoundChaos;
             const upperBefore = proofRecord.fullRouteUpperBoundChaos;
             pCand.status = 'ACQUISITION_PROBING';
@@ -3822,6 +4568,7 @@ export class OptimizerService {
                 persistentExpansion: true,
               }
             );
+            const synthesisCertified = isCertifiedAcquisitionSynthesis(synthesis);
             stageAttemptedCandidates++;
             stageTotalStateBudget += allocation.maxStates;
             stageTotalWallTimeBudgetMs += allocation.maxWallTimeMs;
@@ -3832,10 +4579,10 @@ export class OptimizerService {
             proofRecord.fullRouteLowerBoundChaos =
               proofRecord.acquisitionLowerBoundChaos + proofRecord.downstreamLowerBoundChaos;
             proofRecord.acquisitionModeledOptimal = synthesis.proof.modeledActionOptimalityProven;
-            if (proofRecord.acquisition?.status !== 'RESOLVED' || synthesis.status === 'RESOLVED') {
+            if (!isCertifiedAcquisitionSynthesis(proofRecord.acquisition) || synthesisCertified) {
               proofRecord.acquisition = synthesis;
             }
-            if (synthesis.status === 'RESOLVED' && synthesis.expectedCostChaos !== undefined) {
+            if (synthesisCertified) {
               proofRecord.acquisitionUpperBoundChaos = synthesis.expectedCostChaos;
               synthesisResults.set(candidateIndex, synthesis);
             }
@@ -3874,6 +4621,15 @@ export class OptimizerService {
               upperBoundBeforeChaos: upperBefore,
               upperBoundAfterChaos: proofRecord.fullRouteUpperBoundChaos,
               outcome,
+              wallTimeMs: synthesis.search.elapsedMs,
+              statesExpandedBefore: retainedBefore,
+              statesExpandedAfter: acqSession.expansion.nodes.size,
+              transitionDistributionsReusedBefore: reusedBefore,
+              transitionDistributionsReusedAfter:
+                acqSession.expansion.transitionDistributionsReusedTotal,
+              transitionGenerationMs: synthesis.search.stageTimingMs.transitionGenerationMs,
+              bellmanMs: synthesis.search.stageTimingMs.bellmanMs,
+              occupancyMs: synthesis.search.stageTimingMs.occupancyMs,
             });
             if (outcome === 'RESOLVED') {
               emitProgress(
@@ -3899,6 +4655,7 @@ export class OptimizerService {
           }
           const retainedBefore = downSession.expansion.nodes.size;
           const generatedBefore = downSession.expansion.transitionDistributionsGeneratedTotal;
+          const reusedBefore = downSession.expansion.transitionDistributionsReusedTotal;
           const lowerBefore = proofRecord.fullRouteLowerBoundChaos;
           const upperBefore = proofRecord.fullRouteUpperBoundChaos;
           pCand.status = 'DOWNSTREAM_PROBING';
@@ -3939,6 +4696,17 @@ export class OptimizerService {
           stageTotalStateBudget += allocatedMaxStates;
           stageTotalWallTimeBudgetMs += allocatedWallTimeMs;
           proofRecord.downstream = downstreamResult;
+          proofRecord.partialGraphDownstreamLowerBoundChaos = Math.max(
+            proofRecord.partialGraphDownstreamLowerBoundChaos,
+            genericSearchStartLowerBound(downstreamResult, start.state, input.target),
+          );
+          proofRecord.downstreamLowerBoundChaos = combinedDownstreamLowerBound(
+            proofRecord.partialGraphDownstreamLowerBoundChaos,
+            start,
+            candidateIndex,
+          );
+          proofRecord.fullRouteLowerBoundChaos =
+            proofRecord.acquisitionLowerBoundChaos + proofRecord.downstreamLowerBoundChaos;
           proofRecord.downstreamModeledOptimal = genericSearchModeledOptimal(downstreamResult);
           if (
             downstreamResult.optimalityProof.selectedPolicyStatus ===
@@ -4004,6 +4772,15 @@ export class OptimizerService {
             upperBoundBeforeChaos: upperBefore,
             upperBoundAfterChaos: proofRecord.fullRouteUpperBoundChaos,
             outcome,
+            wallTimeMs: downstreamResult.searchSummary.elapsedMs,
+            statesExpandedBefore: retainedBefore,
+            statesExpandedAfter: downSession.expansion.nodes.size,
+            transitionDistributionsReusedBefore: reusedBefore,
+            transitionDistributionsReusedAfter:
+              downSession.expansion.transitionDistributionsReusedTotal,
+            transitionGenerationMs: downstreamResult.stageTiming.transitionGenerationMs,
+            bellmanMs: downstreamResult.stageTiming.bellmanMs,
+            occupancyMs: downstreamResult.stageTiming.occupancyMs,
           });
         }
 
@@ -4280,7 +5057,7 @@ export class OptimizerService {
           }];
         }
         if (
-          synthesis.status === 'RESOLVED' &&
+          isCertifiedAcquisitionSynthesis(synthesis) &&
           synthesis.proof?.unresolvedCandidatesCouldBeatIncumbent !== true &&
           !usesDirectCleanPolicy
         ) {
@@ -4326,8 +5103,12 @@ export class OptimizerService {
             structuralBounds.get(candidateIndex)?.combinedLowerBoundChaos ?? 0;
         const downstreamLowerBoundChaos = isClean
           ? fastCleanResult
-            ? genericSearchStartLowerBound(fastCleanResult, cleanStart.state, input.target)
-            : 0
+            ? combinedDownstreamLowerBound(
+                genericSearchStartLowerBound(fastCleanResult, cleanStart.state, input.target),
+                cleanStart,
+                cleanCandidateIndex,
+              )
+            : combinedDownstreamLowerBound(0, cleanStart, cleanCandidateIndex)
           : proofRecord?.downstreamLowerBoundChaos ?? 0;
         const fullRouteLowerBoundChaos = acquisitionLowerBoundChaos +
           downstreamLowerBoundChaos;
@@ -4398,6 +5179,39 @@ export class OptimizerService {
           downstreamTransitionDistributionsGenerated:
             (downstreamSession?.expansion.transitionDistributionsGeneratedTotal ?? 0) +
             (boundSession?.expansion.transitionDistributionsGeneratedTotal ?? 0),
+          proofDebtChaos: incumbentUpperBound === undefined
+            ? undefined
+            : Math.max(0, incumbentUpperBound - fullRouteLowerBoundChaos),
+          lastWorkStage: proofRecord?.lastAllocatedStage,
+          schedulerPriorityScore: !isClean && proofRecord
+            ? (incumbentUpperBound === undefined
+                ? proofRecord.fullRouteLowerBoundChaos
+                : proofRecord.fullRouteLowerBoundChaos / Math.max(1e-9, incumbentUpperBound)) +
+              Math.min(
+                0.2,
+                Math.max(0, ...Object.values(proofRecord.noProofChangeByStage ?? {})) * 0.05,
+              )
+            : undefined,
+          consecutiveNoProofChange: proofRecord
+            ? Math.max(0, ...Object.values(proofRecord.noProofChangeByStage ?? {}))
+            : 0,
+          deprioritizedReason: proofRecord?.deprioritizedReason,
+          downstreamLowerBoundEvidence: {
+            partialGraphLowerBoundChaos: isClean && fastCleanResult
+              ? genericSearchStartLowerBound(fastCleanResult, cleanStart.state, input.target)
+              : isClean
+                ? 0
+                : proofRecord?.partialGraphDownstreamLowerBoundChaos ?? 0,
+            relaxedTargetProgressLowerBoundChaos: isClean
+              ? relaxedDownstreamBoundFor(cleanStart, cleanCandidateIndex).lowerBoundChaos
+              : proofRecord?.relaxedDownstreamLowerBoundChaos ?? 0,
+            combinedLowerBoundChaos: downstreamLowerBoundChaos,
+            combinationRule: 'MAX_OF_ADMISSIBLE_DOWNSTREAM_BOUNDS',
+            relaxedTargetProgress: isClean
+              ? relaxedDownstreamBoundFor(cleanStart, cleanCandidateIndex)
+              : proofRecord?.relaxedDownstreamBound ??
+                relaxedDownstreamBoundFor(start, candidateIndex),
+          },
         };
       }
     );
@@ -4430,6 +5244,95 @@ export class OptimizerService {
     const dominatedCandidates = portfolioCandidateEvidence.filter(
       (candidate) => candidate.status === 'DOMINATED'
     ).length;
+    const finalizedProofTranches = portfolioProofTranches.map((tranche) => {
+      const wallTimeMs = Math.max(0, tranche.wallTimeMs ?? 0);
+      const seconds = Math.max(0.001, wallTimeMs / 1_000);
+      const lowerGain = Math.max(
+        0,
+        tranche.lowerBoundAfterChaos - tranche.lowerBoundBeforeChaos,
+      );
+      const upperImprovement = tranche.upperBoundBeforeChaos !== undefined &&
+          tranche.upperBoundAfterChaos !== undefined
+        ? Math.max(0, tranche.upperBoundBeforeChaos - tranche.upperBoundAfterChaos)
+        : 0;
+      const comparisonUpperBefore = tranche.upperBoundBeforeChaos ?? incumbentUpperBound;
+      const comparisonUpperAfter = tranche.upperBoundAfterChaos ?? incumbentUpperBound;
+      const potentialGapBeforeChaos = comparisonUpperBefore === undefined
+        ? undefined
+        : Math.max(0, comparisonUpperBefore - tranche.lowerBoundBeforeChaos);
+      const potentialGapAfterChaos = comparisonUpperAfter === undefined
+        ? undefined
+        : Math.max(0, comparisonUpperAfter - tranche.lowerBoundAfterChaos);
+      const gapReduction = potentialGapBeforeChaos === undefined || potentialGapAfterChaos === undefined
+        ? 0
+        : Math.max(0, potentialGapBeforeChaos - potentialGapAfterChaos);
+      const candidateIndex = Number(/^candidate_(\d+)$/.exec(tranche.candidateId)?.[1]);
+      const start = Number.isFinite(candidateIndex) ? starts[candidateIndex] : undefined;
+      const proofRecord = start?.fracturedRequirement
+        ? searchSessionRecord.fractureProofs.get(JSON.stringify(start.fracturedRequirement))
+        : undefined;
+      const priorNoChange = proofRecord?.noProofChangeByStage?.[tranche.stage] ?? 0;
+      const consecutiveNoProofChange = tranche.outcome === 'NO_PROOF_CHANGE'
+        ? priorNoChange + 1
+        : 0;
+      if (proofRecord) {
+        proofRecord.noProofChangeByStage = {
+          ...proofRecord.noProofChangeByStage,
+          [tranche.stage]: consecutiveNoProofChange,
+        };
+        proofRecord.lastProofGainPerSecond = (lowerGain + upperImprovement) / seconds;
+        proofRecord.deprioritizedReason = consecutiveNoProofChange >= 2
+          ? `${tranche.stage} produced ${consecutiveNoProofChange} consecutive NO_PROOF_CHANGE tranches; ` +
+            'the generic scheduler will switch to the alternate bound/policy stage next.'
+          : undefined;
+      }
+      return {
+        ...tranche,
+        wallTimeMs,
+        statesExpandedBefore: tranche.statesExpandedBefore ?? tranche.retainedStatesBefore,
+        statesExpandedAfter: tranche.statesExpandedAfter ?? tranche.retainedStatesAfter,
+        transitionDistributionsReusedBefore: tranche.transitionDistributionsReusedBefore ?? 0,
+        transitionDistributionsReusedAfter: tranche.transitionDistributionsReusedAfter ?? 0,
+        transitionGenerationMs: tranche.transitionGenerationMs ?? 0,
+        bellmanMs: tranche.bellmanMs ?? 0,
+        occupancyMs: tranche.occupancyMs ?? 0,
+        potentialGapBeforeChaos,
+        potentialGapAfterChaos,
+        proofStatusBefore: tranche.proofStatusBefore ??
+          (tranche.upperBoundBeforeChaos === undefined
+            ? 'COMPETITIVE_UNRESOLVED' as const
+            : 'FULL_ROUTE_RESOLVED' as const),
+        proofStatusAfter: tranche.proofStatusAfter ??
+          (tranche.outcome === 'DOMINATED'
+            ? 'DOMINATED' as const
+            : tranche.upperBoundAfterChaos === undefined
+              ? 'COMPETITIVE_UNRESOLVED' as const
+              : 'FULL_ROUTE_RESOLVED' as const),
+        lowerBoundGainPerSecond: lowerGain / seconds,
+        upperBoundImprovementPerSecond: upperImprovement / seconds,
+        potentialGapReductionPerSecond: gapReduction / seconds,
+        transitionsGeneratedPerSecond: Math.max(
+          0,
+          tranche.transitionDistributionsGeneratedAfter -
+            tranche.transitionDistributionsGeneratedBefore,
+        ) / seconds,
+        consecutiveNoProofChange,
+        deprioritizedReason: proofRecord?.deprioritizedReason,
+      } satisfies AcquisitionPortfolioProofTranche;
+    });
+    for (const candidate of portfolioCandidateEvidence) {
+      const candidateIndex = Number(/^candidate_(\d+)$/.exec(candidate.candidateId)?.[1]);
+      const start = Number.isFinite(candidateIndex) ? starts[candidateIndex] : undefined;
+      const proofRecord = start?.fracturedRequirement
+        ? searchSessionRecord.fractureProofs.get(JSON.stringify(start.fracturedRequirement))
+        : undefined;
+      if (!proofRecord) continue;
+      candidate.consecutiveNoProofChange = Math.max(
+        0,
+        ...Object.values(proofRecord.noProofChangeByStage ?? {}),
+      );
+      candidate.deprioritizedReason = proofRecord.deprioritizedReason;
+    }
     const portfolioProof: AcquisitionPortfolioProofSummary = {
       status: portfolioProofStatus,
       selectedFullRouteUpperBoundChaos: incumbentUpperBound,
@@ -4441,11 +5344,12 @@ export class OptimizerService {
       resolvedCompetitiveCandidates,
       dominatedCandidates,
       candidateEvidence: portfolioCandidateEvidence,
-      tranches: portfolioProofTranches,
+      tranches: finalizedProofTranches,
       schedulerPolicy:
-        'Admissible best-bound scheduling: deepen only non-selected families whose full-route L ' +
-        'can beat incumbent U; resolve acquisition before executable downstream, then allocate to ' +
-        'the larger acquisition/downstream proof debt. Stable exact-identity ordering breaks ties.',
+        'Proof-debt/productivity scheduling: prioritize non-selected families whose admissible ' +
+        'full-route L can beat incumbent U, retained work, stage readiness, and recent proof gain; ' +
+        'after two consecutive NO_PROOF_CHANGE tranches switch between executable-policy and ' +
+        'relaxed/partial-bound work. Exact mechanics identity is only a stable tie-breaker.',
     };
     currentPortfolioProofStatus = portfolioProofStatus;
     currentUnresolvedCompetitiveCandidates = acquisitionSelectionThreats.length;
@@ -4792,7 +5696,125 @@ export class OptimizerService {
       [...searchSessionRecord.fractureDownstreams.values()].reduce(
         (sum, continuation) => sum + continuation.expansion.nodes.size,
         0
+      ) +
+      [...searchSessionRecord.fractureDownstreamBounds.values()].reduce(
+        (sum, record) => sum + record.continuation.expansion.nodes.size,
+        0
       );
+    const allocationFromTranches = (
+      predicate: (tranche: AcquisitionPortfolioProofTranche) => boolean,
+    ): OptimizationBudgetAllocation => finalizedProofTranches
+      .filter(predicate)
+      .reduce<OptimizationBudgetAllocation>((allocation, tranche) => ({
+        statesExpanded: allocation.statesExpanded + Math.max(
+          0,
+          (tranche.statesExpandedAfter ?? tranche.retainedStatesAfter) -
+            (tranche.statesExpandedBefore ?? tranche.retainedStatesBefore),
+        ),
+        retainedStates: allocation.retainedStates + tranche.retainedStatesAfter,
+        wallTimeMs: allocation.wallTimeMs + (tranche.wallTimeMs ?? 0),
+        transitionsGenerated: allocation.transitionsGenerated + Math.max(
+          0,
+          tranche.transitionDistributionsGeneratedAfter -
+            tranche.transitionDistributionsGeneratedBefore,
+        ),
+        transitionsReused: allocation.transitionsReused + Math.max(
+          0,
+          (tranche.transitionDistributionsReusedAfter ?? 0) -
+            (tranche.transitionDistributionsReusedBefore ?? 0),
+        ),
+        transitionGenerationMs: allocation.transitionGenerationMs +
+          (tranche.transitionGenerationMs ?? 0),
+        bellmanMs: allocation.bellmanMs + (tranche.bellmanMs ?? 0),
+        occupancyMs: allocation.occupancyMs + (tranche.occupancyMs ?? 0),
+      }), {
+        statesExpanded: 0,
+        retainedStates: 0,
+        wallTimeMs: 0,
+        transitionsGenerated: 0,
+        transitionsReused: 0,
+        transitionGenerationMs: 0,
+        bellmanMs: 0,
+        occupancyMs: 0,
+      });
+    const cleanRouteAllocation = allocationFromTranches((tranche) =>
+      tranche.candidateId === `candidate_${cleanCandidateIndex}`
+    );
+    const fractureAcquisitionAllocation = allocationFromTranches((tranche) =>
+      tranche.stage === 'ACQUISITION'
+    );
+    const fractureDownstreamAllocation = allocationFromTranches((tranche) =>
+      tranche.stage === 'DOWNSTREAM'
+    );
+    const lowerBoundProbeAllocation = allocationFromTranches((tranche) =>
+      tranche.stage === 'DOWNSTREAM_BOUND'
+    );
+    const requestedMaxStates = input.searchBudget?.maxStates ?? 5_000;
+    const requestedMaxExpansionRounds = input.searchBudget?.maxExpansionRounds ?? 3;
+    const inferredPreset: NonNullable<SearchBudget['preset']> = input.searchBudget?.preset ??
+      (requestedMaxStates === 5_000 && runtimeBudget.requestedWallTimeMs === 30_000 &&
+          requestedMaxExpansionRounds === 3
+        ? 'NORMAL'
+        : requestedMaxStates === 10_000 && runtimeBudget.requestedWallTimeMs === 60_000 &&
+            requestedMaxExpansionRounds === 4
+          ? 'DEEP'
+          : requestedMaxStates === 20_000 && runtimeBudget.requestedWallTimeMs === 120_000 &&
+              requestedMaxExpansionRounds === 5
+            ? 'VERY_DEEP'
+            : requestedMaxStates === 50_000 && runtimeBudget.requestedWallTimeMs === 300_000 &&
+                requestedMaxExpansionRounds === 6
+              ? 'RESEARCH'
+              : 'CUSTOM');
+    const requestElapsedAtAssembly = Date.now() - optimizationStarted;
+    const proofClosedAtAssembly = acquisitionSelectionSafe && overallModeledActionOptimalityProven;
+    // A selected subgraph can hit its local tranche wall time well before the
+    // request envelope ends. Classify WALL_TIME only when the request itself
+    // consumed the wall-time envelope; local stage limits stay in evidence.
+    const wallLimitObserved = requestElapsedAtAssembly >=
+      runtimeBudget.engineDeadlineMs * 0.9;
+    const hostReserveObserved = !wallLimitObserved && !proofClosedAtAssembly &&
+      Date.now() >= searchStopDeadline - 500;
+    const stateLimitObserved = result.searchSummary.stateBudgetExhausted ||
+      portfolioTotalStatesExpanded >= requestedMaxStates;
+    const roundLimitObserved = result.searchSummary.roundBudgetExhausted ||
+      result.searchSummary.expansionRounds >= requestedMaxExpansionRounds;
+    const noProductiveWorkObserved = !proofClosedAtAssembly &&
+      finalizedProofTranches.length > 0 &&
+      finalizedProofTranches.slice(-2).every((tranche) => tranche.outcome === 'NO_PROOF_CHANGE');
+    const requestStopReason: OptimizationRequestStopReason = proofClosedAtAssembly
+      ? 'PROOF_CLOSED'
+      : wallLimitObserved
+        ? 'WALL_TIME'
+        : hostReserveObserved
+          ? 'HOST_RESERVE'
+          : stateLimitObserved
+            ? 'STATE_CAP'
+            : roundLimitObserved
+              ? 'ROUND_CAP'
+              : noProductiveWorkObserved
+                ? 'NO_PRODUCTIVE_PROOF_WORK'
+                : 'NO_PRODUCTIVE_PROOF_WORK';
+    const observedStopReasons: OptimizationRequestStopReason[] = [];
+    if (wallLimitObserved) observedStopReasons.push('WALL_TIME');
+    if (hostReserveObserved) observedStopReasons.push('HOST_RESERVE');
+    if (stateLimitObserved) observedStopReasons.push('STATE_CAP');
+    if (roundLimitObserved) observedStopReasons.push('ROUND_CAP');
+    if (noProductiveWorkObserved) observedStopReasons.push('NO_PRODUCTIVE_PROOF_WORK');
+    const secondaryStopReasons = observedStopReasons.filter(
+      (reason) => reason !== requestStopReason
+    );
+    const requestStopEvidence = [
+      `requested up to ${requestedMaxStates.toLocaleString()} states / ` +
+        `${runtimeBudget.requestedWallTimeMs}ms / ${requestedMaxExpansionRounds} rounds`,
+      `used ${portfolioTotalStatesExpanded.toLocaleString()} expanded; ` +
+        `${portfolioRetainedStates.toLocaleString()} retained; ${requestElapsedAtAssembly}ms elapsed`,
+      `selected graph limits: state=${result.searchSummary.stateBudgetExhausted}; ` +
+        `wall=${result.searchSummary.wallTimeBudgetExhausted}; ` +
+        `round=${result.searchSummary.roundBudgetExhausted}`,
+      proofClosedAtAssembly
+        ? 'Every portfolio competitor is resolved or excluded by an admissible bound.'
+        : `${acquisitionSelectionThreats.length} acquisition candidate(s) retain proof debt.`,
+    ];
     const outputWithoutCraftPlan: Omit<
       OptimizeCraftResult,
       'craftPlan' | 'methodPortfolio' | 'presentation' | 'fullRouteUsage' | 'harvestComparison'
@@ -4958,6 +5980,74 @@ export class OptimizerService {
           rawInferredTags: input.harvestTags === undefined ? [...harvestTags] : [],
           enabledCrafts: enabledHarvestCrafts,
         },
+        requestStopReason,
+        secondaryStopReasons,
+        requestBudget: {
+          semantics: 'UP_TO_CAPS',
+          requested: {
+            preset: inferredPreset,
+            maxStates: requestedMaxStates,
+            maxWallTimeMs: runtimeBudget.requestedWallTimeMs,
+            maxExpansionRounds: requestedMaxExpansionRounds,
+          },
+          used: {
+            statesExpanded: result.searchSummary.statesExpanded,
+            retainedStates: portfolioRetainedStates,
+            elapsedMs: requestElapsedAtAssembly,
+            expansionRounds: result.searchSummary.expansionRounds,
+            transitionsGenerated: finalizedProofTranches.reduce(
+              (sum, tranche) => sum + Math.max(
+                0,
+                tranche.transitionDistributionsGeneratedAfter -
+                  tranche.transitionDistributionsGeneratedBefore,
+              ),
+              result.searchSummary.transitionDistributionsGenerated,
+            ),
+            transitionsReused: finalizedProofTranches.reduce(
+              (sum, tranche) => sum + Math.max(
+                0,
+                (tranche.transitionDistributionsReusedAfter ?? 0) -
+                  (tranche.transitionDistributionsReusedBefore ?? 0),
+              ),
+              result.searchSummary.transitionDistributionsReused,
+            ),
+          },
+          stop: {
+            primary: requestStopReason,
+            secondary: secondaryStopReasons,
+            evidence: requestStopEvidence,
+          },
+          allocations: {
+            cleanRoute: cleanRouteAllocation,
+            fractureAcquisition: fractureAcquisitionAllocation,
+            fractureDownstream: fractureDownstreamAllocation,
+            lowerBoundProbes: lowerBoundProbeAllocation,
+            bellmanAndOccupancy: {
+              bellmanMs: finalizedProofTranches.reduce(
+                (sum, tranche) => sum + (tranche.bellmanMs ?? 0),
+                result.stageTiming.bellmanMs,
+              ),
+              occupancyMs: finalizedProofTranches.reduce(
+                (sum, tranche) => sum + (tranche.occupancyMs ?? 0),
+                result.stageTiming.occupancyMs,
+              ),
+            },
+            methodFamilyComparison: {
+              statesExpanded: 0,
+              retainedStates: 0,
+              wallTimeMs: 0,
+              transitionsGenerated: 0,
+              transitionsReused: 0,
+              transitionGenerationMs: 0,
+              bellmanMs: 0,
+              occupancyMs: 0,
+            },
+            serializationAndPresentationReserve: {
+              usedMs: 0,
+              reservedMs: runtimeBudget.shutdownReserveMs,
+            },
+          },
+        },
       },
       solver: {
         bellmanIterations: result.convergence.iterations +
@@ -4987,6 +6077,62 @@ export class OptimizerService {
       warnings: [...new Set(uniqueWarningDetails.map((warning) => warning.message))],
     };
     const craftPlan = buildCraftPlan(outputWithoutCraftPlan);
+    const snapshotMethodFamilyWork = () => [...searchSessionRecord.methodFamilies.values()]
+      .reduce((snapshot, continuation) => ({
+        retainedStates: snapshot.retainedStates + continuation.expansion.nodes.size,
+        highWaterStates: Math.max(
+          snapshot.highWaterStates,
+          continuation.expansion.nodes.size,
+        ),
+        statesExpanded: snapshot.statesExpanded + continuation.expansion.statesExpandedTotal,
+        transitionsGenerated: snapshot.transitionsGenerated +
+          continuation.expansion.transitionDistributionsGeneratedTotal,
+        transitionsReused: snapshot.transitionsReused +
+          continuation.expansion.transitionDistributionsReusedTotal,
+        transitionGenerationMs: snapshot.transitionGenerationMs +
+          continuation.expansion.transitionGenerationMs,
+      }), {
+        retainedStates: 0,
+        highWaterStates: 0,
+        statesExpanded: 0,
+        transitionsGenerated: 0,
+        transitionsReused: 0,
+        transitionGenerationMs: 0,
+      });
+    const snapshotAcquisitionDependencyWork = () => {
+      const active = [...searchSessionRecord.fractureAcquisitions.values()]
+        .reduce((snapshot, continuation) => ({
+          retainedStates: snapshot.retainedStates + continuation.expansion.nodes.size,
+          highWaterStates: Math.max(snapshot.highWaterStates, continuation.expansion.nodes.size),
+          statesExpanded: snapshot.statesExpanded + continuation.expansion.statesExpandedTotal,
+          transitionsGenerated: snapshot.transitionsGenerated +
+            continuation.expansion.transitionDistributionsGeneratedTotal,
+          transitionsReused: snapshot.transitionsReused +
+            continuation.expansion.transitionDistributionsReusedTotal,
+          transitionGenerationMs: snapshot.transitionGenerationMs +
+            continuation.expansion.transitionGenerationMs,
+        }), {
+          retainedStates: 0,
+          highWaterStates: 0,
+          statesExpanded: 0,
+          transitionsGenerated: 0,
+          transitionsReused: 0,
+          transitionGenerationMs: 0,
+        });
+      const retired = searchSessionRecord.retiredFractureAcquisitionWork;
+      return {
+        ...active,
+        highWaterStates: Math.max(active.highWaterStates, retired.highWaterStates),
+        statesExpanded: active.statesExpanded + retired.statesExpanded,
+        transitionsGenerated: active.transitionsGenerated + retired.transitionsGenerated,
+        transitionsReused: active.transitionsReused + retired.transitionsReused,
+        transitionGenerationMs:
+          active.transitionGenerationMs + retired.transitionGenerationMs,
+      };
+    };
+    const methodFamilyWorkBefore = snapshotMethodFamilyWork();
+    const acquisitionDependencyWorkBefore = snapshotAcquisitionDependencyWork();
+    const methodFamilyComparisonStarted = Date.now();
     const methodPortfolioBuild = buildMethodPortfolio({
       pool,
       priceBook,
@@ -5007,6 +6153,9 @@ export class OptimizerService {
       searchIdentityHash,
       deadlineMs: optimizationStarted + Math.floor(runtimeBudget.engineDeadlineMs * 0.97),
     });
+    const methodFamilyComparisonElapsedMs = Date.now() - methodFamilyComparisonStarted;
+    const methodFamilyWorkAfter = snapshotMethodFamilyWork();
+    const acquisitionDependencyWorkAfter = snapshotAcquisitionDependencyWork();
     const resolvedBundles: ResolvedPolicyBundle[] = [];
     const appendBundle = (bundle: ResolvedPolicyBundle | undefined): void => {
       if (bundle) resolvedBundles.push(bundle);
@@ -5091,17 +6240,13 @@ export class OptimizerService {
     }
 
     const uniqueBundles = new Map<string, ResolvedPolicyBundle>();
-    for (const bundle of [...resolvedBundles].sort((left, right) => left.id.localeCompare(right.id))) {
-      const fingerprint = JSON.stringify({
-        actions: bundle.fullRouteUsage.combinedActions.map((usage) => [
-          usage.actionId,
-          usage.expectedCount.toFixed(8),
-          usage.expectedCostChaos.toFixed(8),
-        ]),
-        cost: bundle.metrics.expectedChaosCost.toFixed(8),
-        physicalActions: bundle.metrics.expectedPhysicalActions.toFixed(8),
-        manualTimeMs: bundle.metrics.estimatedManualTimeMs.toFixed(8),
-      });
+    const equivalenceRepresentativePriority = (bundle: ResolvedPolicyBundle): number =>
+      bundle.source === 'OPEN' ? 0 : bundle.source === 'CLEAN_DIRECT' ? 1 : 2;
+    for (const bundle of [...resolvedBundles].sort((left, right) =>
+      equivalenceRepresentativePriority(left) - equivalenceRepresentativePriority(right) ||
+      left.id.localeCompare(right.id)
+    )) {
+      const fingerprint = bundle.policyEquivalenceFingerprint;
       if (!uniqueBundles.has(fingerprint)) uniqueBundles.set(fingerprint, bundle);
     }
     const unifiedBundles = [...uniqueBundles.values()];
@@ -5213,20 +6358,36 @@ export class OptimizerService {
           })),
       },
     };
+    // Constrained method families are independently solved presentation and
+    // objective candidates. They are subsets of the Open action set, so an
+    // unresolved constrained re-solve cannot invalidate a Cheapest proof that
+    // the canonically selected Open policy already closed. If canonical
+    // deduplication selected an equivalent family representative, require the
+    // independently proven Open bundle to carry the exact same policy identity.
+    const cheapestOpenProofBundle = objective.kind === 'CHEAPEST_CHAOS' && selectedBundle
+      ? resolvedBundles.find((bundle) =>
+          bundle.familyId === 'family_open' &&
+          bundle.policyEquivalenceFingerprint === selectedBundle.policyEquivalenceFingerprint &&
+          bundle.solverResult.optimalityProof.modeledActionOptimalityProven
+        )
+      : undefined;
+    const cheapestObjectiveProven = objective.kind === 'CHEAPEST_CHAOS' &&
+      cheapestOpenProofBundle !== undefined && finalAcquisition.selectionSafe;
+    const constrainedObjectiveProven = objectiveProofStatus === 'CONSTRAINED_OPTIMAL_PROVEN' &&
+      selectedBundle?.solverResult.optimalityProof.modeledActionOptimalityProven === true &&
+      finalAcquisition.selectionSafe;
     const finalRecommendationStatus: RecommendationStatus = consistencyFailed
       ? 'INTERNAL_RESULT_MISMATCH'
       : !canonicalRecommended
         ? 'NO_RESOLVED_ROUTE'
-        : objectiveProofStatus === 'CONSTRAINED_OPTIMAL_PROVEN' &&
-            selectedBundle.solverResult.optimalityProof.modeledActionOptimalityProven &&
-            finalAcquisition.selectionSafe
+        : cheapestObjectiveProven || constrainedObjectiveProven
           ? 'PROVEN_OPTIMAL'
           : finalAcquisition.selectionSafe
             ? 'BEST_RESOLVED_ACQUISITION_SAFE'
             : 'PROVISIONAL_RESOLVED';
     const selectedFamilyId = selectedBundle?.familyId ?? 'family_open';
     const bundlesByFamilyId = new Map<string, ResolvedPolicyBundle[]>();
-    for (const bundle of unifiedBundles) {
+    for (const bundle of resolvedBundles) {
       if (!bundle.familyId) continue;
       const familyBundles = bundlesByFamilyId.get(bundle.familyId) ?? [];
       familyBundles.push(bundle);
@@ -5234,9 +6395,15 @@ export class OptimizerService {
     }
     const methodPortfolio = methodPortfolioBuild.families.map((family): MethodFamilyResult => {
       const familyBundles = bundlesByFamilyId.get(family.spec.id) ?? [];
+      const eligibleFamilyBundles = costCeilingChaos === undefined
+        ? familyBundles
+        : familyBundles.filter((bundle) =>
+            bundle.metrics.expectedChaosCost <= costCeilingChaos! + 1e-9
+          );
       const familyBundle = family.spec.id === selectedFamilyId && selectedBundle
         ? familyBundles.find((bundle) => bundle.id === selectedBundle.id)
-        : [...familyBundles].sort(compareBundles)[0];
+        : [...(eligibleFamilyBundles.length > 0 ? eligibleFamilyBundles : familyBundles)]
+            .sort(compareBundles)[0];
       if (!familyBundle) {
         if (
           family.status === 'DISABLED' || family.status === 'NOT_ELIGIBLE' ||
@@ -5249,6 +6416,10 @@ export class OptimizerService {
             summarizedResolvedCost > costCeilingChaos + 1e-9;
           return {
             ...family,
+            route: family.route ? {
+              ...family.route,
+              name: canonicalMethodFamilyRouteName(family) ?? family.route.name,
+            } : undefined,
             status: overCostCeiling ? 'MORE_EXPENSIVE' : 'DOMINATED',
             objectiveEligibility: overCostCeiling
               ? 'OVER_COST_CEILING'
@@ -5271,23 +6442,96 @@ export class OptimizerService {
         };
       }
       const selected = !consistencyFailed && familyBundle.id === selectedBundle?.id;
+      const equivalentToSelectedPolicy = !selected && !consistencyFailed && selectedBundle !== undefined &&
+        familyBundle.policyEquivalenceFingerprint === selectedBundle.policyEquivalenceFingerprint;
       const difference = canonicalCost === null
         ? undefined
         : familyBundle.metrics.expectedChaosCost - canonicalCost;
       const overCostCeiling = costCeilingChaos !== undefined &&
         familyBundle.metrics.expectedChaosCost > costCeilingChaos + 1e-9;
-      const objectiveEligibility = selected || !overCostCeiling
-        ? selected
+      const objectiveEligibility = selected || equivalentToSelectedPolicy || !overCostCeiling
+        ? selected || equivalentToSelectedPolicy
           ? 'RESOLVED_ELIGIBLE' as const
           : 'OBJECTIVE_DOMINATED' as const
         : 'OVER_COST_CEILING' as const;
+      const acquisitionUpperBound = familyBundle.fullRouteUsage.acquisitionCostChaos;
+      const downstreamUpperBound = familyBundle.fullRouteUsage.downstreamCostChaos;
+      const fullRouteUpperBound = familyBundle.fullRouteUsage.fullRouteCostChaos;
+      const rawAcquisitionLowerBound = familyBundle.acquisitionSynthesis?.lowerBoundChaos ??
+        acquisitionUpperBound;
+      const acquisitionLowerBound = Number.isFinite(rawAcquisitionLowerBound) &&
+        rawAcquisitionLowerBound >= 0 &&
+        rawAcquisitionLowerBound <= acquisitionUpperBound + CANONICAL_RECONCILIATION_TOLERANCE_CHAOS
+        ? rawAcquisitionLowerBound
+        : 0;
+      const rawFullRouteLowerBound = familyBundle.route.lowerBoundChaos;
+      const fullRouteLowerBound = Number.isFinite(rawFullRouteLowerBound) &&
+        rawFullRouteLowerBound >= acquisitionLowerBound &&
+        rawFullRouteLowerBound <= fullRouteUpperBound + CANONICAL_RECONCILIATION_TOLERANCE_CHAOS
+        ? rawFullRouteLowerBound
+        : acquisitionLowerBound;
+      // A retained full-route bound can couple acquisition and downstream decisions
+      // more tightly than the separately displayed stage bounds. Subtract the resolved
+      // acquisition cost (not its optimistic L) to obtain a safe downstream-only L;
+      // keep the stronger coupled total L on the full-route row.
+      const downstreamLowerBound = Math.max(
+        0,
+        fullRouteLowerBound - acquisitionUpperBound,
+      );
+      const canonicalRoute: RouteSummary = {
+        ...familyBundle.route,
+        expectedTotalCostChaos: fullRouteUpperBound,
+        incumbentUpperBoundChaos: fullRouteUpperBound,
+        lowerBoundChaos: fullRouteLowerBound,
+        optimalityGapChaos: Math.max(0, fullRouteUpperBound - fullRouteLowerBound),
+        metrics: familyBundle.route.metrics ? {
+          ...familyBundle.route.metrics,
+          expectedChaosCost: fullRouteUpperBound,
+        } : familyBundle.route.metrics,
+        acquisitionMetrics: familyBundle.route.acquisitionMetrics ? {
+          ...familyBundle.route.acquisitionMetrics,
+          expectedChaosCost: acquisitionUpperBound,
+        } : familyBundle.route.acquisitionMetrics,
+        downstreamMetrics: familyBundle.route.downstreamMetrics ? {
+          ...familyBundle.route.downstreamMetrics,
+          expectedChaosCost: downstreamUpperBound,
+        } : familyBundle.route.downstreamMetrics,
+      };
+      const canonicalActionUsage = familyBundle.fullRouteUsage.combinedActions.map((usage) => ({
+        actionId: usage.actionId,
+        actionName: usage.actionName,
+        expectedCount: usage.expectedCount,
+        expectedCostChaos: usage.expectedCostChaos,
+      }));
+      const requiredActionIds = family.spec.requiredActionIds ?? [];
       return {
         ...family,
-        route: familyBundle.route,
-        fullRouteU: familyBundle.metrics.expectedChaosCost,
+        route: canonicalRoute,
+        acquisitionStatus: 'RESOLVED',
+        acquisitionL: acquisitionLowerBound,
+        acquisitionU: acquisitionUpperBound,
+        downstreamStatus: 'RESOLVED',
+        downstreamL: downstreamLowerBound,
+        downstreamU: downstreamUpperBound,
+        fullRouteStatus: 'RESOLVED',
+        fullRouteL: fullRouteLowerBound,
+        fullRouteU: fullRouteUpperBound,
+        requiredActionObservedOnPolicy: requiredActionIds.length === 0 ||
+          requiredActionIds.some((actionId) => familyBundle.actionEvidence.includes(actionId)),
+        onPolicyActionIds: [...familyBundle.actionEvidence],
+        expectedActionUsage: canonicalActionUsage,
+        policyHealth: methodPolicyHealth(familyBundle.solverResult),
         objectiveEligibility,
+        policyEquivalenceFingerprint: familyBundle.policyEquivalenceFingerprint,
+        policyEquivalenceEvidence: familyBundle.policyEquivalenceEvidence,
+        equivalentToSelectedPolicy,
+        duplicateOfMethodFamilyId: equivalentToSelectedPolicy
+          ? selectedFamilyId
+          : family.duplicateOfMethodFamilyId,
         status: selected
           ? 'SELECTED_WINNER'
+          : equivalentToSelectedPolicy
+            ? 'SAME_AS_SELECTED'
           : overCostCeiling
             ? 'MORE_EXPENSIVE'
             : difference === undefined
@@ -5302,11 +6546,24 @@ export class OptimizerService {
           : difference / canonicalCost * 100,
         whyNotSelectedExplanation: selected
           ? 'This exact independently resolved policy is selected by the requested objective.'
+          : equivalentToSelectedPolicy
+            ? 'Same selected policy: this independently searched method family found the same ' +
+              'physical acquisition, normalized state-to-action policy, recovery/terminal ' +
+              'semantics, and full-route usage within the declared tolerance.'
           : overCostCeiling
             ? `Its resolved ${familyBundle.metrics.expectedChaosCost.toFixed(3)}c cost exceeds the ${costCeilingChaos!.toFixed(3)}c objective ceiling.`
             : 'This resolved eligible policy is dominated by the selected policy for the requested objective and its tie-breakers.',
       };
     });
+    for (const family of methodPortfolio) {
+      family.playerRouteName = canonicalMethodFamilyRouteName(family);
+      if (family.route && family.playerRouteName) {
+        // A route may originate from the selected canonical bundle. Keep presentation
+        // labelling immutable so one equivalent method card cannot rename every other
+        // selected-policy surface through a shared object reference.
+        family.route = { ...family.route, name: family.playerRouteName };
+      }
+    }
     const selectedRoutes = unifiedBundles.map((bundle) => bundle.route);
     const finalParetoAlternatives = computeParetoAlternatives(selectedRoutes, objective);
     for (const alternative of finalParetoAlternatives) {
@@ -5332,6 +6589,9 @@ export class OptimizerService {
     const finalProofGlobalOptimality = finalRecommendationStatus === 'PROVEN_OPTIMAL'
       ? 'PROVEN OVER MODELED ACTIONS' as const
       : 'NOT YET PROVEN' as const;
+    const finalObjectiveFamilyProofDebt = objective.kind === 'CHEAPEST_CHAOS'
+      ? 0
+      : unresolvedRelevantFamilies.length;
     const finalCraftPlan = buildCraftPlan({
       target: input.target,
       recommendationStatus: finalRecommendationStatus,
@@ -5351,12 +6611,102 @@ export class OptimizerService {
       priceBook,
       costCeilingChaos,
     });
-    const methodFamilyStates = methodPortfolio.reduce(
-      (sum, family) => sum + family.retainedStates,
-      0
+    const methodFamilyStates = methodFamilyWorkAfter.retainedStates;
+    const acquisitionDependencyStatesAdded = Math.max(
+      0,
+      acquisitionDependencyWorkAfter.retainedStates -
+        acquisitionDependencyWorkBefore.retainedStates,
     );
+    const methodFamilyComparisonAllocation: OptimizationBudgetAllocation = {
+      statesExpanded: Math.max(
+        0,
+        methodFamilyWorkAfter.statesExpanded - methodFamilyWorkBefore.statesExpanded,
+      ) + Math.max(
+        0,
+        acquisitionDependencyWorkAfter.statesExpanded -
+          acquisitionDependencyWorkBefore.statesExpanded,
+      ),
+      retainedStates: methodFamilyStates + acquisitionDependencyStatesAdded,
+      wallTimeMs: methodFamilyComparisonElapsedMs,
+      transitionsGenerated: Math.max(
+        0,
+        methodFamilyWorkAfter.transitionsGenerated - methodFamilyWorkBefore.transitionsGenerated,
+      ) + Math.max(
+        0,
+        acquisitionDependencyWorkAfter.transitionsGenerated -
+          acquisitionDependencyWorkBefore.transitionsGenerated,
+      ),
+      transitionsReused: Math.max(
+        0,
+        methodFamilyWorkAfter.transitionsReused - methodFamilyWorkBefore.transitionsReused,
+      ) + Math.max(
+        0,
+        acquisitionDependencyWorkAfter.transitionsReused -
+          acquisitionDependencyWorkBefore.transitionsReused,
+      ),
+      transitionGenerationMs: Math.max(
+        0,
+        methodFamilyWorkAfter.transitionGenerationMs -
+          methodFamilyWorkBefore.transitionGenerationMs,
+      ) + Math.max(
+        0,
+        acquisitionDependencyWorkAfter.transitionGenerationMs -
+          acquisitionDependencyWorkBefore.transitionGenerationMs,
+      ),
+      bellmanMs: 0,
+      occupancyMs: 0,
+    };
+    const finalPortfolioContinuations = [
+      searchSessionRecord.cleanDownstream,
+      ...searchSessionRecord.fractureAcquisitions.values(),
+      ...searchSessionRecord.fractureDownstreams.values(),
+      ...[...searchSessionRecord.fractureDownstreamBounds.values()]
+        .map((record) => record.continuation),
+    ];
+    const finalPortfolioRetainedStates = finalPortfolioContinuations.reduce(
+      (sum, continuation) => sum + continuation.expansion.nodes.size,
+      0,
+    );
+    const finalPortfolioHighWaterStates = finalPortfolioContinuations.reduce(
+      (maximum, continuation) => Math.max(maximum, continuation.expansion.nodes.size),
+      result.graphBuild.nodes.size,
+    );
+    const finalRequestElapsedMs = Date.now() - optimizationStarted;
+    const finalProofClosed = finalRecommendationStatus === 'PROVEN_OPTIMAL' &&
+      finalObjectiveFamilyProofDebt === 0;
+    const finalWallLimitObserved = finalRequestElapsedMs >=
+      runtimeBudget.engineDeadlineMs * 0.9;
+    const finalHostReserveObserved = !finalWallLimitObserved && !finalProofClosed &&
+      Date.now() >= searchStopDeadline - 500;
+    const finalStateLimitObserved = stateLimitObserved ||
+      Math.max(finalPortfolioHighWaterStates, methodFamilyWorkAfter.highWaterStates) >=
+        requestedMaxStates;
+    const finalRoundLimitObserved = roundLimitObserved;
+    const finalNoProductiveWorkObserved = !finalProofClosed && noProductiveWorkObserved;
+    const finalRequestStopReason: OptimizationRequestStopReason = finalProofClosed
+      ? 'PROOF_CLOSED'
+      : finalWallLimitObserved
+        ? 'WALL_TIME'
+        : finalHostReserveObserved
+          ? 'HOST_RESERVE'
+          : finalStateLimitObserved
+            ? 'STATE_CAP'
+            : finalRoundLimitObserved
+              ? 'ROUND_CAP'
+              : 'NO_PRODUCTIVE_PROOF_WORK';
+    const finalObservedStopReasons: OptimizationRequestStopReason[] = [];
+    if (finalWallLimitObserved) finalObservedStopReasons.push('WALL_TIME');
+    if (finalHostReserveObserved) finalObservedStopReasons.push('HOST_RESERVE');
+    if (finalStateLimitObserved) finalObservedStopReasons.push('STATE_CAP');
+    if (finalRoundLimitObserved) finalObservedStopReasons.push('ROUND_CAP');
+    if (finalNoProductiveWorkObserved) {
+      finalObservedStopReasons.push('NO_PRODUCTIVE_PROOF_WORK');
+    }
+    const finalSecondaryStopReasons = [...new Set(finalObservedStopReasons)]
+      .filter((reason) => reason !== finalRequestStopReason);
     const methodFamilyCounts: Record<MethodFamilyStatus, number> = {
       SELECTED_WINNER: 0,
+      SAME_AS_SELECTED: 0,
       MORE_EXPENSIVE: 0,
       DOMINATED: 0,
       NOT_ELIGIBLE: 0,
@@ -5387,7 +6737,7 @@ export class OptimizerService {
         : undefined,
     };
     const presentation: CanonicalResultPresentation = {
-      schemaVersion: '2X.1',
+      schemaVersion: '2Y.1',
       releaseStatus: 'RELEASE_CANDIDATE_BROWSER_VERIFIED',
       selectedRouteName: canonicalRecommended?.name,
       selectedRouteStatus: finalRecommendationStatus,
@@ -5418,6 +6768,13 @@ export class OptimizerService {
       },
       workScopes: {
         ...outputWithoutCraftPlan.search.workScopes,
+        portfolioTotalStatesExpanded: portfolioTotalStatesExpanded +
+          Math.max(
+            0,
+            acquisitionDependencyWorkAfter.statesExpanded -
+              acquisitionDependencyWorkBefore.statesExpanded,
+          ),
+        portfolioRetainedStates: finalPortfolioRetainedStates,
         selectedPolicyGraphStates: selectedSolverResult?.graphBuild.nodes.size ?? 0,
         acquisitionSynthesisStates:
           selectedBundle?.acquisitionSynthesis?.search?.statesExpanded ?? 0,
@@ -5507,10 +6864,10 @@ export class OptimizerService {
           selectedSolverResult.optimalityProof.modeledActionOptimalityProven,
         unresolvedCompetitiveCandidates:
           selectedSolverResult.optimalityProof.potentiallyCompetitiveUnresolvedCount +
-          unresolvedRelevantFamilies.length,
+          finalObjectiveFamilyProofDebt,
         unresolvedCompetitorsMayBeCheaper:
           selectedSolverResult.optimalityProof.unresolvedCandidatesCouldBeatIncumbent ||
-          unresolvedRelevantFamilies.length > 0,
+          finalObjectiveFamilyProofDebt > 0,
       } : outputWithoutCraftPlan.proof,
       policyRefinement: selectedSolverResult ? {
         ...outputWithoutCraftPlan.policyRefinement,
@@ -5528,6 +6885,36 @@ export class OptimizerService {
         ...outputWithoutCraftPlan.search,
         totalElapsedMs: Date.now() - optimizationStarted,
         workScopes: presentation.workScopes,
+        requestStopReason: finalRequestStopReason,
+        secondaryStopReasons: finalSecondaryStopReasons,
+        requestBudget: {
+          ...outputWithoutCraftPlan.search.requestBudget,
+          used: {
+            ...outputWithoutCraftPlan.search.requestBudget.used,
+            statesExpanded: Math.max(
+              outputWithoutCraftPlan.search.requestBudget.used.statesExpanded,
+              finalPortfolioHighWaterStates,
+              methodFamilyWorkAfter.highWaterStates,
+            ),
+            retainedStates: finalPortfolioRetainedStates + methodFamilyStates,
+            elapsedMs: Date.now() - optimizationStarted,
+            transitionsGenerated:
+              outputWithoutCraftPlan.search.requestBudget.used.transitionsGenerated +
+              methodFamilyComparisonAllocation.transitionsGenerated,
+            transitionsReused:
+              outputWithoutCraftPlan.search.requestBudget.used.transitionsReused +
+              methodFamilyComparisonAllocation.transitionsReused,
+          },
+          allocations: {
+            ...outputWithoutCraftPlan.search.requestBudget.allocations,
+            methodFamilyComparison: methodFamilyComparisonAllocation,
+          },
+          stop: {
+            ...outputWithoutCraftPlan.search.requestBudget.stop,
+            primary: finalRequestStopReason,
+            secondary: finalSecondaryStopReasons,
+          },
+        },
       },
       solver: {
         bellmanIterations: selectedSolverResult?.convergence.iterations ?? 0,
@@ -5543,6 +6930,27 @@ export class OptimizerService {
     const serializationStarted = Date.now();
     JSON.stringify(output);
     output.search.stageTimingMs.serializationMs = Date.now() - serializationStarted;
+    output.search.totalElapsedMs = Date.now() - optimizationStarted;
+    output.search.requestBudget.used.elapsedMs = output.search.totalElapsedMs;
+    output.search.requestBudget.allocations.serializationAndPresentationReserve.usedMs =
+      output.search.stageTimingMs.serializationMs;
+    output.search.requestBudget.stop.evidence = [
+      `requested up to ${output.search.requestBudget.requested.maxStates.toLocaleString()} states / ` +
+        `${output.search.requestBudget.requested.maxWallTimeMs}ms / ` +
+        `${output.search.requestBudget.requested.maxExpansionRounds} rounds`,
+      `used ${output.search.requestBudget.used.statesExpanded.toLocaleString()} expanded; ` +
+        `${output.search.requestBudget.used.retainedStates.toLocaleString()} retained; ` +
+        `${output.search.requestBudget.used.elapsedMs}ms elapsed`,
+      `selected graph limits: state=${result.searchSummary.stateBudgetExhausted}; ` +
+        `wall=${result.searchSummary.wallTimeBudgetExhausted}; ` +
+        `round=${result.searchSummary.roundBudgetExhausted}`,
+      'Expanded states is the request high-water distinct-state graph; retained totals and ' +
+        'stage allocations include independent reusable scopes and are intentionally non-additive.',
+      finalRecommendationStatus === 'PROVEN_OPTIMAL'
+        ? 'Every relevant modeled competitor is resolved or excluded by an admissible bound.'
+        : `${finalAcquisition.portfolioProof.unresolvedCompetitiveCandidates} acquisition ` +
+          `candidate(s) and ${finalObjectiveFamilyProofDebt} objective family/families retain proof debt.`,
+    ];
     JSON.stringify(output);
 
     currentBestUpperBound = output.expectedCostChaos ?? undefined;

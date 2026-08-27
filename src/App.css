@@ -3009,10 +3009,50 @@ td a {
   transition: all 0.2s ease;
 }
 
+.request-budget-utilization {
+  margin-top: 12px;
+  padding: 12px 14px;
+  border: 1px solid rgba(129, 140, 248, 0.28);
+  border-radius: 8px;
+  background: rgba(79, 70, 229, 0.055);
+}
+
+.request-budget-utilization h3 {
+  margin: 0 0 8px;
+  font-size: 13px;
+}
+
+.request-budget-utilization dl {
+  display: grid;
+  grid-template-columns: minmax(72px, auto) minmax(0, 1fr);
+  gap: 5px 12px;
+  margin: 0;
+  font-size: 12px;
+}
+
+.request-budget-utilization dt {
+  color: var(--text-dim);
+}
+
+.request-budget-utilization dd {
+  margin: 0;
+}
+
+.budget-retry-recommendation {
+  margin: 9px 0 0;
+  font-size: 12px;
+  line-height: 1.45;
+}
+
 .method-family-card.winner {
   border-color: #34d399;
   background: rgba(16, 185, 129, 0.05);
   box-shadow: 0 0 12px rgba(16, 185, 129, 0.1);
+}
+
+.method-family-card.same-selected-policy {
+  border-color: rgba(52, 211, 153, 0.55);
+  background: rgba(16, 185, 129, 0.025);
 }
 
 .method-card-header {
@@ -3055,6 +3095,12 @@ td a {
   background: rgba(16, 185, 129, 0.2);
   color: #34d399;
   border: 1px solid rgba(16, 185, 129, 0.4);
+}
+
+.method-status-tag.same_as_selected {
+  background: rgba(16, 185, 129, 0.12);
+  color: #6ee7b7;
+  border: 1px solid rgba(16, 185, 129, 0.3);
 }
 
 .method-status-tag.more_expensive {

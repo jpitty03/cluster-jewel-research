@@ -277,7 +277,7 @@ writeFileSync(evidencePath, `${JSON.stringify({
 }, null, 2)}\n`, 'utf8');
 
 lines.push('\n=== ALL PHASE 2X LOCAL DIAGNOSTIC GATES PASS ===');
-lines.push('Release label/schema: 2X.1');
+lines.push('Release label/schema: 2Y.1 (Phase 2X behavior retained)');
 lines.push('Unit tests added/run: NO');
 lines.push('Mechanics probabilities changed: NO');
 lines.push('State identity weakened: NO');

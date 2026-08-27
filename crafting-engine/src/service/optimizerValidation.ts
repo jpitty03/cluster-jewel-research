@@ -211,6 +211,16 @@ export function validateOptimizeCraftInput(
   }
 
   const budget = input.searchBudget;
+  if (
+    budget?.preset !== undefined &&
+    !['NORMAL', 'DEEP', 'VERY_DEEP', 'RESEARCH', 'CUSTOM'].includes(budget.preset)
+  ) {
+    errors.push({
+      code: 'INVALID_SEARCH_BUDGET_PRESET',
+      field: 'searchBudget',
+      message: 'Search budget preset must be Normal, Deep, Very Deep, Research, or Custom.',
+    });
+  }
   if (budget && [
     budget.maxStates,
     budget.maxWallTimeMs,

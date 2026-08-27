@@ -174,9 +174,12 @@ export type {
   TargetOrderPreference,
 } from './service/craftPlan.ts';
 export type {
+  CanonicalPolicyEquivalencePayload,
   AcquisitionSummary,
   MechanicsConfidenceSummary,
   OptimizationProofSummary,
+  OptimizationRequestBudgetTelemetry,
+  OptimizationRequestStopReason,
   OptimizationSearchSummary,
   OptimizeCraftInput as GenericOptimizeCraftInput,
   OptimizeCraftPriceContext,
@@ -188,3 +191,14 @@ export type {
   RecommendationStatus,
   SearchBudget,
 } from './service/optimizerService.ts';
+export {
+  buildCanonicalPolicyEquivalenceFingerprint,
+  fingerprintCanonicalPolicyEquivalencePayload,
+} from './service/optimizerService.ts';
+export {
+  evaluateRelaxedTargetProgressLowerBound,
+  RELAXED_TARGET_PROGRESS_LOWER_BOUND_VERSION,
+} from './solver/relaxedTargetProgressLowerBound.ts';
+export type {
+  RelaxedTargetProgressLowerBoundResult,
+} from './solver/relaxedTargetProgressLowerBound.ts';

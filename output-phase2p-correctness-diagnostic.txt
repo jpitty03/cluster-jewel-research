@@ -2,16 +2,16 @@ PHASE 2P — CORRECTNESS, PROOF, AND PERFORMANCE CLOSURE DIAGNOSTIC
 
 --- P1: Frozen Fixture Corpus Verification ---
 Fixture [cheap_one_mod] (Cheap one-mod T1 Energy Shield):
-  Status: BEST_RESOLVED_ACQUISITION_SAFE, Cost: 13.3c, Time: 376ms
+  Status: BEST_RESOLVED_ACQUISITION_SAFE, Cost: 13.3c, Time: 362ms
 Fixture [armour_energy_shield] (T1 Armour plus T1 Energy Shield Harvest comparison):
-  Status: BEST_RESOLVED_ACQUISITION_SAFE, Cost: 254.2c, Time: 3978ms
+  Status: BEST_RESOLVED_ACQUISITION_SAFE, Cost: 254.2c, Time: 4016ms
 Fixture [herald_envoy_endbringer] (Empowered Envoy plus Endbringer):
-  Status: BEST_RESOLVED_ACQUISITION_SAFE, Cost: 79.4c, Time: 3482ms
+  Status: BEST_RESOLVED_ACQUISITION_SAFE, Cost: 79.4c, Time: 3903ms
 P1 PASS: Frozen fixtures preserve exact targets; every returned executable route is policy-valid and reconciled, while unresolved outcomes remain explicit.
 
 --- P2: Metamorphic Symmetry (Input Order) ---
-Order [A, B] Cost: 185.79c, Route: Start clean base: Clean Base
-Order [B, A] Cost: 185.79c, Route: Start clean base: Clean Base
+Order [A, B] Cost: 185.79c, Route: Start clean base
+Order [B, A] Cost: 185.79c, Route: Start clean base
 P2 PASS: Mod input ordering produces identical mathematical costs and policy decisions.
 
 --- P3: Metamorphic Monotonicity ---

@@ -12,6 +12,7 @@ export type MethodFamilyKind =
 
 export type MethodFamilyStatus =
   | 'SELECTED_WINNER'
+  | 'SAME_AS_SELECTED'
   | 'MORE_EXPENSIVE'
   | 'DOMINATED'
   | 'NOT_ELIGIBLE'
@@ -59,6 +60,8 @@ export interface MethodFamilyResult {
   status: MethodFamilyStatus;
   evaluationSource: MethodFamilyEvaluationSource;
   objectiveEligibility?: MethodFamilyObjectiveEligibility;
+  /** Canonical player-facing route-family label, available even before U resolves. */
+  playerRouteName?: string;
   route?: RouteSummary;
   craftPlan?: CraftPlanSummary;
   costDifferenceChaos?: number;
@@ -103,4 +106,15 @@ export interface MethodFamilyResult {
     elapsedMs: number;
   };
   duplicateOfMethodFamilyId?: string;
+  policyEquivalenceFingerprint?: string;
+  equivalentToSelectedPolicy?: boolean;
+  policyEquivalenceEvidence?: {
+    version: 'CANONICAL_POLICY_EQUIVALENCE_V1';
+    physicalAcquisitionIdentity: string;
+    normalizedPolicyDecisionCount: number;
+    requiredActionEvidence: string[];
+    recoveryDecisionCount: number;
+    terminalStateCount: number;
+    usageTolerance: number;
+  };
 }

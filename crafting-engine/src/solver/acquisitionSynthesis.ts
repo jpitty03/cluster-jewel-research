@@ -98,6 +98,7 @@ export interface AcquisitionSynthesisRequest {
   harvestTags?: string[];
   allowResearchFallbackPrices?: boolean;
   searchIntent?: SearchIntent;
+  stopAfterFirstCertifiedPolicy?: boolean;
   continuationSession?: import('./genericSearch.ts').GenericSearchContinuationSession;
   persistentExpansion?: boolean;
   onProgress?: (event: import('./genericSearch.ts').SearchProgressEvent) => void;
@@ -206,6 +207,13 @@ export interface AcquisitionSynthesisResult {
     retainedStatesReusedByRound: number[];
     transitionDistributionsGenerated: number;
     transitionDistributionsGeneratedByRound: number[];
+    transitionDistributionsReused: number;
+    transitionDistributionsReusedByRound: number[];
+    stageTimingMs: {
+      transitionGenerationMs: number;
+      bellmanMs: number;
+      occupancyMs: number;
+    };
     previouslyExpandedNodesRevisited: number;
     previouslyExpandedNodesRevisitedByRound: number[];
     acquisitionFeasibilityStatesExpanded: number;
@@ -358,6 +366,7 @@ export function synthesizeAcquisition(
       persistentExpansion: request.persistentExpansion ?? true,
       continuationSession: request.continuationSession,
       recommendationRefinementRounds: 1,
+      stopAfterFirstCertifiedPolicy: request.stopAfterFirstCertifiedPolicy,
       onProgress: request.onProgress,
     }
   );
@@ -596,6 +605,15 @@ export function synthesizeAcquisition(
       transitionDistributionsGeneratedByRound: [
         ...result.searchSummary.transitionDistributionsGeneratedByRound,
       ],
+      transitionDistributionsReused: result.searchSummary.transitionDistributionsReused,
+      transitionDistributionsReusedByRound: [
+        ...result.searchSummary.transitionDistributionsReusedByRound,
+      ],
+      stageTimingMs: {
+        transitionGenerationMs: result.stageTiming.transitionGenerationMs,
+        bellmanMs: result.stageTiming.bellmanMs,
+        occupancyMs: result.stageTiming.occupancyMs,
+      },
       previouslyExpandedNodesRevisited: result.searchSummary.previouslyExpandedNodesRevisited,
       previouslyExpandedNodesRevisitedByRound: [
         ...result.searchSummary.previouslyExpandedNodesRevisitedByRound,

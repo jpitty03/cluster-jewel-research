@@ -1,11 +1,11 @@
 PHASE 2X — CRAFT-PLAN SEMANTICS, BUDGET UX, AND PROOF-DEPTH DIAGNOSTIC
 
 X2/X5/X6/X7 — exact 3-notable semantic correction
-status=PROVISIONAL_RESOLVED; route=Start self-fracture: Prodigious Defence; bundle=bundle:family_fracture_Prodigious Defence; elapsed=24685ms
-selected physical mechanics=fracturing_orb,alteration_orb,exalted_orb,scouring_orb,regal_orb,augmentation_orb,restart_reacquire,transmutation_orb
+status=PROVISIONAL_RESOLVED; route=Self-fracture Riot Queller (T1); bundle=bundle:family_fracture_Riot Queller; elapsed=24700ms
+selected physical mechanics=fracturing_orb,alteration_orb,exalted_orb,augmentation_orb,restart_reacquire,scouring_orb,regal_orb,transmutation_orb
 selected Harvest mechanics=NONE
 plan Harvest mechanics=NONE
-accounting exclusions=clean_base_initial; virtual exclusions=method:family_fracture_Prodigious Defence
+accounting exclusions=clean_base_initial; virtual exclusions=method:family_fracture_Riot Queller
 coverage=uncovered:NONE; invented:NONE; unknown:NONE
 Constellation selected Harvest nodes=NONE
 Initial clean base accounting=1.000 @ 4.000c; chronological mechanic=NO
@@ -22,7 +22,7 @@ Retry formula=states×2, requested wall×2, rounds+1; compatible retained graph 
 generic SPECIALIZED fallback=ABSENT; generic SPECIALIZED→Harvest label=ABSENT; proof-honest selected-route spread wording=PRESENT
 
 === ALL PHASE 2X LOCAL DIAGNOSTIC GATES PASS ===
-Release label/schema: 2X.1
+Release label/schema: 2Y.1 (Phase 2X behavior retained)
 Unit tests added/run: NO
 Mechanics probabilities changed: NO
 State identity weakened: NO

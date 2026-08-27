@@ -623,6 +623,8 @@ export interface GenericSearchOptions {
   continuationSession?: GenericSearchContinuationSession;
   /** Bounded number of completed rounds after the first useful RECOMMEND policy. */
   recommendationRefinementRounds?: number;
+  /** Internal scheduler control for prerequisite work that only needs its first certified policy. */
+  stopAfterFirstCertifiedPolicy?: boolean;
   /** Internal feasibility control; prevents a physical-state probe from abandoning into another acquisition. */
   excludeAcquisitionActions?: boolean;
   /**
@@ -2153,6 +2155,7 @@ export class GenericSearchEngine {
       if (certifiedRecommendation) {
         certifiedRecommendationFound = true;
         timeToFirstUsefulRecommendationMs ??= Date.now() - startTime;
+        if (effectiveOptions.stopAfterFirstCertifiedPolicy === true) break;
         if (intent === 'RECOMMEND') {
           const canRefine = recommendationRefinementRoundsRemaining > 0 &&
             round + 1 < availableRounds &&

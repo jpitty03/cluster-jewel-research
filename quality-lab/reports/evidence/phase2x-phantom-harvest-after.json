@@ -53,17 +53,17 @@
   },
   "result": {
     "recommendationStatus": "PROVISIONAL_RESOLVED",
-    "route": "Start self-fracture: Prodigious Defence",
-    "bundleId": "bundle:family_fracture_Prodigious Defence",
-    "expectedCostChaos": 3057.898222184281,
+    "route": "Self-fracture Riot Queller (T1)",
+    "bundleId": "bundle:family_fracture_Riot Queller",
+    "expectedCostChaos": 1757.610772265634,
     "selectedPhysicalActionIds": [
       "fracturing_orb",
       "alteration_orb",
       "exalted_orb",
-      "scouring_orb",
-      "regal_orb",
       "augmentation_orb",
       "restart_reacquire",
+      "scouring_orb",
+      "regal_orb",
       "transmutation_orb"
     ],
     "selectedHarvestActionIds": [],
@@ -75,8 +75,8 @@
         "actionIds": [
           "fracturing_orb",
           "alteration_orb",
-          "exalted_orb",
           "augmentation_orb",
+          "exalted_orb",
           "regal_orb",
           "transmutation_orb"
         ]
@@ -143,7 +143,7 @@
       "clean_base_initial"
     ],
     "excludedVirtualActionIds": [
-      "method:family_fracture_Prodigious Defence"
+      "method:family_fracture_Riot Queller"
     ],
     "uncoveredActionIds": [],
     "inventedActionIds": [],

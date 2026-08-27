@@ -12,6 +12,7 @@ import type {
   PolicyExplanationRule,
   RecommendationStatus,
   MethodFamilyResult,
+  OptimizationRequestStopReason,
 } from '../crafting-engine/src/service/optimizerService.ts';
 import {
   playerizeModifierText,
@@ -87,7 +88,7 @@ function compactBudgetValue(value: number): string {
 }
 
 function budgetPreview(budget: SearchDepthBudget): string {
-  return `${compactBudgetValue(budget.maxStates)} states · up to ${Math.round(budget.maxWallTimeMs / 1000)}s · ` +
+  return `up to ${compactBudgetValue(budget.maxStates)} states · up to ${Math.round(budget.maxWallTimeMs / 1000)}s · ` +
     `${budget.maxExpansionRounds} rounds · reuses compatible retained graph`;
 }
 
@@ -148,6 +149,41 @@ const STATUS_COPY: Record<RecommendationStatus, { title: string; detail: string 
   },
 };
 
+const REQUEST_STOP_COPY: Record<OptimizationRequestStopReason, { label: string; retry: string }> = {
+  PROOF_CLOSED: {
+    label: 'Proof closed',
+    retry: 'All modeled competitors were resolved or excluded by admissible bounds.',
+  },
+  STATE_CAP: {
+    label: 'State cap reached',
+    retry: 'The state cap limited the strongest competitor; Retry deeper increases the state envelope and reuses retained work.',
+  },
+  WALL_TIME: {
+    label: 'Wall time reached',
+    retry: 'Wall time limited this run; Retry deeper increases the time cap and reuses retained work.',
+  },
+  ROUND_CAP: {
+    label: 'Round cap reached',
+    retry: 'The expansion-round cap ended this run; Retry deeper adds another round and reuses retained work.',
+  },
+  NO_PRODUCTIVE_PROOF_WORK: {
+    label: 'No productive proof work remained',
+    retry: 'Recent tranches did not improve a bound or executable policy; Retry deeper may try the alternate retained proof stage.',
+  },
+  HOST_RESERVE: {
+    label: 'Stopped for host safety reserve',
+    retry: 'The engine preserved its shutdown/serialization reserve; Retry deeper increases the request cap and reuses retained work.',
+  },
+  CANCELLED: {
+    label: 'Cancelled',
+    retry: 'The request was cancelled; compatible retained work remains available.',
+  },
+  ERROR: {
+    label: 'Stopped after an error',
+    retry: 'The request stopped after an error; retry only after reviewing the reported failure.',
+  },
+};
+
 function chaos(value: number | null | undefined): string {
   return value === null || value === undefined ? '—' : `${value.toFixed(3)}c`;
 }
@@ -187,7 +223,7 @@ function methodFamilyPlayerName(
     : undefined;
   if (target && method.spec.kind === 'SELF_FRACTURE') return `Self-fracture ${target.compactText}`;
   if (target && method.spec.kind === 'SELF_FRACTURE_HARVEST') {
-    return `Fracture ${target.compactText} + Harvest`;
+    return `Self-fracture ${target.compactText} + Harvest`;
   }
   return publicModifierText(method.spec.name, mods);
 }
@@ -304,6 +340,9 @@ const PROOF_REASON_COPY: Record<AcquisitionPortfolioProofReason, string> = {
   RESOLVE_DOWNSTREAM_AFTER_ACQUISITION: 'Acquisition resolved; downstream route is next.',
   DEEPEST_ACQUISITION_PROOF_DEBT: 'Acquisition has the larger unresolved proof gap.',
   DEEPEST_DOWNSTREAM_PROOF_DEBT: 'Downstream has the larger unresolved proof gap.',
+  PROOF_PRODUCTIVITY_PRIORITY: 'Recent retained work has the strongest proof productivity.',
+  SWITCH_AFTER_NO_PROOF_CHANGE: 'Repeated no-change work switched to the alternate proof stage.',
+  DEPRIORITIZED_REPEATED_NO_CHANGE: 'Repeated no-change work was temporarily deprioritized.',
   DOMINATED_BY_FULL_ROUTE_BOUND: 'Its admissible full-route lower bound cannot beat the incumbent.',
   SELECTED_EXECUTABLE_ROUTE: 'This is the best executable full route found.',
   CLEAN_ROUTE_PROVEN: 'The clean route is resolved at the current allocated depth.',
@@ -559,7 +598,7 @@ export function SearchActivityVisualizer({
   );
 }
 
-export const APP_RELEASE_VERSION = '2X.1';
+export const APP_RELEASE_VERSION = '2Y.1';
 
 interface CraftOptimizerProps {
   seed?: OptimizerSeed | null;
@@ -769,7 +808,12 @@ export function CraftOptimizer({ seed = null, onBackToClusterJewels }: CraftOpti
         : undefined,
       allowResearchFallbackPrices: allowFallback,
       objective: draftObjective,
-      searchBudget: { maxStates, maxWallTimeMs, maxExpansionRounds },
+      searchBudget: {
+        maxStates,
+        maxWallTimeMs,
+        maxExpansionRounds,
+        preset: searchDepthPreset,
+      },
       searchIntent,
     };
   }, [
@@ -789,6 +833,7 @@ export function CraftOptimizer({ seed = null, onBackToClusterJewels }: CraftOpti
     maxWallTimeMs,
     passiveCount,
     saleValue,
+    searchDepthPreset,
     searchIntent,
     selectedTargetIds,
   ]);
@@ -936,7 +981,7 @@ export function CraftOptimizer({ seed = null, onBackToClusterJewels }: CraftOpti
     if (validationError || !workerRef.current) return;
     const requestValidation = validateBrowserOptimizeInput({
       ...draftInput,
-      searchBudget: budget,
+      searchBudget: { ...budget, preset: matchingSearchDepthPreset(budget) },
       searchIntent: intent,
       compareMethodFamilies,
     });
@@ -1002,6 +1047,7 @@ export function CraftOptimizer({ seed = null, onBackToClusterJewels }: CraftOpti
     lines.push(`Target: ${res.target.requiredMods.map((requirement) =>
       requirement.modId ? playerModName(requirement.modId, eligibleMods) : requirement.name ?? requirement.modGroup ?? 'Exact modifier'
     ).join(' + ')}`);
+    lines.push(`Selected Route: ${publicSelectedRouteName ?? 'none certified'}`);
     lines.push(`Expected Total Cost: ~${chaos(res.expectedCostChaos)}`);
     lines.push('\nEstimated Materials & Bases:');
 
@@ -1029,7 +1075,9 @@ export function CraftOptimizer({ seed = null, onBackToClusterJewels }: CraftOpti
     lines.push(`Target: ${res.target.requiredMods.map((requirement) =>
       requirement.modId ? playerModName(requirement.modId, eligibleMods) : requirement.name ?? requirement.modGroup ?? 'Exact modifier'
     ).join(' + ')}`);
-    lines.push(`Starting Point: ${recommendedStart}`);
+    lines.push(`Selected route: ${publicSelectedRouteName ?? 'none certified'}`);
+    lines.push(`Starting Point: ${publicSelectedRouteName ?? recommendedStart}`);
+    lines.push(`Physical Start: ${recommendedStart}`);
     lines.push(`Expected Cost: ~${chaos(res.expectedCostChaos)}`);
     lines.push(`Expected Actions: ~${res.recommended?.metrics?.expectedPhysicalActions ? Math.round(res.recommended.metrics.expectedPhysicalActions) : 'N/A'}`);
     lines.push('\n--- Chronological Instructions ---');
@@ -1058,12 +1106,13 @@ export function CraftOptimizer({ seed = null, onBackToClusterJewels }: CraftOpti
 
   const copyShareUrl = () => {
     const payload: CraftSharePayload = {
-      version: '2X.1',
+      version: '2Y.1',
       baseType,
       clusterType,
       itemLevel,
       passiveCount,
       targetMods: targetModIds.filter(Boolean),
+      selectedRouteName: publicSelectedRouteName,
       finalRarity: effectiveRarity,
       objectiveSpec: draftObjective,
       costConstraintType,
@@ -1092,12 +1141,13 @@ export function CraftOptimizer({ seed = null, onBackToClusterJewels }: CraftOpti
 
   const copyBugReport = (res?: OptimizeCraftResult) => {
     const payload: CraftSharePayload = {
-      version: '2X.1',
+      version: '2Y.1',
       baseType,
       clusterType,
       itemLevel,
       passiveCount,
       targetMods: targetModIds.filter(Boolean),
+      selectedRouteName: publicSelectedRouteName,
       finalRarity: effectiveRarity,
       objectiveSpec: draftObjective,
       costConstraintType,
@@ -1637,8 +1687,8 @@ export function CraftOptimizer({ seed = null, onBackToClusterJewels }: CraftOpti
             <h3 id="search-depth-title">Search depth</h3>
             <p>
               {searchDepthPreset === 'CUSTOM'
-                ? `Custom · ${maxStates.toLocaleString()} states / ${Math.round(maxWallTimeMs / 1000)}s / ${maxExpansionRounds} rounds`
-                : `${SEARCH_DEPTH_PRESETS[searchDepthPreset].label} · ${maxStates.toLocaleString()} states / ${Math.round(maxWallTimeMs / 1000)}s / ${maxExpansionRounds} rounds`}
+                ? `Custom · up to ${maxStates.toLocaleString()} states / ${Math.round(maxWallTimeMs / 1000)}s / ${maxExpansionRounds} rounds`
+                : `${SEARCH_DEPTH_PRESETS[searchDepthPreset].label} · up to ${maxStates.toLocaleString()} states / ${Math.round(maxWallTimeMs / 1000)}s / ${maxExpansionRounds} rounds`}
             </p>
           </div>
           <label>
@@ -1651,7 +1701,7 @@ export function CraftOptimizer({ seed = null, onBackToClusterJewels }: CraftOpti
                 const budget = SEARCH_DEPTH_PRESETS[preset];
                 return (
                   <option key={preset} value={preset}>
-                    {budget.label} — {budget.maxStates.toLocaleString()} states / {budget.maxWallTimeMs / 1000}s / {budget.maxExpansionRounds} rounds
+                    {budget.label} — up to {budget.maxStates.toLocaleString()} states / {budget.maxWallTimeMs / 1000}s / {budget.maxExpansionRounds} rounds
                   </option>
                 );
               })}
@@ -1667,7 +1717,7 @@ export function CraftOptimizer({ seed = null, onBackToClusterJewels }: CraftOpti
           >
             <strong>{unresolvedCompetitiveFamilies} competitive {unresolvedCompetitiveFamilies === 1 ? 'family remains' : 'families remain'}.</strong>{' '}
             Suggested next depth: {suggestedDepth
-              ? `${SEARCH_DEPTH_PRESETS[suggestedDepth].label} (${compactBudgetValue(SEARCH_DEPTH_PRESETS[suggestedDepth].maxStates)} / ${SEARCH_DEPTH_PRESETS[suggestedDepth].maxWallTimeMs / 1000}s / ${SEARCH_DEPTH_PRESETS[suggestedDepth].maxExpansionRounds} rounds)`
+              ? `${SEARCH_DEPTH_PRESETS[suggestedDepth].label} (up to ${compactBudgetValue(SEARCH_DEPTH_PRESETS[suggestedDepth].maxStates)} / ${SEARCH_DEPTH_PRESETS[suggestedDepth].maxWallTimeMs / 1000}s / ${SEARCH_DEPTH_PRESETS[suggestedDepth].maxExpansionRounds} rounds)`
               : `Custom (${budgetPreview(retryDeeperBudget).replace(' · reuses compatible retained graph', '')})`}.
           </p>
         )}
@@ -1690,7 +1740,7 @@ export function CraftOptimizer({ seed = null, onBackToClusterJewels }: CraftOpti
           </div>
           {exceedsMeasuredResearchPreset && (
             <p className="warning-note" role="status">
-              This custom budget exceeds the browser-measured Research preset (50,000 states / 300s / 6 rounds). Cancellation and the requested-runtime host guard remain active.
+              This custom budget exceeds the browser-measured Research preset (up to 50,000 states / 300s / 6 rounds). Cancellation and the requested-runtime host guard remain active.
             </p>
           )}
           <label className="optimizer-checkbox">
@@ -1878,6 +1928,51 @@ export function CraftOptimizer({ seed = null, onBackToClusterJewels }: CraftOpti
                 <span>Route, policy, and material totals exceeded the 0.05c reconciliation tolerance. Diagnostic evidence remains available below.</span>
               </div>
             )}
+            <section
+              className="request-budget-utilization"
+              data-testid="request-budget-utilization"
+              data-requested-preset={result.search.requestBudget.requested.preset}
+              data-requested-max-states={result.search.requestBudget.requested.maxStates}
+              data-requested-max-wall-time-ms={result.search.requestBudget.requested.maxWallTimeMs}
+              data-requested-max-rounds={result.search.requestBudget.requested.maxExpansionRounds}
+              data-used-states={result.search.requestBudget.used.statesExpanded}
+              data-retained-states={result.search.requestBudget.used.retainedStates}
+              data-used-elapsed-ms={result.search.requestBudget.used.elapsedMs}
+              data-stop-reason={result.search.requestBudget.stop.primary}
+            >
+              <h3>Search budget used</h3>
+              <dl>
+                <dt>Requested</dt>
+                <dd>
+                  {result.search.requestBudget.requested.preset.replace('_', ' ')} — up to{' '}
+                  {compactBudgetValue(result.search.requestBudget.requested.maxStates)} states /{' '}
+                  {Math.round(result.search.requestBudget.requested.maxWallTimeMs / 1000)}s /{' '}
+                  {result.search.requestBudget.requested.maxExpansionRounds} rounds
+                </dd>
+                <dt>Used</dt>
+                <dd>
+                  {result.search.requestBudget.used.statesExpanded.toLocaleString()} expanded ·{' '}
+                  {result.search.requestBudget.used.retainedStates.toLocaleString()} retained ·{' '}
+                  {(result.search.requestBudget.used.elapsedMs / 1000).toFixed(1)}s
+                </dd>
+                <dt>Stopped</dt>
+                <dd>{REQUEST_STOP_COPY[result.search.requestBudget.stop.primary].label}</dd>
+              </dl>
+              {result.search.requestBudget.stop.secondary.length > 0 && (
+                <p className="muted">
+                  Also observed: {result.search.requestBudget.stop.secondary
+                    .map((reason) => REQUEST_STOP_COPY[reason].label)
+                    .join(', ')}.
+                </p>
+              )}
+              {result.search.requestBudget.stop.primary !== 'PROOF_CLOSED' && (
+                <p className="budget-retry-recommendation">
+                  {REQUEST_STOP_COPY[result.search.requestBudget.stop.primary].retry}{' '}
+                  Exact reuse available: {result.search.requestBudget.used.retainedStates.toLocaleString()} retained states.
+                  A deeper run may improve the proof; it does not guarantee closure.
+                </p>
+              )}
+            </section>
             {materialWarnings.length > 0 && (
               <section className="decision-warnings" aria-label="Important recommendation warnings">
                 <h3>Important for this recommendation</h3>
@@ -2055,6 +2150,7 @@ export function CraftOptimizer({ seed = null, onBackToClusterJewels }: CraftOpti
               <div className="method-portfolio-grid">
                 {result.methodPortfolio.map((method) => {
                   const isWinner = method.status === 'SELECTED_WINNER';
+                  const isSameSelectedPolicy = method.status === 'SAME_AS_SELECTED';
                   const isMoreExpensive = method.status === 'MORE_EXPENSIVE';
                   const isDominated = method.status === 'DOMINATED';
                   const isNotEligible = method.status === 'NOT_ELIGIBLE';
@@ -2064,12 +2160,15 @@ export function CraftOptimizer({ seed = null, onBackToClusterJewels }: CraftOpti
                   return (
                     <div
                       key={method.spec.id}
-                      className={`method-family-card ${isWinner ? 'winner' : ''} status-${method.status.toLowerCase()}`}
+                      className={`method-family-card ${isWinner ? 'winner' : ''} ${isSameSelectedPolicy ? 'same-selected-policy' : ''} status-${method.status.toLowerCase()}`}
                       data-method-family-id={method.spec.id}
                       data-evaluation-source={method.evaluationSource}
                       data-objective-eligibility={method.objectiveEligibility}
                       data-required-action-observed={method.requiredActionObservedOnPolicy}
                       data-duplicate-of={method.duplicateOfMethodFamilyId}
+                      data-player-route={method.playerRouteName
+                        ? publicModifierText(method.playerRouteName, targetDescriptors)
+                        : undefined}
                     >
                       <div className="method-card-header">
                         <div className="method-title-group">
@@ -2079,6 +2178,8 @@ export function CraftOptimizer({ seed = null, onBackToClusterJewels }: CraftOpti
                         <span className={`method-status-tag ${method.status.toLowerCase()}`}>
                           {isWinner
                             ? 'Recommended'
+                            : isSameSelectedPolicy
+                              ? 'Same selected policy'
                             : isMoreExpensive
                               ? method.costDifferenceChaos !== undefined
                                 ? `+${method.costDifferenceChaos.toFixed(1)}c${method.costDifferencePercent !== undefined ? ` (+${method.costDifferencePercent.toFixed(0)}%)` : ''}`
@@ -2095,10 +2196,29 @@ export function CraftOptimizer({ seed = null, onBackToClusterJewels }: CraftOpti
                         </span>
                       </div>
                       <p className="method-desc">{publicModifierText(method.spec.description, targetDescriptors, 'primary')}</p>
+                      {method.playerRouteName && (
+                        <p className="method-route-name">
+                          <strong>{method.route ? 'Route:' : 'Route family:'}</strong>{' '}
+                          {publicModifierText(method.playerRouteName, targetDescriptors)}
+                        </p>
+                      )}
                       <p className="method-evaluation-source">
                         <strong>Evidence:</strong> {method.evaluationSource.replace(/_/g, ' ')}
                         {method.duplicateOfMethodFamilyId ? ` · same independently evaluated policy as ${method.duplicateOfMethodFamilyId}` : ''}
                       </p>
+                      {method.policyEquivalenceEvidence && (
+                        <details className="method-equivalence-evidence">
+                          <summary>Policy equivalence evidence</summary>
+                          <dl>
+                            <dt>Fingerprint</dt><dd>{method.policyEquivalenceFingerprint}</dd>
+                            <dt>Acquisition identity</dt><dd>{method.policyEquivalenceEvidence.physicalAcquisitionIdentity}</dd>
+                            <dt>Normalized decisions</dt><dd>{method.policyEquivalenceEvidence.normalizedPolicyDecisionCount}</dd>
+                            <dt>Required action evidence</dt><dd>{method.policyEquivalenceEvidence.requiredActionEvidence.join(', ') || 'none'}</dd>
+                            <dt>Recovery / terminal evidence</dt><dd>{method.policyEquivalenceEvidence.recoveryDecisionCount} / {method.policyEquivalenceEvidence.terminalStateCount}</dd>
+                            <dt>Usage tolerance</dt><dd>{method.policyEquivalenceEvidence.usageTolerance}</dd>
+                          </dl>
+                        </details>
+                      )}
                       {method.objectiveEligibility && (
                         <p className="method-objective-eligibility">
                           <strong>Objective eligibility:</strong>{' '}
@@ -2212,6 +2332,8 @@ export function CraftOptimizer({ seed = null, onBackToClusterJewels }: CraftOpti
                   <span>Selected route</span>
                   <strong data-selected-route={publicSelectedRouteName}>{publicSelectedRouteName}</strong>
                   <span>Starting point</span>
+                  <strong>{publicSelectedRouteName}</strong>
+                  <span>Physical start</span>
                   <strong>{recommendedStart}</strong>
                   <p>This condensed playbook puts the selected policy in chronological order. Repeat its recovery loop after misses, and expand Decision details when the exact current affixes matter.</p>
                 </div>
@@ -2461,6 +2583,82 @@ export function CraftOptimizer({ seed = null, onBackToClusterJewels }: CraftOpti
                     <tbody>{result.alternatives.map((route) => <tr key={route.actionId}><td>{route.name}</td><td>{route.status}</td><td>{chaos(route.expectedTotalCostChaos)}</td><td>{chaos(route.lowerBoundChaos)}</td><td>{chaos(route.optimalityGapChaos)}</td><td>{route.couldBeatResolvedIncumbent ? 'yes' : 'no'}</td></tr>)}</tbody>
                   </table>
                 ) : <p>No alternative acquisition routes were generated.</p>}
+              </section>
+
+              <section className="advanced-section proof-debt-panel" data-testid="proof-debt-panel">
+                <h2>Why not proven?</h2>
+                <p className="muted">
+                  Full-route lower/upper bounds and the most recent proof work. Lower bounds combine
+                  the partial graph with the independently admissible relaxed target-progress bound.
+                </p>
+                <table>
+                  <thead><tr><th>Candidate</th><th>L</th><th>U/current</th><th>Proof debt</th><th>Last work</th></tr></thead>
+                  <tbody>{result.acquisition.portfolioProof.candidateEvidence.map((candidate) => (
+                    <tr
+                      key={candidate.candidateId}
+                      data-proof-candidate={candidate.candidateId}
+                      data-proof-status={candidate.status}
+                      data-relaxed-lower-bound={candidate.downstreamLowerBoundEvidence.relaxedTargetProgressLowerBoundChaos}
+                    >
+                      <td>{publicModifierText(candidate.label, targetDescriptors)}</td>
+                      <td>{chaos(candidate.fullRouteLowerBoundChaos)}</td>
+                      <td>{chaos(candidate.fullRouteUpperBoundChaos)}</td>
+                      <td>{candidate.status === 'DOMINATED'
+                        ? 'Bound excludes it'
+                        : candidate.status === 'SELECTED'
+                          ? 'Selected executable route'
+                          : candidate.proofDebtChaos === undefined
+                            ? 'No incumbent yet'
+                            : `${candidate.proofDebtChaos.toFixed(1)}c · can still beat best`}</td>
+                      <td>
+                        {candidate.lastWorkStage?.replace(/_/g, ' ').toLowerCase() ?? 'relaxed bound'}
+                        {candidate.consecutiveNoProofChange > 0
+                          ? ` · ${candidate.consecutiveNoProofChange} no-change`
+                          : ''}
+                      </td>
+                    </tr>
+                  ))}</tbody>
+                </table>
+                <details>
+                  <summary>Bound sources and technical identities</summary>
+                  {result.acquisition.portfolioProof.candidateEvidence.map((candidate) => (
+                    <dl key={`${candidate.candidateId}-bound-technical`}>
+                      <dt>Candidate ID</dt><dd>{candidate.candidateId}</dd>
+                      <dt>Player route</dt><dd>{publicModifierText(candidate.label, targetDescriptors)}</dd>
+                      <dt>Partial / relaxed / combined downstream L</dt>
+                      <dd>
+                        {chaos(candidate.downstreamLowerBoundEvidence.partialGraphLowerBoundChaos)} /{' '}
+                        {chaos(candidate.downstreamLowerBoundEvidence.relaxedTargetProgressLowerBoundChaos)} /{' '}
+                        {chaos(candidate.downstreamLowerBoundEvidence.combinedLowerBoundChaos)}
+                      </dd>
+                      <dt>Relaxed-bound identity</dt>
+                      <dd>{candidate.downstreamLowerBoundEvidence.relaxedTargetProgress.cache.identityHash}</dd>
+                      <dt>Last scheduler reason</dt><dd>{candidate.proofReason}</dd>
+                      {candidate.deprioritizedReason && <><dt>Deprioritization</dt><dd>{candidate.deprioritizedReason}</dd></>}
+                    </dl>
+                  ))}
+                </details>
+                {result.acquisition.portfolioProof.tranches.length > 0 && (
+                  <details>
+                    <summary>Proof-work tranche telemetry</summary>
+                    <table>
+                      <thead><tr><th>Candidate / stage</th><th>States</th><th>Transitions gen/reused</th><th>Timing</th><th>L → L</th><th>Outcome</th></tr></thead>
+                      <tbody>{result.acquisition.portfolioProof.tranches.map((tranche, index) => (
+                        <tr key={`${tranche.candidateId}-${tranche.stage}-${index}`}>
+                          <td>{publicModifierText(tranche.label, targetDescriptors)} · {tranche.stage}</td>
+                          <td>{tranche.statesExpandedBefore} → {tranche.statesExpandedAfter}</td>
+                          <td>
+                            {tranche.transitionDistributionsGeneratedBefore} → {tranche.transitionDistributionsGeneratedAfter} /{' '}
+                            {tranche.transitionDistributionsReusedBefore} → {tranche.transitionDistributionsReusedAfter}
+                          </td>
+                          <td>{tranche.wallTimeMs}ms · transitions {tranche.transitionGenerationMs}ms · Bellman {tranche.bellmanMs}ms · occupancy {tranche.occupancyMs}ms</td>
+                          <td>{chaos(tranche.lowerBoundBeforeChaos)} → {chaos(tranche.lowerBoundAfterChaos)}</td>
+                          <td>{tranche.outcome}</td>
+                        </tr>
+                      ))}</tbody>
+                    </table>
+                  </details>
+                )}
               </section>
 
               <section className="advanced-section self-fracture-portfolio">
