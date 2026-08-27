@@ -233,12 +233,17 @@ The after images were visually reviewed in addition to the geometry assertions. 
 | Budget-isolation targeted gate | PASS 1/1; run `2026-08-27T21-45-54-525Z`; 58.370s wall |
 | Constellation scope/Fit All gate | PASS 1/1; run `2026-08-27T21-46-57-164Z`; 9.061s wall |
 | Phase 3B/3C focused retention | PASS 2/2; run `2026-08-27T21-47-11-400Z`; 36.727s wall |
-| DEV, exactly once | PASS 10/10; run `2026-08-27T21-47-54-750Z`; 214.217s wall |
+| Initial DEV acceptance | Functional PASS 10/10; run `2026-08-27T21-47-54-750Z`; 214.217s wall; later rejected by the hosted Phase 3A audit because it exceeded the 180s DEV ceiling |
+| Corrective DEV smoke | PASS 9/9; run `2026-08-27T22-39-14-826Z`; 158.798s wall; `C-core-budget-isolation` remains focused + RELEASE coverage instead of duplicating its two fresh Worker searches in ordinary DEV |
 | RELEASE, exactly once | PASS 16/16; run `2026-08-27T21-51-34-657Z`; 233.469s wall |
 | `diagnostic:phase3b` | PASS; 250,000 seeded trials/case; 0.25 self-loop / 0.75 open side and price reversal preserved |
 | `diagnostic:phase3c` | PASS C1–C10 after its negative-control assertion was made stage-aware |
 
+| Hosted committed-evidence audit | PASS A1-A14 + preservation; current DEV 9/9 in 158.798s and retained RELEASE 16/16 in 233.469s |
+
 Chromium was `151.0.7922.34`. The final targeted, DEV, and RELEASE reports contain zero console, page, or network errors.
+
+The first Pages attempt exposed the DEV-tier regression rather than a product failure: adding the exhaustive compare-methods A/B gate to DEV had raised the tier above Phase 3A's three-minute contract. The generic gate remains independently runnable and remains in RELEASE, while DEV retains the real full-route policy-evidence check. Because the corrective source change affected only tier membership and the committed-evidence reader, the plan's post-RELEASE rule called for the changed diagnostic plus DEV smoke, not another RELEASE run. No gate operation, optimizer, mechanics, or presentation source changed after RELEASE.
 
 ### Mature retained audit
 
@@ -287,9 +292,10 @@ Self-review additionally found and repaired one integration edge before broad va
 
 ## 8. Commit, push, and deployment
 
-- Implementation/evidence/report commit: pending final commit.
-- Push to `origin/main`: pending.
-- GitHub Pages workflow: pending.
+- Implementation/evidence/report commit: `c9d8b7b3a129e42d54a25f3449502d1c7f24240b`.
+- Push to `origin/main`: `debd00cbc16911eb8ac27b010605015b8af6e334..c9d8b7b3a129e42d54a25f3449502d1c7f24240b` completed.
+- Initial GitHub Pages workflow: run `33123134291`; build/lint/diff passed, then the committed-evidence audit correctly rejected the 214.217s DEV tier and triggered the corrective tiering change documented above.
+- Corrective commit and successful GitHub Pages workflow: pending.
 - Deployed SHA and live verification: pending.
 
 This section will be closed with immutable commit and Pages evidence after the implementation commit deploys. A later documentation-only closeout does not change product, mechanics, search, layout, or validation evidence.

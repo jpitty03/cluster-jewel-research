@@ -41,21 +41,21 @@
     }
   },
   "selected": {
-    "actionId": "acquire_candidate_1_self-fracture_executable",
+    "actionId": "method:family_fracture_Primordial Bond",
     "name": "Self-fracture Primordial Bond",
     "acquisitionCandidateId": "candidate_1",
     "acquisitionMethodId": "self-fracture_executable",
-    "expectedTotalCostChaos": 1459.7923662158182,
-    "lowerBoundChaos": 1408.1154452858168,
-    "incumbentUpperBoundChaos": 1459.7923662158182,
-    "optimalityGapChaos": 51.67692093000437,
+    "expectedTotalCostChaos": 1459.7923662160777,
+    "lowerBoundChaos": 340.41913,
+    "incumbentUpperBoundChaos": 1459.7923662160777,
+    "optimalityGapChaos": 1119.3732362160783,
     "status": "RESOLVED",
-    "couldBeatResolvedIncumbent": false,
+    "couldBeatResolvedIncumbent": true,
     "metrics": {
-      "expectedChaosCost": 1459.7923662158182,
-      "expectedPhysicalActions": 740.8471930293676,
-      "estimatedManualTimeMs": 314538.8772117272,
-      "objectiveScore": 1459.7923662158182,
+      "expectedChaosCost": 1459.7923662160777,
+      "expectedPhysicalActions": 740.8471930308776,
+      "estimatedManualTimeMs": 314538.8772123303,
+      "objectiveScore": 1459.7923662160777,
       "effortConfidence": "DEFAULT_APPROXIMATE"
     }
   },
@@ -84,8 +84,8 @@
       "forcedAcquisitionType": "CLEAN"
     },
     "status": "MORE_EXPENSIVE",
-    "costDifferenceChaos": 3307.9388977471526,
-    "costDifferencePercent": 226.60338376218783,
+    "costDifferenceChaos": 3307.9388977468934,
+    "costDifferencePercent": 226.6033837621298,
     "evaluationSource": "INDEPENDENT_SOLVE",
     "incumbentSource": "ADMISSIBLE_KNOWN_POLICY",
     "familySearchStatus": "BEST_FOUND_UNPROVEN",
@@ -100,7 +100,7 @@
       "sourceAcquisitionKind": "SELF_FRACTURE",
       "sourceAcquisitionCostChaos": 1406.2963152858167,
       "familyAcquisitionCostChaos": 40,
-      "selectedPolicyDecisionCount": 346,
+      "selectedPolicyDecisionCount": 345,
       "selectedPhysicalActionIds": [
         "alteration_orb",
         "augmentation_orb",
@@ -209,8 +209,8 @@
           {
             "actionId": "alteration_orb",
             "actionName": "Orb of Alteration",
-            "expectedCount": 193.388459707309,
-            "expectedCostChaos": 25.836698216896487,
+            "expectedCount": 193.388459708237,
+            "expectedCostChaos": 25.836698217020462,
             "scope": "DOWNSTREAM",
             "evidenceSource": "DOWNSTREAM_SELECTED_POLICY",
             "physicalAcquisitionIdentity": "Large Cluster Jewel|Minions deal 10% increased Damage|84|8|magic|influenced=false|synthesised=false|acquisitionMenu=false|methodFamilyActionEvidence=|Suffix:Primordial Bond:1:F:",
@@ -220,8 +220,8 @@
           {
             "actionId": "exalted_orb",
             "actionName": "Exalted Orb Slam",
-            "expectedCount": 11.632847748272178,
-            "expectedCostChaos": 13.61043186547845,
+            "expectedCount": 11.63284774832936,
+            "expectedCostChaos": 13.610431865545353,
             "scope": "DOWNSTREAM",
             "evidenceSource": "DOWNSTREAM_SELECTED_POLICY",
             "physicalAcquisitionIdentity": "Large Cluster Jewel|Minions deal 10% increased Damage|84|8|magic|influenced=false|synthesised=false|acquisitionMenu=false|methodFamilyActionEvidence=|Suffix:Primordial Bond:1:F:",
@@ -231,8 +231,8 @@
           {
             "actionId": "scouring_orb",
             "actionName": "Orb of Scouring",
-            "expectedCount": 19.625902272537118,
-            "expectedCostChaos": 10.580323915124819,
+            "expectedCount": 19.62590227263375,
+            "expectedCostChaos": 10.580323915176912,
             "scope": "DOWNSTREAM",
             "evidenceSource": "DOWNSTREAM_SELECTED_POLICY",
             "physicalAcquisitionIdentity": "Large Cluster Jewel|Minions deal 10% increased Damage|84|8|magic|influenced=false|synthesised=false|acquisitionMenu=false|methodFamilyActionEvidence=|Suffix:Primordial Bond:1:F:",
@@ -242,8 +242,8 @@
           {
             "actionId": "augmentation_orb",
             "actionName": "Orb of Augmentation",
-            "expectedCount": 68.97301719936435,
-            "expectedCostChaos": 2.7182266078269492,
+            "expectedCount": 68.97301719969307,
+            "expectedCostChaos": 2.718226607839904,
             "scope": "DOWNSTREAM",
             "evidenceSource": "DOWNSTREAM_SELECTED_POLICY",
             "physicalAcquisitionIdentity": "Large Cluster Jewel|Minions deal 10% increased Damage|84|8|magic|influenced=false|synthesised=false|acquisitionMenu=false|methodFamilyActionEvidence=|Suffix:Primordial Bond:1:F:",
@@ -253,8 +253,8 @@
           {
             "actionId": "regal_orb",
             "actionName": "Regal Orb",
-            "expectedCount": 20.62590227253722,
-            "expectedCostChaos": 0.7503703246749042,
+            "expectedCount": 20.625902272636196,
+            "expectedCostChaos": 0.7503703246785048,
             "scope": "DOWNSTREAM",
             "evidenceSource": "DOWNSTREAM_SELECTED_POLICY",
             "physicalAcquisitionIdentity": "Large Cluster Jewel|Minions deal 10% increased Damage|84|8|magic|influenced=false|synthesised=false|acquisitionMenu=false|methodFamilyActionEvidence=|Suffix:Primordial Bond:1:F:",
@@ -464,9 +464,9 @@
       }
     },
     "searchDivergence": {
-      "knownRetainedStates": 5000,
+      "knownRetainedStates": 3334,
       "independentRetainedStates": 1,
-      "retainedStatesOnlyInKnown": 4999,
+      "retainedStatesOnlyInKnown": 3333,
       "retainedStatesOnlyInIndependent": 0,
       "commonRetainedStates": 1,
       "knownOnPolicyStatesMissingFromIndependentGraph": 399,
@@ -484,7 +484,7 @@
           "occupancyUnderKnownPolicy": 1013.8069816437692,
           "occupancyUnderIndependentPolicy": 0,
           "knownSelectedActionId": "alteration_orb",
-          "knownActionQInKnownGraph": 4727.859851537509,
+          "knownActionQInKnownGraph": 4727.859851438595,
           "reason": "STATE_NOT_DISCOVERED"
         },
         {
@@ -498,7 +498,7 @@
           "occupancyUnderKnownPolicy": 1013.8069816437692,
           "occupancyUnderIndependentPolicy": 0,
           "knownSelectedActionId": "alteration_orb",
-          "knownActionQInKnownGraph": 4727.859851537509,
+          "knownActionQInKnownGraph": 4727.859851438595,
           "reason": "STATE_NOT_DISCOVERED"
         },
         {
@@ -512,7 +512,7 @@
           "occupancyUnderKnownPolicy": 1013.8069816437692,
           "occupancyUnderIndependentPolicy": 0,
           "knownSelectedActionId": "alteration_orb",
-          "knownActionQInKnownGraph": 4727.859851537509,
+          "knownActionQInKnownGraph": 4727.859851438595,
           "reason": "STATE_NOT_DISCOVERED"
         },
         {
@@ -526,7 +526,7 @@
           "occupancyUnderKnownPolicy": 1013.8069816437692,
           "occupancyUnderIndependentPolicy": 0,
           "knownSelectedActionId": "alteration_orb",
-          "knownActionQInKnownGraph": 4727.859851537509,
+          "knownActionQInKnownGraph": 4727.859851438595,
           "reason": "STATE_NOT_DISCOVERED"
         },
         {
@@ -540,7 +540,7 @@
           "occupancyUnderKnownPolicy": 1013.8069816437692,
           "occupancyUnderIndependentPolicy": 0,
           "knownSelectedActionId": "alteration_orb",
-          "knownActionQInKnownGraph": 4727.859851537509,
+          "knownActionQInKnownGraph": 4727.859851438595,
           "reason": "STATE_NOT_DISCOVERED"
         },
         {
@@ -554,7 +554,7 @@
           "occupancyUnderKnownPolicy": 1013.8069816437692,
           "occupancyUnderIndependentPolicy": 0,
           "knownSelectedActionId": "alteration_orb",
-          "knownActionQInKnownGraph": 4727.859851537509,
+          "knownActionQInKnownGraph": 4727.859851438595,
           "reason": "STATE_NOT_DISCOVERED"
         },
         {
@@ -568,7 +568,7 @@
           "occupancyUnderKnownPolicy": 844.8391513698078,
           "occupancyUnderIndependentPolicy": 0,
           "knownSelectedActionId": "alteration_orb",
-          "knownActionQInKnownGraph": 4727.859851537509,
+          "knownActionQInKnownGraph": 4727.859851438595,
           "reason": "STATE_NOT_DISCOVERED"
         },
         {
@@ -582,7 +582,7 @@
           "occupancyUnderKnownPolicy": 683.0245595439095,
           "occupancyUnderIndependentPolicy": 0,
           "knownSelectedActionId": "alteration_orb",
-          "knownActionQInKnownGraph": 4727.859851537509,
+          "knownActionQInKnownGraph": 4727.859851438595,
           "reason": "STATE_NOT_DISCOVERED"
         },
         {
@@ -596,7 +596,7 @@
           "occupancyUnderKnownPolicy": 683.0245595439095,
           "occupancyUnderIndependentPolicy": 0,
           "knownSelectedActionId": "alteration_orb",
-          "knownActionQInKnownGraph": 4727.859851537509,
+          "knownActionQInKnownGraph": 4727.859851438595,
           "reason": "STATE_NOT_DISCOVERED"
         },
         {
@@ -610,7 +610,7 @@
           "occupancyUnderKnownPolicy": 683.0245595439095,
           "occupancyUnderIndependentPolicy": 0,
           "knownSelectedActionId": "alteration_orb",
-          "knownActionQInKnownGraph": 4727.859851537509,
+          "knownActionQInKnownGraph": 4727.859851438595,
           "reason": "STATE_NOT_DISCOVERED"
         },
         {
@@ -624,7 +624,7 @@
           "occupancyUnderKnownPolicy": 683.0245595439095,
           "occupancyUnderIndependentPolicy": 0,
           "knownSelectedActionId": "alteration_orb",
-          "knownActionQInKnownGraph": 4727.859851537509,
+          "knownActionQInKnownGraph": 4727.859851438595,
           "reason": "STATE_NOT_DISCOVERED"
         },
         {
@@ -638,7 +638,7 @@
           "occupancyUnderKnownPolicy": 683.0245595439095,
           "occupancyUnderIndependentPolicy": 0,
           "knownSelectedActionId": "alteration_orb",
-          "knownActionQInKnownGraph": 4727.859851537509,
+          "knownActionQInKnownGraph": 4727.859851438595,
           "reason": "STATE_NOT_DISCOVERED"
         },
         {
@@ -652,7 +652,7 @@
           "occupancyUnderKnownPolicy": 683.0245595439095,
           "occupancyUnderIndependentPolicy": 0,
           "knownSelectedActionId": "alteration_orb",
-          "knownActionQInKnownGraph": 4727.859851537509,
+          "knownActionQInKnownGraph": 4727.859851438595,
           "reason": "STATE_NOT_DISCOVERED"
         },
         {
@@ -666,7 +666,7 @@
           "occupancyUnderKnownPolicy": 683.0245595439095,
           "occupancyUnderIndependentPolicy": 0,
           "knownSelectedActionId": "alteration_orb",
-          "knownActionQInKnownGraph": 4727.859851537509,
+          "knownActionQInKnownGraph": 4727.859851438595,
           "reason": "STATE_NOT_DISCOVERED"
         },
         {
@@ -680,7 +680,7 @@
           "occupancyUnderKnownPolicy": 683.0245595439095,
           "occupancyUnderIndependentPolicy": 0,
           "knownSelectedActionId": "alteration_orb",
-          "knownActionQInKnownGraph": 4727.859851537509,
+          "knownActionQInKnownGraph": 4727.859851438595,
           "reason": "STATE_NOT_DISCOVERED"
         },
         {
@@ -694,7 +694,7 @@
           "occupancyUnderKnownPolicy": 683.0245595439095,
           "occupancyUnderIndependentPolicy": 0,
           "knownSelectedActionId": "alteration_orb",
-          "knownActionQInKnownGraph": 4727.859851537509,
+          "knownActionQInKnownGraph": 4727.859851438595,
           "reason": "STATE_NOT_DISCOVERED"
         },
         {
@@ -708,7 +708,7 @@
           "occupancyUnderKnownPolicy": 675.8713210958462,
           "occupancyUnderIndependentPolicy": 0,
           "knownSelectedActionId": "alteration_orb",
-          "knownActionQInKnownGraph": 4727.859851537509,
+          "knownActionQInKnownGraph": 4727.859851438595,
           "reason": "STATE_NOT_DISCOVERED"
         },
         {
@@ -722,7 +722,7 @@
           "occupancyUnderKnownPolicy": 569.1871329532579,
           "occupancyUnderIndependentPolicy": 0,
           "knownSelectedActionId": "alteration_orb",
-          "knownActionQInKnownGraph": 4727.859851537509,
+          "knownActionQInKnownGraph": 4727.859851438595,
           "reason": "STATE_NOT_DISCOVERED"
         },
         {
@@ -736,7 +736,7 @@
           "occupancyUnderKnownPolicy": 540.727776305595,
           "occupancyUnderIndependentPolicy": 0,
           "knownSelectedActionId": "alteration_orb",
-          "knownActionQInKnownGraph": 4727.859851537509,
+          "knownActionQInKnownGraph": 4727.859851438595,
           "reason": "STATE_NOT_DISCOVERED"
         },
         {
@@ -750,7 +750,7 @@
           "occupancyUnderKnownPolicy": 422.4195756849039,
           "occupancyUnderIndependentPolicy": 0,
           "knownSelectedActionId": "augmentation_orb",
-          "knownActionQInKnownGraph": 4725.114446005714,
+          "knownActionQInKnownGraph": 4725.1144459068555,
           "reason": "STATE_NOT_DISCOVERED"
         }
       ]
@@ -784,7 +784,7 @@
         "expectedChaosCost": 4727.731263962971,
         "expectedPhysicalActions": 35645.51554742855,
         "estimatedManualTimeMs": 14258206.21897142,
-        "objectiveScore": 4727.731263537508,
+        "objectiveScore": 4727.731263438594,
         "effortConfidence": "DEFAULT_APPROXIMATE"
       }
     },
@@ -943,13 +943,13 @@
       "onPolicyReachableStates": 415,
       "onPolicyTerminalStates": 15,
       "onPolicyUnresolvedTransitions": 0,
-      "terminalAbsorptionProbability": 1,
+      "terminalAbsorptionProbability": 0.9999999980241998,
       "proper": true,
       "fullyResolved": true,
       "bellmanConverged": true,
       "occupancyConverged": true,
       "costReconciled": true,
-      "reconciliationDifferenceChaos": 4.254416126059368e-7
+      "reconciliationDifferenceChaos": 5.243555278866552e-7
     },
     "sessionIdentity": "phase2j-4ae46f61:family_conventional",
     "retainedStates": 1,
@@ -958,7 +958,7 @@
       "maxStates": 5000,
       "maxWallTimeMs": 265,
       "maxExpansionRounds": 3,
-      "elapsedMs": 300
+      "elapsedMs": 349
     },
     "whyNotSelectedExplanation": "This resolved eligible policy is dominated by the selected policy for the requested objective and its tie-breakers.",
     "objectiveEligibility": "OBJECTIVE_DOMINATED",
@@ -1014,7 +1014,7 @@
       "targetFractureModId": "Primordial Bond",
       "targetFractureModName": "Primordial Bond (T1)"
     },
-    "status": "SAME_AS_SELECTED",
+    "status": "SELECTED_WINNER",
     "costDifferenceChaos": 0,
     "costDifferencePercent": 0,
     "evaluationSource": "INDEPENDENT_SOLVE",
@@ -1032,7 +1032,7 @@
       "sourceAcquisitionKind": "SELF_FRACTURE",
       "sourceAcquisitionCostChaos": 1406.2963152858167,
       "familyAcquisitionCostChaos": 1406.2963152858167,
-      "selectedPolicyDecisionCount": 346,
+      "selectedPolicyDecisionCount": 345,
       "selectedPhysicalActionIds": [
         "alteration_orb",
         "augmentation_orb",
@@ -1154,8 +1154,8 @@
           {
             "actionId": "alteration_orb",
             "actionName": "Orb of Alteration",
-            "expectedCount": 193.388459707309,
-            "expectedCostChaos": 25.836698216896487,
+            "expectedCount": 193.388459708237,
+            "expectedCostChaos": 25.836698217020462,
             "scope": "DOWNSTREAM",
             "evidenceSource": "DOWNSTREAM_SELECTED_POLICY",
             "physicalAcquisitionIdentity": "Large Cluster Jewel|Minions deal 10% increased Damage|84|8|magic|influenced=false|synthesised=false|acquisitionMenu=false|methodFamilyActionEvidence=|Suffix:Primordial Bond:1:F:",
@@ -1165,8 +1165,8 @@
           {
             "actionId": "exalted_orb",
             "actionName": "Exalted Orb Slam",
-            "expectedCount": 11.632847748272178,
-            "expectedCostChaos": 13.61043186547845,
+            "expectedCount": 11.63284774832936,
+            "expectedCostChaos": 13.610431865545353,
             "scope": "DOWNSTREAM",
             "evidenceSource": "DOWNSTREAM_SELECTED_POLICY",
             "physicalAcquisitionIdentity": "Large Cluster Jewel|Minions deal 10% increased Damage|84|8|magic|influenced=false|synthesised=false|acquisitionMenu=false|methodFamilyActionEvidence=|Suffix:Primordial Bond:1:F:",
@@ -1176,8 +1176,8 @@
           {
             "actionId": "scouring_orb",
             "actionName": "Orb of Scouring",
-            "expectedCount": 19.625902272537118,
-            "expectedCostChaos": 10.580323915124819,
+            "expectedCount": 19.62590227263375,
+            "expectedCostChaos": 10.580323915176912,
             "scope": "DOWNSTREAM",
             "evidenceSource": "DOWNSTREAM_SELECTED_POLICY",
             "physicalAcquisitionIdentity": "Large Cluster Jewel|Minions deal 10% increased Damage|84|8|magic|influenced=false|synthesised=false|acquisitionMenu=false|methodFamilyActionEvidence=|Suffix:Primordial Bond:1:F:",
@@ -1187,8 +1187,8 @@
           {
             "actionId": "augmentation_orb",
             "actionName": "Orb of Augmentation",
-            "expectedCount": 68.97301719936435,
-            "expectedCostChaos": 2.7182266078269492,
+            "expectedCount": 68.97301719969307,
+            "expectedCostChaos": 2.718226607839904,
             "scope": "DOWNSTREAM",
             "evidenceSource": "DOWNSTREAM_SELECTED_POLICY",
             "physicalAcquisitionIdentity": "Large Cluster Jewel|Minions deal 10% increased Damage|84|8|magic|influenced=false|synthesised=false|acquisitionMenu=false|methodFamilyActionEvidence=|Suffix:Primordial Bond:1:F:",
@@ -1198,8 +1198,8 @@
           {
             "actionId": "regal_orb",
             "actionName": "Regal Orb",
-            "expectedCount": 20.62590227253722,
-            "expectedCostChaos": 0.7503703246749042,
+            "expectedCount": 20.625902272636196,
+            "expectedCostChaos": 0.7503703246785048,
             "scope": "DOWNSTREAM",
             "evidenceSource": "DOWNSTREAM_SELECTED_POLICY",
             "physicalAcquisitionIdentity": "Large Cluster Jewel|Minions deal 10% increased Damage|84|8|magic|influenced=false|synthesised=false|acquisitionMenu=false|methodFamilyActionEvidence=|Suffix:Primordial Bond:1:F:",
@@ -1264,15 +1264,15 @@
         ]
       },
       "sourceParity": {
-        "expectedDownstreamCostChaos": 53.49605093001628,
+        "expectedDownstreamCostChaos": 53.49605093026165,
         "revalidatedDownstreamCostChaos": 53.49605092998983,
-        "costDifferenceChaos": 2.645350605234853e-11,
-        "expectedPhysicalActions": 314.2461292000228,
+        "costDifferenceChaos": 2.7182522899238393e-10,
+        "expectedPhysicalActions": 314.2461292015328,
         "revalidatedPhysicalActions": 314.2461292000758,
-        "actionDifference": 5.303490979713388e-11,
-        "expectedManualTimeMs": 125698.4516800086,
+        "actionDifference": 1.457010512240231e-9,
+        "expectedManualTimeMs": 125698.45168061172,
         "revalidatedManualTimeMs": 125698.45168002995,
-        "timeDifferenceMs": 2.134765964001417e-8
+        "timeDifferenceMs": 5.817710189148784e-7
       }
     },
     "knownPolicyAdmissibility": {
@@ -1418,35 +1418,21 @@
       ]
     },
     "route": {
-      "actionId": "method:family_fracture_Primordial Bond:known-policy",
+      "actionId": "method:family_fracture_Primordial Bond",
       "name": "Self-fracture Primordial Bond",
       "acquisitionCandidateId": "candidate_1",
       "acquisitionMethodId": "self-fracture_executable",
-      "expectedTotalCostChaos": 1459.7923662158182,
+      "expectedTotalCostChaos": 1459.7923662160777,
       "lowerBoundChaos": 340.41913,
-      "incumbentUpperBoundChaos": 1459.7923662158182,
-      "optimalityGapChaos": 1119.3732362158182,
+      "incumbentUpperBoundChaos": 1459.7923662160777,
+      "optimalityGapChaos": 1119.3732362160777,
       "status": "RESOLVED",
-      "couldBeatResolvedIncumbent": false,
+      "couldBeatResolvedIncumbent": true,
       "metrics": {
-        "expectedChaosCost": 1459.7923662158182,
-        "expectedPhysicalActions": 740.8471930293676,
-        "estimatedManualTimeMs": 314538.8772117272,
-        "objectiveScore": 1459.7923662158182,
-        "effortConfidence": "DEFAULT_APPROXIMATE"
-      },
-      "acquisitionMetrics": {
-        "expectedChaosCost": 1406.2963152858165,
-        "expectedPhysicalActions": 426.60106382934487,
-        "estimatedManualTimeMs": 188840.4255317186,
-        "objectiveScore": 1406.2963152858167,
-        "effortConfidence": "DEFAULT_APPROXIMATE"
-      },
-      "downstreamMetrics": {
-        "expectedChaosCost": 53.496050930001616,
-        "expectedPhysicalActions": 314.2461292015328,
-        "estimatedManualTimeMs": 125698.45168061172,
-        "objectiveScore": 53.496050930021994,
+        "expectedChaosCost": 1459.7923662160777,
+        "expectedPhysicalActions": 740.8471930308776,
+        "estimatedManualTimeMs": 314538.8772123303,
+        "objectiveScore": 1459.7923662160777,
         "effortConfidence": "DEFAULT_APPROXIMATE"
       }
     },
@@ -1455,10 +1441,10 @@
     "acquisitionU": 1406.2963152858165,
     "downstreamStatus": "RESOLVED",
     "downstreamL": 0,
-    "downstreamU": 53.496050930001616,
+    "downstreamU": 53.496050930261134,
     "fullRouteStatus": "RESOLVED",
     "fullRouteL": 340.41913,
-    "fullRouteU": 1459.7923662158182,
+    "fullRouteU": 1459.7923662160777,
     "requiredActionObservedOnPolicy": true,
     "fullRouteActionEvidence": {
       "version": "FULL_ROUTE_ACTION_EVIDENCE_V1",
@@ -1557,8 +1543,8 @@
         {
           "actionId": "alteration_orb",
           "actionName": "Orb of Alteration",
-          "expectedCount": 193.388459707309,
-          "expectedCostChaos": 25.836698216896487,
+          "expectedCount": 193.388459708237,
+          "expectedCostChaos": 25.836698217020462,
           "scope": "DOWNSTREAM",
           "evidenceSource": "DOWNSTREAM_SELECTED_POLICY",
           "physicalAcquisitionIdentity": "Large Cluster Jewel|Minions deal 10% increased Damage|84|8|magic|influenced=false|synthesised=false|acquisitionMenu=false|methodFamilyActionEvidence=|Suffix:Primordial Bond:1:F:",
@@ -1568,8 +1554,8 @@
         {
           "actionId": "exalted_orb",
           "actionName": "Exalted Orb Slam",
-          "expectedCount": 11.632847748272178,
-          "expectedCostChaos": 13.61043186547845,
+          "expectedCount": 11.63284774832936,
+          "expectedCostChaos": 13.610431865545353,
           "scope": "DOWNSTREAM",
           "evidenceSource": "DOWNSTREAM_SELECTED_POLICY",
           "physicalAcquisitionIdentity": "Large Cluster Jewel|Minions deal 10% increased Damage|84|8|magic|influenced=false|synthesised=false|acquisitionMenu=false|methodFamilyActionEvidence=|Suffix:Primordial Bond:1:F:",
@@ -1579,8 +1565,8 @@
         {
           "actionId": "scouring_orb",
           "actionName": "Orb of Scouring",
-          "expectedCount": 19.625902272537118,
-          "expectedCostChaos": 10.580323915124819,
+          "expectedCount": 19.62590227263375,
+          "expectedCostChaos": 10.580323915176912,
           "scope": "DOWNSTREAM",
           "evidenceSource": "DOWNSTREAM_SELECTED_POLICY",
           "physicalAcquisitionIdentity": "Large Cluster Jewel|Minions deal 10% increased Damage|84|8|magic|influenced=false|synthesised=false|acquisitionMenu=false|methodFamilyActionEvidence=|Suffix:Primordial Bond:1:F:",
@@ -1590,8 +1576,8 @@
         {
           "actionId": "augmentation_orb",
           "actionName": "Orb of Augmentation",
-          "expectedCount": 68.97301719936435,
-          "expectedCostChaos": 2.7182266078269492,
+          "expectedCount": 68.97301719969307,
+          "expectedCostChaos": 2.718226607839904,
           "scope": "DOWNSTREAM",
           "evidenceSource": "DOWNSTREAM_SELECTED_POLICY",
           "physicalAcquisitionIdentity": "Large Cluster Jewel|Minions deal 10% increased Damage|84|8|magic|influenced=false|synthesised=false|acquisitionMenu=false|methodFamilyActionEvidence=|Suffix:Primordial Bond:1:F:",
@@ -1601,8 +1587,8 @@
         {
           "actionId": "regal_orb",
           "actionName": "Regal Orb",
-          "expectedCount": 20.62590227253722,
-          "expectedCostChaos": 0.7503703246749042,
+          "expectedCount": 20.625902272636196,
+          "expectedCostChaos": 0.7503703246785048,
           "scope": "DOWNSTREAM",
           "evidenceSource": "DOWNSTREAM_SELECTED_POLICY",
           "physicalAcquisitionIdentity": "Large Cluster Jewel|Minions deal 10% increased Damage|84|8|magic|influenced=false|synthesised=false|acquisitionMenu=false|methodFamilyActionEvidence=|Suffix:Primordial Bond:1:F:",
@@ -1652,8 +1638,8 @@
       {
         "actionId": "alteration_orb",
         "actionName": "Orb of Alteration",
-        "expectedCount": 517.0693107708024,
-        "expectedCostChaos": 69.0804599189791
+        "expectedCount": 517.0693107717304,
+        "expectedCostChaos": 69.08045991910308
       },
       {
         "actionId": "clean_base_initial",
@@ -1664,26 +1650,26 @@
       {
         "actionId": "exalted_orb",
         "actionName": "Exalted Orb Slam",
-        "expectedCount": 15.632847748267999,
-        "expectedCostChaos": 18.29043186547356
+        "expectedCount": 15.63284774832518,
+        "expectedCostChaos": 18.290431865540462
       },
       {
         "actionId": "scouring_orb",
         "actionName": "Orb of Scouring",
-        "expectedCount": 20.62590227253608,
-        "expectedCostChaos": 11.119423915124258
+        "expectedCount": 20.62590227263271,
+        "expectedCostChaos": 11.119423915176352
       },
       {
         "actionId": "augmentation_orb",
         "actionName": "Orb of Augmentation",
-        "expectedCount": 151.89322996523555,
-        "expectedCostChaos": 5.986112192929935
+        "expectedCount": 151.89322996556427,
+        "expectedCostChaos": 5.9861121929428895
       },
       {
         "actionId": "regal_orb",
         "actionName": "Regal Orb",
-        "expectedCount": 24.625902272533043,
-        "expectedCostChaos": 0.8958903246747522
+        "expectedCount": 24.62590227263202,
+        "expectedCostChaos": 0.8958903246783528
       },
       {
         "actionId": "transmutation_orb",
@@ -1695,21 +1681,21 @@
     "policyHealth": {
       "selectedPolicyStatus": "FULLY RESOLVED / PROPER / ABSORBING / COST-RECONCILED",
       "proofLevel": "BEST FULLY RESOLVED POLICY FOUND",
-      "onPolicyReachableStates": 361,
+      "onPolicyReachableStates": 360,
       "onPolicyTerminalStates": 15,
       "onPolicyUnresolvedTransitions": 0,
-      "terminalAbsorptionProbability": 0.9999999999882052,
+      "terminalAbsorptionProbability": 0.9999999990147179,
       "proper": true,
       "fullyResolved": true,
       "bellmanConverged": true,
       "occupancyConverged": true,
       "costReconciled": true,
-      "reconciliationDifferenceChaos": 1.1823431123048067e-11
+      "reconciliationDifferenceChaos": 2.396589593445242e-10
     },
     "sessionIdentity": "phase2j-4ae46f61:family_fracture_Primordial Bond",
     "retainedStates": 4670,
     "transitionDistributionsGenerated": 14272,
-    "whyNotSelectedExplanation": "Same selected policy: this family-context revalidation confirms the same physical acquisition, normalized state-to-action policy, recovery/terminal semantics, and full-route usage within the declared tolerance.",
+    "whyNotSelectedExplanation": "This exact executable policy was independently revalidated inside the family and is selected by the requested objective; family optimality remains unproven.",
     "objectiveEligibility": "RESOLVED_ELIGIBLE",
     "policyEquivalenceFingerprint": "policy-b8fc0f29",
     "policyEquivalenceEvidence": {
@@ -1731,9 +1717,605 @@
       "terminalStateCount": 1,
       "usageTolerance": 0.000001
     },
-    "equivalentToSelectedPolicy": true,
-    "duplicateOfMethodFamilyId": "family_open",
-    "playerRouteName": "Self-fracture Primordial Bond"
+    "equivalentToSelectedPolicy": false,
+    "playerRouteName": "Self-fracture Primordial Bond",
+    "craftPlan": {
+      "status": "CERTIFIED",
+      "startingPoint": "Primordial Bond",
+      "steps": [
+        {
+          "id": "acquire",
+          "phase": "ACQUIRE",
+          "title": "Create the fractured starting base",
+          "instruction": "Follow the selected executable self-fracture synthesis for Primordial Bond. Use the returned Fracturing Orb policy; a wrong permanent fracture follows the returned reacquire/reprepare recovery.",
+          "actionIds": [
+            "fracturing_orb",
+            "alteration_orb",
+            "exalted_orb",
+            "augmentation_orb",
+            "regal_orb",
+            "transmutation_orb"
+          ],
+          "actionNames": [
+            "Fracturing Orb",
+            "Orb of Alteration",
+            "Exalted Orb Slam",
+            "Orb of Augmentation",
+            "Regal Orb",
+            "Orb of Transmutation"
+          ],
+          "targetProgressBefore": 0,
+          "targetProgressAfter": 0,
+          "decisionDetails": []
+        },
+        {
+          "id": "initialize",
+          "phase": "INITIALIZE",
+          "title": "Make it Magic",
+          "instruction": "Use Orb of Transmutation to begin the rolling loop.",
+          "actionIds": [
+            "transmutation_orb"
+          ],
+          "actionNames": [
+            "Orb of Transmutation"
+          ],
+          "decisionDetails": []
+        },
+        {
+          "id": "roll",
+          "phase": "ROLL",
+          "title": "Roll for a target modifier",
+          "instruction": "Use Orb of Alteration until one desired modifier appears in a state the selected policy keeps.",
+          "actionIds": [
+            "alteration_orb"
+          ],
+          "actionNames": [
+            "Orb of Alteration"
+          ],
+          "targetProgressBefore": 0,
+          "targetProgressAfter": 1,
+          "decisionDetails": []
+        },
+        {
+          "id": "fill",
+          "phase": "FILL",
+          "title": "Fill the Magic item when needed",
+          "instruction": "Use Orb of Augmentation when the selected policy wants another Magic affix before promotion.",
+          "actionIds": [
+            "augmentation_orb"
+          ],
+          "actionNames": [
+            "Orb of Augmentation"
+          ],
+          "decisionDetails": []
+        },
+        {
+          "id": "promote",
+          "phase": "PROMOTE",
+          "title": "Promote the keepable Magic states",
+          "instruction": "Use Regal Orb only for the one-target Magic states the selected policy promotes; otherwise continue rolling. Expand Decision details when exact current affixes matter.",
+          "actionIds": [
+            "regal_orb"
+          ],
+          "actionNames": [
+            "Regal Orb"
+          ],
+          "decisionDetails": [
+            {
+              "id": "decision_1",
+              "summary": "rare 0P/0S states with the same target progress choose different actions based on exact current affixes.",
+              "representedStateCount": 227,
+              "expectedVisits": 426.6010638293448,
+              "options": [
+                {
+                  "actionId": "alteration_orb",
+                  "action": "Orb of Alteration",
+                  "representedStateCount": 208,
+                  "expectedVisits": 323.68085106349275,
+                  "policyRuleIndices": [
+                    8,
+                    9,
+                    10,
+                    11,
+                    12,
+                    13,
+                    14,
+                    15,
+                    16,
+                    18,
+                    19,
+                    26,
+                    27,
+                    29,
+                    30,
+                    31,
+                    32,
+                    33,
+                    34,
+                    35,
+                    36,
+                    37,
+                    38,
+                    39,
+                    40,
+                    41,
+                    42,
+                    43,
+                    44,
+                    45,
+                    46,
+                    47,
+                    48,
+                    49,
+                    50,
+                    51,
+                    52,
+                    53,
+                    54,
+                    55,
+                    56,
+                    57,
+                    58,
+                    59,
+                    60,
+                    61,
+                    62,
+                    63,
+                    64,
+                    65,
+                    66,
+                    67,
+                    68,
+                    69,
+                    70,
+                    71,
+                    72,
+                    73,
+                    74,
+                    75,
+                    76,
+                    77,
+                    78,
+                    79,
+                    80,
+                    81,
+                    82,
+                    83,
+                    84,
+                    85,
+                    86,
+                    87,
+                    88,
+                    89,
+                    90,
+                    91,
+                    92,
+                    93,
+                    94,
+                    95,
+                    96,
+                    97,
+                    98,
+                    99,
+                    100,
+                    101,
+                    102,
+                    103,
+                    104,
+                    105,
+                    106,
+                    109,
+                    110,
+                    111,
+                    112,
+                    113,
+                    114,
+                    115,
+                    116,
+                    117,
+                    118,
+                    119,
+                    120,
+                    121,
+                    122,
+                    123,
+                    124,
+                    125,
+                    126,
+                    127,
+                    128,
+                    129,
+                    130,
+                    131,
+                    132,
+                    133,
+                    134,
+                    137,
+                    138,
+                    139,
+                    140,
+                    141,
+                    142,
+                    143,
+                    144,
+                    145,
+                    146,
+                    147,
+                    148,
+                    149,
+                    150,
+                    151,
+                    152,
+                    153,
+                    154,
+                    155,
+                    156,
+                    157,
+                    158,
+                    159,
+                    160,
+                    161,
+                    162,
+                    163,
+                    164,
+                    165,
+                    166,
+                    167,
+                    168,
+                    169,
+                    170,
+                    171,
+                    172,
+                    173,
+                    174,
+                    175,
+                    176,
+                    177,
+                    178,
+                    179,
+                    180,
+                    181,
+                    182,
+                    183,
+                    184,
+                    185,
+                    186,
+                    187,
+                    188,
+                    189,
+                    190,
+                    191,
+                    192,
+                    193,
+                    194,
+                    195,
+                    196,
+                    197,
+                    198,
+                    199,
+                    200,
+                    201,
+                    202,
+                    203,
+                    204,
+                    205,
+                    206,
+                    207,
+                    208,
+                    209,
+                    210,
+                    211,
+                    212,
+                    213,
+                    214,
+                    215,
+                    216,
+                    217,
+                    218,
+                    219,
+                    220,
+                    221,
+                    222,
+                    223,
+                    224,
+                    225,
+                    226,
+                    227
+                  ]
+                },
+                {
+                  "actionId": "augmentation_orb",
+                  "action": "Orb of Augmentation",
+                  "representedStateCount": 13,
+                  "expectedVisits": 82.92021276587121,
+                  "policyRuleIndices": [
+                    1,
+                    2,
+                    3,
+                    4,
+                    5,
+                    6,
+                    7,
+                    17,
+                    24,
+                    25,
+                    107,
+                    108,
+                    136
+                  ]
+                },
+                {
+                  "actionId": "transmutation_orb",
+                  "action": "Orb of Transmutation",
+                  "representedStateCount": 1,
+                  "expectedVisits": 3.999999999996871,
+                  "policyRuleIndices": [
+                    20
+                  ]
+                },
+                {
+                  "actionId": "fracturing_orb",
+                  "action": "Fracturing Orb",
+                  "representedStateCount": 1,
+                  "expectedVisits": 3.9999999999958504,
+                  "policyRuleIndices": [
+                    21
+                  ]
+                },
+                {
+                  "actionId": "regal_orb",
+                  "action": "Regal Orb",
+                  "representedStateCount": 1,
+                  "expectedVisits": 3.9999999999958216,
+                  "policyRuleIndices": [
+                    22
+                  ]
+                },
+                {
+                  "actionId": "exalted_orb",
+                  "action": "Exalted Orb Slam",
+                  "representedStateCount": 1,
+                  "expectedVisits": 3.999999999995821,
+                  "policyRuleIndices": [
+                    23
+                  ]
+                },
+                {
+                  "actionId": "restart_reacquire",
+                  "action": "Abandon attempt and reacquire a clean base",
+                  "representedStateCount": 1,
+                  "expectedVisits": 2.999999999996883,
+                  "policyRuleIndices": [
+                    28
+                  ]
+                },
+                {
+                  "actionId": "scouring_orb",
+                  "action": "Orb of Scouring",
+                  "representedStateCount": 1,
+                  "expectedVisits": 0.9999999999989615,
+                  "policyRuleIndices": [
+                    135
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "id": "finish",
+          "phase": "FINISH",
+          "title": "Try to finish the missing target",
+          "instruction": "Use Exalted Orb Slam only in the selected finishing states where the missing target can still be reached.",
+          "actionIds": [
+            "exalted_orb"
+          ],
+          "actionNames": [
+            "Exalted Orb Slam"
+          ],
+          "decisionDetails": [
+            {
+              "id": "decision_2",
+              "summary": "rare 1P/2S states with the same target progress choose different actions based on exact current affixes.",
+              "representedStateCount": 16,
+              "expectedVisits": 6.253375010435851,
+              "options": [
+                {
+                  "actionId": "exalted_orb",
+                  "action": "Exalted Orb Slam",
+                  "representedStateCount": 14,
+                  "expectedVisits": 5.816423874164682,
+                  "policyRuleIndices": [
+                    236,
+                    237,
+                    238,
+                    239,
+                    240,
+                    241,
+                    242,
+                    243,
+                    244,
+                    256,
+                    258,
+                    259,
+                    262,
+                    263
+                  ]
+                },
+                {
+                  "actionId": "scouring_orb",
+                  "action": "Orb of Scouring",
+                  "representedStateCount": 2,
+                  "expectedVisits": 0.4369511362711697,
+                  "policyRuleIndices": [
+                    254,
+                    266
+                  ]
+                }
+              ]
+            },
+            {
+              "id": "decision_3",
+              "summary": "rare 1P/2S states with the same target progress choose different actions based on exact current affixes.",
+              "representedStateCount": 16,
+              "expectedVisits": 6.253375010435851,
+              "options": [
+                {
+                  "actionId": "exalted_orb",
+                  "action": "Exalted Orb Slam",
+                  "representedStateCount": 14,
+                  "expectedVisits": 5.816423874164682,
+                  "policyRuleIndices": [
+                    245,
+                    246,
+                    247,
+                    248,
+                    249,
+                    250,
+                    251,
+                    252,
+                    253,
+                    257,
+                    260,
+                    261,
+                    264,
+                    265
+                  ]
+                },
+                {
+                  "actionId": "scouring_orb",
+                  "action": "Orb of Scouring",
+                  "representedStateCount": 2,
+                  "expectedVisits": 0.4369511362711697,
+                  "policyRuleIndices": [
+                    255,
+                    267
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "id": "recover",
+          "phase": "RECOVER",
+          "title": "Recover from misses",
+          "instruction": "Use Abandon attempt and reacquire a clean base and Orb of Scouring when the selected policy calls for recovery. If it Scours, continue from the resulting item's actual rarity/state; with one fractured affix, Scour leaves a Magic item. If it Reacquires, return to the selected acquisition state. Expand Decision details for the exact next action.",
+          "actionIds": [
+            "restart_reacquire",
+            "scouring_orb"
+          ],
+          "actionNames": [
+            "Abandon attempt and reacquire a clean base",
+            "Orb of Scouring"
+          ],
+          "decisionDetails": []
+        },
+        {
+          "id": "success",
+          "phase": "SUCCESS",
+          "title": "Finish",
+          "instruction": "Stop when every requested target condition is satisfied.",
+          "actionIds": [],
+          "actionNames": [],
+          "targetProgressBefore": 2,
+          "targetProgressAfter": 3,
+          "decisionDetails": []
+        }
+      ],
+      "recovery": {
+        "actionIds": [
+          "restart_reacquire",
+          "scouring_orb"
+        ],
+        "provenance": "Fractured affixes survive Scouring and block further Fracturing Orb use, so a wrong fracture has no in-place reset. Recovery is only modeled through restart/reacquisition, which pays the clean-base price again."
+      },
+      "targetOrderPreference": {
+        "kind": "NONE",
+        "targetModIds": [],
+        "strength": "NONE",
+        "evidence": "No consistent identity-specific preservation split across 0 analogous selected-policy Magic contexts: Primordial Bond=1/11, Renewal=0/0, Rotten Claws=0/0.",
+        "behaviors": [
+          {
+            "targetModId": "Primordial Bond",
+            "representedMagicStates": 11,
+            "expectedVisits": 262.36147690793007,
+            "preserveStates": 1,
+            "preserveVisits": 68.97301719969307,
+            "rerollStates": 10,
+            "rerollVisits": 193.388459708237,
+            "selectedActions": [
+              {
+                "actionId": "alteration_orb",
+                "representedStates": 10,
+                "expectedVisits": 193.388459708237
+              },
+              {
+                "actionId": "augmentation_orb",
+                "representedStates": 1,
+                "expectedVisits": 68.97301719969307
+              }
+            ]
+          },
+          {
+            "targetModId": "Renewal",
+            "representedMagicStates": 0,
+            "expectedVisits": 0,
+            "preserveStates": 0,
+            "preserveVisits": 0,
+            "rerollStates": 0,
+            "rerollVisits": 0,
+            "selectedActions": []
+          },
+          {
+            "targetModId": "Rotten Claws",
+            "representedMagicStates": 0,
+            "expectedVisits": 0,
+            "preserveStates": 0,
+            "preserveVisits": 0,
+            "rerollStates": 0,
+            "rerollVisits": 0,
+            "selectedActions": []
+          }
+        ]
+      },
+      "detailedDecisionCount": 3,
+      "exactPolicyBranchCount": 268,
+      "exactPolicyBranchesHiddenByDefault": 268,
+      "selectedActionIds": [
+        "fracturing_orb",
+        "restart_reacquire",
+        "alteration_orb",
+        "exalted_orb",
+        "scouring_orb",
+        "augmentation_orb",
+        "regal_orb",
+        "transmutation_orb"
+      ],
+      "representedActionIds": [
+        "fracturing_orb",
+        "alteration_orb",
+        "exalted_orb",
+        "augmentation_orb",
+        "regal_orb",
+        "transmutation_orb",
+        "restart_reacquire",
+        "scouring_orb"
+      ],
+      "uncoveredActionIds": [],
+      "inventedActionIds": [],
+      "excludedAccountingActionIds": [
+        "clean_base_initial"
+      ],
+      "excludedVirtualActionIds": [
+        "method:family_fracture_Primordial Bond"
+      ],
+      "unknownActionIds": [],
+      "expectedPhysicalActions": 740.8471930308776,
+      "estimatedManualTimeMs": 314538.8772123303,
+      "optimalityNote": "This plan is the best certified policy found at the current search depth; Retry deeper may improve the expected cost or decisions.",
+      "provenance": "Presentation-only deterministic compression of the certified selected acquisition and on-policy rules. Phase order comes from shared action mechanics; conflicts retain exact policy-rule indices."
+    }
   },
   "harvestControls": [
     {

@@ -123,7 +123,10 @@ export const QUALITY_GATE_REGISTRY: QualityGateDefinition[] = [
     isolation: 'SELF_CONTAINED',
     dependencies: [],
     sourceAreas: ['worker', 'optimizer-service', 'method-family', 'proof'],
-    defaultSuites: ['DEV', 'RELEASE'],
+    // The fresh-Worker compare-methods A/B is intentionally retained for final
+    // acceptance and focused reruns. Keeping both 29-second optimizer requests
+    // out of ordinary DEV preserves the Phase 3A <=3 minute tier contract.
+    defaultSuites: ['RELEASE'],
     shard: 'C',
     operation: 'core-budget-isolation',
   }),

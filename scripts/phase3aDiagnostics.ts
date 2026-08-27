@@ -85,8 +85,30 @@ const phase2z = loadJson<{ status: string; checks: Array<{ id: string; passed: b
   join(reportsDirectory, 'phase2z-gate.json'),
   'Phase 2Z browser report',
 );
-const dev = loadJson<QualitySuiteReport>(join(reportsDirectory, 'phase3a-dev-gate.json'), 'Phase 3A DEV report');
-const release = loadJson<QualitySuiteReport>(join(reportsDirectory, 'phase3a-release-gate.json'), 'Phase 3A RELEASE report');
+function retainedTierReport(tier: 'DEV' | 'RELEASE'): { path: string; report: QualitySuiteReport } {
+  const suffix = tier.toLowerCase();
+  const candidates = [
+    `phase3d-${suffix}-gate.json`,
+    `phase3a-${suffix}-gate.json`,
+  ];
+  const fileName = candidates.find((candidate) => existsSync(join(reportsDirectory, candidate)));
+  assert(fileName, `No committed ${tier} report is available`);
+  return {
+    path: `quality-lab/reports/${fileName}`,
+    report: loadJson<QualitySuiteReport>(
+      join(reportsDirectory, fileName),
+      `retained ${tier} report`,
+    ),
+  };
+}
+
+// The Pages audit must follow the current gate registry. Phase 3D intentionally
+// replaced and extended several Phase 3A gate definitions, so auditing the old
+// Phase 3A run against the new registry would compare two different snapshots.
+const retainedDev = retainedTierReport('DEV');
+const retainedRelease = retainedTierReport('RELEASE');
+const dev = retainedDev.report;
+const release = retainedRelease.report;
 const harnessEvidence = loadJson<JsonRecord>(harnessEvidencePath, 'Phase 3A harness control evidence');
 
 check('A1', 'Gate registry completeness', () => {
@@ -200,7 +222,12 @@ check('A7', 'DEV runtime target', () => {
   assert.equal(dev.counts.failed, 0);
   assert(dev.runtime.totalWallMs <= 180_000, `DEV took ${dev.runtime.totalWallMs} ms`);
   assert.deepEqual(dev.selectedGateIds, gatesForTier('DEV').map((gate) => gate.id));
-  return { gates: dev.counts.total, wallMs: dev.runtime.totalWallMs, targetMs: 180_000 };
+  return {
+    evidencePath: retainedDev.path,
+    gates: dev.counts.total,
+    wallMs: dev.runtime.totalWallMs,
+    targetMs: 180_000,
+  };
 });
 
 check('A8', 'RELEASE runtime target', () => {
@@ -208,7 +235,12 @@ check('A8', 'RELEASE runtime target', () => {
   assert.equal(release.counts.failed, 0);
   assert(release.runtime.totalWallMs <= 600_000, `RELEASE took ${release.runtime.totalWallMs} ms`);
   assert.deepEqual(release.selectedGateIds, gatesForTier('RELEASE').map((gate) => gate.id));
-  return { gates: release.counts.total, wallMs: release.runtime.totalWallMs, targetMs: 600_000 };
+  return {
+    evidencePath: retainedRelease.path,
+    gates: release.counts.total,
+    wallMs: release.runtime.totalWallMs,
+    targetMs: 600_000,
+  };
 });
 
 check('A9', 'EXTENDED and long-soak separation', () => {

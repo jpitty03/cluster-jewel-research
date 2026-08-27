@@ -1,6 +1,6 @@
 {
   "schemaVersion": "PHASE3A_QUALITY_REPORT_V1",
-  "runId": "2026-08-27T21-47-54-750Z",
+  "runId": "2026-08-27T22-39-14-826Z",
   "suite": "DEV",
   "requestedGateIds": [
     "A-clean-worker-canonical",
@@ -8,7 +8,6 @@
     "B-fractured-magic-alter-price-reversal",
     "B-harvest-objective-policy",
     "C-full-route-policy-evidence",
-    "C-core-budget-isolation",
     "D-constellation-large-scc-layout",
     "D-constellation-scope-fit",
     "D-real-policy-flow-differential",
@@ -20,14 +19,13 @@
     "B-fractured-magic-alter-price-reversal",
     "B-harvest-objective-policy",
     "C-full-route-policy-evidence",
-    "C-core-budget-isolation",
     "D-constellation-large-scc-layout",
     "D-constellation-scope-fit",
     "D-real-policy-flow-differential",
     "D-frozen-policy-flow-renderer"
   ],
-  "startedAt": "2026-08-27T21:47:54.751Z",
-  "finishedAt": "2026-08-27T21:51:28.967Z",
+  "startedAt": "2026-08-27T22:39:14.826Z",
+  "finishedAt": "2026-08-27T22:41:53.624Z",
   "status": "PASSED",
   "identity": {
     "applicationSourceBuildHash": "app-a946cd172e7873b8f29b",
@@ -36,7 +34,7 @@
     "priceSnapshotIdentity": "prices-086bbb3ef86a6b63",
     "browserVersion": "151.0.7922.34",
     "harnessVersion": "PHASE3A_QUALITY_LAB_V1",
-    "compatibilityHash": "compatible-16956412409e443353204abf"
+    "compatibilityHash": "compatible-716dc1022a567128ca719ff3"
   },
   "scheduling": {
     "processLevelShards": [
@@ -68,8 +66,7 @@
       {
         "shard": "C",
         "gateIds": [
-          "C-full-route-policy-evidence",
-          "C-core-budget-isolation"
+          "C-full-route-policy-evidence"
         ],
         "mode": "SERIAL_SOLVER_HEAVY"
       },
@@ -86,11 +83,11 @@
     ]
   },
   "counts": {
-    "passed": 10,
+    "passed": 9,
     "failed": 0,
     "resumed": 0,
     "skipped": 0,
-    "total": 10
+    "total": 9
   },
   "results": [
     {
@@ -107,9 +104,9 @@
       "costClass": "FAST",
       "status": "PASS",
       "passed": true,
-      "startedAt": "2026-08-27T21:47:55.772Z",
-      "finishedAt": "2026-08-27T21:47:58.158Z",
-      "durationMs": 2386,
+      "startedAt": "2026-08-27T22:39:15.909Z",
+      "finishedAt": "2026-08-27T22:39:18.239Z",
+      "durationMs": 2330,
       "details": {
         "fixture": "cheap_one_mod",
         "protocol": {
@@ -147,7 +144,7 @@
         "priceSnapshotIdentity": "prices-086bbb3ef86a6b63",
         "browserVersion": "151.0.7922.34",
         "harnessVersion": "PHASE3A_QUALITY_LAB_V1",
-        "compatibilityHash": "compatible-16956412409e443353204abf"
+        "compatibilityHash": "compatible-716dc1022a567128ca719ff3"
       }
     },
     {
@@ -167,9 +164,9 @@
       "costClass": "SOLVER_HEAVY",
       "status": "PASS",
       "passed": true,
-      "startedAt": "2026-08-27T21:48:15.711Z",
-      "finishedAt": "2026-08-27T21:48:42.749Z",
-      "durationMs": 27038,
+      "startedAt": "2026-08-27T22:39:35.242Z",
+      "finishedAt": "2026-08-27T22:40:02.970Z",
+      "durationMs": 27727,
       "details": {
         "conserved": {
           "nodes": 18,
@@ -266,7 +263,7 @@
         "priceSnapshotIdentity": "prices-086bbb3ef86a6b63",
         "browserVersion": "151.0.7922.34",
         "harnessVersion": "PHASE3A_QUALITY_LAB_V1",
-        "compatibilityHash": "compatible-16956412409e443353204abf"
+        "compatibilityHash": "compatible-716dc1022a567128ca719ff3"
       }
     },
     {
@@ -286,9 +283,9 @@
       "costClass": "SOLVER_HEAVY",
       "status": "PASS",
       "passed": true,
-      "startedAt": "2026-08-27T21:48:42.749Z",
-      "finishedAt": "2026-08-27T21:49:11.899Z",
-      "durationMs": 29149,
+      "startedAt": "2026-08-27T22:40:02.970Z",
+      "finishedAt": "2026-08-27T22:40:31.664Z",
+      "durationMs": 28693,
       "details": {
         "route": {
           "recommendationStatus": "PROVISIONAL_RESOLVED",
@@ -362,7 +359,7 @@
         "priceSnapshotIdentity": "prices-086bbb3ef86a6b63",
         "browserVersion": "151.0.7922.34",
         "harnessVersion": "PHASE3A_QUALITY_LAB_V1",
-        "compatibilityHash": "compatible-16956412409e443353204abf"
+        "compatibilityHash": "compatible-716dc1022a567128ca719ff3"
       }
     },
     {
@@ -380,9 +377,9 @@
       "costClass": "SOLVER_HEAVY",
       "status": "PASS",
       "passed": true,
-      "startedAt": "2026-08-27T21:49:11.899Z",
-      "finishedAt": "2026-08-27T21:49:32.826Z",
-      "durationMs": 20928,
+      "startedAt": "2026-08-27T22:40:31.664Z",
+      "finishedAt": "2026-08-27T22:40:54.417Z",
+      "durationMs": 22753,
       "details": {
         "objective": {
           "kind": "FEWEST_ACTIONS_WITHIN_COST",
@@ -412,7 +409,7 @@
         "priceSnapshotIdentity": "prices-086bbb3ef86a6b63",
         "browserVersion": "151.0.7922.34",
         "harnessVersion": "PHASE3A_QUALITY_LAB_V1",
-        "compatibilityHash": "compatible-16956412409e443353204abf"
+        "compatibilityHash": "compatible-716dc1022a567128ca719ff3"
       }
     },
     {
@@ -433,14 +430,14 @@
       "costClass": "SOLVER_HEAVY",
       "status": "PASS",
       "passed": true,
-      "startedAt": "2026-08-27T21:49:33.942Z",
-      "finishedAt": "2026-08-27T21:50:31.903Z",
-      "durationMs": 57961,
+      "startedAt": "2026-08-27T22:40:55.552Z",
+      "finishedAt": "2026-08-27T22:41:53.512Z",
+      "durationMs": 57959,
       "details": {
         "selectedAcquisitionKind": "SELF_FRACTURE",
         "primordialFamilyId": "family_fracture_Primordial Bond",
-        "primordialStatus": "SAME_AS_SELECTED",
-        "equivalentToSelectedPolicy": true,
+        "primordialStatus": "SELECTED_WINNER",
+        "equivalentToSelectedPolicy": false,
         "fractureCheck": {
           "actionId": "fracturing_orb",
           "requiredScope": "ACQUISITION",
@@ -457,11 +454,11 @@
         "harvestFamilies": 3,
         "combinedFamilies": 9,
         "accounting": {
-          "selectedBundleId": "core:open-selected-policy",
-          "maximumDifferenceChaos": 1.4779288903810084e-11,
+          "selectedBundleId": "bundle:family_fracture_Primordial Bond:independent",
+          "maximumDifferenceChaos": 6.821210263296962e-13,
           "acquisitionCostChaos": 1406.2963152858165,
-          "downstreamCostChaos": 53.496050930001616,
-          "fullRouteCostChaos": 1459.7923662158182
+          "downstreamCostChaos": 53.496050930261134,
+          "fullRouteCostChaos": 1459.7923662160777
         },
         "artifact": "quality-lab\\reports\\evidence\\phase3d-full-route-policy-evidence-browser.json",
         "screenshot": "quality-lab\\reports\\evidence\\phase3d-full-route-policy-evidence-desktop.png"
@@ -474,139 +471,7 @@
         "priceSnapshotIdentity": "prices-086bbb3ef86a6b63",
         "browserVersion": "151.0.7922.34",
         "harnessVersion": "PHASE3A_QUALITY_LAB_V1",
-        "compatibilityHash": "compatible-16956412409e443353204abf"
-      }
-    },
-    {
-      "id": "C-core-budget-isolation",
-      "title": "Fresh real Workers preserve the frozen core snapshot across Compare Methods false/true",
-      "phase": "3D",
-      "shard": "C",
-      "tags": [
-        "phase3d",
-        "worker",
-        "solver",
-        "proof",
-        "budget",
-        "method-family"
-      ],
-      "costClass": "SOLVER_HEAVY",
-      "status": "PASS",
-      "passed": true,
-      "startedAt": "2026-08-27T21:50:31.903Z",
-      "finishedAt": "2026-08-27T21:51:28.844Z",
-      "durationMs": 56941,
-      "details": {
-        "mode": "STRONGER_MONOTONE_CORE",
-        "disabledSnapshot": {
-          "version": "CORE_RECOMMENDATION_SNAPSHOT_PHASE3D_V1",
-          "compareMethodFamiliesRequested": false,
-          "coreEnvelope": {
-            "deadlineFraction": 0.85,
-            "deadlineAtRequestMs": 24650,
-            "allocatedWallTimeMs": 24650
-          },
-          "selectedExecutableUChaos": 1459.7923662160783,
-          "candidateExecutableUChaos": [
-            {
-              "candidateId": "candidate_0",
-              "fullRouteUChaos": 4767.73126396295
-            },
-            {
-              "candidateId": "candidate_1",
-              "fullRouteUChaos": 1459.7923662160783
-            },
-            {
-              "candidateId": "candidate_2",
-              "fullRouteUChaos": 1636.3811154830044
-            },
-            {
-              "candidateId": "candidate_3",
-              "fullRouteUChaos": 1636.3811154829793
-            }
-          ],
-          "retainedStateFingerprint": "states-d6d23c8a",
-          "statesExpanded": 13336,
-          "retainedStates": 21793,
-          "stopReason": "HOST_RESERVE",
-          "canonicalPolicyFingerprint": "core-c8da05a5"
-        },
-        "enabledSnapshot": {
-          "version": "CORE_RECOMMENDATION_SNAPSHOT_PHASE3D_V1",
-          "compareMethodFamiliesRequested": true,
-          "coreEnvelope": {
-            "deadlineFraction": 0.85,
-            "deadlineAtRequestMs": 24650,
-            "allocatedWallTimeMs": 24650
-          },
-          "selectedExecutableUChaos": 1459.7923662160783,
-          "candidateExecutableUChaos": [
-            {
-              "candidateId": "candidate_0",
-              "fullRouteUChaos": 4767.73126396295
-            },
-            {
-              "candidateId": "candidate_1",
-              "fullRouteUChaos": 1459.7923662160783
-            },
-            {
-              "candidateId": "candidate_2",
-              "fullRouteUChaos": 1636.3811154830044
-            },
-            {
-              "candidateId": "candidate_3",
-              "fullRouteUChaos": 1636.3811154829793
-            }
-          ],
-          "retainedStateFingerprint": "states-d6d23c8a",
-          "statesExpanded": 13336,
-          "retainedStates": 21944,
-          "stopReason": "HOST_RESERVE",
-          "canonicalPolicyFingerprint": "core-c8da05a5"
-        },
-        "disabledFinalU": 1459.7923662158182,
-        "enabledFinalU": 1459.7923662158182,
-        "freshWorkerProtocol": [
-          "PROGRESS",
-          "PROGRESS",
-          "PROGRESS",
-          "PROGRESS",
-          "PROGRESS",
-          "PROGRESS",
-          "PROGRESS",
-          "PROGRESS",
-          "PROGRESS",
-          "PROGRESS",
-          "PROGRESS",
-          "PROGRESS",
-          "PROGRESS",
-          "PROGRESS",
-          "PROGRESS",
-          "PROGRESS",
-          "PROGRESS",
-          "PROGRESS",
-          "PROGRESS",
-          "PROGRESS",
-          "PROGRESS",
-          "PROGRESS",
-          "PROGRESS",
-          "PROGRESS",
-          "PROGRESS",
-          "PROGRESS",
-          "COMPLETE",
-          "RESULT"
-        ],
-        "artifact": "quality-lab\\reports\\evidence\\phase3d-core-budget-worker-ab.json"
-      },
-      "executionIdentity": {
-        "applicationSourceBuildHash": "app-a946cd172e7873b8f29b",
-        "gateIdVersion": "C-core-budget-isolation@1",
-        "fixtureCorpusVersion": "Phase3C-Frozen-Browser-Corpus-1",
-        "fixtureInputHash": "fixture-c0956dc4af1bc5d29323",
-        "priceSnapshotIdentity": "prices-086bbb3ef86a6b63",
-        "browserVersion": "151.0.7922.34",
-        "harnessVersion": "PHASE3A_QUALITY_LAB_V1",
-        "compatibilityHash": "compatible-16956412409e443353204abf"
+        "compatibilityHash": "compatible-716dc1022a567128ca719ff3"
       }
     },
     {
@@ -624,9 +489,9 @@
       "costClass": "FAST",
       "status": "PASS",
       "passed": true,
-      "startedAt": "2026-08-27T21:47:55.819Z",
-      "finishedAt": "2026-08-27T21:48:01.879Z",
-      "durationMs": 6060,
+      "startedAt": "2026-08-27T22:39:15.989Z",
+      "finishedAt": "2026-08-27T22:39:22.207Z",
+      "durationMs": 6218,
       "details": {
         "topologyFingerprint": "topology-3c852336",
         "nodeCount": 43,
@@ -676,7 +541,7 @@
         "priceSnapshotIdentity": "prices-086bbb3ef86a6b63",
         "browserVersion": "151.0.7922.34",
         "harnessVersion": "PHASE3A_QUALITY_LAB_V1",
-        "compatibilityHash": "compatible-16956412409e443353204abf"
+        "compatibilityHash": "compatible-716dc1022a567128ca719ff3"
       }
     },
     {
@@ -694,9 +559,9 @@
       "costClass": "FAST",
       "status": "PASS",
       "passed": true,
-      "startedAt": "2026-08-27T21:48:01.880Z",
-      "finishedAt": "2026-08-27T21:48:10.550Z",
-      "durationMs": 8670,
+      "startedAt": "2026-08-27T22:39:22.207Z",
+      "finishedAt": "2026-08-27T22:39:30.308Z",
+      "durationMs": 8100,
       "details": {
         "field": {
           "topologyFingerprint": "topology-b6fb87a1",
@@ -780,15 +645,15 @@
               "width": 300.390625,
               "height": 430
             },
-            "nodeLabelCount": 10,
+            "nodeLabelCount": 11,
             "scopeHeaderCount": 2,
             "handoffLabelCount": 1,
             "outside": [],
             "collisionCount": 0,
             "goalCount": 1,
             "visibleGoalLabelCount": 1,
-            "topGap": 128.984375,
-            "bottomGap": 116.53125
+            "topGap": 123.0625,
+            "bottomGap": 124.125
           },
           "screenshots": {
             "desktop": "quality-lab\\reports\\evidence\\phase3d-constellation-scope-1440x900.png",
@@ -829,7 +694,7 @@
         "priceSnapshotIdentity": "prices-086bbb3ef86a6b63",
         "browserVersion": "151.0.7922.34",
         "harnessVersion": "PHASE3A_QUALITY_LAB_V1",
-        "compatibilityHash": "compatible-16956412409e443353204abf"
+        "compatibilityHash": "compatible-716dc1022a567128ca719ff3"
       }
     },
     {
@@ -847,9 +712,9 @@
       "costClass": "FAST",
       "status": "PASS",
       "passed": true,
-      "startedAt": "2026-08-27T21:48:10.550Z",
-      "finishedAt": "2026-08-27T21:48:12.540Z",
-      "durationMs": 1990,
+      "startedAt": "2026-08-27T22:39:30.308Z",
+      "finishedAt": "2026-08-27T22:39:32.166Z",
+      "durationMs": 1858,
       "details": {
         "sourceAppCommit": "df49b94ecca555671d8c78268d3149c2b8c84c7b",
         "normalizedSummarySha256": "12c4d104b9fd3f9c43499995e024d05df4fb9de90b9b0e72ca4233a8564d0746",
@@ -869,7 +734,7 @@
         "priceSnapshotIdentity": "prices-086bbb3ef86a6b63",
         "browserVersion": "151.0.7922.34",
         "harnessVersion": "PHASE3A_QUALITY_LAB_V1",
-        "compatibilityHash": "compatible-16956412409e443353204abf"
+        "compatibilityHash": "compatible-716dc1022a567128ca719ff3"
       }
     },
     {
@@ -885,9 +750,9 @@
       "costClass": "FAST",
       "status": "PASS",
       "passed": true,
-      "startedAt": "2026-08-27T21:48:12.540Z",
-      "finishedAt": "2026-08-27T21:48:14.593Z",
-      "durationMs": 2053,
+      "startedAt": "2026-08-27T22:39:32.166Z",
+      "finishedAt": "2026-08-27T22:39:34.175Z",
+      "durationMs": 2009,
       "details": {
         "certificationScope": "RENDERER_INTERACTION_ONLY",
         "topologyFingerprint": "topology-4481a40d",
@@ -903,86 +768,80 @@
         "priceSnapshotIdentity": "prices-086bbb3ef86a6b63",
         "browserVersion": "151.0.7922.34",
         "harnessVersion": "PHASE3A_QUALITY_LAB_V1",
-        "compatibilityHash": "compatible-16956412409e443353204abf"
+        "compatibilityHash": "compatible-716dc1022a567128ca719ff3"
       }
     }
   ],
   "runtime": {
-    "totalWallMs": 214217,
-    "summedGateMs": 213176,
-    "appStartupMs": 1399,
-    "browserStartupMs": 399,
-    "solverHeavyMs": 192017,
-    "visualInteractionMs": 74960,
-    "harnessOverheadMs": 2139,
+    "totalWallMs": 158798,
+    "summedGateMs": 157647,
+    "appStartupMs": 1385,
+    "browserStartupMs": 375,
+    "solverHeavyMs": 137132,
+    "visualInteractionMs": 74605,
+    "harnessOverheadMs": 2137,
     "categoryTotalsMs": {
-      "worker": 196393,
-      "solver": 196393,
-      "proof": 196393,
-      "clean": 2386,
-      "phase3b": 56187,
-      "fracture": 114148,
-      "handoff": 27038,
-      "constellation": 74960,
-      "visual": 47922,
-      "objectives": 20928,
-      "harvest": 78889,
-      "phase3d": 123572,
-      "phase3c": 64021,
-      "method-family": 114902,
-      "budget": 56941,
-      "responsive": 14730,
-      "accessibility": 16783
+      "worker": 141320,
+      "solver": 141320,
+      "proof": 141320,
+      "clean": 2330,
+      "phase3b": 56420,
+      "fracture": 114379,
+      "handoff": 27727,
+      "constellation": 74605,
+      "visual": 46878,
+      "objectives": 22753,
+      "harvest": 80712,
+      "phase3d": 66059,
+      "phase3c": 64177,
+      "method-family": 57959,
+      "responsive": 14318,
+      "accessibility": 16327
     },
     "slowestGates": [
       {
         "id": "C-full-route-policy-evidence",
-        "durationMs": 57961,
-        "status": "PASS"
-      },
-      {
-        "id": "C-core-budget-isolation",
-        "durationMs": 56941,
+        "durationMs": 57959,
         "status": "PASS"
       },
       {
         "id": "B-fractured-magic-alter-price-reversal",
-        "durationMs": 29149,
+        "durationMs": 28693,
         "status": "PASS"
       },
       {
         "id": "B-self-fracture-policy",
-        "durationMs": 27038,
+        "durationMs": 27727,
         "status": "PASS"
       },
       {
         "id": "B-harvest-objective-policy",
-        "durationMs": 20928,
+        "durationMs": 22753,
         "status": "PASS"
       },
       {
         "id": "D-constellation-scope-fit",
-        "durationMs": 8670,
+        "durationMs": 8100,
         "status": "PASS"
       },
       {
         "id": "D-constellation-large-scc-layout",
-        "durationMs": 6060,
+        "durationMs": 6218,
         "status": "PASS"
       },
       {
         "id": "A-clean-worker-canonical",
-        "durationMs": 2386,
+        "durationMs": 2330,
         "status": "PASS"
       },
       {
         "id": "D-frozen-policy-flow-renderer",
-        "durationMs": 2053,
+        "durationMs": 2009,
         "status": "PASS"
       },
       {
         "id": "D-real-policy-flow-differential",
-        "durationMs": 1990,
+        "durationMs": 1858,
         "status": "PASS"
       }
     ]
@@ -1004,8 +863,7 @@
     "phase3bAlterSelfLoopFlow": "quality-lab\\reports\\evidence\\phase3b-alter-self-loop-flow.json",
     "phase3dPolicyEvidenceBrowser": "quality-lab\\reports\\evidence\\phase3d-full-route-policy-evidence-browser.json",
     "phase3dPolicyEvidenceScreenshot": "quality-lab\\reports\\evidence\\phase3d-full-route-policy-evidence-desktop.png",
-    "phase3dCoreBudgetWorkerAb": "quality-lab\\reports\\evidence\\phase3d-core-budget-worker-ab.json",
-    "runReport": "quality-lab\\artifacts\\phase3a-2026-08-27T21-47-54-750Z\\report.json",
+    "runReport": "quality-lab\\artifacts\\phase3a-2026-08-27T22-39-14-826Z\\report.json",
     "stableReport": "quality-lab\\reports\\phase3d-dev-gate.json",
     "summary": "quality-lab\\reports\\phase3d-dev-gate.md"
   }
