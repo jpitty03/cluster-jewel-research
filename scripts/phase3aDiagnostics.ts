@@ -288,6 +288,7 @@ check('A13', 'Mature and direct diagnostics retained', () => {
     ['phase2x', 'output-phase2x-craft-plan-semantics-budget-ux-proof-depth-diagnostic.txt', /PASS/],
     ['phase2y', 'output-phase2y-proof-efficiency-budget-telemetry-policy-equivalence-diagnostic.txt', /PASS/],
     ['phase2z', 'output-phase2z-selected-policy-flow-diagnostic.txt', /PASS/],
+    ['phase3b', 'output-phase3b-fractured-magic-alteration-diagnostic.txt', /PASS/],
   ] as const;
   const observed = outputs.map(([id, path, pattern]) => {
     const absolute = join(repositoryRoot, path);
@@ -323,8 +324,19 @@ check('PRESERVATION', 'Prohibited-change and command policy', () => {
   const changed = execFileSync('git', ['diff', '--name-only', 'df49b94', '--', ...protectedPaths], {
     cwd: repositoryRoot,
     encoding: 'utf8',
-  }).trim();
-  assert.equal(changed, '', `Protected mechanics/state paths changed:\n${changed}`);
+  }).trim().split(/\r?\n/).filter(Boolean);
+  const phase3bAuthorizedMechanicsPaths = new Set([
+    'crafting-engine/src/rules/actionRegistry.ts',
+    'crafting-engine/src/rules/magicRollShape.ts',
+  ]);
+  const unauthorized = changed.filter((path) => !phase3bAuthorizedMechanicsPaths.has(path));
+  assert.deepEqual(unauthorized, [], `Unauthorized protected mechanics/state paths changed:\n${unauthorized.join('\n')}`);
+  assert(existsSync(join(
+    repositoryRoot,
+    'docs',
+    'crafting-engine',
+    'POST_PHASE3A_REVIEW_AND_PHASE3B_FRACTURED_MAGIC_ALTERATION_FIDELITY_PLAN.md',
+  )), 'Phase 3B mechanics-correction source of truth is missing');
   const packageJson = loadJson<{ scripts: Record<string, string> }>(join(repositoryRoot, 'package.json'), 'root package');
   assert.equal(packageJson.scripts['lab:release'], 'tsx quality-lab/src/orchestrator.ts --suite RELEASE');
   assert.equal(packageJson.scripts['lab:legacy-release'], 'tsx quality-lab/src/runner.ts --scenario release');
@@ -340,9 +352,11 @@ check('PRESERVATION', 'Prohibited-change and command policy', () => {
   assert(recommendation.tags.includes('constellation'));
   assert(recommendation.tags.includes('handoff'));
   return {
-    protectedPathDiff: [],
+    protectedPathDiff: changed,
+    phase3bAuthorizedMechanicsPaths: [...phase3bAuthorizedMechanicsPaths],
     unitTestsAddedOrRun: false,
-    mechanicsProbabilitiesChanged: false,
+    mechanicsProbabilitiesChanged:
+      'Fractured-slot no-new-affix mass corrected; configured global one/two-affix split unchanged and approximate.',
     stateIdentityWeakened: false,
     hardcodedWinnerAdded: false,
     marketFracturedRankingRestored: false,

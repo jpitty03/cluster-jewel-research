@@ -21,6 +21,12 @@ import {
 import { getEligibleMods, calculateTotalWeight } from './modEligibility.ts';
 import { HARVEST_CRAFT_DEFINITIONS, getHarvestCraftCost } from './harvestCrafts.ts';
 import { getTaggedModsForCluster } from './clusterPoolHelpers.ts';
+import {
+  MAGIC_ROLL_SHAPE,
+  magicRollShapeProbabilities,
+  sampleMagicRollShape,
+  type MagicRollShapeClass,
+} from './magicRollShape.ts';
 
 export type DiscoveredActionType =
   | 'TRANSFORMATION_ORB'
@@ -330,6 +336,30 @@ function scouredRarity(state: ItemState): ItemState['rarity'] {
   return 'rare';
 }
 
+function getMagicRerollKernelState(state: ItemState): ItemState {
+  const kernel = cloneItemState(state);
+  kernel.rarity = 'magic';
+  kernel.prefixes = kernel.prefixes.filter((mod) => isFracturedMod(kernel, mod));
+  kernel.suffixes = kernel.suffixes.filter((mod) => isFracturedMod(kernel, mod));
+  // RolledMod.isFractured remains authoritative; rederive the compatibility
+  // index after removing every nonpersistent affix.
+  kernel.fracturedModIds = getAllAffixes(kernel).map((mod) => mod.modId);
+  return kernel;
+}
+
+function getMagicRerollKernelIdentity(state: ItemState): string {
+  return `${MAGIC_ROLL_SHAPE.version}|${getPhysicalStateSignature(getMagicRerollKernelState(state))}`;
+}
+
+const MAGIC_REPEATABLE_FULL_REROLL: RepeatableFullRerollContract = {
+  kind: 'FULL_REPLACE_NONPERSISTENT',
+  preservedComponents: 'FRACTURED_AFFIXES',
+  replacesNonPersistentAffixes: true,
+  transitionDistributionDependsOnlyOnKernel: true,
+  getKernelState: getMagicRerollKernelState,
+  getKernelIdentity: getMagicRerollKernelIdentity,
+};
+
 /**
  * Creates the economic abandon-and-reacquire action for a solver run. The destination
  * and price evidence are supplied by the selected starting acquisition, never a recipe.
@@ -414,97 +444,88 @@ function generateMagicTransitions(
   if (!pool) return { outcomes: [], immediateCostChaos: costChaos };
 
   const allMods = pool.getAllMods();
-  const cleanMagicBase: ItemState = {
-    ...cloneItemState(state),
-    rarity: 'magic',
-    prefixes: state.prefixes.filter((p) => p.isFractured),
-    suffixes: state.suffixes.filter((s) => s.isFractured),
+  const cleanMagicBase = getMagicRerollKernelState(state);
+  const shapeProbabilities = magicRollShapeProbabilities();
+  const requestedSides: Record<MagicRollShapeClass, Array<'Prefix' | 'Suffix'>> = {
+    PREFIX_ONLY: ['Prefix'],
+    SUFFIX_ONLY: ['Suffix'],
+    PREFIX_AND_SUFFIX: ['Prefix', 'Suffix'],
   };
-
-  const eligiblePrefixes = getEligibleMods(cleanMagicBase, allMods, { requiredGenType: 'Prefix' });
-  const eligibleSuffixes = getEligibleMods(cleanMagicBase, allMods, { requiredGenType: 'Suffix' });
-
-  const totalPrefixWeight = calculateTotalWeight(eligiblePrefixes);
-  const totalSuffixWeight = calculateTotalWeight(eligibleSuffixes);
-  const fracturedAffixCount = getAllAffixes(cleanMagicBase).length;
-
-  if (totalPrefixWeight <= 0 && totalSuffixWeight <= 0) {
-    return { outcomes: [{ state: cleanMagicBase, probability: 1.0 }], immediateCostChaos: costChaos };
-  }
-
+  const shapeLabels: Record<MagicRollShapeClass, string> = {
+    PREFIX_ONLY: 'Magic Prefix-only roll',
+    SUFFIX_ONLY: 'Magic Suffix-only roll',
+    PREFIX_AND_SUFFIX: 'Magic Prefix + Suffix roll',
+  };
   const outcomes: TransitionOutcome[] = [];
 
-  // A scoured item with one fractured affix is magic and has exactly one legal
-  // non-fractured slot. Alteration fills that opposite-side slot.
-  if (fracturedAffixCount === 1) {
-    const eligible = totalPrefixWeight > 0 ? eligiblePrefixes : eligibleSuffixes;
-    const totalWeight = calculateTotalWeight(eligible);
-    for (const mod of eligible) {
-      checkTransitionDeadline(control);
-      const nextState = cloneItemState(cleanMagicBase);
-      if (mod.genType === 'Prefix') nextState.prefixes.push(toRolledMod(mod));
-      else nextState.suffixes.push(toRolledMod(mod));
-      outcomes.push({
-        state: nextState,
-        probability: mod.weight / totalWeight,
-        label: `Fractured magic roll: ${mod.name}`,
-      });
-    }
-    return { outcomes, immediateCostChaos: costChaos };
-  }
-
-  // 1. 1-Prefix only (25% chance)
-  if (totalPrefixWeight > 0) {
-    for (const p of eligiblePrefixes) {
-      checkTransitionDeadline(control);
-      const pProb = 0.25 * (p.weight / totalPrefixWeight);
-      const nextState = cloneItemState(cleanMagicBase);
-      nextState.prefixes.push(toRolledMod(p));
-      outcomes.push({
-        state: nextState,
-        probability: pProb,
-        label: `1 Prefix: ${p.name}`,
-      });
-    }
-  }
-
-  // 2. 1-Suffix only (25% chance)
-  if (totalSuffixWeight > 0) {
-    for (const s of eligibleSuffixes) {
-      checkTransitionDeadline(control);
-      const sProb = 0.25 * (s.weight / totalSuffixWeight);
-      const nextState = cloneItemState(cleanMagicBase);
-      nextState.suffixes.push(toRolledMod(s));
-      outcomes.push({
-        state: nextState,
-        probability: sProb,
-        label: `1 Suffix: ${s.name}`,
-      });
-    }
-  }
-
-  // 3. 1-Prefix + 1-Suffix (50% chance)
-  if (totalPrefixWeight > 0 && totalSuffixWeight > 0) {
-    for (const p of eligiblePrefixes) {
-      checkTransitionDeadline(control);
-      const stateWithP = cloneItemState(cleanMagicBase);
-      stateWithP.prefixes.push(toRolledMod(p));
-      const remainingSuffixes = getEligibleMods(stateWithP, allMods, { requiredGenType: 'Suffix' });
-      const remSuffixWeight = calculateTotalWeight(remainingSuffixes);
-
-      if (remSuffixWeight > 0) {
-        for (const s of remainingSuffixes) {
+  for (const shape of ['PREFIX_ONLY', 'SUFFIX_ONLY', 'PREFIX_AND_SUFFIX'] as const) {
+    type FrontierEntry = {
+      state: ItemState;
+      probability: number;
+      evidence: string[];
+    };
+    let frontier: FrontierEntry[] = [{
+      state: cloneItemState(cleanMagicBase),
+      probability: shapeProbabilities[shape],
+      evidence: [],
+    }];
+    for (const side of requestedSides[shape]) {
+      const nextFrontier: FrontierEntry[] = [];
+      for (const entry of frontier) {
+        checkTransitionDeadline(control);
+        const occupied = side === 'Prefix'
+          ? entry.state.prefixes.length >= 1
+          : entry.state.suffixes.length >= 1;
+        if (occupied) {
+          nextFrontier.push({
+            ...entry,
+            evidence: [...entry.evidence, `fractured ${side} already occupies the requested side`],
+          });
+          continue;
+        }
+        const eligible = getEligibleMods(entry.state, allMods, { requiredGenType: side });
+        const totalWeight = calculateTotalWeight(eligible);
+        if (totalWeight <= 0) {
+          nextFrontier.push({
+            ...entry,
+            evidence: [...entry.evidence, `no eligible ${side} modifier is available`],
+          });
+          continue;
+        }
+        for (const mod of eligible) {
           checkTransitionDeadline(control);
-          const comboProb = 0.5 * (p.weight / totalPrefixWeight) * (s.weight / remSuffixWeight);
-          const nextState = cloneItemState(stateWithP);
-          nextState.suffixes.push(toRolledMod(s));
-          outcomes.push({
+          const nextState = cloneItemState(entry.state);
+          if (side === 'Prefix') nextState.prefixes.push(toRolledMod(mod));
+          else nextState.suffixes.push(toRolledMod(mod));
+          nextFrontier.push({
             state: nextState,
-            probability: comboProb,
-            label: `2 Affixes: ${p.name} / ${s.name}`,
+            probability: entry.probability * (mod.weight / totalWeight),
+            evidence: [...entry.evidence, `rolled ${side}: ${mod.name}`],
           });
         }
       }
+      frontier = nextFrontier;
+    }
+    for (const entry of frontier) {
+      const addedAffixes = getAllAffixes(entry.state).length - getAllAffixes(cleanMagicBase).length;
+      const outcome = addedAffixes === 0 ? 'no new affix' : `${addedAffixes} new affix${addedAffixes === 1 ? '' : 'es'}`;
+      // Preserve the long-standing clean-item presentation labels so the
+      // Phase 3A frozen renderer fixture changes only when its real topology
+      // changes. Fractured/blocked outcomes get the more explanatory Phase 3B
+      // copy below.
+      const cleanLabel = getAllAffixes(cleanMagicBase).length === 0 &&
+        addedAffixes === requestedSides[shape].length
+        ? shape === 'PREFIX_ONLY'
+          ? `1 Prefix: ${entry.state.prefixes[0]?.name ?? 'unknown'}`
+          : shape === 'SUFFIX_ONLY'
+            ? `1 Suffix: ${entry.state.suffixes[0]?.name ?? 'unknown'}`
+            : `2 Affixes: ${entry.state.prefixes[0]?.name ?? 'unknown'} / ${entry.state.suffixes[0]?.name ?? 'unknown'}`
+        : undefined;
+      outcomes.push({
+        state: entry.state,
+        probability: entry.probability,
+        label: cleanLabel ?? `${shapeLabels[shape]}: ${outcome} — ${entry.evidence.join('; ')}`,
+      });
     }
   }
 
@@ -520,53 +541,23 @@ function sampleMagicTransition(
   if (!pool) return state;
 
   const allMods = pool.getAllMods();
-  const nextState: ItemState = {
-    ...cloneItemState(state),
-    rarity: 'magic',
-    prefixes: state.prefixes.filter((p) => p.isFractured),
-    suffixes: state.suffixes.filter((s) => s.isFractured),
-  };
-
-  if (getAllAffixes(nextState).length === 1) {
-    const eligible = getEligibleMods(nextState, allMods);
+  const nextState = getMagicRerollKernelState(state);
+  const shape = sampleMagicRollShape(rng);
+  const requestedSides: Array<'Prefix' | 'Suffix'> = shape === 'PREFIX_ONLY'
+    ? ['Prefix']
+    : shape === 'SUFFIX_ONLY'
+      ? ['Suffix']
+      : ['Prefix', 'Suffix'];
+  for (const side of requestedSides) {
+    const occupied = side === 'Prefix'
+      ? nextState.prefixes.length >= 1
+      : nextState.suffixes.length >= 1;
+    if (occupied) continue;
+    const eligible = getEligibleMods(nextState, allMods, { requiredGenType: side });
     const chosen = selectWeightedMod(eligible, rng);
-    if (chosen) {
-      if (chosen.genType === 'Prefix') nextState.prefixes.push(toRolledMod(chosen));
-      else nextState.suffixes.push(toRolledMod(chosen));
-    }
-    return nextState;
-  }
-
-  const isTwoAffix = rng.next() < 0.5;
-
-  if (isTwoAffix) {
-    // 2 Affixes: 1 Prefix + 1 Suffix
-    const eligiblePrefixes = getEligibleMods(nextState, allMods, { requiredGenType: 'Prefix' });
-    const chosenP = selectWeightedMod(eligiblePrefixes, rng);
-    if (chosenP) {
-      nextState.prefixes.push(toRolledMod(chosenP));
-    }
-    const eligibleSuffixes = getEligibleMods(nextState, allMods, { requiredGenType: 'Suffix' });
-    const chosenS = selectWeightedMod(eligibleSuffixes, rng);
-    if (chosenS) {
-      nextState.suffixes.push(toRolledMod(chosenS));
-    }
-  } else {
-    // 1 Affix: 50% Prefix, 50% Suffix
-    const isPrefix = rng.next() < 0.5;
-    if (isPrefix) {
-      const eligiblePrefixes = getEligibleMods(nextState, allMods, { requiredGenType: 'Prefix' });
-      const chosenP = selectWeightedMod(eligiblePrefixes, rng);
-      if (chosenP) {
-        nextState.prefixes.push(toRolledMod(chosenP));
-      }
-    } else {
-      const eligibleSuffixes = getEligibleMods(nextState, allMods, { requiredGenType: 'Suffix' });
-      const chosenS = selectWeightedMod(eligibleSuffixes, rng);
-      if (chosenS) {
-        nextState.suffixes.push(toRolledMod(chosenS));
-      }
-    }
+    if (!chosen) continue;
+    if (side === 'Prefix') nextState.prefixes.push(toRolledMod(chosen));
+    else nextState.suffixes.push(toRolledMod(chosen));
   }
 
   return nextState;
@@ -585,6 +576,9 @@ export const CRAFT_MECHANICS: CraftMechanic[] = [
     category: 'base-prep',
     physicalActionCount: 1,
     estimatedManualTimeMs: 400,
+    parameters: { magicRollShapeVersion: MAGIC_ROLL_SHAPE.version },
+    mechanicsConfidence: 'APPROXIMATE / EXTERNALLY CLOSE',
+    mechanicsProvenance: MAGIC_ROLL_SHAPE.provenance,
     isLegal: (state) => state.rarity === 'normal',
     getCost: (ctx) => ctx.priceBook.evaluateRate('transmutation', 0.03),
     getTransitions: (state, _target, context, control) => {
@@ -675,6 +669,10 @@ export const CRAFT_MECHANICS: CraftMechanic[] = [
     category: 'base-prep',
     physicalActionCount: 1,
     estimatedManualTimeMs: 400,
+    parameters: { magicRollShapeVersion: MAGIC_ROLL_SHAPE.version },
+    mechanicsConfidence: 'APPROXIMATE / EXTERNALLY CLOSE',
+    mechanicsProvenance: MAGIC_ROLL_SHAPE.provenance,
+    repeatableFullReroll: MAGIC_REPEATABLE_FULL_REROLL,
     isLegal: (state) => state.rarity === 'magic',
     getCost: (ctx) => ctx.priceBook.evaluateRate('alteration', 0.11),
     getTransitions: (state, _target, context, control) => {

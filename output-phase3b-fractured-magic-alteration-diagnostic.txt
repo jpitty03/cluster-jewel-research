@@ -1,0 +1,14 @@
+PHASE 3B — FRACTURED MAGIC ALTERATION FIDELITY DIAGNOSTIC
+Shared roll shape: MAGIC_ROLL_SHAPE_PHASE3B_V1 (APPROXIMATE)
+Declared shapes: Prefix-only=0.25; Suffix-only=0.25; Prefix+Suffix=0.5
+Fractured Prefix: self-loop=0.25; open Suffix=0.75; target=0.30000000000000004
+Fractured Suffix: self-loop=0.25; open Prefix=0.75; target=0.30000000000000004
+Augment target=0.4; no-new-affix=0
+Monte Carlo: 250,000 trials/case; all analytical proportions inside seeded 99% Wilson intervals
+Current Bellman: selected=augmentation_orb; Q=augmentation_orb:0.254589c, alteration_orb:0.358631c
+Price reversal: selected=alteration_orb; Q=alteration_orb:0.000333c, augmentation_orb:50.000200c
+Acquisition: RESOLVED; proper=true; absorption=0.9999999999999934; reconciled=true
+Cache identity: phase2j-cee29d59 -> phase2j-67d8b678; mechanics=phase3b-magic-roll-shape-v1
+External parity benchmarks executed: 9
+ALL PHASE 3B DIRECT DIAGNOSTIC GATES PASS
+Unit tests added/run: NO

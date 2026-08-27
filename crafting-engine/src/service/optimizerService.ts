@@ -2338,7 +2338,7 @@ function sortedRecord(record: Record<string, number | undefined>): Record<string
   return Object.fromEntries(Object.keys(record).sort().map((key) => [key, record[key]]));
 }
 
-export const OPTIMIZER_MECHANICS_ACTION_SET_VERSION = 'phase2j-core-actions-v1';
+export const OPTIMIZER_MECHANICS_ACTION_SET_VERSION = 'phase3b-magic-roll-shape-v1';
 export const OPTIMIZER_CANONICAL_STATE_VERSION = 'target-conditioned-groups-v2';
 
 interface SearchIdentityComponents {

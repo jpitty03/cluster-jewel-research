@@ -1,5 +1,5 @@
 {
-  "version": "Phase2Y-Frozen-Browser-Corpus-1",
+  "version": "Phase3B-Frozen-Browser-Corpus-1",
   "fixtures": [
     {
       "id": "cheap_one_mod",
@@ -224,6 +224,38 @@
         "cleanBaseCostChaos": 4,
         "cleanBasePriceSource": "manual",
         "cleanBasePriceProvenance": "Phase 2X frozen exact 8-passive ilvl 84 shield-attack base quote"
+      },
+      "searchBudget": { "maxStates": 5000, "maxWallTimeMs": 30000, "maxExpansionRounds": 3 }
+    },
+    {
+      "id": "phase3b_three_notable_alter_reversal",
+      "name": "Phase 3B shield three-notable fractured-Magic Alter price reversal",
+      "baseType": "Large Cluster Jewel",
+      "clusterType": "12% increased Attack Damage while holding a Shield",
+      "itemLevel": 84,
+      "passiveCount": 8,
+      "finalRarity": "rare",
+      "extraAffixes": "allow-extra",
+      "targetMods": ["Prodigious Defence", "Riot Queller", "Smite the Weak"],
+      "priceContext": {
+        "currencyRates": {
+          "chaos": 1,
+          "divine": 193.9,
+          "fracturing": 355.8,
+          "annul": 8.67,
+          "exalt": 1.63,
+          "scour": 0.3711,
+          "alteration": 0.04,
+          "transmutation": 0.01102,
+          "augmentation": 0.06493,
+          "regal": 0.119,
+          "wildLifeforce": 0.01838,
+          "vividLifeforce": 0.06815,
+          "primalLifeforce": 0.03697
+        },
+        "cleanBaseCostChaos": 4,
+        "cleanBasePriceSource": "manual",
+        "cleanBasePriceProvenance": "Phase 3B controlled price-only variant of the frozen Phase 2X fixture; Alter and Augment compete through the production Bellman solver"
       },
       "searchBudget": { "maxStates": 5000, "maxWallTimeMs": 30000, "maxExpansionRounds": 3 }
     },

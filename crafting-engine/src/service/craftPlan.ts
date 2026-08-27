@@ -568,7 +568,10 @@ function stepCopy(
     case 'RECOVER':
       return {
         title: 'Recover from misses',
-        instruction: `Use ${actions} when the current item cannot progress, then repeat the rolling loop.`,
+        instruction:
+          `Use ${actions} when the selected policy calls for recovery. If it Scours, continue from ` +
+          `the resulting item's actual rarity/state; with one fractured affix, Scour leaves a Magic item. ` +
+          'If it Reacquires, return to the selected acquisition state. Expand Decision details for the exact next action.',
       };
     case 'SUCCESS':
       return { title: 'Finish', instruction: 'Stop when every requested target condition is satisfied.' };
@@ -762,8 +765,16 @@ export function buildCraftPlan(source: CraftPlanSource): CraftPlanSummary {
   const recoveryIds = unique([...(byPhase.get('RECOVER') ?? []), ...synthesisRecoveryIds]);
   let recovery: CraftPlanRecovery | undefined;
   if (recoveryIds.length > 0) {
-    const returnToStep = steps.find((step) => step.phase === 'INITIALIZE') ??
-      steps.find((step) => step.phase === 'ROLL');
+    // A single synthetic return arrow is false when this compressed step
+    // contains state-dependent Scour and/or Reacquire branches. Decision
+    // details retain the exact on-policy destination for each physical state.
+    const hasStateDependentDestination = recoveryIds.some((actionId) =>
+      actionId === 'scouring_orb' || actionId === 'restart_reacquire'
+    );
+    const returnToStep = hasStateDependentDestination
+      ? undefined
+      : steps.find((step) => step.phase === 'INITIALIZE') ??
+        steps.find((step) => step.phase === 'ROLL');
     const names = actionNamesFor(recoveryIds, actionNames);
     const copy = stepCopy('RECOVER', names, targetOrderPreference, false);
     steps.push({
@@ -781,7 +792,7 @@ export function buildCraftPlan(source: CraftPlanSource): CraftPlanSummary {
       returnToStepId: returnToStep?.id,
       provenance:
         selectedSynthesis?.wrongFractureRecovery?.note ??
-        'Recovery actions and loop destination are derived from selected on-policy actions and rarity progression.',
+        'Recovery actions and any displayed destination are derived from selected on-policy actions and actual rarity progression.',
     };
   }
 

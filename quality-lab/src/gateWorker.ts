@@ -82,6 +82,7 @@ interface FrozenPolicyFlowFixture {
 
 const qualityDirectory = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const repositoryRoot = resolve(qualityDirectory, '..');
+const stableEvidenceDirectory = join(qualityDirectory, 'reports', 'evidence');
 const fixtureCorpus = JSON.parse(
   readFileSync(join(qualityDirectory, 'fixtures', 'fixtureCorpus.json'), 'utf8'),
 ) as FixtureCorpusRecord;
@@ -442,6 +443,44 @@ function assertTarget(result: JsonRecord, input: FixtureRecord): void {
   assert.deepEqual(canonicalIds(ids), canonicalIds(input.targetMods));
 }
 
+function phase3bRouteEvidence(result: JsonRecord): JsonRecord {
+  const recommended = jsonRecord(result.recommended, 'recommended route');
+  const usage = jsonRecord(result.fullRouteUsage, 'full-route usage');
+  const combinedActions = arrayValue(usage.combinedActions, 'combined actions')
+    .map((entry) => jsonRecord(entry, 'combined action'));
+  const actionCounts = Object.fromEntries(combinedActions.map((action) => [
+    String(action.actionId),
+    numberValue(action.expectedCount, `${String(action.actionId)} expected count`),
+  ]));
+  return {
+    recommendationStatus: result.recommendationStatus,
+    selectedAcquisition: recommended.name,
+    selectedBundleId: recommended.bundleId,
+    acquisitionCostChaos: usage.acquisitionCostChaos,
+    downstreamCostChaos: usage.downstreamCostChaos,
+    fullRouteCostChaos: usage.fullRouteCostChaos,
+    expectedPhysicalActions: jsonRecord(recommended.metrics, 'route metrics').expectedPhysicalActions,
+    estimatedManualTimeMs: jsonRecord(recommended.metrics, 'route metrics').estimatedManualTimeMs,
+    actionCounts,
+  };
+}
+
+function assertPhase3bRecoveryCopy(result: JsonRecord): string | undefined {
+  const plan = jsonRecord(result.craftPlan, 'craft plan');
+  const recovery = arrayValue(plan.steps, 'craft plan steps')
+    .map((entry) => jsonRecord(entry, 'craft plan step'))
+    .find((step) => step.phase === 'RECOVER');
+  if (!recovery) return undefined;
+  const instruction = String(recovery.instruction);
+  assert.match(instruction, /resulting item's actual rarity\/state/i);
+  assert.match(instruction, /one fractured affix, Scour leaves a Magic item/i);
+  assert.match(instruction, /Reacquires, return to the selected acquisition state/i);
+  assert.match(instruction, /Decision details for the exact next action/i);
+  assert.equal(recovery.recoveryTargetStepId, undefined,
+    'Compressed state-dependent Scour/Reacquire recovery retained a false fixed return arrow');
+  return instruction;
+}
+
 function assertWorkerProtocol(events: CapturedWorkerEvent[]): JsonRecord {
   const messageTypes = events
     .filter((event) => event.kind === 'MESSAGE_FROM_WORKER')
@@ -568,13 +607,114 @@ async function runGateOperation(ctx: GateWorkerContext): Promise<unknown> {
         assert(oneFracturedScour, 'No one-fractured Scour destination exists');
         const destination = nodes.find((node) => node.id === oneFracturedScour.targetNodeId)!;
         assert.equal(destination.rarity, 'magic');
-        assert.notEqual(destination.selectedActionId, 'transmutation_orb');
+        assert.equal(destination.selectedActionId, 'augmentation_orb',
+          'Current-price Scour destination did not economically select Augment');
+        const topology = jsonRecord(flow.topology, 'self-fracture topology');
+        const route = phase3bRouteEvidence(result);
+        const recoveryCopy = assertPhase3bRecoveryCopy(result);
+        mkdirSync(stableEvidenceDirectory, { recursive: true });
+        const artifactPath = join(stableEvidenceDirectory, 'phase3b-current-self-fracture-flow.json');
+        writeFileSync(artifactPath, `${JSON.stringify({ input, route, flow }, null, 2)}\n`, 'utf8');
+        ctx.artifacts.phase3bCurrentSelfFractureFlow = relative(repositoryRoot, artifactPath);
         return {
           conserved,
           scourEdges: scour.length,
           reacquireEdges: reacquire.length,
           fracturedDestination: { rarity: destination.rarity, selectedActionId: destination.selectedActionId },
+          scourDestinations: scour.map((edge) => ({
+            sourceNodeId: edge.sourceNodeId,
+            targetNodeId: edge.targetNodeId,
+            rarity: nodes.find((node) => node.id === edge.targetNodeId)?.rarity,
+            selectedActionId: nodes.find((node) => node.id === edge.targetNodeId)?.selectedActionId,
+          })),
+          topology,
+          route,
+          recoveryCopy,
           accounting: assertCanonicalAccounting(result),
+          artifact: ctx.artifacts.phase3bCurrentSelfFractureFlow,
+        };
+      });
+
+    case 'fractured-magic-alter-price-reversal':
+      return withPage(ctx, async (page) => {
+        const input = fixture('phase3b_three_notable_alter_reversal');
+        const result = await optimizedFixture(page, ctx.appUrl, input);
+        assertTarget(result, input);
+        const flow = selectedPolicyFlow(result, 'Phase 3B Alter reversal');
+        const conserved = assertFlowConservation(flow, 'Phase 3B Alter reversal');
+        const nodes = arrayValue(flow.nodes, 'Alter reversal nodes')
+          .map((entry) => jsonRecord(entry, 'Alter reversal node'));
+        const edges = arrayValue(flow.edges, 'Alter reversal edges')
+          .map((entry) => jsonRecord(entry, 'Alter reversal edge'));
+        const fractureOnlyAlterNode = nodes.find((node) =>
+          node.selectedActionId === 'alteration_orb' &&
+          Array.isArray(node.fracturedTargetModIds) && node.fracturedTargetModIds.length === 1 &&
+          numberValue(node.prefixCount, 'Alter node Prefix count') +
+            numberValue(node.suffixCount, 'Alter node Suffix count') === 1
+        );
+        assert(fractureOnlyAlterNode,
+          'Controlled real Worker result has no fracture-only Magic state selecting Alter');
+        assert.equal(fractureOnlyAlterNode.rarity, 'magic');
+        const selfLoop = edges.find((edge) =>
+          edge.sourceNodeId === fractureOnlyAlterNode.id &&
+          edge.targetNodeId === fractureOnlyAlterNode.id &&
+          edge.actionId === 'alteration_orb' &&
+          /no new affix/i.test(String(edge.representativeOutcome))
+        );
+        assert(selfLoop, 'Fractured-Magic Alter no-new-affix mass is absent from real PolicyFlow');
+        assert.equal(selfLoop.outcomeKind, 'REPEAT');
+        assert.match(String(selfLoop.representativeOutcome), /fractured (Prefix|Suffix).*requested side/i);
+        const conditionalProbability = numberValue(
+          selfLoop.conditionalProbability,
+          'Alter self-loop conditional probability',
+        );
+        assert(conditionalProbability > 0 && conditionalProbability < 1,
+          'Alter self-loop probability was discarded or renormalized to certainty');
+        const anchor = page.locator(`[data-edge-anchor="${String(selfLoop.id)}"]`);
+        await anchor.focus();
+        await page.keyboard.press('Enter');
+        const details = page.getByLabel('Selected constellation edge details');
+        await details.waitFor();
+        const detailText = await details.innerText();
+        assert.match(detailText, /no new affix/i);
+        assert.match(detailText, /fractured (Prefix|Suffix)/i);
+        assert.match(detailText, /Occupancy-weighted policy-flow probability/i);
+        // Read collapsed Advanced evidence directly. Pointer clicks inside the
+        // canvas overlay intentionally bubble to the camera gesture owner and
+        // would close the selected edge after the accessibility assertion.
+        assert.match(String(await details.textContent()), /EXACT_SELECTED_POLICY_TRANSITION/);
+        mkdirSync(stableEvidenceDirectory, { recursive: true });
+        const screenshotPath = join(stableEvidenceDirectory, 'phase3b-alter-self-loop.png');
+        await page.screenshot({ path: screenshotPath, fullPage: true });
+        ctx.artifacts.phase3bAlterSelfLoopScreenshot = relative(repositoryRoot, screenshotPath);
+        const route = phase3bRouteEvidence(result);
+        const recoveryCopy = assertPhase3bRecoveryCopy(result);
+        const artifactPath = join(stableEvidenceDirectory, 'phase3b-alter-self-loop-flow.json');
+        writeFileSync(artifactPath, `${JSON.stringify({
+          input,
+          route,
+          conserved,
+          fractureOnlyAlterNode,
+          selfLoop,
+          flow,
+        }, null, 2)}\n`, 'utf8');
+        ctx.artifacts.phase3bAlterSelfLoopFlow = relative(repositoryRoot, artifactPath);
+        return {
+          route,
+          conserved,
+          topology: flow.topology,
+          fractureOnlyAlterNode: fractureOnlyAlterNode.id,
+          selfLoop: {
+            id: selfLoop.id,
+            conditionalProbability,
+            expectedFlow: selfLoop.expectedFlow,
+            representativeOutcome: selfLoop.representativeOutcome,
+            nextSelectedActionId: selfLoop.nextSelectedActionId,
+          },
+          recoveryCopy,
+          accounting: assertCanonicalAccounting(result),
+          screenshot: ctx.artifacts.phase3bAlterSelfLoopScreenshot,
+          flowArtifact: ctx.artifacts.phase3bAlterSelfLoopFlow,
         };
       });
 
@@ -858,11 +998,38 @@ async function runGateOperation(ctx: GateWorkerContext): Promise<unknown> {
         const input = fixture('phase2y_field_three_notable');
         const result = await optimizedFixture(page, ctx.appUrl, input);
         assertTarget(result, input);
+        const flow = selectedPolicyFlow(result, 'Phase 3B field control');
+        const conserved = assertFlowConservation(flow, 'Phase 3B field control');
+        const nodes = arrayValue(flow.nodes, 'field nodes').map((entry) => jsonRecord(entry, 'field node'));
+        const edges = arrayValue(flow.edges, 'field edges').map((entry) => jsonRecord(entry, 'field edge'));
+        const scourDestinations = edges.filter((edge) => edge.actionId === 'scouring_orb').map((edge) => {
+          const destination = nodes.find((node) => node.id === edge.targetNodeId);
+          return {
+            sourceNodeId: edge.sourceNodeId,
+            targetNodeId: edge.targetNodeId,
+            rarity: destination?.rarity,
+            selectedActionId: destination?.selectedActionId,
+          };
+        });
+        assert(scourDestinations.length > 0, 'Field control has no selected Scour recovery');
+        assert(scourDestinations.every((destination) =>
+          destination.rarity === 'magic' && destination.selectedActionId === 'augmentation_orb'
+        ), 'Field Scour did not continue from the actual one-fractured Magic state into selected Augment');
+        const route = phase3bRouteEvidence(result);
+        mkdirSync(stableEvidenceDirectory, { recursive: true });
+        const artifactPath = join(stableEvidenceDirectory, 'phase3b-field-three-notable.json');
+        writeFileSync(artifactPath, `${JSON.stringify({ input, route, scourDestinations, flow }, null, 2)}\n`, 'utf8');
+        ctx.artifacts.phase3bFieldThreeNotable = relative(repositoryRoot, artifactPath);
         return {
           fixture: input.id,
+          route,
+          conserved,
+          topology: flow.topology,
+          scourDestinations,
           accounting: assertCanonicalAccounting(result),
           proofStatus: result.objectiveProofStatus,
           search: result.search,
+          artifact: ctx.artifacts.phase3bFieldThreeNotable,
         };
       });
 

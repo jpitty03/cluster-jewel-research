@@ -1,0 +1,510 @@
+{
+  "phase": "3B",
+  "generatedAt": "2026-08-27T15:09:43.536Z",
+  "implementation": {
+    "defect": "The one-fractured-affix analytical and sampled Alteration shortcut discarded the requested same-side roll shape and renormalized all probability onto the open opposite side.",
+    "sharedContract": {
+      "oneAffixProbability": 0.5,
+      "twoAffixProbability": 0.5,
+      "oneAffixPrefixShare": 0.5,
+      "oneAffixSuffixShare": 0.5,
+      "confidence": "APPROXIMATE",
+      "provenance": "Phase 3B shared contract retaining the existing documented 50/50 one-affix/two-affix approximation. Field evidence reports approximately 52/48, but no independent exact split is currently pinned; fractured-slot behavior is exact relative to this contract.",
+      "version": "MAGIC_ROLL_SHAPE_PHASE3B_V1"
+    },
+    "exactSplitDisposition": "The existing 50/50 one-affix/two-affix approximation remains configured. The approximately 52/48 field observation was not independently pinned and was not hardcoded."
+  },
+  "analytical": {
+    "configuredShapeProbabilities": {
+      "PREFIX_ONLY": 0.25,
+      "SUFFIX_ONLY": 0.25,
+      "PREFIX_AND_SUFFIX": 0.5
+    },
+    "openSideProbability": 0.75,
+    "targetWeightShare": 0.4,
+    "clean": {
+      "probabilitySum": 1,
+      "prefixOnly": 0.25,
+      "suffixOnly": 0.25,
+      "prefixAndSuffix": 0.5,
+      "selfLoop": 0,
+      "oppositeSide": 0,
+      "targetHit": 0.30000000000000004,
+      "illegalDoublePrefix": 0,
+      "illegalDoubleSuffix": 0
+    },
+    "fracturedPrefix": {
+      "probabilitySum": 1,
+      "prefixOnly": 0,
+      "suffixOnly": 0,
+      "prefixAndSuffix": 0,
+      "selfLoop": 0.25,
+      "oppositeSide": 0.75,
+      "targetHit": 0.30000000000000004,
+      "illegalDoublePrefix": 0,
+      "illegalDoubleSuffix": 0
+    },
+    "fracturedSuffix": {
+      "probabilitySum": 1,
+      "prefixOnly": 0,
+      "suffixOnly": 0,
+      "prefixAndSuffix": 0,
+      "selfLoop": 0.25,
+      "oppositeSide": 0.75,
+      "targetHit": 0.30000000000000004,
+      "illegalDoublePrefix": 0,
+      "illegalDoubleSuffix": 0
+    },
+    "augmentFromFracturedPrefix": {
+      "probabilitySum": 1,
+      "prefixOnly": 0,
+      "suffixOnly": 0,
+      "prefixAndSuffix": 0,
+      "selfLoop": 0,
+      "oppositeSide": 1,
+      "targetHit": 0.4,
+      "illegalDoublePrefix": 0,
+      "illegalDoubleSuffix": 0
+    },
+    "formulas": {
+      "fracturedPrefixSelfLoop": "oneAffixProbability × oneAffixPrefixShare",
+      "fracturedPrefixOpenSuffix": "oneAffixProbability × oneAffixSuffixShare + twoAffixProbability",
+      "weightedTargetHit": "openSideProbability × targetWeight / totalEligibleOppositeSideWeight",
+      "augmentTargetHit": "targetWeight / totalEligibleOppositeSideWeight"
+    }
+  },
+  "monteCarlo": {
+    "trialCountPerCase": 250000,
+    "seeds": {
+      "cleanMagic": 989921281,
+      "fracturedPrefix": 989986818,
+      "fracturedSuffix": 990052355,
+      "augment": 990183429
+    },
+    "cleanOneAffix": {
+      "successes": 125313,
+      "trials": 250000,
+      "observed": 0.501252,
+      "analytical": 0.5,
+      "confidence": "99% Wilson",
+      "interval": [
+        0.49867617972474926,
+        0.50382775382189
+      ],
+      "analyticalInsideInterval": true
+    },
+    "cleanTwoAffix": {
+      "successes": 124687,
+      "trials": 250000,
+      "observed": 0.498748,
+      "analytical": 0.5,
+      "confidence": "99% Wilson",
+      "interval": [
+        0.49617224617811,
+        0.5013238202752508
+      ],
+      "analyticalInsideInterval": true
+    },
+    "fracturedPrefixSelfLoop": {
+      "successes": 62386,
+      "trials": 250000,
+      "observed": 0.249544,
+      "analytical": 0.25,
+      "confidence": "99% Wilson",
+      "interval": [
+        0.24732129081984414,
+        0.2517800028246529
+      ],
+      "analyticalInsideInterval": true
+    },
+    "fracturedPrefixOpenSuffix": {
+      "successes": 187614,
+      "trials": 250000,
+      "observed": 0.750456,
+      "analytical": 0.75,
+      "confidence": "99% Wilson",
+      "interval": [
+        0.7482199971753472,
+        0.7526787091801559
+      ],
+      "analyticalInsideInterval": true
+    },
+    "fracturedPrefixTargetSuffix": {
+      "successes": 75505,
+      "trials": 250000,
+      "observed": 0.30202,
+      "analytical": 0.30000000000000004,
+      "confidence": "99% Wilson",
+      "interval": [
+        0.29965997871475997,
+        0.30439052962098573
+      ],
+      "analyticalInsideInterval": true
+    },
+    "fracturedSuffixSelfLoop": {
+      "successes": 62299,
+      "trials": 250000,
+      "observed": 0.249196,
+      "analytical": 0.25,
+      "confidence": "99% Wilson",
+      "interval": [
+        0.24697433855211162,
+        0.25143097356344735
+      ],
+      "analyticalInsideInterval": true
+    },
+    "fracturedSuffixOpenPrefix": {
+      "successes": 187701,
+      "trials": 250000,
+      "observed": 0.750804,
+      "analytical": 0.75,
+      "confidence": "99% Wilson",
+      "interval": [
+        0.7485690264365527,
+        0.7530256614478884
+      ],
+      "analyticalInsideInterval": true
+    },
+    "fracturedSuffixTargetPrefix": {
+      "successes": 75437,
+      "trials": 250000,
+      "observed": 0.301748,
+      "analytical": 0.30000000000000004,
+      "confidence": "99% Wilson",
+      "interval": [
+        0.29938859062411627,
+        0.30411793214878124
+      ],
+      "analyticalInsideInterval": true
+    },
+    "augmentTargetSuffix": {
+      "successes": 99592,
+      "trials": 250000,
+      "observed": 0.398368,
+      "analytical": 0.4,
+      "confidence": "99% Wilson",
+      "interval": [
+        0.3958486730132139,
+        0.40089272138611176
+      ],
+      "analyticalInsideInterval": true
+    }
+  },
+  "bellman": {
+    "pricingSnapshot": {
+      "league": "Allflame",
+      "fetchedAt": "2026-08-26T06:31:33.498Z",
+      "ratesAt": "2026-08-26T05:36:32.599Z",
+      "alteration": 0.1336,
+      "augmentation": 0.03941
+    },
+    "transitionEvidence": {
+      "alterTargetHitProbability": 0.30000000000000004,
+      "alterNoNewAffixProbability": 0.25,
+      "augmentTargetHitProbability": 0.4,
+      "augmentNoNewAffixProbability": 0
+    },
+    "current": {
+      "selectedActionId": "augmentation_orb",
+      "selectedValueChaos": 0.2545887499999998,
+      "qValues": [
+        {
+          "actionId": "augmentation_orb",
+          "actionName": "Orb of Augmentation",
+          "immediateCostChaos": 0.03941,
+          "expectedContinuationChaos": 0.21517874999999984,
+          "totalQValueChaos": 0.2545887499999998,
+          "lowerBoundChaos": 0.2545785371710201,
+          "incumbentUpperBoundChaos": 0.2545887499999998,
+          "optimalityGapChaos": 0.00001021282897972764,
+          "couldBeatResolvedIncumbent": false,
+          "status": "RESOLVED",
+          "unresolvedTargetCount": 0
+        },
+        {
+          "actionId": "alteration_orb",
+          "actionName": "Orb of Alteration",
+          "immediateCostChaos": 0.1336,
+          "expectedContinuationChaos": 0.22503124999999985,
+          "totalQValueChaos": 0.35863124999999985,
+          "lowerBoundChaos": 0.3586197961110777,
+          "incumbentUpperBoundChaos": 0.2545887499999998,
+          "optimalityGapChaos": 0,
+          "couldBeatResolvedIncumbent": false,
+          "status": "RESOLVED",
+          "unresolvedTargetCount": 0
+        }
+      ],
+      "proof": "FULLY RESOLVED / PROPER / ABSORBING / COST-RECONCILED",
+      "proper": true,
+      "absorptionProbability": 1,
+      "reconciled": true
+    },
+    "controlledPriceReversal": {
+      "changedOnly": [
+        "alteration",
+        "augmentation"
+      ],
+      "rates": {
+        "alteration": 0.0001,
+        "augmentation": 50
+      },
+      "result": {
+        "selectedActionId": "alteration_orb",
+        "selectedValueChaos": 0.0003333333333333333,
+        "qValues": [
+          {
+            "actionId": "alteration_orb",
+            "actionName": "Orb of Alteration",
+            "immediateCostChaos": 0.0001,
+            "expectedContinuationChaos": 0.00023333333333333333,
+            "totalQValueChaos": 0.0003333333333333333,
+            "lowerBoundChaos": 0.0003198821309999999,
+            "incumbentUpperBoundChaos": 0.0003333333333333333,
+            "optimalityGapChaos": 0.0000134512023333334,
+            "couldBeatResolvedIncumbent": false,
+            "status": "RESOLVED",
+            "unresolvedTargetCount": 0
+          },
+          {
+            "actionId": "augmentation_orb",
+            "actionName": "Orb of Augmentation",
+            "immediateCostChaos": 50,
+            "expectedContinuationChaos": 0.00019999999999999998,
+            "totalQValueChaos": 50.0002,
+            "lowerBoundChaos": 50.000188470398,
+            "incumbentUpperBoundChaos": 0.0003333333333333333,
+            "optimalityGapChaos": 0,
+            "couldBeatResolvedIncumbent": false,
+            "status": "RESOLVED",
+            "unresolvedTargetCount": 0
+          }
+        ],
+        "proof": "FULLY RESOLVED / PROPER / ABSORBING / COST-RECONCILED",
+        "proper": true,
+        "absorptionProbability": 1,
+        "reconciled": true
+      }
+    }
+  },
+  "acquisition": {
+    "status": "RESOLVED",
+    "expectedCostChaos": 1203.8634880000036,
+    "lowerBoundChaos": 299.6,
+    "expectedRestarts": 3.0000000000000093,
+    "expectedFracturingOrbs": 4.000000000000012,
+    "expectedActionUsage": [
+      {
+        "actionId": "fracturing_orb",
+        "actionName": "Fracturing Orb",
+        "expectedCount": 4.000000000000012,
+        "expectedCostChaos": 1194.4000000000037
+      },
+      {
+        "actionId": "exalted_orb",
+        "actionName": "Exalted Orb Slam",
+        "expectedCount": 4.000000000000013,
+        "expectedCostChaos": 4.680000000000016
+      },
+      {
+        "actionId": "restart_reacquire",
+        "actionName": "Abandon attempt and reacquire a clean base",
+        "expectedCount": 3.0000000000000093,
+        "expectedCostChaos": 3.0000000000000093
+      },
+      {
+        "actionId": "scouring_orb",
+        "actionName": "Orb of Scouring",
+        "expectedCount": 1.0000000000000027,
+        "expectedCostChaos": 0.5391000000000015
+      },
+      {
+        "actionId": "regal_orb",
+        "actionName": "Regal Orb",
+        "expectedCount": 4.0000000000000115,
+        "expectedCostChaos": 0.14552000000000043
+      },
+      {
+        "actionId": "augmentation_orb",
+        "actionName": "Orb of Augmentation",
+        "expectedCount": 2.000000000000006,
+        "expectedCostChaos": 0.07882000000000025
+      },
+      {
+        "actionId": "transmutation_orb",
+        "actionName": "Orb of Transmutation",
+        "expectedCount": 4.000000000000011,
+        "expectedCostChaos": 0.020048000000000052
+      }
+    ],
+    "proof": {
+      "selectedPolicyStatus": "FULLY RESOLVED / PROPER / ABSORBING / COST-RECONCILED",
+      "proofLevel": "OPTIMAL OVER MODELED ACTIONS: PROVEN",
+      "globalOptimality": "NOT YET PROVEN",
+      "modeledActionOptimalityProven": true,
+      "unresolvedCompetitorCount": 0,
+      "potentiallyCompetitiveUnresolvedCount": 0,
+      "unresolvedCandidatesCouldBeatIncumbent": false
+    },
+    "risk": {
+      "selectedPolicyProper": true,
+      "terminalAbsorptionProbability": 0.9999999999999934,
+      "unresolvedOnPolicyProbability": 0,
+      "onPolicyReachableStates": 14,
+      "onPolicyTerminalStates": 1,
+      "hasCycles": true
+    },
+    "solver": {
+      "bellmanIterations": 462,
+      "bellmanConverged": true,
+      "occupancyIterations": 7,
+      "occupancyConverged": true,
+      "reconciliationDifferenceChaos": 3.637978807091713e-12,
+      "costReconciled": true
+    },
+    "search": {
+      "statesExpanded": 24,
+      "cumulativeExpansionWork": 24,
+      "repeatedStatesExpanded": 0,
+      "expansionRounds": 1,
+      "expansionMode": "PERSISTENT_EXTENDED",
+      "seedStatesExpanded": 1,
+      "newStatesByRound": [
+        23
+      ],
+      "retainedStatesReusedByRound": [
+        1
+      ],
+      "transitionDistributionsGenerated": 71,
+      "transitionDistributionsGeneratedByRound": [
+        71
+      ],
+      "transitionDistributionsReused": 7,
+      "transitionDistributionsReusedByRound": [
+        7
+      ],
+      "stageTimingMs": {
+        "transitionGenerationMs": 1,
+        "bellmanMs": 10,
+        "occupancyMs": 0
+      },
+      "previouslyExpandedNodesRevisited": 1,
+      "previouslyExpandedNodesRevisitedByRound": [
+        1
+      ],
+      "acquisitionFeasibilityStatesExpanded": 0,
+      "interruptedStatesExpanded": 0,
+      "elapsedMs": 25,
+      "budgetExhausted": false,
+      "maxStates": 1000,
+      "graphHitStateLimit": false,
+      "graphHitWallTimeLimit": false,
+      "unexpandedProbabilityMass": 0,
+      "canonicalStateIdentity": "FRACTURE_PREPARATION_BISIMULATION_V1"
+    },
+    "terminalPhysicalStateSignatures": [
+      "Large Cluster Jewel|Phase 3B controlled Magic roll-shape pool|1|8|magic|influenced=false|synthesised=false|acquisitionMenu=false|methodFamilyActionEvidence=|Prefix:phase3b_prefix_target:1:F:"
+    ]
+  },
+  "cacheInvalidation": {
+    "previousMechanicsActionSetVersion": "phase2j-core-actions-v1",
+    "currentMechanicsActionSetVersion": "phase3b-magic-roll-shape-v1",
+    "previousIdentityHash": "phase2j-cee29d59",
+    "currentIdentityHash": "phase2j-67d8b678",
+    "identitiesDiffer": true,
+    "relaxedBoundVersion": "RELAXED_TARGET_PROGRESS_LOWER_BOUND_V2_PHASE3B_MAGIC_ROLL_SHAPE",
+    "repeatableKernelVersion": "MAGIC_ROLL_SHAPE_PHASE3B_V1",
+    "acquisitionStateIdentity": "FRACTURE_PREPARATION_BISIMULATION_V1",
+    "stateIdentityDisposition": "Unchanged: the physical/canonical state equivalence relation did not change; incompatible transition/session/cache identities did.",
+    "serializedContinuationDisposition": "Share/export bundles serialize request/result summaries, not live continuation graphs."
+  },
+  "probabilityAudit": {
+    "distributions": {
+      "cleanAlter": 1,
+      "fracturedPrefixAlter": 1,
+      "fracturedSuffixAlter": 1,
+      "fracturedPrefixAugment": 1
+    },
+    "tolerance": 1e-12,
+    "illegalAnalyticalMass": {
+      "doublePrefix": 0,
+      "doubleSuffix": 0
+    },
+    "illegalMonteCarloOutcomes": {
+      "doublePrefix": 0,
+      "doubleSuffix": 0
+    }
+  },
+  "externalParity": [
+    {
+      "benchmarkId": "alt_t1_int",
+      "status": "ALIGNED",
+      "analyticalProbabilityPct": 1.437699680511181,
+      "monteCarloProbabilityPct": 1.505,
+      "classification": "PRESERVED / NO MATERIAL DIFFERENCE — benchmark starts without a fracture"
+    },
+    {
+      "benchmarkId": "alt_t1_int_es_raw_magic",
+      "status": "ALIGNED",
+      "analyticalProbabilityPct": 0.02299951496578439,
+      "monteCarloProbabilityPct": 0.0238,
+      "classification": "PRESERVED / NO MATERIAL DIFFERENCE — benchmark starts without a fracture"
+    },
+    {
+      "benchmarkId": "harvest_defences_t1_int_es_raw_presence",
+      "status": "CLOSE / APPROXIMATE",
+      "analyticalProbabilityPct": 0.2755331083208381,
+      "monteCarloProbabilityPct": 0.2753,
+      "classification": "PRESERVED / UNRELATED MECHANIC"
+    },
+    {
+      "benchmarkId": "annul_once_after_harvest_t1_int_es_raw_hit",
+      "status": "CLOSE / APPROXIMATE",
+      "analyticalProbabilityPct": 43.775434252917364,
+      "monteCarloProbabilityPct": 44.278968398111154,
+      "classification": "PRESERVED / UNRELATED MECHANIC"
+    },
+    {
+      "benchmarkId": "harvest_then_one_annul_t1_int_es_presence",
+      "status": "CLOSE / APPROXIMATE",
+      "analyticalProbabilityPct": 0.12061581467800807,
+      "monteCarloProbabilityPct": 0.12190000000000001,
+      "classification": "PRESERVED / UNRELATED MECHANIC"
+    },
+    {
+      "benchmarkId": "fracture_t1_int",
+      "status": "ALIGNED",
+      "analyticalProbabilityPct": 25,
+      "monteCarloProbabilityPct": 24.955,
+      "classification": "PRESERVED / UNRELATED MECHANIC"
+    },
+    {
+      "benchmarkId": "compound_harvest_frac_int_to_es35",
+      "status": "REFERENCE EXPECTATION",
+      "analyticalProbabilityPct": null,
+      "monteCarloProbabilityPct": null,
+      "classification": "PRESERVED / UNRELATED MECHANIC"
+    },
+    {
+      "benchmarkId": "annul_after_compound_harvest",
+      "status": "REFERENCE EXPECTATION",
+      "analyticalProbabilityPct": null,
+      "monteCarloProbabilityPct": null,
+      "classification": "PRESERVED / UNRELATED MECHANIC"
+    },
+    {
+      "benchmarkId": "final_exalt_attr_or_attack_speed",
+      "status": "ALIGNED",
+      "analyticalProbabilityPct": 3.8062283737024223,
+      "monteCarloProbabilityPct": 3.8350000000000004,
+      "classification": "PRESERVED / UNRELATED MECHANIC"
+    }
+  ],
+  "prohibitions": {
+    "unitTestsAddedOrRun": false,
+    "hardcodedAlterOrAugmentWinner": false,
+    "hardcodedApproximate52_48": false,
+    "stateIdentityWeakened": false,
+    "marketFracturedRanking": false
+  }
+}

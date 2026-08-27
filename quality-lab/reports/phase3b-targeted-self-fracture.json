@@ -1,0 +1,204 @@
+{
+  "schemaVersion": "PHASE3A_QUALITY_REPORT_V1",
+  "runId": "2026-08-27T14-54-28-281Z",
+  "suite": "TARGETED",
+  "requestedGateIds": [
+    "B-self-fracture-policy"
+  ],
+  "selectedGateIds": [
+    "B-self-fracture-policy"
+  ],
+  "startedAt": "2026-08-27T14:54:28.282Z",
+  "finishedAt": "2026-08-27T14:54:56.341Z",
+  "status": "PASSED",
+  "identity": {
+    "applicationSourceBuildHash": "app-0bda07ea6518f2dd8b2a",
+    "fixtureCorpusVersion": "Phase3B-Frozen-Browser-Corpus-1",
+    "fixtureCorpusHash": "corpus-f82fabccc70fb4a4937c",
+    "priceSnapshotIdentity": "prices-c030074ab584f9e3",
+    "browserVersion": "151.0.7922.34",
+    "harnessVersion": "PHASE3A_QUALITY_LAB_V1",
+    "compatibilityHash": "compatible-b424f7c8f4cdd5ec66ee1f65"
+  },
+  "scheduling": {
+    "processLevelShards": [
+      "B"
+    ],
+    "browserLightParallelism": 2,
+    "solverHeavyConcurrency": 1,
+    "longSoakAutomatic": false,
+    "shardPlan": [
+      {
+        "shard": "B",
+        "gateIds": [
+          "B-self-fracture-policy"
+        ],
+        "mode": "SERIAL_SOLVER_HEAVY"
+      }
+    ]
+  },
+  "counts": {
+    "passed": 1,
+    "failed": 0,
+    "resumed": 0,
+    "skipped": 0,
+    "total": 1
+  },
+  "results": [
+    {
+      "id": "B-self-fracture-policy",
+      "title": "Real self-fracture route preserves Scour to fractured-Magic Augment and reacquire semantics",
+      "phase": "3B",
+      "shard": "B",
+      "tags": [
+        "phase3b",
+        "worker",
+        "solver",
+        "fracture",
+        "handoff",
+        "proof",
+        "constellation"
+      ],
+      "costClass": "SOLVER_HEAVY",
+      "status": "PASS",
+      "passed": true,
+      "startedAt": "2026-08-27T14:54:29.293Z",
+      "finishedAt": "2026-08-27T14:54:56.229Z",
+      "durationMs": 26937,
+      "details": {
+        "conserved": {
+          "nodes": 18,
+          "edges": 38,
+          "samples": 24
+        },
+        "scourEdges": 4,
+        "reacquireEdges": 1,
+        "fracturedDestination": {
+          "rarity": "magic",
+          "selectedActionId": "augmentation_orb"
+        },
+        "scourDestinations": [
+          {
+            "sourceNodeId": "policy_acquisition_db380768",
+            "targetNodeId": "policy_downstream_1ee1fa28",
+            "rarity": "magic",
+            "selectedActionId": "augmentation_orb"
+          },
+          {
+            "sourceNodeId": "policy_downstream_67413c5a",
+            "targetNodeId": "policy_downstream_1ee1fa28",
+            "rarity": "magic",
+            "selectedActionId": "augmentation_orb"
+          },
+          {
+            "sourceNodeId": "policy_downstream_770358df",
+            "targetNodeId": "policy_downstream_1ee1fa28",
+            "rarity": "magic",
+            "selectedActionId": "augmentation_orb"
+          },
+          {
+            "sourceNodeId": "policy_downstream_fb72c337",
+            "targetNodeId": "policy_downstream_1ee1fa28",
+            "rarity": "magic",
+            "selectedActionId": "augmentation_orb"
+          }
+        ],
+        "topology": {
+          "nodeCount": 18,
+          "edgeCount": 38,
+          "stronglyConnectedComponentCount": 4,
+          "cyclicComponentCount": 2,
+          "branchNodeCount": 9,
+          "recoveryEdgeCount": 10,
+          "repeatEdgeCount": 5,
+          "selectedActionHistogram": {
+            "transmutation_orb": 1,
+            "alteration_orb": 3,
+            "augmentation_orb": 3,
+            "exalted_orb": 2,
+            "regal_orb": 2,
+            "fracturing_orb": 1,
+            "restart_reacquire": 1,
+            "scouring_orb": 4
+          },
+          "fingerprint": "topology-8d0a74e9"
+        },
+        "route": {
+          "recommendationStatus": "PROVISIONAL_RESOLVED",
+          "selectedAcquisition": "Self-fracture Riot Queller",
+          "acquisitionCostChaos": 1652.3740800069322,
+          "downstreamCostChaos": 113.98089928629301,
+          "fullRouteCostChaos": 1766.3549792932251,
+          "expectedPhysicalActions": 2409.828588423025,
+          "estimatedManualTimeMs": 982131.4353692862,
+          "actionCounts": {
+            "fracturing_orb": 4.0000000000168185,
+            "alteration_orb": 1850.6851703804941,
+            "augmentation_orb": 486.1471133409799,
+            "exalted_orb": 15.044663209789604,
+            "restart_reacquire": 3.000000000012613,
+            "scouring_orb": 21.475820745854048,
+            "clean_base_initial": 1,
+            "regal_orb": 25.475820745862816,
+            "transmutation_orb": 4.00000000001261
+          }
+        },
+        "recoveryCopy": "Use Abandon attempt and reacquire a clean base and Orb of Scouring when the selected policy calls for recovery. If it Scours, continue from the resulting item's actual rarity/state; with one fractured affix, Scour leaves a Magic item. If it Reacquires, return to the selected acquisition state. Expand Decision details for the exact next action.",
+        "accounting": {
+          "selectedBundleId": "bundle:family_fracture_Riot Queller",
+          "maximumDifferenceChaos": 4.547473508864641e-13,
+          "acquisitionCostChaos": 1652.3740800069322,
+          "downstreamCostChaos": 113.98089928629301,
+          "fullRouteCostChaos": 1766.3549792932251
+        },
+        "artifact": "quality-lab\\reports\\evidence\\phase3b-current-self-fracture-flow.json"
+      },
+      "executionIdentity": {
+        "applicationSourceBuildHash": "app-0bda07ea6518f2dd8b2a",
+        "gateIdVersion": "B-self-fracture-policy@2",
+        "fixtureCorpusVersion": "Phase3B-Frozen-Browser-Corpus-1",
+        "fixtureInputHash": "fixture-2f70c545c1e6acdbe389",
+        "priceSnapshotIdentity": "prices-c030074ab584f9e3",
+        "browserVersion": "151.0.7922.34",
+        "harnessVersion": "PHASE3A_QUALITY_LAB_V1",
+        "compatibilityHash": "compatible-b424f7c8f4cdd5ec66ee1f65"
+      }
+    }
+  ],
+  "runtime": {
+    "totalWallMs": 28059,
+    "summedGateMs": 26937,
+    "appStartupMs": 338,
+    "browserStartupMs": 82,
+    "solverHeavyMs": 26937,
+    "visualInteractionMs": 26937,
+    "harnessOverheadMs": 493,
+    "categoryTotalsMs": {
+      "phase3b": 26937,
+      "worker": 26937,
+      "solver": 26937,
+      "fracture": 26937,
+      "handoff": 26937,
+      "proof": 26937,
+      "constellation": 26937
+    },
+    "slowestGates": [
+      {
+        "id": "B-self-fracture-policy",
+        "durationMs": 26937,
+        "status": "PASS"
+      }
+    ]
+  },
+  "runtimeErrors": {
+    "console": [],
+    "page": [],
+    "network": []
+  },
+  "artifacts": {
+    "phase3bCurrentSelfFractureFlow": "quality-lab\\reports\\evidence\\phase3b-current-self-fracture-flow.json",
+    "runReport": "quality-lab\\artifacts\\phase3a-2026-08-27T14-54-28-281Z\\report.json",
+    "stableReport": "quality-lab\\reports\\phase3b-targeted-self-fracture.json",
+    "summary": "quality-lab\\reports\\phase3b-targeted-self-fracture.md"
+  }
+}

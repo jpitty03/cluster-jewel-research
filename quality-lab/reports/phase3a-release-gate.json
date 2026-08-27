@@ -1,12 +1,13 @@
 {
   "schemaVersion": "PHASE3A_QUALITY_REPORT_V1",
-  "runId": "2026-08-27T06-31-52-056Z",
+  "runId": "2026-08-27T15-09-53-031Z",
   "suite": "RELEASE",
   "requestedGateIds": [
     "A-clean-worker-canonical",
     "A-proof-accounting-no-fallback",
     "A-cancel-replace-recover",
     "B-self-fracture-policy",
+    "B-fractured-magic-alter-price-reversal",
     "B-harvest-objective-policy",
     "C-cluster-handoff",
     "C-share-export-roundtrip",
@@ -20,6 +21,7 @@
     "A-proof-accounting-no-fallback",
     "A-cancel-replace-recover",
     "B-self-fracture-policy",
+    "B-fractured-magic-alter-price-reversal",
     "B-harvest-objective-policy",
     "C-cluster-handoff",
     "C-share-export-roundtrip",
@@ -28,17 +30,17 @@
     "D-frozen-policy-flow-renderer",
     "D-constellation-interaction-short-replay"
   ],
-  "startedAt": "2026-08-27T06:31:52.056Z",
-  "finishedAt": "2026-08-27T06:33:04.060Z",
+  "startedAt": "2026-08-27T15:09:53.032Z",
+  "finishedAt": "2026-08-27T15:11:36.760Z",
   "status": "PASSED",
   "identity": {
-    "applicationSourceBuildHash": "app-a689ed3470c02ec44283",
-    "fixtureCorpusVersion": "Phase2Y-Frozen-Browser-Corpus-1",
-    "fixtureCorpusHash": "corpus-606784355f3ddfef06ac",
-    "priceSnapshotIdentity": "prices-34734839cce7da56",
+    "applicationSourceBuildHash": "app-231264501792683fb852",
+    "fixtureCorpusVersion": "Phase3B-Frozen-Browser-Corpus-1",
+    "fixtureCorpusHash": "corpus-f82fabccc70fb4a4937c",
+    "priceSnapshotIdentity": "prices-c030074ab584f9e3",
     "browserVersion": "151.0.7922.34",
     "harnessVersion": "PHASE3A_QUALITY_LAB_V1",
-    "compatibilityHash": "compatible-93284ec92f863ae208ecd116"
+    "compatibilityHash": "compatible-52913c9a49518520a46c9e08"
   },
   "scheduling": {
     "processLevelShards": [
@@ -64,6 +66,7 @@
         "shard": "B",
         "gateIds": [
           "B-self-fracture-policy",
+          "B-fractured-magic-alter-price-reversal",
           "B-harvest-objective-policy"
         ],
         "mode": "SERIAL_SOLVER_HEAVY"
@@ -89,11 +92,11 @@
     ]
   },
   "counts": {
-    "passed": 11,
+    "passed": 12,
     "failed": 0,
     "resumed": 0,
     "skipped": 0,
-    "total": 11
+    "total": 12
   },
   "results": [
     {
@@ -110,9 +113,9 @@
       "costClass": "FAST",
       "status": "PASS",
       "passed": true,
-      "startedAt": "2026-08-27T06:31:52.914Z",
-      "finishedAt": "2026-08-27T06:31:54.819Z",
-      "durationMs": 1904,
+      "startedAt": "2026-08-27T15:09:53.939Z",
+      "finishedAt": "2026-08-27T15:09:56.118Z",
+      "durationMs": 2179,
       "details": {
         "fixture": "cheap_one_mod",
         "protocol": {
@@ -143,14 +146,14 @@
         }
       },
       "executionIdentity": {
-        "applicationSourceBuildHash": "app-a689ed3470c02ec44283",
+        "applicationSourceBuildHash": "app-231264501792683fb852",
         "gateIdVersion": "A-clean-worker-canonical@1",
-        "fixtureCorpusVersion": "Phase2Y-Frozen-Browser-Corpus-1",
+        "fixtureCorpusVersion": "Phase3B-Frozen-Browser-Corpus-1",
         "fixtureInputHash": "fixture-a8a605222b9c93d082e9",
-        "priceSnapshotIdentity": "prices-34734839cce7da56",
+        "priceSnapshotIdentity": "prices-c030074ab584f9e3",
         "browserVersion": "151.0.7922.34",
         "harnessVersion": "PHASE3A_QUALITY_LAB_V1",
-        "compatibilityHash": "compatible-93284ec92f863ae208ecd116"
+        "compatibilityHash": "compatible-52913c9a49518520a46c9e08"
       }
     },
     {
@@ -166,9 +169,9 @@
       "costClass": "FAST",
       "status": "PASS",
       "passed": true,
-      "startedAt": "2026-08-27T06:31:54.819Z",
-      "finishedAt": "2026-08-27T06:31:56.488Z",
-      "durationMs": 1670,
+      "startedAt": "2026-08-27T15:09:56.118Z",
+      "finishedAt": "2026-08-27T15:09:57.990Z",
+      "durationMs": 1872,
       "details": {
         "accounting": {
           "selectedBundleId": "core:clean-open-policy",
@@ -184,14 +187,14 @@
         }
       },
       "executionIdentity": {
-        "applicationSourceBuildHash": "app-a689ed3470c02ec44283",
+        "applicationSourceBuildHash": "app-231264501792683fb852",
         "gateIdVersion": "A-proof-accounting-no-fallback@1",
-        "fixtureCorpusVersion": "Phase2Y-Frozen-Browser-Corpus-1",
+        "fixtureCorpusVersion": "Phase3B-Frozen-Browser-Corpus-1",
         "fixtureInputHash": "fixture-a8a605222b9c93d082e9",
-        "priceSnapshotIdentity": "prices-34734839cce7da56",
+        "priceSnapshotIdentity": "prices-c030074ab584f9e3",
         "browserVersion": "151.0.7922.34",
         "harnessVersion": "PHASE3A_QUALITY_LAB_V1",
-        "compatibilityHash": "compatible-93284ec92f863ae208ecd116"
+        "compatibilityHash": "compatible-52913c9a49518520a46c9e08"
       }
     },
     {
@@ -207,47 +210,49 @@
       "costClass": "MEDIUM",
       "status": "PASS",
       "passed": true,
-      "startedAt": "2026-08-27T06:31:56.488Z",
-      "finishedAt": "2026-08-27T06:31:58.437Z",
-      "durationMs": 1948,
+      "startedAt": "2026-08-27T15:09:57.990Z",
+      "finishedAt": "2026-08-27T15:10:00.186Z",
+      "durationMs": 2196,
       "details": {
         "terminated": true,
         "replacementSpawned": true,
         "recovered": "BEST_RESOLVED_ACQUISITION_SAFE"
       },
       "executionIdentity": {
-        "applicationSourceBuildHash": "app-a689ed3470c02ec44283",
+        "applicationSourceBuildHash": "app-231264501792683fb852",
         "gateIdVersion": "A-cancel-replace-recover@1",
-        "fixtureCorpusVersion": "Phase2Y-Frozen-Browser-Corpus-1",
+        "fixtureCorpusVersion": "Phase3B-Frozen-Browser-Corpus-1",
         "fixtureInputHash": "fixture-41b8cfceeef9062a5af9",
-        "priceSnapshotIdentity": "prices-34734839cce7da56",
+        "priceSnapshotIdentity": "prices-c030074ab584f9e3",
         "browserVersion": "151.0.7922.34",
         "harnessVersion": "PHASE3A_QUALITY_LAB_V1",
-        "compatibilityHash": "compatible-93284ec92f863ae208ecd116"
+        "compatibilityHash": "compatible-52913c9a49518520a46c9e08"
       }
     },
     {
       "id": "B-self-fracture-policy",
-      "title": "Real self-fracture route preserves Scour and reacquire semantics",
-      "phase": "3A",
+      "title": "Real self-fracture route preserves Scour to fractured-Magic Augment and reacquire semantics",
+      "phase": "3B",
       "shard": "B",
       "tags": [
+        "phase3b",
         "worker",
         "solver",
         "fracture",
         "handoff",
-        "proof"
+        "proof",
+        "constellation"
       ],
       "costClass": "SOLVER_HEAVY",
       "status": "PASS",
       "passed": true,
-      "startedAt": "2026-08-27T06:32:15.614Z",
-      "finishedAt": "2026-08-27T06:32:42.396Z",
-      "durationMs": 26782,
+      "startedAt": "2026-08-27T15:10:18.358Z",
+      "finishedAt": "2026-08-27T15:10:45.365Z",
+      "durationMs": 27007,
       "details": {
         "conserved": {
           "nodes": 18,
-          "edges": 37,
+          "edges": 38,
           "samples": 24
         },
         "scourEdges": 4,
@@ -256,23 +261,187 @@
           "rarity": "magic",
           "selectedActionId": "augmentation_orb"
         },
+        "scourDestinations": [
+          {
+            "sourceNodeId": "policy_acquisition_db380768",
+            "targetNodeId": "policy_downstream_1ee1fa28",
+            "rarity": "magic",
+            "selectedActionId": "augmentation_orb"
+          },
+          {
+            "sourceNodeId": "policy_downstream_67413c5a",
+            "targetNodeId": "policy_downstream_1ee1fa28",
+            "rarity": "magic",
+            "selectedActionId": "augmentation_orb"
+          },
+          {
+            "sourceNodeId": "policy_downstream_770358df",
+            "targetNodeId": "policy_downstream_1ee1fa28",
+            "rarity": "magic",
+            "selectedActionId": "augmentation_orb"
+          },
+          {
+            "sourceNodeId": "policy_downstream_fb72c337",
+            "targetNodeId": "policy_downstream_1ee1fa28",
+            "rarity": "magic",
+            "selectedActionId": "augmentation_orb"
+          }
+        ],
+        "topology": {
+          "nodeCount": 18,
+          "edgeCount": 38,
+          "stronglyConnectedComponentCount": 4,
+          "cyclicComponentCount": 2,
+          "branchNodeCount": 9,
+          "recoveryEdgeCount": 10,
+          "repeatEdgeCount": 5,
+          "selectedActionHistogram": {
+            "transmutation_orb": 1,
+            "alteration_orb": 3,
+            "augmentation_orb": 3,
+            "exalted_orb": 2,
+            "regal_orb": 2,
+            "fracturing_orb": 1,
+            "restart_reacquire": 1,
+            "scouring_orb": 4
+          },
+          "fingerprint": "topology-8d0a74e9"
+        },
+        "route": {
+          "recommendationStatus": "PROVISIONAL_RESOLVED",
+          "selectedAcquisition": "Self-fracture Riot Queller",
+          "acquisitionCostChaos": 1652.3740800069322,
+          "downstreamCostChaos": 113.98089928629301,
+          "fullRouteCostChaos": 1766.3549792932251,
+          "expectedPhysicalActions": 2409.828588423025,
+          "estimatedManualTimeMs": 982131.4353692862,
+          "actionCounts": {
+            "fracturing_orb": 4.0000000000168185,
+            "alteration_orb": 1850.6851703804941,
+            "augmentation_orb": 486.1471133409799,
+            "exalted_orb": 15.044663209789604,
+            "restart_reacquire": 3.000000000012613,
+            "scouring_orb": 21.475820745854048,
+            "clean_base_initial": 1,
+            "regal_orb": 25.475820745862816,
+            "transmutation_orb": 4.00000000001261
+          }
+        },
+        "recoveryCopy": "Use Abandon attempt and reacquire a clean base and Orb of Scouring when the selected policy calls for recovery. If it Scours, continue from the resulting item's actual rarity/state; with one fractured affix, Scour leaves a Magic item. If it Reacquires, return to the selected acquisition state. Expand Decision details for the exact next action.",
         "accounting": {
           "selectedBundleId": "bundle:family_fracture_Riot Queller",
-          "maximumDifferenceChaos": 0,
+          "maximumDifferenceChaos": 4.547473508864641e-13,
           "acquisitionCostChaos": 1652.3740800069322,
-          "downstreamCostChaos": 105.2366922587018,
-          "fullRouteCostChaos": 1757.610772265634
-        }
+          "downstreamCostChaos": 113.98089928629301,
+          "fullRouteCostChaos": 1766.3549792932251
+        },
+        "artifact": "quality-lab\\reports\\evidence\\phase3b-current-self-fracture-flow.json"
       },
       "executionIdentity": {
-        "applicationSourceBuildHash": "app-a689ed3470c02ec44283",
-        "gateIdVersion": "B-self-fracture-policy@1",
-        "fixtureCorpusVersion": "Phase2Y-Frozen-Browser-Corpus-1",
+        "applicationSourceBuildHash": "app-231264501792683fb852",
+        "gateIdVersion": "B-self-fracture-policy@2",
+        "fixtureCorpusVersion": "Phase3B-Frozen-Browser-Corpus-1",
         "fixtureInputHash": "fixture-2f70c545c1e6acdbe389",
-        "priceSnapshotIdentity": "prices-34734839cce7da56",
+        "priceSnapshotIdentity": "prices-c030074ab584f9e3",
         "browserVersion": "151.0.7922.34",
         "harnessVersion": "PHASE3A_QUALITY_LAB_V1",
-        "compatibilityHash": "compatible-93284ec92f863ae208ecd116"
+        "compatibilityHash": "compatible-52913c9a49518520a46c9e08"
+      }
+    },
+    {
+      "id": "B-fractured-magic-alter-price-reversal",
+      "title": "Real fractured-Magic Alter policy exposes conserved no-new-affix self-loop under reversed economics",
+      "phase": "3B",
+      "shard": "B",
+      "tags": [
+        "phase3b",
+        "worker",
+        "solver",
+        "fracture",
+        "constellation",
+        "proof",
+        "visual"
+      ],
+      "costClass": "SOLVER_HEAVY",
+      "status": "PASS",
+      "passed": true,
+      "startedAt": "2026-08-27T15:10:45.365Z",
+      "finishedAt": "2026-08-27T15:11:14.346Z",
+      "durationMs": 28980,
+      "details": {
+        "route": {
+          "recommendationStatus": "PROVISIONAL_RESOLVED",
+          "selectedAcquisition": "Self-fracture Riot Queller",
+          "acquisitionCostChaos": 1516.7244200126595,
+          "downstreamCostChaos": 58.03225364011038,
+          "fullRouteCostChaos": 1574.75667365277,
+          "expectedPhysicalActions": 2571.8776262225424,
+          "estimatedManualTimeMs": 1046951.0504891654,
+          "actionCounts": {
+            "fracturing_orb": 4.000000000033474,
+            "alteration_orb": 2497.5479881867773,
+            "exalted_orb": 15.044663209972367,
+            "restart_reacquire": 3.000000000025097,
+            "scouring_orb": 21.475820746165635,
+            "clean_base_initial": 1,
+            "regal_orb": 25.475820746196575,
+            "augmentation_orb": 1.3333333333444988,
+            "transmutation_orb": 4.00000000002513
+          }
+        },
+        "conserved": {
+          "nodes": 18,
+          "edges": 42,
+          "samples": 24
+        },
+        "topology": {
+          "nodeCount": 18,
+          "edgeCount": 42,
+          "stronglyConnectedComponentCount": 4,
+          "cyclicComponentCount": 2,
+          "branchNodeCount": 9,
+          "recoveryEdgeCount": 10,
+          "repeatEdgeCount": 13,
+          "selectedActionHistogram": {
+            "transmutation_orb": 1,
+            "alteration_orb": 5,
+            "regal_orb": 2,
+            "exalted_orb": 2,
+            "fracturing_orb": 1,
+            "restart_reacquire": 1,
+            "augmentation_orb": 1,
+            "scouring_orb": 4
+          },
+          "fingerprint": "topology-3c9554ce"
+        },
+        "fractureOnlyAlterNode": "policy_downstream_32ff8725",
+        "selfLoop": {
+          "id": "flow_downstream_f4484364",
+          "conditionalProbability": 0.24999999999999997,
+          "expectedFlow": 52.049037780629426,
+          "representativeOutcome": "Magic Prefix-only roll: no new affix — fractured Prefix already occupies the requested side",
+          "nextSelectedActionId": "alteration_orb"
+        },
+        "recoveryCopy": "Use Abandon attempt and reacquire a clean base and Orb of Scouring when the selected policy calls for recovery. If it Scours, continue from the resulting item's actual rarity/state; with one fractured affix, Scour leaves a Magic item. If it Reacquires, return to the selected acquisition state. Expand Decision details for the exact next action.",
+        "accounting": {
+          "selectedBundleId": "bundle:family_fracture_Riot Queller",
+          "maximumDifferenceChaos": 2.2737367544323206e-13,
+          "acquisitionCostChaos": 1516.7244200126595,
+          "downstreamCostChaos": 58.03225364011038,
+          "fullRouteCostChaos": 1574.75667365277
+        },
+        "screenshot": "quality-lab\\reports\\evidence\\phase3b-alter-self-loop.png",
+        "flowArtifact": "quality-lab\\reports\\evidence\\phase3b-alter-self-loop-flow.json"
+      },
+      "executionIdentity": {
+        "applicationSourceBuildHash": "app-231264501792683fb852",
+        "gateIdVersion": "B-fractured-magic-alter-price-reversal@1",
+        "fixtureCorpusVersion": "Phase3B-Frozen-Browser-Corpus-1",
+        "fixtureInputHash": "fixture-f6b9fbf1b8b89d388877",
+        "priceSnapshotIdentity": "prices-c030074ab584f9e3",
+        "browserVersion": "151.0.7922.34",
+        "harnessVersion": "PHASE3A_QUALITY_LAB_V1",
+        "compatibilityHash": "compatible-52913c9a49518520a46c9e08"
       }
     },
     {
@@ -290,9 +459,9 @@
       "costClass": "SOLVER_HEAVY",
       "status": "PASS",
       "passed": true,
-      "startedAt": "2026-08-27T06:32:42.397Z",
-      "finishedAt": "2026-08-27T06:33:03.967Z",
-      "durationMs": 21571,
+      "startedAt": "2026-08-27T15:11:14.346Z",
+      "finishedAt": "2026-08-27T15:11:36.617Z",
+      "durationMs": 22271,
       "details": {
         "objective": {
           "kind": "FEWEST_ACTIONS_WITHIN_COST",
@@ -315,14 +484,14 @@
         }
       },
       "executionIdentity": {
-        "applicationSourceBuildHash": "app-a689ed3470c02ec44283",
+        "applicationSourceBuildHash": "app-231264501792683fb852",
         "gateIdVersion": "B-harvest-objective-policy@1",
-        "fixtureCorpusVersion": "Phase2Y-Frozen-Browser-Corpus-1",
+        "fixtureCorpusVersion": "Phase3B-Frozen-Browser-Corpus-1",
         "fixtureInputHash": "fixture-00e49a73585df6bded7e",
-        "priceSnapshotIdentity": "prices-34734839cce7da56",
+        "priceSnapshotIdentity": "prices-c030074ab584f9e3",
         "browserVersion": "151.0.7922.34",
         "harnessVersion": "PHASE3A_QUALITY_LAB_V1",
-        "compatibilityHash": "compatible-93284ec92f863ae208ecd116"
+        "compatibilityHash": "compatible-52913c9a49518520a46c9e08"
       }
     },
     {
@@ -338,9 +507,9 @@
       "costClass": "FAST",
       "status": "PASS",
       "passed": true,
-      "startedAt": "2026-08-27T06:31:52.947Z",
-      "finishedAt": "2026-08-27T06:31:54.005Z",
-      "durationMs": 1058,
+      "startedAt": "2026-08-27T15:09:54.044Z",
+      "finishedAt": "2026-08-27T15:09:55.156Z",
+      "durationMs": 1112,
       "details": {
         "passiveChoice": "8",
         "targetIds": [],
@@ -348,14 +517,14 @@
         "focusedBanner": true
       },
       "executionIdentity": {
-        "applicationSourceBuildHash": "app-a689ed3470c02ec44283",
+        "applicationSourceBuildHash": "app-231264501792683fb852",
         "gateIdVersion": "C-cluster-handoff@1",
-        "fixtureCorpusVersion": "Phase2Y-Frozen-Browser-Corpus-1",
+        "fixtureCorpusVersion": "Phase3B-Frozen-Browser-Corpus-1",
         "fixtureInputHash": "fixture-4f53cda18c2baa0c0354",
-        "priceSnapshotIdentity": "prices-34734839cce7da56",
+        "priceSnapshotIdentity": "prices-c030074ab584f9e3",
         "browserVersion": "151.0.7922.34",
         "harnessVersion": "PHASE3A_QUALITY_LAB_V1",
-        "compatibilityHash": "compatible-93284ec92f863ae208ecd116"
+        "compatibilityHash": "compatible-52913c9a49518520a46c9e08"
       }
     },
     {
@@ -372,26 +541,26 @@
       "costClass": "FAST",
       "status": "PASS",
       "passed": true,
-      "startedAt": "2026-08-27T06:31:54.005Z",
-      "finishedAt": "2026-08-27T06:31:55.966Z",
-      "durationMs": 1961,
+      "startedAt": "2026-08-27T15:09:55.156Z",
+      "finishedAt": "2026-08-27T15:09:57.609Z",
+      "durationMs": 2453,
       "details": {
         "exportVersion": "2Y.1",
-        "shareHashLength": 4351,
+        "shareHashLength": 4355,
         "targetIds": [
           "AfflictionJewelSmallPassivesGrantES3"
         ],
         "policyFlowExported": true
       },
       "executionIdentity": {
-        "applicationSourceBuildHash": "app-a689ed3470c02ec44283",
+        "applicationSourceBuildHash": "app-231264501792683fb852",
         "gateIdVersion": "C-share-export-roundtrip@1",
-        "fixtureCorpusVersion": "Phase2Y-Frozen-Browser-Corpus-1",
+        "fixtureCorpusVersion": "Phase3B-Frozen-Browser-Corpus-1",
         "fixtureInputHash": "fixture-a8a605222b9c93d082e9",
-        "priceSnapshotIdentity": "prices-34734839cce7da56",
+        "priceSnapshotIdentity": "prices-c030074ab584f9e3",
         "browserVersion": "151.0.7922.34",
         "harnessVersion": "PHASE3A_QUALITY_LAB_V1",
-        "compatibilityHash": "compatible-93284ec92f863ae208ecd116"
+        "compatibilityHash": "compatible-52913c9a49518520a46c9e08"
       }
     },
     {
@@ -408,9 +577,9 @@
       "costClass": "FAST",
       "status": "PASS",
       "passed": true,
-      "startedAt": "2026-08-27T06:31:55.966Z",
-      "finishedAt": "2026-08-27T06:31:58.260Z",
-      "durationMs": 2294,
+      "startedAt": "2026-08-27T15:09:57.609Z",
+      "finishedAt": "2026-08-27T15:10:00.161Z",
+      "durationMs": 2552,
       "details": {
         "geometry": {
           "viewport": 390,
@@ -418,17 +587,17 @@
           "bodyWidth": 390
         },
         "keyboardNodeFocus": true,
-        "screenshot": "quality-lab\\artifacts\\phase3a-2026-08-27T06-31-52-056Z\\shard-C\\phase3a-responsive-mobile.png"
+        "screenshot": "quality-lab\\artifacts\\phase3a-2026-08-27T15-09-53-031Z\\shard-C\\phase3a-responsive-mobile.png"
       },
       "executionIdentity": {
-        "applicationSourceBuildHash": "app-a689ed3470c02ec44283",
+        "applicationSourceBuildHash": "app-231264501792683fb852",
         "gateIdVersion": "C-responsive-accessibility@1",
-        "fixtureCorpusVersion": "Phase2Y-Frozen-Browser-Corpus-1",
+        "fixtureCorpusVersion": "Phase3B-Frozen-Browser-Corpus-1",
         "fixtureInputHash": "fixture-a8a605222b9c93d082e9",
-        "priceSnapshotIdentity": "prices-34734839cce7da56",
+        "priceSnapshotIdentity": "prices-c030074ab584f9e3",
         "browserVersion": "151.0.7922.34",
         "harnessVersion": "PHASE3A_QUALITY_LAB_V1",
-        "compatibilityHash": "compatible-93284ec92f863ae208ecd116"
+        "compatibilityHash": "compatible-52913c9a49518520a46c9e08"
       }
     },
     {
@@ -446,9 +615,9 @@
       "costClass": "FAST",
       "status": "PASS",
       "passed": true,
-      "startedAt": "2026-08-27T06:31:59.207Z",
-      "finishedAt": "2026-08-27T06:32:00.904Z",
-      "durationMs": 1696,
+      "startedAt": "2026-08-27T15:10:01.221Z",
+      "finishedAt": "2026-08-27T15:10:03.085Z",
+      "durationMs": 1864,
       "details": {
         "sourceAppCommit": "df49b94ecca555671d8c78268d3149c2b8c84c7b",
         "normalizedSummarySha256": "12c4d104b9fd3f9c43499995e024d05df4fb9de90b9b0e72ca4233a8564d0746",
@@ -461,14 +630,14 @@
         "workerToDom": true
       },
       "executionIdentity": {
-        "applicationSourceBuildHash": "app-a689ed3470c02ec44283",
+        "applicationSourceBuildHash": "app-231264501792683fb852",
         "gateIdVersion": "D-real-policy-flow-differential@1",
-        "fixtureCorpusVersion": "Phase2Y-Frozen-Browser-Corpus-1",
+        "fixtureCorpusVersion": "Phase3B-Frozen-Browser-Corpus-1",
         "fixtureInputHash": "fixture-eae470b544f63a5880cc",
-        "priceSnapshotIdentity": "prices-34734839cce7da56",
+        "priceSnapshotIdentity": "prices-c030074ab584f9e3",
         "browserVersion": "151.0.7922.34",
         "harnessVersion": "PHASE3A_QUALITY_LAB_V1",
-        "compatibilityHash": "compatible-93284ec92f863ae208ecd116"
+        "compatibilityHash": "compatible-52913c9a49518520a46c9e08"
       }
     },
     {
@@ -484,9 +653,9 @@
       "costClass": "FAST",
       "status": "PASS",
       "passed": true,
-      "startedAt": "2026-08-27T06:32:00.904Z",
-      "finishedAt": "2026-08-27T06:32:02.573Z",
-      "durationMs": 1669,
+      "startedAt": "2026-08-27T15:10:03.085Z",
+      "finishedAt": "2026-08-27T15:10:04.967Z",
+      "durationMs": 1882,
       "details": {
         "certificationScope": "RENDERER_INTERACTION_ONLY",
         "topologyFingerprint": "topology-4481a40d",
@@ -495,14 +664,14 @@
         "branchInteraction": true
       },
       "executionIdentity": {
-        "applicationSourceBuildHash": "app-a689ed3470c02ec44283",
+        "applicationSourceBuildHash": "app-231264501792683fb852",
         "gateIdVersion": "D-frozen-policy-flow-renderer@1",
-        "fixtureCorpusVersion": "Phase2Y-Frozen-Browser-Corpus-1",
+        "fixtureCorpusVersion": "Phase3B-Frozen-Browser-Corpus-1",
         "fixtureInputHash": "fixture-eae470b544f63a5880cc",
-        "priceSnapshotIdentity": "prices-34734839cce7da56",
+        "priceSnapshotIdentity": "prices-c030074ab584f9e3",
         "browserVersion": "151.0.7922.34",
         "harnessVersion": "PHASE3A_QUALITY_LAB_V1",
-        "compatibilityHash": "compatible-93284ec92f863ae208ecd116"
+        "compatibilityHash": "compatible-52913c9a49518520a46c9e08"
       }
     },
     {
@@ -519,9 +688,9 @@
       "costClass": "MEDIUM",
       "status": "PASS",
       "passed": true,
-      "startedAt": "2026-08-27T06:32:02.573Z",
-      "finishedAt": "2026-08-27T06:32:14.724Z",
-      "durationMs": 12151,
+      "startedAt": "2026-08-27T15:10:04.967Z",
+      "finishedAt": "2026-08-27T15:10:17.331Z",
+      "durationMs": 12364,
       "details": {
         "selectedEdge": "flow_downstream_7a37989d",
         "keyboardCamera": true,
@@ -531,90 +700,91 @@
         "memoryDeltaBytes": 0
       },
       "executionIdentity": {
-        "applicationSourceBuildHash": "app-a689ed3470c02ec44283",
+        "applicationSourceBuildHash": "app-231264501792683fb852",
         "gateIdVersion": "D-constellation-interaction-short-replay@1",
-        "fixtureCorpusVersion": "Phase2Y-Frozen-Browser-Corpus-1",
+        "fixtureCorpusVersion": "Phase3B-Frozen-Browser-Corpus-1",
         "fixtureInputHash": "fixture-a8a605222b9c93d082e9",
-        "priceSnapshotIdentity": "prices-34734839cce7da56",
+        "priceSnapshotIdentity": "prices-c030074ab584f9e3",
         "browserVersion": "151.0.7922.34",
         "harnessVersion": "PHASE3A_QUALITY_LAB_V1",
-        "compatibilityHash": "compatible-93284ec92f863ae208ecd116"
+        "compatibilityHash": "compatible-52913c9a49518520a46c9e08"
       }
     }
   ],
   "runtime": {
-    "totalWallMs": 72004,
-    "summedGateMs": 74704,
-    "appStartupMs": 1372,
-    "browserStartupMs": 271,
-    "solverHeavyMs": 48353,
-    "visualInteractionMs": 18868,
-    "harnessOverheadMs": 1856,
+    "totalWallMs": 103727,
+    "summedGateMs": 106732,
+    "appStartupMs": 1386,
+    "browserStartupMs": 350,
+    "solverHeavyMs": 78258,
+    "visualInteractionMs": 75761,
+    "harnessOverheadMs": 2081,
     "categoryTotalsMs": {
-      "worker": 57532,
-      "solver": 55571,
-      "proof": 55584,
-      "clean": 1904,
-      "cancellation": 1948,
-      "fracture": 26782,
-      "handoff": 29801,
-      "objectives": 21571,
-      "harvest": 21571,
-      "responsive": 15503,
-      "accessibility": 17172,
-      "share-export": 1961,
-      "visual": 17810,
-      "constellation": 17810
+      "worker": 88822,
+      "solver": 86369,
+      "proof": 86626,
+      "clean": 2179,
+      "cancellation": 2196,
+      "phase3b": 55987,
+      "fracture": 55987,
+      "handoff": 30572,
+      "constellation": 74649,
+      "visual": 47642,
+      "objectives": 22271,
+      "harvest": 22271,
+      "responsive": 16028,
+      "accessibility": 17910,
+      "share-export": 2453
     },
     "slowestGates": [
       {
+        "id": "B-fractured-magic-alter-price-reversal",
+        "durationMs": 28980,
+        "status": "PASS"
+      },
+      {
         "id": "B-self-fracture-policy",
-        "durationMs": 26782,
+        "durationMs": 27007,
         "status": "PASS"
       },
       {
         "id": "B-harvest-objective-policy",
-        "durationMs": 21571,
+        "durationMs": 22271,
         "status": "PASS"
       },
       {
         "id": "D-constellation-interaction-short-replay",
-        "durationMs": 12151,
+        "durationMs": 12364,
         "status": "PASS"
       },
       {
         "id": "C-responsive-accessibility",
-        "durationMs": 2294,
+        "durationMs": 2552,
         "status": "PASS"
       },
       {
         "id": "C-share-export-roundtrip",
-        "durationMs": 1961,
+        "durationMs": 2453,
         "status": "PASS"
       },
       {
         "id": "A-cancel-replace-recover",
-        "durationMs": 1948,
+        "durationMs": 2196,
         "status": "PASS"
       },
       {
         "id": "A-clean-worker-canonical",
-        "durationMs": 1904,
-        "status": "PASS"
-      },
-      {
-        "id": "D-real-policy-flow-differential",
-        "durationMs": 1696,
-        "status": "PASS"
-      },
-      {
-        "id": "A-proof-accounting-no-fallback",
-        "durationMs": 1670,
+        "durationMs": 2179,
         "status": "PASS"
       },
       {
         "id": "D-frozen-policy-flow-renderer",
-        "durationMs": 1669,
+        "durationMs": 1882,
+        "status": "PASS"
+      },
+      {
+        "id": "A-proof-accounting-no-fallback",
+        "durationMs": 1872,
         "status": "PASS"
       }
     ]
@@ -625,9 +795,12 @@
     "network": []
   },
   "artifacts": {
-    "phase3aShareExport": "quality-lab\\artifacts\\phase3a-2026-08-27T06-31-52-056Z\\shard-C\\phase3a-share-export.json",
-    "phase3aResponsiveMobile": "quality-lab\\artifacts\\phase3a-2026-08-27T06-31-52-056Z\\shard-C\\phase3a-responsive-mobile.png",
-    "runReport": "quality-lab\\artifacts\\phase3a-2026-08-27T06-31-52-056Z\\report.json",
+    "phase3aShareExport": "quality-lab\\artifacts\\phase3a-2026-08-27T15-09-53-031Z\\shard-C\\phase3a-share-export.json",
+    "phase3aResponsiveMobile": "quality-lab\\artifacts\\phase3a-2026-08-27T15-09-53-031Z\\shard-C\\phase3a-responsive-mobile.png",
+    "phase3bCurrentSelfFractureFlow": "quality-lab\\reports\\evidence\\phase3b-current-self-fracture-flow.json",
+    "phase3bAlterSelfLoopScreenshot": "quality-lab\\reports\\evidence\\phase3b-alter-self-loop.png",
+    "phase3bAlterSelfLoopFlow": "quality-lab\\reports\\evidence\\phase3b-alter-self-loop-flow.json",
+    "runReport": "quality-lab\\artifacts\\phase3a-2026-08-27T15-09-53-031Z\\report.json",
     "stableReport": "quality-lab\\reports\\phase3a-release-gate.json",
     "summary": "quality-lab\\reports\\phase3a-release-summary.md"
   }

@@ -14,8 +14,8 @@ PASS A12: Optimized final RELEASE acceptance
 PASS A13: Mature and direct diagnostics retained
 PASS A14: Lean hosted Pages policy
 PASS PRESERVATION: Prohibited-change and command policy
-PASS: DEV 5/5 in 53.413 s.
-PASS: RELEASE 11/11 in 72.004 s.
+PASS: DEV 6/6 in 84.474 s.
+PASS: RELEASE 12/12 in 103.727 s.
 PASS: legacy baseline 115/115 in 1298.597 s was not re-executed.
 Long soaks completed or counted as acceptance evidence: NO
 Unit tests run: NO

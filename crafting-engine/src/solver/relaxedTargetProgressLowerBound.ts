@@ -12,7 +12,7 @@ import type { CraftMechanic } from '../rules/actionRegistry.ts';
 import { getEligibleMods } from '../rules/modEligibility.ts';
 
 export const RELAXED_TARGET_PROGRESS_LOWER_BOUND_VERSION =
-  'RELAXED_TARGET_PROGRESS_LOWER_BOUND_V1' as const;
+  'RELAXED_TARGET_PROGRESS_LOWER_BOUND_V2_PHASE3B_MAGIC_ROLL_SHAPE' as const;
 
 export interface RelaxedTargetActionBound {
   actionId: string;

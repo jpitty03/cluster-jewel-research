@@ -1,6 +1,6 @@
 {
   "version": "PHASE3A_QUALITY_LAB_DIAGNOSTIC_V1",
-  "generatedAt": "2026-08-27T06:53:38.004Z",
+  "generatedAt": "2026-08-27T15:11:42.558Z",
   "committedEvidenceMode": false,
   "status": "PASSED",
   "checks": [
@@ -12,7 +12,7 @@
         "legacyBaselineGates": 115,
         "phase2zAdditionalUniqueGates": 9,
         "mappedHistoricalGates": 124,
-        "phase3aRegisteredGates": 15,
+        "phase3aRegisteredGates": 16,
         "requiredTags": [
           "worker",
           "solver",
@@ -99,98 +99,104 @@
       "details": {
         "devSlowest": [
           {
+            "id": "B-fractured-magic-alter-price-reversal",
+            "durationMs": 29006,
+            "status": "PASS"
+          },
+          {
             "id": "B-self-fracture-policy",
-            "durationMs": 26747,
+            "durationMs": 26973,
             "status": "PASS"
           },
           {
             "id": "B-harvest-objective-policy",
-            "durationMs": 21286,
+            "durationMs": 22346,
             "status": "PASS"
           },
           {
             "id": "A-clean-worker-canonical",
-            "durationMs": 1972,
+            "durationMs": 2216,
             "status": "PASS"
           },
           {
             "id": "D-real-policy-flow-differential",
-            "durationMs": 1869,
+            "durationMs": 2082,
             "status": "PASS"
           },
           {
             "id": "D-frozen-policy-flow-renderer",
-            "durationMs": 1695,
+            "durationMs": 1897,
             "status": "PASS"
           }
         ],
         "releaseSlowest": [
           {
+            "id": "B-fractured-magic-alter-price-reversal",
+            "durationMs": 28980,
+            "status": "PASS"
+          },
+          {
             "id": "B-self-fracture-policy",
-            "durationMs": 26782,
+            "durationMs": 27007,
             "status": "PASS"
           },
           {
             "id": "B-harvest-objective-policy",
-            "durationMs": 21571,
+            "durationMs": 22271,
             "status": "PASS"
           },
           {
             "id": "D-constellation-interaction-short-replay",
-            "durationMs": 12151,
+            "durationMs": 12364,
             "status": "PASS"
           },
           {
             "id": "C-responsive-accessibility",
-            "durationMs": 2294,
+            "durationMs": 2552,
             "status": "PASS"
           },
           {
             "id": "C-share-export-roundtrip",
-            "durationMs": 1961,
+            "durationMs": 2453,
             "status": "PASS"
           },
           {
             "id": "A-cancel-replace-recover",
-            "durationMs": 1948,
+            "durationMs": 2196,
             "status": "PASS"
           },
           {
             "id": "A-clean-worker-canonical",
-            "durationMs": 1904,
-            "status": "PASS"
-          },
-          {
-            "id": "D-real-policy-flow-differential",
-            "durationMs": 1696,
-            "status": "PASS"
-          },
-          {
-            "id": "A-proof-accounting-no-fallback",
-            "durationMs": 1670,
+            "durationMs": 2179,
             "status": "PASS"
           },
           {
             "id": "D-frozen-policy-flow-renderer",
-            "durationMs": 1669,
+            "durationMs": 1882,
+            "status": "PASS"
+          },
+          {
+            "id": "A-proof-accounting-no-fallback",
+            "durationMs": 1872,
             "status": "PASS"
           }
         ],
         "releaseCategoryTotalsMs": {
-          "worker": 57532,
-          "solver": 55571,
-          "proof": 55584,
-          "clean": 1904,
-          "cancellation": 1948,
-          "fracture": 26782,
-          "handoff": 29801,
-          "objectives": 21571,
-          "harvest": 21571,
-          "responsive": 15503,
-          "accessibility": 17172,
-          "share-export": 1961,
-          "visual": 17810,
-          "constellation": 17810
+          "worker": 88822,
+          "solver": 86369,
+          "proof": 86626,
+          "clean": 2179,
+          "cancellation": 2196,
+          "phase3b": 55987,
+          "fracture": 55987,
+          "handoff": 30572,
+          "constellation": 74649,
+          "visual": 47642,
+          "objectives": 22271,
+          "harvest": 22271,
+          "responsive": 16028,
+          "accessibility": 17910,
+          "share-export": 2453
         }
       }
     },
@@ -220,6 +226,7 @@
             "shard": "B",
             "gateIds": [
               "B-self-fracture-policy",
+              "B-fractured-magic-alter-price-reversal",
               "B-harvest-objective-policy"
             ],
             "mode": "SERIAL_SOLVER_HEAVY"
@@ -247,6 +254,7 @@
             "shard": "B",
             "gateIds": [
               "B-self-fracture-policy",
+              "B-fractured-magic-alter-price-reversal",
               "B-harvest-objective-policy"
             ],
             "mode": "SERIAL_SOLVER_HEAVY"
@@ -277,8 +285,8 @@
       "title": "DEV runtime target",
       "passed": true,
       "details": {
-        "gates": 5,
-        "wallMs": 53413,
+        "gates": 6,
+        "wallMs": 84474,
         "targetMs": 180000
       }
     },
@@ -287,8 +295,8 @@
       "title": "RELEASE runtime target",
       "passed": true,
       "details": {
-        "gates": 11,
-        "wallMs": 72004,
+        "gates": 12,
+        "wallMs": 103727,
         "targetMs": 600000
       }
     },
@@ -325,9 +333,9 @@
       "details": {
         "legacyGateCount": 115,
         "legacyWallMs": 1298597,
-        "releaseGateCount": 11,
-        "releaseWallMs": 72004,
-        "speedup": 18.035067496250207,
+        "releaseGateCount": 12,
+        "releaseWallMs": 103727,
+        "speedup": 12.519372969429368,
         "dispositions": {
           "RETAINED_LEGACY": 23,
           "REPLACED_BY_PHASE3A": 94,
@@ -341,9 +349,9 @@
       "title": "Optimized final RELEASE acceptance",
       "passed": true,
       "details": {
-        "runId": "2026-08-27T06-31-52-056Z",
-        "compatibilityHash": "compatible-93284ec92f863ae208ecd116",
-        "passed": 11,
+        "runId": "2026-08-27T15-09-53-031Z",
+        "compatibilityHash": "compatible-52913c9a49518520a46c9e08",
+        "passed": 12,
         "failed": 0,
         "runtimeErrors": {
           "console": [],
@@ -381,6 +389,12 @@
             "path": "output-phase2z-selected-policy-flow-diagnostic.txt",
             "sha256": "8a8d5484a33f2a6a3455fb21eef19b54330fdc809e4ac67f11e21e325b584f13",
             "bytes": 1592
+          },
+          {
+            "id": "phase3b",
+            "path": "output-phase3b-fractured-magic-alteration-diagnostic.txt",
+            "sha256": "f074ff3849611be99479dbf34e027b3cc34ccf33fa9195b5069e41f2ca0b7a0c",
+            "bytes": 958
           }
         ],
         "releaseRerunAfterPassingDiagnostics": false
@@ -401,9 +415,15 @@
       "title": "Prohibited-change and command policy",
       "passed": true,
       "details": {
-        "protectedPathDiff": [],
+        "protectedPathDiff": [
+          "crafting-engine/src/rules/actionRegistry.ts"
+        ],
+        "phase3bAuthorizedMechanicsPaths": [
+          "crafting-engine/src/rules/actionRegistry.ts",
+          "crafting-engine/src/rules/magicRollShape.ts"
+        ],
         "unitTestsAddedOrRun": false,
-        "mechanicsProbabilitiesChanged": false,
+        "mechanicsProbabilitiesChanged": "Fractured-slot no-new-affix mass corrected; configured global one/two-affix split unchanged and approximate.",
         "stateIdentityWeakened": false,
         "hardcodedWinnerAdded": false,
         "marketFracturedRankingRestored": false,
@@ -449,15 +469,15 @@
     }
   ],
   "runtimes": {
-    "devWallMs": 53413,
-    "releaseWallMs": 72004,
+    "devWallMs": 84474,
+    "releaseWallMs": 103727,
     "legacyWallMs": 1298597,
-    "legacySpeedup": 18.035067496250207
+    "legacySpeedup": 12.519372969429368
   },
   "gateCounts": {
-    "registry": 15,
-    "dev": 5,
-    "release": 11,
+    "registry": 16,
+    "dev": 6,
+    "release": 12,
     "extended": 4,
     "legacyBaseline": 115,
     "mappedHistorical": 124

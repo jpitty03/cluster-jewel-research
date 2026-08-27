@@ -219,3 +219,14 @@ export {
 export type {
   RelaxedTargetProgressLowerBoundResult,
 } from './solver/relaxedTargetProgressLowerBound.ts';
+export {
+  MAGIC_ROLL_SHAPE,
+  magicRollShapeProbabilities,
+  sampleMagicRollShape,
+  validateMagicRollShape,
+} from './rules/magicRollShape.ts';
+export type {
+  MagicRollShape,
+  MagicRollShapeClass,
+  MagicRollShapeConfidence,
+} from './rules/magicRollShape.ts';

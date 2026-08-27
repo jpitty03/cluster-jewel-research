@@ -1,7 +1,6 @@
 import type { ItemState } from '../domain/ItemState.ts';
 import {
   cloneItemState,
-  isFracturedMod,
   normalizeItemState,
 } from '../domain/ItemState.ts';
 import type { TargetDefinition } from '../domain/TargetDefinition.ts';
@@ -179,21 +178,6 @@ export class SolverCraftActionAdapter {
   ): { distribution?: TransitionDistribution; reused: boolean } {
     if (!this.mechanic.getTransitions) return { reused: false };
     const control = { deadlineMs };
-    if (this.mechanic.id === 'alteration_orb') {
-      const resetState = cloneItemState(state);
-      resetState.prefixes = resetState.prefixes.filter(
-        (mod) => isFracturedMod(state, mod)
-      );
-      resetState.suffixes = resetState.suffixes.filter(
-        (mod) => isFracturedMod(state, mod)
-      );
-      const cacheKey = getCanonicalStateKey(resetState, this.target);
-      const cached = this.transitionCache.get(cacheKey);
-      if (cached) return { distribution: cached, reused: true };
-      const distribution = this.mechanic.getTransitions(state, this.target, this.context, control);
-      this.transitionCache.set(cacheKey, distribution);
-      return { distribution, reused: false };
-    }
     if (this.mechanic.repeatableFullReroll) {
       const cacheKey = this.mechanic.repeatableFullReroll.getKernelIdentity(state);
       const cached = this.transitionCache.get(cacheKey);
