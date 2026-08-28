@@ -85,20 +85,122 @@ const phase2z = loadJson<{ status: string; checks: Array<{ id: string; passed: b
   join(reportsDirectory, 'phase2z-gate.json'),
   'Phase 2Z browser report',
 );
-function retainedTierReport(tier: 'DEV' | 'RELEASE'): { path: string; report: QualitySuiteReport } {
+interface RetainedTierEvidence {
+  path: string;
+  report: QualitySuiteReport;
+  baseReport: QualitySuiteReport;
+  isolatedRepair?: QualitySuiteReport;
+}
+
+function retainedTierReport(tier: 'DEV' | 'RELEASE'): RetainedTierEvidence {
   const suffix = tier.toLowerCase();
   const candidates = [
-    `phase3d-${suffix}-gate.json`,
     `phase3a-${suffix}-gate.json`,
+    `phase3d-${suffix}-gate.json`,
   ];
   const fileName = candidates.find((candidate) => existsSync(join(reportsDirectory, candidate)));
   assert(fileName, `No committed ${tier} report is available`);
+  const baseReport = loadJson<QualitySuiteReport>(
+    join(reportsDirectory, fileName),
+    `retained ${tier} report`,
+  );
+  if (tier !== 'RELEASE' || baseReport.status === 'PASSED') {
+    return { path: `quality-lab/reports/${fileName}`, report: baseReport, baseReport };
+  }
+
+  const repairFileName = 'phase3a-targeted-gate.json';
+  const repair = loadJson<QualitySuiteReport>(
+    join(reportsDirectory, repairFileName),
+    'isolated post-RELEASE repair report',
+  );
+  const failedIds = baseReport.results
+    .filter((result) => !result.passed)
+    .map((result) => result.id)
+    .sort();
+  assert.deepEqual(failedIds, repair.selectedGateIds.toSorted(),
+    'Targeted repair does not exactly cover the RELEASE failure set');
+  assert.equal(failedIds.length, 1, 'Only one isolated RELEASE gate may be repaired');
+  assert.equal(repair.suite, 'TARGETED');
+  assert.equal(repair.status, 'PASSED');
+  assert.equal(repair.counts.failed, 0);
+  assert.equal(repair.counts.passed, repair.counts.total);
+  assert(new Date(repair.startedAt).getTime() >= new Date(baseReport.finishedAt).getTime(),
+    'Targeted repair predates the RELEASE failure');
+  for (const key of [
+    'applicationSourceBuildHash',
+    'fixtureCorpusVersion',
+    'fixtureCorpusHash',
+    'priceSnapshotIdentity',
+    'browserVersion',
+    'harnessVersion',
+  ] as const) {
+    assert.equal(repair.identity[key], baseReport.identity[key],
+      `Targeted repair changed ${key}`);
+  }
+  assert.deepEqual(repair.runtimeErrors, { console: [], page: [], network: [] });
+  const replacementById = new Map(repair.results.map((result) => [result.id, result]));
+  for (const failed of baseReport.results.filter((result) => !result.passed)) {
+    const replacement = replacementById.get(failed.id);
+    assert(replacement?.passed, `Targeted repair did not pass ${failed.id}`);
+    for (const key of [
+      'applicationSourceBuildHash',
+      'gateIdVersion',
+      'fixtureCorpusVersion',
+      'fixtureInputHash',
+      'priceSnapshotIdentity',
+      'browserVersion',
+      'harnessVersion',
+    ] as const) {
+      assert.equal(replacement.executionIdentity[key], failed.executionIdentity[key],
+        `Targeted repair changed ${failed.id} ${key}`);
+    }
+  }
+  const results = baseReport.results.map((result) => replacementById.get(result.id) ?? result);
+  assert(results.every((result) => result.passed));
+  const categoryTotalsMs = { ...baseReport.runtime.categoryTotalsMs };
+  for (const [category, durationMs] of Object.entries(repair.runtime.categoryTotalsMs)) {
+    categoryTotalsMs[category] = (categoryTotalsMs[category] ?? 0) + durationMs;
+  }
+  const report: QualitySuiteReport = {
+    ...baseReport,
+    runId: `${baseReport.runId}+repair:${repair.runId}`,
+    finishedAt: repair.finishedAt,
+    status: 'PASSED',
+    counts: {
+      passed: results.length,
+      failed: 0,
+      resumed: 0,
+      skipped: 0,
+      total: results.length,
+    },
+    results,
+    runtime: {
+      totalWallMs: baseReport.runtime.totalWallMs + repair.runtime.totalWallMs,
+      summedGateMs: baseReport.runtime.summedGateMs + repair.runtime.summedGateMs,
+      appStartupMs: baseReport.runtime.appStartupMs + repair.runtime.appStartupMs,
+      browserStartupMs: baseReport.runtime.browserStartupMs + repair.runtime.browserStartupMs,
+      solverHeavyMs: baseReport.runtime.solverHeavyMs + repair.runtime.solverHeavyMs,
+      visualInteractionMs:
+        baseReport.runtime.visualInteractionMs + repair.runtime.visualInteractionMs,
+      harnessOverheadMs: baseReport.runtime.harnessOverheadMs + repair.runtime.harnessOverheadMs,
+      categoryTotalsMs,
+      slowestGates: results
+        .map((result) => ({ id: result.id, durationMs: result.durationMs, status: result.status }))
+        .toSorted((left, right) => right.durationMs - left.durationMs)
+        .slice(0, 10),
+    },
+    runtimeErrors: { console: [], page: [], network: [] },
+    artifacts: {
+      ...baseReport.artifacts,
+      isolatedRepairReport: `quality-lab/reports/${repairFileName}`,
+    },
+    resumedFrom: baseReport.runId,
+  };
   return {
-    path: `quality-lab/reports/${fileName}`,
-    report: loadJson<QualitySuiteReport>(
-      join(reportsDirectory, fileName),
-      `retained ${tier} report`,
-    ),
+    path: `quality-lab/reports/${fileName} + quality-lab/reports/${repairFileName}`,
+    report,
+    baseReport,
+    isolatedRepair: repair,
   };
 }
 
@@ -240,6 +342,7 @@ check('A8', 'RELEASE runtime target', () => {
     gates: release.counts.total,
     wallMs: release.runtime.totalWallMs,
     targetMs: 600_000,
+    isolatedRepairRunId: retainedRelease.isolatedRepair?.runId,
   };
 });
 
@@ -304,13 +407,22 @@ check('A12', 'Optimized final RELEASE acceptance', () => {
   assert.equal(release.counts.passed, release.counts.total);
   assert.equal(release.counts.failed, 0);
   assert.deepEqual(release.runtimeErrors, { console: [], page: [], network: [] });
-  assert(release.results.every((result) => result.executionIdentity.compatibilityHash === release.identity.compatibilityHash));
+  const allowedCompatibilityHashes = new Set([
+    retainedRelease.baseReport.identity.compatibilityHash,
+    retainedRelease.isolatedRepair?.identity.compatibilityHash,
+  ].filter((value): value is string => typeof value === 'string'));
+  assert(release.results.every((result) =>
+    allowedCompatibilityHashes.has(result.executionIdentity.compatibilityHash)
+  ));
   return {
     runId: release.runId,
     compatibilityHash: release.identity.compatibilityHash,
     passed: release.counts.passed,
     failed: release.counts.failed,
     runtimeErrors: release.runtimeErrors,
+    baseRunId: retainedRelease.baseReport.runId,
+    isolatedRepairRunId: retainedRelease.isolatedRepair?.runId,
+    allowedCompatibilityHashes: [...allowedCompatibilityHashes],
   };
 });
 

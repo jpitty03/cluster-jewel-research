@@ -1,10 +1,11 @@
 PHASE 3D FULL-ROUTE EVIDENCE + BUDGET ISOLATION + CONSTELLATION SCOPE DIAGNOSTIC
 D1 request identity=00326428ade79a96bfc53456c211bb4a0111db88c9c0d1b7d11ed6a9df253027
-D2 evidence families=9; entries=54
+D2 evidence families=13; entries=91
 D3-D6 selected acquisition=SELF_FRACTURE; stage controls=PASS
-D7 mode=EXACT_CORE_STATE_SET; false=3336 states/1459.7923662160783c; true=3336 states/1459.7923662160783c
-D8 policies=1; monotone=true
-D9 core=3336 states; stop=HOST_RESERVE; deadline=24650ms
+D7 field mode=HOST_TIMED_EQUIVALENT_INCUMBENT; false=6669 states/1459.7923662160783c; true=5002 states/1459.7923662160783c
+D7 deterministic mode=EXACT_CORE_STATE_SET; false=2000 states; true=2000 states
+D8 policies=2; monotone=true
+D9 core=5002 states; stop=HOST_RESERVE; deadline=24650ms
 D10 policy/family proof separation=PASS
 D11-D14 field=23 nodes/49 edges/1 handoff; stress=43 nodes/191 edges
-Evidence SHA-256: baf7b2a6c05e4630cdf799913e86c5a4906651c7217fd9c2eb097a74a8f5c42d
+Evidence SHA-256: e0ed3ccf9d5833271bfc3d9bfbb87fab90abfba289f053e46ca17bcafe3dd1c5

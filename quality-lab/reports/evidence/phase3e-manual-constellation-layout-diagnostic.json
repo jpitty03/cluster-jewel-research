@@ -1,0 +1,182 @@
+{
+  "phase": "3E",
+  "generatedAt": "2026-08-28T03:49:58.506Z",
+  "fixture": {
+    "fixtureId": "policy-flow-phase3e-manual-v1",
+    "fixtureVersion": 1,
+    "sourceAppCommit": "dc32528e107090bfd7b6bbbe321db93d8b4b1723",
+    "normalizedRequest": {
+      "baseType": "Large Cluster Jewel",
+      "clusterType": "12% increased Chaos Damage",
+      "itemLevel": 84,
+      "passiveCount": 8,
+      "target": {
+        "requiredMods": [
+          {
+            "modId": "Touch of Cruelty"
+          },
+          {
+            "modId": "Unspeakable Gifts"
+          },
+          {
+            "modId": "Unwaveringly Evil"
+          }
+        ],
+        "requiredRarity": "rare"
+      },
+      "prices": {
+        "currencyRates": {
+          "chaos": 1,
+          "divine": 213.5,
+          "fracturing": 298.6,
+          "annul": 11.66,
+          "exalt": 1.17,
+          "scour": 0.5391,
+          "alteration": 0.1336,
+          "transmutation": 0.005012,
+          "augmentation": 0.03941,
+          "regal": 0.03638,
+          "wildLifeforce": 0.02377,
+          "vividLifeforce": 0.08208,
+          "primalLifeforce": 0.04085
+        },
+        "cleanBaseCostChaos": 38,
+        "cleanBasePriceSource": "manual",
+        "cleanBasePriceProvenance": "Frozen Allflame ilvl 84 eight-passive 12% Chaos Damage clean-base quote reviewed by the Phase 3E plan"
+      },
+      "objective": {
+        "kind": "CHEAPEST_CHAOS"
+      },
+      "searchBudget": {
+        "preset": "NORMAL",
+        "maxStates": 5000,
+        "maxWallTimeMs": 30000,
+        "maxExpansionRounds": 3
+      },
+      "searchIntent": "RECOMMEND",
+      "allowResearchFallbackPrices": true,
+      "compareMethodFamilies": false
+    },
+    "selectedBundleId": "bundle:family_fracture_Unspeakable Gifts:independent",
+    "selectedPolicyFingerprint": "policy-1031a5cd",
+    "selectedRouteName": "Self-fracture Unspeakable Gifts",
+    "selectedCostChaos": 1660.1253603083733,
+    "policyFlowVersion": "SELECTED_POLICY_FLOW_V1",
+    "topologyFingerprint": "topology-c6ae1cff",
+    "exactFlowFingerprint": "flow-95543b18",
+    "serializedSummary": {
+      "path": "quality-lab/fixtures/policy-flow-phase3e-manual-v1-artifact.json",
+      "selector": "flow",
+      "artifactSha256": "bbdf04ed629da27927d620108b557132f5c000e2e93de0dbdca45711d262325d",
+      "normalizedSummarySha256": "14417ea81333802ec2827ea755cfabc684883c4ff94a5cf4a4ebcd1a8ed58936",
+      "nodeCount": 23,
+      "edgeCount": 49
+    },
+    "certificationScope": "Frozen real 23-node Normal self-fracture PolicyFlow used only to validate Phase 3E presentation overrides.",
+    "limitations": [
+      "Manual layout is browser-local presentation data and is absent from this PolicyFlow fixture.",
+      "The frozen renderer wrapper is Quality Lab-only.",
+      "Refreshing this fixture requires an explicit --refresh-fixture invocation."
+    ]
+  },
+  "gates": {
+    "E1_truthPreservation": {
+      "topologyFingerprintBefore": "topology-c6ae1cff",
+      "topologyFingerprintAfter": "topology-c6ae1cff",
+      "exactFlowFingerprintBefore": "flow-95543b18",
+      "exactFlowFingerprintAfter": "flow-95543b18",
+      "flowTruthSha256": "2cb6b4ae60c766054a7ed044ed1caf359d990ae48a6d197ae975005b84ea8758",
+      "graphTruthSha256": "e24865db87fcada2c3cb5f0fb43059a80bccca0870f073aff4c7c00712b0ef9b",
+      "reconciliationCertified": true
+    },
+    "E2_geometryMovement": {
+      "overrides": {
+        "policy_acquisition_277e773e": {
+          "x": 586,
+          "y": 172
+        },
+        "policy_acquisition_9d0cbb8e": {
+          "x": 1398,
+          "y": 502
+        },
+        "policy_downstream_722c4086": {
+          "x": 2024,
+          "y": 318
+        }
+      },
+      "movedNodeCount": 3
+    },
+    "E3_liveEdgeGeometry": {
+      "edgeId": "flow_acquisition_13e74d8a",
+      "before": {
+        "controlX": 295.76,
+        "controlY": 428
+      },
+      "after": {
+        "controlX": 353.84000000000003,
+        "controlY": 324.15999999999997
+      }
+    },
+    "E4_selfLoopAttachment": {
+      "edgeId": "flow_acquisition_eea952c6",
+      "nodeId": "policy_acquisition_277e773e",
+      "before": {
+        "controlX": 496,
+        "controlY": 156
+      },
+      "after": {
+        "controlX": 672,
+        "controlY": 68
+      }
+    },
+    "E5_certifiedHandoff": {
+      "edgeId": "flow_acquisition_c8d86065_handoff_4efdf2b5",
+      "routing": "SCOPE_HANDOFF",
+      "evidenceKind": "CERTIFIED_SCOPE_HANDOFF"
+    },
+    "E6_persistenceRoundTrip": {
+      "schema": "MANUAL_CONSTELLATION_LAYOUT_V1",
+      "identity": "{\"schemaVersion\":\"MANUAL_CONSTELLATION_LAYOUT_V1\",\"layoutVersion\":\"SELECTED_POLICY_SEMANTIC_SCC_LAYOUT_V2\",\"sourcePolicyFingerprint\":\"policy-1031a5cd\",\"topologyFingerprint\":\"topology-c6ae1cff\",\"nodeIds\":[\"policy_acquisition_053e5afb\",\"policy_acquisition_1c1cee3c\",\"policy_acquisition_277e773e\",\"policy_acquisition_2f729e55\",\"policy_acquisition_361a76dd\",\"policy_acquisition_44f6e9ec\",\"policy_acquisition_9d0cbb8e\",\"policy_acquisition_a5f0a601\",\"policy_acquisition_bf5af0e3\",\"policy_acquisition_e3d5e123\",\"policy_downstream_0371dc6e\",\"policy_downstream_19ae85b9\",\"policy_downstream_22eae66d\",\"policy_downstream_680e595c\",\"policy_downstream_6f43614a\",\"policy_downstream_722c4086\",\"policy_downstream_72bcc0f1\",\"policy_downstream_85e9b594\",\"policy_downstream_95a4f984\",\"policy_downstream_9d3301a7\",\"policy_downstream_b32b2bea\",\"policy_downstream_d372ab8c\",\"policy_downstream_efdb40cf\"]}",
+      "storageKey": "cluster-jewel-research:manual-constellation-layout:17b2b90080b81439",
+      "overrideCount": 3
+    },
+    "E7_mismatchRejection": {
+      "policy": true,
+      "topology": true,
+      "nodeIdentity": true
+    },
+    "E8_malformedStorage": {
+      "malformed": true,
+      "nonFinite": true,
+      "missing": true,
+      "unknownDiscarded": true
+    },
+    "E9_resetSemantics": {
+      "resetViewPreserved": true,
+      "resetLayoutRemoved": true
+    },
+    "E10_fitAllEffectiveBounds": {
+      "fitBounds": {
+        "minX": 255.76,
+        "maxX": 4207,
+        "minY": -766.5173374483675,
+        "maxY": 1300
+      },
+      "outlier": {
+        "id": "policy_acquisition_a5f0a601",
+        "x": 4167,
+        "y": -669.1823839936451
+      }
+    }
+  },
+  "prohibitions": {
+    "unitTestsAddedOrRun": false,
+    "mechanicsChanged": false,
+    "policyFlowMutated": false,
+    "solverIdentityChanged": false,
+    "hardcodedWinner": false,
+    "craftSpecificProductionBranch": false,
+    "marketFracturedRanking": false,
+    "longSuiteRun": false
+  }
+}

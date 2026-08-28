@@ -1,0 +1,14 @@
+PHASE 3E MANUAL CONSTELLATION LAYOUT DIAGNOSTIC
+E1 truth=topology-c6ae1cff/flow-95543b18; reconciliation=PASS
+E2 moved=3; untouched=canonical
+E3 edge=flow_acquisition_13e74d8a; live geometry=PASS
+E4 Alter self-loop=flow_acquisition_eea952c6; attachment=PASS
+E5 handoff=flow_acquisition_c8d86065_handoff_4efdf2b5; CERTIFIED_SCOPE_HANDOFF/SCOPE_HANDOFF=PASS
+E6 schema=MANUAL_CONSTELLATION_LAYOUT_V1; round-trip=PASS
+E7 policy/topology/node mismatch rejection=PASS
+E8 malformed/non-finite/missing/unknown storage handling=PASS
+E9 Reset View preserves; Reset Layout removes=PASS
+E10 outlier=policy_acquisition_a5f0a601; effective Fit All bounds=PASS
+Evidence SHA-256: 1a560e7f3ba39f70b15eda84422b83239da87b8daf6df8592eff9ce560d44087
+Unit tests added/run: NO
+EXTENDED/nightly/legacy/long-soak run: NO

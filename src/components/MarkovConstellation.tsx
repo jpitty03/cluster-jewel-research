@@ -1,6 +1,7 @@
 import React, {
   useCallback,
   useEffect,
+  useLayoutEffect,
   useMemo,
   useRef,
   useState,
@@ -11,6 +12,18 @@ import type {
   VisualizationNode,
   VisualizationWisp,
 } from '../../crafting-engine/src/domain/VisualizationGraph.ts';
+import {
+  constellationGraphBounds,
+  createConstellationLayoutIdentity,
+  createEffectiveConstellationGraph,
+  loadConstellationLayout,
+  MANUAL_CONSTELLATION_LAYOUT_SCHEMA,
+  persistConstellationLayout,
+  removePersistedConstellationLayout,
+  type ConstellationGraphBounds,
+  type ConstellationLayoutOverrides,
+  type ConstellationNodePosition,
+} from './constellationLayout.ts';
 
 export interface MarkovConstellationProps {
   graph: VisualizationGraph;
@@ -33,6 +46,8 @@ export interface ConstellationCamera {
   fitMode: ConstellationFitMode;
   /** Retains the base fit while manual pan/zoom is active. */
   baseFitMode: Exclude<ConstellationFitMode, 'MANUAL'>;
+  /** Freezes the last requested camera frame while node geometry is edited. */
+  fitBounds?: ConstellationGraphBounds;
 }
 
 interface ViewportTransform {
@@ -69,42 +84,31 @@ interface PointerGesture {
   startClientY: number;
   startPanX: number;
   startPanY: number;
+  startScale: number;
   moved: boolean;
+  kind: 'PAN' | 'NODE';
   targetNodeId?: string;
   targetEdgeId?: string;
+  startNodePosition?: ConstellationNodePosition;
+  startNodeOverride?: ConstellationNodePosition;
+  latestNodePosition?: ConstellationNodePosition;
+}
+
+interface KeyboardLayoutGesture {
+  nodeId: string;
+  startNodeOverride?: ConstellationNodePosition;
 }
 
 const ZOOM_MIN = 0.35;
 const ZOOM_MAX = 5;
 const DRAG_THRESHOLD = 6;
 const LABEL_MARGIN = 5;
+const KEYBOARD_NUDGE = 12;
+const KEYBOARD_NUDGE_LARGE = 48;
+const EMPTY_LAYOUT_OVERRIDES: ConstellationLayoutOverrides = {};
 
 function clamp(value: number, min: number, max: number): number {
   return Math.min(max, Math.max(min, value));
-}
-
-function graphBounds(graph: VisualizationGraph, mode: 'SELECTED_ROUTE' | 'ALL') {
-  const requested = mode === 'SELECTED_ROUTE'
-    ? graph.nodes.filter((node) => node.isSelectedRoute)
-    : graph.nodes;
-  const nodes = requested.length > 0 ? requested : graph.nodes;
-  if (nodes.length === 0) {
-    return { minX: 0, maxX: 1000, minY: 0, maxY: 600 };
-  }
-  if (nodes.length === graph.nodes.length) {
-    return {
-      minX: graph.bounds.minX,
-      maxX: graph.bounds.maxX,
-      minY: graph.bounds.minY,
-      maxY: graph.bounds.maxY,
-    };
-  }
-  return {
-    minX: Math.min(...nodes.map((node) => node.x - node.radius - 74)),
-    maxX: Math.max(...nodes.map((node) => node.x + node.radius + 74)),
-    minY: Math.min(...nodes.map((node) => node.y - node.radius - 70)),
-    maxY: Math.max(...nodes.map((node) => node.y + node.radius + 70)),
-  };
 }
 
 function calculateTransform(
@@ -114,7 +118,7 @@ function calculateTransform(
   displayHeight: number,
 ): ViewportTransform {
   const baseMode = camera.fitMode === 'MANUAL' ? camera.baseFitMode : camera.fitMode;
-  const bounds = graphBounds(graph, baseMode);
+  const bounds = camera.fitBounds ?? constellationGraphBounds(graph, baseMode);
   const graphWidth = Math.max(1, bounds.maxX - bounds.minX);
   const graphHeight = Math.max(1, bounds.maxY - bounds.minY);
   const marginFactor = displayWidth < 600 ? 0.34 : displayWidth < 900 ? 0.65 : 1;
@@ -274,6 +278,14 @@ function buildLabelLayouts(
   return placed;
 }
 
+function browserLayoutStorage(): Storage | undefined {
+  try {
+    return typeof window === 'undefined' ? undefined : window.localStorage;
+  } catch {
+    return undefined;
+  }
+}
+
 export const MarkovConstellation: React.FC<MarkovConstellationProps> = ({
   graph,
   selectedRouteName,
@@ -291,8 +303,11 @@ export const MarkovConstellation: React.FC<MarkovConstellationProps> = ({
   const routeRailRef = useRef<HTMLDivElement | null>(null);
   const routeButtonRefs = useRef(new Map<string, HTMLButtonElement>());
   const pointerGestureRef = useRef<PointerGesture | null>(null);
+  const keyboardLayoutGestureRef = useRef<KeyboardLayoutGesture | null>(null);
   const controlsTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const wispsRef = useRef<VisualizationWisp[]>([]);
+  const layoutIdentity = useMemo(() => createConstellationLayoutIdentity(graph), [graph]);
+  const layoutOverridesRef = useRef<ConstellationLayoutOverrides>({});
 
   const [isPlaying, setIsPlaying] = useState(!deterministicMode);
   const [speedMultiplier, setSpeedMultiplier] = useState(1);
@@ -307,6 +322,13 @@ export const MarkovConstellation: React.FC<MarkovConstellationProps> = ({
   const [controlsVisible, setControlsVisible] = useState(true);
   const [advancedLabels, setAdvancedLabels] = useState(false);
   const [particleCount, setParticleCount] = useState(0);
+  const [isLayoutEditing, setIsLayoutEditing] = useState(false);
+  const [isNodeDragging, setIsNodeDragging] = useState(false);
+  const [layoutState, setLayoutState] = useState(() => {
+    const overrides = loadConstellationLayout(browserLayoutStorage(), layoutIdentity);
+    layoutOverridesRef.current = overrides;
+    return { identity: layoutIdentity.serialized, overrides };
+  });
   const [viewportSize, setViewportSize] = useState({ width, height });
   const [camera, setCamera] = useState<ConstellationCamera>({
     panX: 0,
@@ -316,17 +338,25 @@ export const MarkovConstellation: React.FC<MarkovConstellationProps> = ({
     baseFitMode: 'SELECTED_ROUTE',
   });
 
+  const layoutOverrides = layoutState.identity === layoutIdentity.serialized
+    ? layoutState.overrides
+    : EMPTY_LAYOUT_OVERRIDES;
+  layoutOverridesRef.current = layoutOverrides;
+  const effectiveGraph = useMemo(
+    () => createEffectiveConstellationGraph(graph, layoutOverrides),
+    [graph, layoutOverrides],
+  );
   const graphIdentity = useMemo(() =>
-    `${graph.seed}|${graph.layoutVersion}|${graph.topology.fingerprint}|${graph.nodes.map((node) => node.id).join('|')}`,
-  [graph]);
+    `${graph.seed}|${layoutIdentity.serialized}`,
+  [graph.seed, layoutIdentity.serialized]);
   const selectedNode = graph.nodes.find((node) => node.id === selectedNodeId) ?? null;
   const selectedEdge = graph.edges.find((edge) => edge.id === selectedEdgeId) ?? null;
   const activeReplayNodeId = mode === 'REPLAY' && graph.selectedRouteNodeIds.length > 0
     ? graph.selectedRouteNodeIds[replayStepIndex % graph.selectedRouteNodeIds.length]
     : null;
   const transform = useMemo(
-    () => calculateTransform(graph, camera, viewportSize.width, viewportSize.height),
-    [camera, graph, viewportSize],
+    () => calculateTransform(effectiveGraph, camera, viewportSize.width, viewportSize.height),
+    [camera, effectiveGraph, viewportSize],
   );
 
   const showControls = useCallback(() => {
@@ -375,6 +405,17 @@ export const MarkovConstellation: React.FC<MarkovConstellationProps> = ({
     observer.observe(viewport);
     return () => observer.disconnect();
   }, [height, isFullscreen, width]);
+
+  useLayoutEffect(() => {
+    pointerGestureRef.current = null;
+    keyboardLayoutGestureRef.current = null;
+    setIsNodeDragging(false);
+    setIsPanning(false);
+    setIsLayoutEditing(false);
+    const overrides = loadConstellationLayout(browserLayoutStorage(), layoutIdentity);
+    layoutOverridesRef.current = overrides;
+    setLayoutState({ identity: layoutIdentity.serialized, overrides });
+  }, [layoutIdentity]);
 
   useEffect(() => {
     setCamera({
@@ -505,20 +546,20 @@ export const MarkovConstellation: React.FC<MarkovConstellationProps> = ({
       context.save();
       context.translate(transform.offsetX, transform.offsetY);
       context.scale(transform.scale, transform.scale);
-      if (graph.scopeEvidence.boundaryX !== undefined && graph.scopeEvidence.handoffEdgeIds.length > 0) {
+      if (effectiveGraph.scopeEvidence.boundaryX !== undefined && effectiveGraph.scopeEvidence.handoffEdgeIds.length > 0) {
         context.save();
         context.beginPath();
         context.setLineDash([9, 12]);
-        context.moveTo(graph.scopeEvidence.boundaryX, graph.scopeEvidence.headerY + 24);
-        context.lineTo(graph.scopeEvidence.boundaryX, graph.bounds.maxY);
+        context.moveTo(effectiveGraph.scopeEvidence.boundaryX, effectiveGraph.scopeEvidence.headerY + 24);
+        context.lineTo(effectiveGraph.scopeEvidence.boundaryX, effectiveGraph.bounds.maxY);
         context.strokeStyle = 'rgba(45, 212, 191, 0.24)';
         context.lineWidth = 1.4 / transform.scale;
         context.stroke();
         context.restore();
       }
-      for (const edge of graph.edges) {
-        const source = graph.nodes.find((node) => node.id === edge.source);
-        const target = graph.nodes.find((node) => node.id === edge.target);
+      for (const edge of effectiveGraph.edges) {
+        const source = effectiveGraph.nodes.find((node) => node.id === edge.source);
+        const target = effectiveGraph.nodes.find((node) => node.id === edge.target);
         if (!source || !target) continue;
         context.beginPath();
         context.moveTo(source.x, source.y);
@@ -545,9 +586,9 @@ export const MarkovConstellation: React.FC<MarkovConstellationProps> = ({
 
       if (!reducedMotion) {
         for (const wisp of wispsRef.current) {
-          const edge = graph.edges.find((candidate) => candidate.id === wisp.edgeId);
+          const edge = effectiveGraph.edges.find((candidate) => candidate.id === wisp.edgeId);
           if (!edge) continue;
-          const position = edgePoint(graph, edge, wisp.progress);
+          const position = edgePoint(effectiveGraph, edge, wisp.progress);
           const glow = context.createRadialGradient(position.x, position.y, 0, position.x, position.y, wisp.size * 3);
           glow.addColorStop(0, wisp.color);
           glow.addColorStop(0.5, `${wisp.color}66`);
@@ -561,7 +602,7 @@ export const MarkovConstellation: React.FC<MarkovConstellationProps> = ({
         }
       }
 
-      for (const node of graph.nodes) {
+      for (const node of effectiveGraph.nodes) {
         const isHovered = hoveredNodeId === node.id;
         const isSelected = selectedNodeId === node.id;
         const isActive = activeReplayNodeId === node.id;
@@ -623,7 +664,7 @@ export const MarkovConstellation: React.FC<MarkovConstellationProps> = ({
   }, [
     activeReplayNodeId,
     deterministicMode,
-    graph,
+    effectiveGraph,
     height,
     hoveredNodeId,
     isPlaying,
@@ -647,10 +688,10 @@ export const MarkovConstellation: React.FC<MarkovConstellationProps> = ({
   const hitNode = useCallback((clientX: number, clientY: number) => {
     const point = graphCoordinates(clientX, clientY);
     if (!point) return undefined;
-    return [...graph.nodes].reverse().find((node) =>
+    return [...effectiveGraph.nodes].reverse().find((node) =>
       Math.hypot(node.x - point.x, node.y - point.y) <= node.radius + 10 / transform.scale
     );
-  }, [graph.nodes, graphCoordinates, transform.scale]);
+  }, [effectiveGraph.nodes, graphCoordinates, transform.scale]);
 
   const pauseScreensaverMotion = useCallback(() => {
     if (mode === 'SCREENSAVER') setIsPlaying(false);
@@ -658,7 +699,7 @@ export const MarkovConstellation: React.FC<MarkovConstellationProps> = ({
 
   const zoomAtPoint = useCallback((pointX: number, pointY: number, factor: number) => {
     setCamera((current) => {
-      const oldTransform = calculateTransform(graph, current, viewportSize.width, viewportSize.height);
+      const oldTransform = calculateTransform(effectiveGraph, current, viewportSize.width, viewportSize.height);
       const nextZoom = clamp(current.zoom * factor, ZOOM_MIN, ZOOM_MAX);
       if (nextZoom === current.zoom) return current;
       const graphX = (pointX - oldTransform.offsetX) / oldTransform.scale;
@@ -670,10 +711,14 @@ export const MarkovConstellation: React.FC<MarkovConstellationProps> = ({
         zoom: nextZoom,
         fitMode: 'MANUAL',
         baseFitMode: current.fitMode === 'MANUAL' ? current.baseFitMode : current.fitMode,
+        fitBounds: current.fitBounds ?? constellationGraphBounds(
+          effectiveGraph,
+          current.fitMode === 'MANUAL' ? current.baseFitMode : current.fitMode,
+        ),
       };
     });
     pauseScreensaverMotion();
-  }, [graph, pauseScreensaverMotion, viewportSize]);
+  }, [effectiveGraph, pauseScreensaverMotion, viewportSize]);
 
   useEffect(() => {
     const viewport = viewportRef.current;
@@ -691,29 +736,74 @@ export const MarkovConstellation: React.FC<MarkovConstellationProps> = ({
   const selectNode = useCallback((node: VisualizationNode | undefined) => {
     setSelectedNodeId(node?.id ?? null);
     setSelectedEdgeId(null);
-    if (node) onNodeClick?.(node);
-  }, [onNodeClick]);
+    const canonicalNode = node ? graph.nodes.find((candidate) => candidate.id === node.id) : undefined;
+    if (canonicalNode) onNodeClick?.(canonicalNode);
+  }, [graph.nodes, onNodeClick]);
 
   const selectEdge = useCallback((edge: VisualizationEdge | undefined) => {
     setSelectedEdgeId(edge?.id ?? null);
     setSelectedNodeId(null);
-    if (edge) onEdgeClick?.(edge);
-  }, [onEdgeClick]);
+    const canonicalEdge = edge ? graph.edges.find((candidate) => candidate.id === edge.id) : undefined;
+    if (canonicalEdge) onEdgeClick?.(canonicalEdge);
+  }, [graph.edges, onEdgeClick]);
+
+  const replaceLayoutOverrides = useCallback((overrides: ConstellationLayoutOverrides) => {
+    layoutOverridesRef.current = overrides;
+    setLayoutState({ identity: layoutIdentity.serialized, overrides });
+  }, [layoutIdentity.serialized]);
+
+  const persistLayoutOverrides = useCallback((overrides = layoutOverridesRef.current) => {
+    persistConstellationLayout(browserLayoutStorage(), layoutIdentity, overrides);
+  }, [layoutIdentity]);
+
+  const restoreNodeOverride = useCallback((
+    nodeId: string,
+    position: ConstellationNodePosition | undefined,
+  ) => {
+    const next = { ...layoutOverridesRef.current };
+    if (position) next[nodeId] = { ...position };
+    else delete next[nodeId];
+    replaceLayoutOverrides(next);
+    persistLayoutOverrides(next);
+  }, [persistLayoutOverrides, replaceLayoutOverrides]);
+
+  const freezeCurrentCameraFrame = useCallback(() => {
+    setCamera((current) => {
+      if (current.fitBounds) return current;
+      const baseMode = current.fitMode === 'MANUAL' ? current.baseFitMode : current.fitMode;
+      return { ...current, fitBounds: constellationGraphBounds(effectiveGraph, baseMode) };
+    });
+  }, [effectiveGraph]);
 
   const handlePointerDown = (event: React.PointerEvent<HTMLDivElement>) => {
     if (event.pointerType === 'mouse' && event.button !== 0) return;
     showControls();
-    event.currentTarget.focus({ preventScroll: true });
+    const targetElement = event.target as HTMLElement;
+    const targetNodeId = targetElement.closest<HTMLElement>('[data-node-id]')?.dataset.nodeId;
+    const targetNode = targetNodeId
+      ? effectiveGraph.nodes.find((node) => node.id === targetNodeId)
+      : undefined;
+    const nodeControl = targetElement.closest<HTMLButtonElement>('button[data-node-id]');
+    if (nodeControl) nodeControl.focus({ preventScroll: true });
+    else event.currentTarget.focus({ preventScroll: true });
     event.currentTarget.setPointerCapture(event.pointerId);
+    const moveNode = isLayoutEditing && mode !== 'SCREENSAVER' && targetNode !== undefined;
+    if (moveNode) freezeCurrentCameraFrame();
     pointerGestureRef.current = {
       pointerId: event.pointerId,
       startClientX: event.clientX,
       startClientY: event.clientY,
       startPanX: camera.panX,
       startPanY: camera.panY,
+      startScale: transform.scale,
       moved: false,
-      targetNodeId: (event.target as HTMLElement).closest<HTMLElement>('[data-node-id]')?.dataset.nodeId,
-      targetEdgeId: (event.target as HTMLElement).closest<HTMLElement>('[data-edge-id]')?.dataset.edgeId,
+      kind: moveNode ? 'NODE' : 'PAN',
+      targetNodeId,
+      targetEdgeId: targetElement.closest<HTMLElement>('[data-edge-id]')?.dataset.edgeId,
+      startNodePosition: moveNode ? { x: targetNode.x, y: targetNode.y } : undefined,
+      startNodeOverride: moveNode && targetNodeId && layoutOverridesRef.current[targetNodeId]
+        ? { ...layoutOverridesRef.current[targetNodeId] }
+        : undefined,
     };
   };
 
@@ -728,52 +818,125 @@ export const MarkovConstellation: React.FC<MarkovConstellationProps> = ({
     const deltaY = event.clientY - gesture.startClientY;
     if (!gesture.moved && Math.hypot(deltaX, deltaY) >= DRAG_THRESHOLD) {
       gesture.moved = true;
-      setIsPanning(true);
+      if (gesture.kind === 'NODE') setIsNodeDragging(true);
+      else setIsPanning(true);
       pauseScreensaverMotion();
     }
     if (!gesture.moved) return;
     setHoveredNodeId(null);
+    if (gesture.kind === 'NODE' && gesture.targetNodeId && gesture.startNodePosition) {
+      const position = {
+        x: gesture.startNodePosition.x + deltaX / gesture.startScale,
+        y: gesture.startNodePosition.y + deltaY / gesture.startScale,
+      };
+      gesture.latestNodePosition = position;
+      replaceLayoutOverrides({
+        ...layoutOverridesRef.current,
+        [gesture.targetNodeId]: position,
+      });
+      return;
+    }
     setCamera((current) => ({
       panX: gesture.startPanX + deltaX,
       panY: gesture.startPanY + deltaY,
       zoom: current.zoom,
       fitMode: 'MANUAL',
       baseFitMode: current.fitMode === 'MANUAL' ? current.baseFitMode : current.fitMode,
+      fitBounds: current.fitBounds ?? constellationGraphBounds(
+        effectiveGraph,
+        current.fitMode === 'MANUAL' ? current.baseFitMode : current.fitMode,
+      ),
     }));
   };
 
   const finishPointerGesture = (event: React.PointerEvent<HTMLDivElement>, allowClick: boolean) => {
     const gesture = pointerGestureRef.current;
     if (!gesture || gesture.pointerId !== event.pointerId) return;
-    if (allowClick && !gesture.moved) {
+    if (gesture.kind === 'NODE' && gesture.moved && gesture.targetNodeId) {
+      if (allowClick) persistLayoutOverrides();
+      else restoreNodeOverride(gesture.targetNodeId, gesture.startNodeOverride);
+    } else if (allowClick && !gesture.moved) {
       const targetedEdge = gesture.targetEdgeId
-        ? graph.edges.find((edge) => edge.id === gesture.targetEdgeId)
+        ? effectiveGraph.edges.find((edge) => edge.id === gesture.targetEdgeId)
         : undefined;
       const targetedNode = gesture.targetNodeId
-        ? graph.nodes.find((node) => node.id === gesture.targetNodeId)
+        ? effectiveGraph.nodes.find((node) => node.id === gesture.targetNodeId)
         : hitNode(event.clientX, event.clientY);
       if (targetedEdge) selectEdge(targetedEdge);
       else selectNode(targetedNode);
     }
     pointerGestureRef.current = null;
     setIsPanning(false);
+    setIsNodeDragging(false);
     if (event.currentTarget.hasPointerCapture(event.pointerId)) {
       event.currentTarget.releasePointerCapture(event.pointerId);
     }
   };
 
+  const cancelActiveNodeDrag = useCallback(() => {
+    const gesture = pointerGestureRef.current;
+    if (!gesture || gesture.kind !== 'NODE') return false;
+    if (gesture.moved && gesture.targetNodeId) {
+      restoreNodeOverride(gesture.targetNodeId, gesture.startNodeOverride);
+    }
+    pointerGestureRef.current = null;
+    setIsNodeDragging(false);
+    setIsPanning(false);
+    const viewport = viewportRef.current;
+    if (viewport?.hasPointerCapture(gesture.pointerId)) {
+      viewport.releasePointerCapture(gesture.pointerId);
+    }
+    return true;
+  }, [restoreNodeOverride]);
+
   const focusRoute = useCallback(() => {
-    setCamera({ panX: 0, panY: 0, zoom: 1, fitMode: 'SELECTED_ROUTE', baseFitMode: 'SELECTED_ROUTE' });
-  }, []);
+    setCamera({
+      panX: 0,
+      panY: 0,
+      zoom: 1,
+      fitMode: 'SELECTED_ROUTE',
+      baseFitMode: 'SELECTED_ROUTE',
+      fitBounds: constellationGraphBounds(effectiveGraph, 'SELECTED_ROUTE'),
+    });
+  }, [effectiveGraph]);
   const fitAll = useCallback(() => {
-    setCamera({ panX: 0, panY: 0, zoom: 1, fitMode: 'ALL', baseFitMode: 'ALL' });
-  }, []);
+    setCamera({
+      panX: 0,
+      panY: 0,
+      zoom: 1,
+      fitMode: 'ALL',
+      baseFitMode: 'ALL',
+      fitBounds: constellationGraphBounds(effectiveGraph, 'ALL'),
+    });
+  }, [effectiveGraph]);
   const resetView = useCallback(() => {
     setCamera((current) => {
       const fitMode = current.fitMode === 'MANUAL' ? current.baseFitMode : current.fitMode;
-      return { panX: 0, panY: 0, zoom: 1, fitMode, baseFitMode: fitMode };
+      return {
+        panX: 0,
+        panY: 0,
+        zoom: 1,
+        fitMode,
+        baseFitMode: fitMode,
+        fitBounds: constellationGraphBounds(effectiveGraph, fitMode),
+      };
     });
-  }, []);
+  }, [effectiveGraph]);
+
+  const resetLayout = useCallback(() => {
+    cancelActiveNodeDrag();
+    keyboardLayoutGestureRef.current = null;
+    removePersistedConstellationLayout(browserLayoutStorage(), layoutIdentity);
+    replaceLayoutOverrides({});
+    setCamera({
+      panX: 0,
+      panY: 0,
+      zoom: 1,
+      fitMode: 'ALL',
+      baseFitMode: 'ALL',
+      fitBounds: constellationGraphBounds(graph, 'ALL'),
+    });
+  }, [cancelActiveNodeDrag, graph, layoutIdentity, replaceLayoutOverrides]);
 
   const panBy = useCallback((deltaX: number, deltaY: number) => {
     setCamera((current) => ({
@@ -782,12 +945,64 @@ export const MarkovConstellation: React.FC<MarkovConstellationProps> = ({
       panY: current.panY + deltaY,
       fitMode: 'MANUAL',
       baseFitMode: current.fitMode === 'MANUAL' ? current.baseFitMode : current.fitMode,
+      fitBounds: current.fitBounds ?? constellationGraphBounds(
+        effectiveGraph,
+        current.fitMode === 'MANUAL' ? current.baseFitMode : current.fitMode,
+      ),
     }));
     pauseScreensaverMotion();
-  }, [pauseScreensaverMotion]);
+  }, [effectiveGraph, pauseScreensaverMotion]);
+
+  const finishKeyboardLayoutGesture = useCallback((commit: boolean) => {
+    const gesture = keyboardLayoutGestureRef.current;
+    if (!gesture) return false;
+    keyboardLayoutGestureRef.current = null;
+    if (commit) persistLayoutOverrides();
+    else restoreNodeOverride(gesture.nodeId, gesture.startNodeOverride);
+    return true;
+  }, [persistLayoutOverrides, restoreNodeOverride]);
+
+  const keyboardNodeId = (target: EventTarget | null): string | undefined =>
+    (target as HTMLElement | null)?.closest<HTMLElement>('[data-node-id]')?.dataset.nodeId ??
+    selectedNodeId ?? undefined;
+
+  const nudgeNode = useCallback((nodeId: string, deltaX: number, deltaY: number) => {
+    const node = effectiveGraph.nodes.find((candidate) => candidate.id === nodeId);
+    if (!node) return false;
+    const currentGesture = keyboardLayoutGestureRef.current;
+    if (!currentGesture || currentGesture.nodeId !== nodeId) {
+      if (currentGesture) persistLayoutOverrides();
+      keyboardLayoutGestureRef.current = {
+        nodeId,
+        startNodeOverride: layoutOverridesRef.current[nodeId]
+          ? { ...layoutOverridesRef.current[nodeId] }
+          : undefined,
+      };
+    }
+    freezeCurrentCameraFrame();
+    replaceLayoutOverrides({
+      ...layoutOverridesRef.current,
+      [nodeId]: { x: node.x + deltaX, y: node.y + deltaY },
+    });
+    setSelectedNodeId(nodeId);
+    setSelectedEdgeId(null);
+    pauseScreensaverMotion();
+    return true;
+  }, [effectiveGraph.nodes, freezeCurrentCameraFrame, pauseScreensaverMotion, persistLayoutOverrides, replaceLayoutOverrides]);
 
   const handleKeyDown = (event: React.KeyboardEvent<HTMLDivElement>) => {
     showControls();
+    const layoutStep = event.shiftKey ? KEYBOARD_NUDGE_LARGE : KEYBOARD_NUDGE;
+    const focusedNodeId = keyboardNodeId(event.target);
+    if (isLayoutEditing && mode !== 'SCREENSAVER' && focusedNodeId &&
+      ['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown'].includes(event.key)) {
+      const delta = event.key === 'ArrowLeft' ? [-layoutStep, 0]
+        : event.key === 'ArrowRight' ? [layoutStep, 0]
+          : event.key === 'ArrowUp' ? [0, -layoutStep]
+            : [0, layoutStep];
+      if (nudgeNode(focusedNodeId, delta[0], delta[1])) event.preventDefault();
+      return;
+    }
     const step = event.shiftKey ? 72 : 36;
     let handled = true;
     switch (event.key) {
@@ -804,6 +1019,8 @@ export const MarkovConstellation: React.FC<MarkovConstellationProps> = ({
       case 'a':
       case 'A': fitAll(); break;
       case 'Escape':
+        cancelActiveNodeDrag();
+        finishKeyboardLayoutGesture(false);
         setSelectedNodeId(null);
         setSelectedEdgeId(null);
         // Preserve the browser's native Escape behavior so fullscreen can exit.
@@ -813,6 +1030,32 @@ export const MarkovConstellation: React.FC<MarkovConstellationProps> = ({
     }
     if (handled) event.preventDefault();
   };
+
+  const handleKeyUp = (event: React.KeyboardEvent<HTMLDivElement>) => {
+    if (['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown'].includes(event.key)) {
+      finishKeyboardLayoutGesture(true);
+    }
+  };
+
+  const toggleLayoutEditing = useCallback(() => {
+    if (isLayoutEditing) {
+      cancelActiveNodeDrag();
+      finishKeyboardLayoutGesture(true);
+      setIsLayoutEditing(false);
+      return;
+    }
+    if (mode === 'SCREENSAVER') setMode('EXPLORER');
+    setIsLayoutEditing(true);
+  }, [cancelActiveNodeDrag, finishKeyboardLayoutGesture, isLayoutEditing, mode]);
+
+  const changeMode = useCallback((nextMode: 'REPLAY' | 'EXPLORER' | 'SCREENSAVER') => {
+    if (nextMode === 'SCREENSAVER') {
+      cancelActiveNodeDrag();
+      finishKeyboardLayoutGesture(true);
+      setIsLayoutEditing(false);
+    }
+    setMode(nextMode);
+  }, [cancelActiveNodeDrag, finishKeyboardLayoutGesture]);
 
   const toggleFullscreen = async () => {
     if (!containerRef.current) return;
@@ -825,7 +1068,7 @@ export const MarkovConstellation: React.FC<MarkovConstellationProps> = ({
   };
 
   const labelLayouts = useMemo(() => buildLabelLayouts(
-    graph,
+    effectiveGraph,
     transform,
     viewportSize.width,
     viewportSize.height,
@@ -833,10 +1076,10 @@ export const MarkovConstellation: React.FC<MarkovConstellationProps> = ({
     selectedNodeId,
     hoveredNodeId,
     activeReplayNodeId,
-  ), [activeReplayNodeId, camera, graph, hoveredNodeId, selectedNodeId, transform, viewportSize]);
+  ), [activeReplayNodeId, camera, effectiveGraph, hoveredNodeId, selectedNodeId, transform, viewportSize]);
 
   const visibleEdgeLabels = useMemo(() => {
-    const candidates = graph.edges
+    const candidates = effectiveGraph.edges
       .filter((edge) => advancedLabels || (
         edge.isScopeHandoff || edge.source === activeReplayNodeId || edge.id === selectedEdgeId
       ))
@@ -852,7 +1095,7 @@ export const MarkovConstellation: React.FC<MarkovConstellationProps> = ({
     ];
     const placed: EdgeLabelLayout[] = [];
     for (const edge of candidates) {
-      const point = edgePoint(graph, edge, 0.5);
+      const point = edgePoint(effectiveGraph, edge, 0.5);
       const anchorX = point.x * transform.scale + transform.offsetX;
       const anchorY = point.y * transform.scale + transform.offsetY;
       const labelWidth = clamp(edge.actionLabel.length * 6.7 + 16, 76, 160);
@@ -884,7 +1127,7 @@ export const MarkovConstellation: React.FC<MarkovConstellationProps> = ({
       placed.push({ edge, ...available });
     }
     return placed;
-  }, [advancedLabels, activeReplayNodeId, graph, labelLayouts, selectedEdgeId, transform, viewportSize]);
+  }, [advancedLabels, activeReplayNodeId, effectiveGraph, labelLayouts, selectedEdgeId, transform, viewportSize]);
 
   const incomingEdges = selectedNode ? graph.edges.filter((edge) => edge.target === selectedNode.id) : [];
   const outgoingEdges = selectedNode ? graph.edges.filter((edge) => edge.source === selectedNode.id) : [];
@@ -898,7 +1141,7 @@ export const MarkovConstellation: React.FC<MarkovConstellationProps> = ({
   return (
     <div
       ref={containerRef}
-      className={`markov-constellation-container mode-${mode.toLowerCase()} ${isFullscreen ? 'fullscreen' : ''} ${isPanning ? 'is-panning' : ''} ${controlsVisible ? 'controls-visible' : 'controls-hidden'} ${className}`}
+      className={`markov-constellation-container mode-${mode.toLowerCase()} ${isFullscreen ? 'fullscreen' : ''} ${isPanning ? 'is-panning' : ''} ${isLayoutEditing ? 'layout-editing' : 'layout-locked'} ${isNodeDragging ? 'is-node-dragging' : ''} ${controlsVisible ? 'controls-visible' : 'controls-hidden'} ${className}`}
       data-testid="markov-constellation-container"
       data-selected-route={selectedRouteName}
       data-camera-fit-mode={camera.fitMode}
@@ -909,6 +1152,13 @@ export const MarkovConstellation: React.FC<MarkovConstellationProps> = ({
       data-camera-min-zoom={ZOOM_MIN}
       data-camera-max-zoom={ZOOM_MAX}
       data-graph-identity={graphIdentity}
+      data-manual-layout-schema={MANUAL_CONSTELLATION_LAYOUT_SCHEMA}
+      data-manual-layout-identity={layoutIdentity.serialized}
+      data-manual-layout-storage-key={layoutIdentity.storageKey}
+      data-manual-layout-persistence-eligible={layoutIdentity.persistenceEligible}
+      data-manual-layout-mode={isLayoutEditing ? 'ARRANGE' : 'LOCKED'}
+      data-manual-layout-override-count={Object.keys(layoutOverrides).length}
+      data-manual-layout-node-dragging={isNodeDragging}
       data-policy-flow-version={graph.policyFlowVersion}
       data-policy-flow-status={graph.policyFlowStatus}
       data-source-bundle-id={graph.sourceBundleId}
@@ -949,12 +1199,12 @@ export const MarkovConstellation: React.FC<MarkovConstellationProps> = ({
         <div className="toolbar-left">
           <span className="constellation-title">✨ Markov Constellation</span>
           <div className="mode-toggle-group" aria-label="Constellation mode">
-            <button className={`mode-btn ${mode === 'REPLAY' ? 'active' : ''}`} onClick={() => setMode('REPLAY')}>▶ Replay</button>
-            <button className={`mode-btn ${mode === 'EXPLORER' ? 'active' : ''}`} onClick={() => setMode('EXPLORER')}>Explore</button>
+            <button className={`mode-btn ${mode === 'REPLAY' ? 'active' : ''}`} onClick={() => changeMode('REPLAY')}>▶ Replay</button>
+            <button className={`mode-btn ${mode === 'EXPLORER' ? 'active' : ''}`} onClick={() => changeMode('EXPLORER')}>Explore</button>
             <button
               className={`mode-btn ${mode === 'SCREENSAVER' ? 'active' : ''}`}
               onClick={() => {
-                setMode('SCREENSAVER');
+                changeMode('SCREENSAVER');
                 void toggleFullscreen();
               }}
             >Screensaver</button>
@@ -965,6 +1215,18 @@ export const MarkovConstellation: React.FC<MarkovConstellationProps> = ({
           <button className={`ctrl-btn ${camera.fitMode === 'SELECTED_ROUTE' ? 'active' : ''}`} onClick={focusRoute} aria-label="Route Focus">Route Focus</button>
           <button className={`ctrl-btn ${camera.fitMode === 'ALL' ? 'active' : ''}`} onClick={fitAll} aria-label="Fit All">Fit All</button>
           <button className="ctrl-btn" onClick={resetView} aria-label="Reset View">Reset View</button>
+          <button
+            className={`ctrl-btn layout-mode-btn ${isLayoutEditing ? 'active' : ''}`}
+            onClick={toggleLayoutEditing}
+            aria-label={isLayoutEditing ? 'Lock constellation layout' : 'Arrange constellation layout'}
+            aria-pressed={isLayoutEditing}
+          >{isLayoutEditing ? 'Lock Layout' : 'Arrange'}</button>
+          <button
+            className="ctrl-btn reset-layout-btn"
+            onClick={resetLayout}
+            aria-label="Reset Layout"
+            disabled={Object.keys(layoutOverrides).length === 0}
+          >Reset Layout</button>
           <button className="ctrl-btn" onClick={() => zoomAtPoint(viewportSize.width / 2, viewportSize.height / 2, 1 / 1.2)} aria-label="Zoom constellation out">−</button>
           <span className="constellation-zoom-readout" aria-live="polite">{camera.zoom.toFixed(2)}×</span>
           <button className="ctrl-btn" onClick={() => zoomAtPoint(viewportSize.width / 2, viewportSize.height / 2, 1.2)} aria-label="Zoom constellation in">+</button>
@@ -984,9 +1246,12 @@ export const MarkovConstellation: React.FC<MarkovConstellationProps> = ({
         className="constellation-viewport"
         tabIndex={0}
         role="region"
-        aria-label="Interactive Markov Constellation camera"
+        aria-label={isLayoutEditing
+          ? 'Interactive Markov Constellation camera, layout arrangement unlocked'
+          : 'Interactive Markov Constellation camera, layout locked'}
         aria-describedby="constellation-camera-instructions"
         onKeyDown={handleKeyDown}
+        onKeyUp={handleKeyUp}
         onPointerDown={handlePointerDown}
         onPointerMove={handlePointerMove}
         onPointerUp={(event) => finishPointerGesture(event, true)}
@@ -1006,28 +1271,30 @@ export const MarkovConstellation: React.FC<MarkovConstellationProps> = ({
         />
 
         <div className="constellation-label-layer" aria-label="Constellation policy states and branches">
-          {graph.scopeEvidence.acquisitionCenterX !== undefined && graph.scopeEvidence.acquisitionNodeIds.length > 0 && (
+          {effectiveGraph.scopeEvidence.acquisitionCenterX !== undefined && effectiveGraph.scopeEvidence.acquisitionNodeIds.length > 0 && (
             <div
               className="constellation-scope-header acquisition-scope"
               data-scope="ACQUISITION"
               style={{
-                left: graph.scopeEvidence.acquisitionCenterX * transform.scale + transform.offsetX,
-                top: graph.scopeEvidence.headerY * transform.scale + transform.offsetY,
+                left: effectiveGraph.scopeEvidence.acquisitionCenterX * transform.scale + transform.offsetX,
+                top: effectiveGraph.scopeEvidence.headerY * transform.scale + transform.offsetY,
               }}
-            >{graph.scopeEvidence.acquisitionHeader}</div>
+            >{effectiveGraph.scopeEvidence.acquisitionHeader}</div>
           )}
-          {graph.scopeEvidence.downstreamCenterX !== undefined && graph.scopeEvidence.downstreamNodeIds.length > 0 && (
+          {effectiveGraph.scopeEvidence.downstreamCenterX !== undefined && effectiveGraph.scopeEvidence.downstreamNodeIds.length > 0 && (
             <div
               className="constellation-scope-header downstream-scope"
               data-scope="DOWNSTREAM"
               style={{
-                left: graph.scopeEvidence.downstreamCenterX * transform.scale + transform.offsetX,
-                top: graph.scopeEvidence.headerY * transform.scale + transform.offsetY,
+                left: effectiveGraph.scopeEvidence.downstreamCenterX * transform.scale + transform.offsetX,
+                top: effectiveGraph.scopeEvidence.headerY * transform.scale + transform.offsetY,
               }}
-            >{graph.scopeEvidence.downstreamHeader}</div>
+            >{effectiveGraph.scopeEvidence.downstreamHeader}</div>
           )}
-          {graph.edges.map((edge) => {
-            const point = edgePoint(graph, edge, 0.5);
+          {effectiveGraph.edges.map((edge) => {
+            const point = edgePoint(effectiveGraph, edge, 0.5);
+            const source = effectiveGraph.nodes.find((node) => node.id === edge.source);
+            const target = effectiveGraph.nodes.find((node) => node.id === edge.target);
             const diameter = Math.max(28, edge.width * transform.scale * 3 + 16);
             return (
               <button
@@ -1043,10 +1310,20 @@ export const MarkovConstellation: React.FC<MarkovConstellationProps> = ({
                 }}
                 data-edge-id={edge.id}
                 data-edge-anchor={edge.id}
+                data-edge-source={edge.source}
+                data-edge-target={edge.target}
                 data-conditional-probability={edge.probability.toPrecision(12)}
                 data-expected-flow={edge.expectedVisits.toPrecision(12)}
+                data-outcome-kind={edge.outcomeKind}
+                data-evidence-kind={edge.evidenceKind}
                 data-edge-routing={edge.routing}
                 data-scope-handoff={edge.isScopeHandoff}
+                data-edge-control-x={edge.controlX.toFixed(3)}
+                data-edge-control-y={edge.controlY.toFixed(3)}
+                data-edge-source-x={source?.x.toFixed(3)}
+                data-edge-source-y={source?.y.toFixed(3)}
+                data-edge-target-x={target?.x.toFixed(3)}
+                data-edge-target-y={target?.y.toFixed(3)}
                 onClick={(event) => {
                   if (event.detail === 0) selectEdge(edge);
                 }}
@@ -1054,7 +1331,8 @@ export const MarkovConstellation: React.FC<MarkovConstellationProps> = ({
               />
             );
           })}
-          {graph.nodes.map((node) => {
+          {effectiveGraph.nodes.map((node) => {
+            const canonicalNode = graph.nodes.find((candidate) => candidate.id === node.id);
             const diameter = Math.max(32, node.radius * transform.scale * 2 + 12);
             return (
               <button
@@ -1071,16 +1349,25 @@ export const MarkovConstellation: React.FC<MarkovConstellationProps> = ({
                 data-node-anchor={node.id}
                 data-node-x={node.x.toFixed(3)}
                 data-node-y={node.y.toFixed(3)}
+                data-canonical-node-x={canonicalNode?.x.toFixed(3)}
+                data-canonical-node-y={canonicalNode?.y.toFixed(3)}
+                data-manual-position={Boolean(layoutOverrides[node.id])}
                 data-semantic-band={node.semanticBand}
                 data-recovery-lane={node.recoveryLane}
                 data-policy-scope={node.scope}
                 data-progress-label={node.progressLabel}
                 onFocus={() => setHoveredNodeId(node.id)}
-                onBlur={() => setHoveredNodeId(null)}
+                onBlur={() => {
+                  finishKeyboardLayoutGesture(true);
+                  setHoveredNodeId(null);
+                }}
                 onClick={(event) => {
                   if (event.detail === 0) selectNode(node);
                 }}
-                aria-label={`Select ${node.fullLabel}`}
+                aria-label={isLayoutEditing
+                  ? `Reposition ${node.fullLabel}. Arrow keys nudge; Shift plus Arrow moves farther.`
+                  : `Select ${node.fullLabel}`}
+                aria-pressed={selectedNodeId === node.id}
               />
             );
           })}
@@ -1094,13 +1381,19 @@ export const MarkovConstellation: React.FC<MarkovConstellationProps> = ({
               data-step-number={layout.node.stepNumber}
               data-policy-scope={layout.node.scope}
               data-progress-label={layout.node.progressLabel}
+              data-node-x={layout.node.x.toFixed(3)}
+              data-node-y={layout.node.y.toFixed(3)}
+              data-manual-position={Boolean(layoutOverrides[layout.node.id])}
               data-label-priority={labelPriority(layout.node, selectedNodeId, hoveredNodeId, activeReplayNodeId)}
               onFocus={() => setHoveredNodeId(layout.node.id)}
-              onBlur={() => setHoveredNodeId(null)}
+              onBlur={() => {
+                finishKeyboardLayoutGesture(true);
+                setHoveredNodeId(null);
+              }}
               onClick={(event) => {
                 if (event.detail === 0) selectNode(layout.node);
               }}
-              aria-label={`${advancedLabels && layout.node.stepNumber ? `Traversal index ${layout.node.stepNumber}: ` : ''}${layout.node.fullLabel}. ${layout.node.details.routeStatus}`}
+              aria-label={`${isLayoutEditing ? 'Repositionable node. ' : ''}${advancedLabels && layout.node.stepNumber ? `Traversal index ${layout.node.stepNumber}: ` : ''}${layout.node.fullLabel}. ${layout.node.details.routeStatus}${isLayoutEditing ? ' Arrow keys nudge; Shift plus Arrow moves farther.' : ''}`}
             >
               {layout.collapsed
                 ? <span>{layout.node.kind === 'TERMINAL_SUCCESS' ? '✓' : '•'}</span>
@@ -1125,6 +1418,8 @@ export const MarkovConstellation: React.FC<MarkovConstellationProps> = ({
               data-outcome-kind={edge.outcomeKind}
               data-edge-routing={edge.routing}
               data-scope-handoff={edge.isScopeHandoff}
+              data-edge-control-x={edge.controlX.toFixed(3)}
+              data-edge-control-y={edge.controlY.toFixed(3)}
               onClick={(event) => {
                 if (event.detail === 0) selectEdge(edge);
               }}
@@ -1246,7 +1541,10 @@ export const MarkovConstellation: React.FC<MarkovConstellationProps> = ({
                 className={`${node.id === activeReplayNodeId ? 'active' : ''} ${node.isSelectedRoute ? 'selected-route-node' : ''}`}
                 data-node-id={node.id}
                 onFocus={() => setHoveredNodeId(node.id)}
-                onBlur={() => setHoveredNodeId(null)}
+                onBlur={() => {
+                  finishKeyboardLayoutGesture(true);
+                  setHoveredNodeId(null);
+                }}
                 onClick={() => selectNode(node)}
               >{railLabel}</button>
             );
@@ -1257,9 +1555,13 @@ export const MarkovConstellation: React.FC<MarkovConstellationProps> = ({
       <p id="constellation-camera-instructions" className="sr-only">
         Drag with a mouse, pen, or one finger to pan. Use the wheel or plus and minus keys to zoom.
         Arrow keys pan, zero resets, F focuses the selected route, A fits every node, and Escape closes node details.
+        Choose Arrange to unlock node placement. While unlocked, drag a node or focus it and use Arrow keys to
+        reposition it; Shift plus Arrow moves farther. Empty-space dragging continues to pan. Escape cancels an
+        active node move. Reset View changes only the camera; Reset Layout restores automatic node positions.
       </p>
       <div className="sr-only" aria-live="polite">
         Camera {camera.fitMode.toLowerCase().replace('_', ' ')}, zoom {camera.zoom.toFixed(2)}.
+        Layout {isLayoutEditing ? 'arrangement unlocked' : 'locked'}, {Object.keys(layoutOverrides).length} manual positions.
         {selectedNode ? ` Selected ${selectedNode.fullLabel}.` : ''}
         {selectedEdge ? ` Selected branch ${selectedEdge.actionLabel}.` : ''}
       </div>

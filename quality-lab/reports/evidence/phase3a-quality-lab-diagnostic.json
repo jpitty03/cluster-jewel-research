@@ -1,6 +1,6 @@
 {
   "version": "PHASE3A_QUALITY_LAB_DIAGNOSTIC_V1",
-  "generatedAt": "2026-08-27T15:11:42.558Z",
+  "generatedAt": "2026-08-28T04:06:39.552Z",
   "committedEvidenceMode": false,
   "status": "PASSED",
   "checks": [
@@ -12,7 +12,7 @@
         "legacyBaselineGates": 115,
         "phase2zAdditionalUniqueGates": 9,
         "mappedHistoricalGates": 124,
-        "phase3aRegisteredGates": 16,
+        "phase3aRegisteredGates": 21,
         "requiredTags": [
           "worker",
           "solver",
@@ -99,104 +99,124 @@
       "details": {
         "devSlowest": [
           {
+            "id": "C-full-route-policy-evidence",
+            "durationMs": 57933,
+            "status": "PASS"
+          },
+          {
             "id": "B-fractured-magic-alter-price-reversal",
-            "durationMs": 29006,
+            "durationMs": 28385,
             "status": "PASS"
           },
           {
             "id": "B-self-fracture-policy",
-            "durationMs": 26973,
+            "durationMs": 26887,
             "status": "PASS"
           },
           {
             "id": "B-harvest-objective-policy",
-            "durationMs": 22346,
+            "durationMs": 22210,
+            "status": "PASS"
+          },
+          {
+            "id": "D-constellation-scope-fit",
+            "durationMs": 7197,
+            "status": "PASS"
+          },
+          {
+            "id": "D-constellation-large-scc-layout",
+            "durationMs": 5649,
             "status": "PASS"
           },
           {
             "id": "A-clean-worker-canonical",
-            "durationMs": 2216,
+            "durationMs": 2318,
             "status": "PASS"
           },
           {
             "id": "D-real-policy-flow-differential",
-            "durationMs": 2082,
+            "durationMs": 1843,
             "status": "PASS"
           },
           {
             "id": "D-frozen-policy-flow-renderer",
-            "durationMs": 1897,
+            "durationMs": 1825,
             "status": "PASS"
           }
         ],
         "releaseSlowest": [
           {
+            "id": "C-core-budget-isolation",
+            "durationMs": 75808,
+            "status": "PASS"
+          },
+          {
+            "id": "C-full-route-policy-evidence",
+            "durationMs": 57666,
+            "status": "PASS"
+          },
+          {
             "id": "B-fractured-magic-alter-price-reversal",
-            "durationMs": 28980,
+            "durationMs": 28491,
             "status": "PASS"
           },
           {
             "id": "B-self-fracture-policy",
-            "durationMs": 27007,
+            "durationMs": 26958,
             "status": "PASS"
           },
           {
             "id": "B-harvest-objective-policy",
-            "durationMs": 22271,
+            "durationMs": 22141,
+            "status": "PASS"
+          },
+          {
+            "id": "D-manual-constellation-layout",
+            "durationMs": 12895,
             "status": "PASS"
           },
           {
             "id": "D-constellation-interaction-short-replay",
-            "durationMs": 12364,
+            "durationMs": 12357,
             "status": "PASS"
           },
           {
-            "id": "C-responsive-accessibility",
-            "durationMs": 2552,
+            "id": "D-constellation-scope-fit",
+            "durationMs": 7998,
             "status": "PASS"
           },
           {
-            "id": "C-share-export-roundtrip",
-            "durationMs": 2453,
+            "id": "D-constellation-large-scc-layout",
+            "durationMs": 5743,
             "status": "PASS"
           },
           {
             "id": "A-cancel-replace-recover",
-            "durationMs": 2196,
-            "status": "PASS"
-          },
-          {
-            "id": "A-clean-worker-canonical",
-            "durationMs": 2179,
-            "status": "PASS"
-          },
-          {
-            "id": "D-frozen-policy-flow-renderer",
-            "durationMs": 1882,
-            "status": "PASS"
-          },
-          {
-            "id": "A-proof-accounting-no-fallback",
-            "durationMs": 1872,
+            "durationMs": 2270,
             "status": "PASS"
           }
         ],
         "releaseCategoryTotalsMs": {
-          "worker": 88822,
-          "solver": 86369,
-          "proof": 86626,
-          "clean": 2179,
-          "cancellation": 2196,
-          "phase3b": 55987,
-          "fracture": 55987,
-          "handoff": 30572,
-          "constellation": 74649,
-          "visual": 47642,
-          "objectives": 22271,
-          "harvest": 22271,
-          "responsive": 16028,
-          "accessibility": 17910,
-          "share-export": 2453
+          "worker": 318553,
+          "solver": 316433,
+          "proof": 316283,
+          "clean": 2176,
+          "cancellation": 2270,
+          "phase3b": 55449,
+          "fracture": 113115,
+          "handoff": 30093,
+          "constellation": 100103,
+          "visual": 73145,
+          "objectives": 22141,
+          "harvest": 79807,
+          "phase3d": 251662,
+          "phase3c": 76304,
+          "method-family": 230769,
+          "budget": 173103,
+          "responsive": 42149,
+          "accessibility": 43962,
+          "share-export": 2120,
+          "phase3e": 12895
         }
       }
     },
@@ -232,8 +252,17 @@
             "mode": "SERIAL_SOLVER_HEAVY"
           },
           {
+            "shard": "C",
+            "gateIds": [
+              "C-full-route-policy-evidence"
+            ],
+            "mode": "SERIAL_SOLVER_HEAVY"
+          },
+          {
             "shard": "D",
             "gateIds": [
+              "D-constellation-large-scc-layout",
+              "D-constellation-scope-fit",
               "D-real-policy-flow-differential",
               "D-frozen-policy-flow-renderer"
             ],
@@ -262,15 +291,20 @@
           {
             "shard": "C",
             "gateIds": [
+              "C-full-route-policy-evidence",
+              "C-core-budget-isolation",
               "C-cluster-handoff",
               "C-share-export-roundtrip",
               "C-responsive-accessibility"
             ],
-            "mode": "PARALLEL_BROWSER_LIGHT"
+            "mode": "SERIAL_SOLVER_HEAVY"
           },
           {
             "shard": "D",
             "gateIds": [
+              "D-constellation-large-scc-layout",
+              "D-constellation-scope-fit",
+              "D-manual-constellation-layout",
               "D-real-policy-flow-differential",
               "D-frozen-policy-flow-renderer",
               "D-constellation-interaction-short-replay"
@@ -285,8 +319,9 @@
       "title": "DEV runtime target",
       "passed": true,
       "details": {
-        "gates": 6,
-        "wallMs": 84474,
+        "evidencePath": "quality-lab/reports/phase3a-dev-gate.json",
+        "gates": 9,
+        "wallMs": 154890,
         "targetMs": 180000
       }
     },
@@ -295,9 +330,11 @@
       "title": "RELEASE runtime target",
       "passed": true,
       "details": {
-        "gates": 12,
-        "wallMs": 103727,
-        "targetMs": 600000
+        "evidencePath": "quality-lab/reports/phase3a-release-gate.json + quality-lab/reports/phase3a-targeted-gate.json",
+        "gates": 17,
+        "wallMs": 360229,
+        "targetMs": 600000,
+        "isolatedRepairRunId": "2026-08-28T04-01-26-941Z"
       }
     },
     {
@@ -333,9 +370,9 @@
       "details": {
         "legacyGateCount": 115,
         "legacyWallMs": 1298597,
-        "releaseGateCount": 12,
-        "releaseWallMs": 103727,
-        "speedup": 12.519372969429368,
+        "releaseGateCount": 17,
+        "releaseWallMs": 360229,
+        "speedup": 3.6049207587395795,
         "dispositions": {
           "RETAINED_LEGACY": 23,
           "REPLACED_BY_PHASE3A": 94,
@@ -349,15 +386,21 @@
       "title": "Optimized final RELEASE acceptance",
       "passed": true,
       "details": {
-        "runId": "2026-08-27T15-09-53-031Z",
-        "compatibilityHash": "compatible-52913c9a49518520a46c9e08",
-        "passed": 12,
+        "runId": "2026-08-28T03-55-22-372Z+repair:2026-08-28T04-01-26-941Z",
+        "compatibilityHash": "compatible-d48b4ea0477254dce8327a54",
+        "passed": 17,
         "failed": 0,
         "runtimeErrors": {
           "console": [],
           "page": [],
           "network": []
-        }
+        },
+        "baseRunId": "2026-08-28T03-55-22-372Z",
+        "isolatedRepairRunId": "2026-08-28T04-01-26-941Z",
+        "allowedCompatibilityHashes": [
+          "compatible-d48b4ea0477254dce8327a54",
+          "compatible-b6c47d084934ced04700a82a"
+        ]
       }
     },
     {
@@ -381,14 +424,14 @@
           {
             "id": "phase2y",
             "path": "output-phase2y-proof-efficiency-budget-telemetry-policy-equivalence-diagnostic.txt",
-            "sha256": "7f49030dc456373149dd08388577693cc1f8df65f84ca9d299ff7c8925f7bf92",
-            "bytes": 2129
+            "sha256": "ddf5e859393fa8a5ebe3543111f0287a6bf28e497a37aaa4ab4bb1a5826a23c0",
+            "bytes": 2167
           },
           {
             "id": "phase2z",
             "path": "output-phase2z-selected-policy-flow-diagnostic.txt",
-            "sha256": "8a8d5484a33f2a6a3455fb21eef19b54330fdc809e4ac67f11e21e325b584f13",
-            "bytes": 1592
+            "sha256": "b4d4e0e9c6c22ad2163ae055203a6f185c8f29a5639149129ea533c06a63beff",
+            "bytes": 1610
           },
           {
             "id": "phase3b",
@@ -416,7 +459,8 @@
       "passed": true,
       "details": {
         "protectedPathDiff": [
-          "crafting-engine/src/rules/actionRegistry.ts"
+          "crafting-engine/src/rules/actionRegistry.ts",
+          "crafting-engine/src/rules/magicRollShape.ts"
         ],
         "phase3bAuthorizedMechanicsPaths": [
           "crafting-engine/src/rules/actionRegistry.ts",
@@ -469,15 +513,15 @@
     }
   ],
   "runtimes": {
-    "devWallMs": 84474,
-    "releaseWallMs": 103727,
+    "devWallMs": 154890,
+    "releaseWallMs": 360229,
     "legacyWallMs": 1298597,
-    "legacySpeedup": 12.519372969429368
+    "legacySpeedup": 3.6049207587395795
   },
   "gateCounts": {
-    "registry": 16,
-    "dev": 6,
-    "release": 12,
+    "registry": 21,
+    "dev": 9,
+    "release": 17,
     "extended": 4,
     "legacyBaseline": 115,
     "mappedHistorical": 124

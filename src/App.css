@@ -3550,6 +3550,17 @@ td a {
   color: #38bdf8;
 }
 
+.ctrl-btn:disabled {
+  cursor: not-allowed;
+  opacity: 0.42;
+}
+
+.layout-mode-btn.active {
+  background: rgba(192, 132, 252, 0.2);
+  border-color: #c084fc;
+  color: #e9d5ff;
+}
+
 .speed-selector {
   display: flex;
   gap: 2px;
@@ -3592,6 +3603,26 @@ td a {
 
 .markov-constellation-container.is-panning .constellation-viewport {
   cursor: grabbing;
+}
+
+.markov-constellation-container.layout-locked .constellation-node-anchor,
+.markov-constellation-container.layout-locked .constellation-node-label {
+  cursor: pointer;
+}
+
+.markov-constellation-container.layout-editing .constellation-node-anchor,
+.markov-constellation-container.layout-editing .constellation-node-label {
+  cursor: grab;
+}
+
+.markov-constellation-container.is-node-dragging .constellation-node-anchor,
+.markov-constellation-container.is-node-dragging .constellation-node-label,
+.markov-constellation-container.is-node-dragging .constellation-viewport {
+  cursor: grabbing;
+}
+
+.markov-constellation-container.layout-editing .constellation-node-label[data-manual-position='true'] {
+  box-shadow: 0 0 0 2px rgba(192, 132, 252, 0.42), 0 4px 12px rgba(0, 0, 0, 0.8);
 }
 
 .markov-constellation-container.mode-screensaver.controls-hidden .constellation-viewport {

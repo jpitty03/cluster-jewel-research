@@ -1,6 +1,38 @@
 {
-  "version": "Phase3C-Frozen-Browser-Corpus-1",
+  "version": "Phase3E-Frozen-Browser-Corpus-1",
   "fixtures": [
+    {
+      "id": "phase3e_manual_constellation_field",
+      "name": "Phase 3E Touch of Cruelty plus Unspeakable Gifts plus Unwaveringly Evil manual-layout field",
+      "baseType": "Large Cluster Jewel",
+      "clusterType": "12% increased Chaos Damage",
+      "itemLevel": 84,
+      "passiveCount": 8,
+      "finalRarity": "rare",
+      "extraAffixes": "allow-extra",
+      "targetMods": ["Touch of Cruelty", "Unspeakable Gifts", "Unwaveringly Evil"],
+      "priceContext": {
+        "currencyRates": {
+          "chaos": 1,
+          "divine": 213.5,
+          "fracturing": 298.6,
+          "annul": 11.66,
+          "exalt": 1.17,
+          "scour": 0.5391,
+          "alteration": 0.1336,
+          "transmutation": 0.005012,
+          "augmentation": 0.03941,
+          "regal": 0.03638,
+          "wildLifeforce": 0.02377,
+          "vividLifeforce": 0.08208,
+          "primalLifeforce": 0.04085
+        },
+        "cleanBaseCostChaos": 38,
+        "cleanBasePriceSource": "manual",
+        "cleanBasePriceProvenance": "Frozen Allflame ilvl 84 eight-passive 12% Chaos Damage clean-base quote reviewed by the Phase 3E plan"
+      },
+      "searchBudget": { "maxStates": 5000, "maxWallTimeMs": 30000, "maxExpansionRounds": 3 }
+    },
     {
       "id": "phase3c_primordial_renewal_rotten_claws",
       "name": "Phase 3C Primordial Bond plus Renewal plus Rotten Claws field consistency",

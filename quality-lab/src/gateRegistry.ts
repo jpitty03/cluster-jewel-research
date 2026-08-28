@@ -206,6 +206,23 @@ export const QUALITY_GATE_REGISTRY: QualityGateDefinition[] = [
     operation: 'constellation-scope-fit',
   }),
   gate({
+    id: 'D-manual-constellation-layout',
+    version: 1,
+    phase: '3E',
+    title: 'Strict saved manual layout follows real pointer, keyboard, camera, and reset behavior',
+    tags: ['phase3e', 'phase3d', 'phase3c', 'constellation', 'visual', 'responsive', 'accessibility'],
+    fixtureIds: ['cheap_one_mod', 'phase3e_manual_constellation_field'],
+    costClass: 'MEDIUM',
+    isolation: 'SELF_CONTAINED',
+    dependencies: [],
+    sourceAreas: ['constellation', 'visualization-graph', 'responsive-css', 'quality-fixtures'],
+    // The exhaustive gesture/persistence witness is targeted during development
+    // and retained in RELEASE without increasing ordinary DEV runtime.
+    defaultSuites: ['RELEASE'],
+    shard: 'D',
+    operation: 'manual-constellation-layout',
+  }),
+  gate({
     id: 'D-real-policy-flow-differential',
     version: 1,
     phase: '3A',

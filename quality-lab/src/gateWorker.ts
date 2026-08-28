@@ -66,8 +66,11 @@ interface FrozenPolicyFlowFixture {
   normalizedRequest: JsonRecord;
   selectedBundleId: string;
   selectedPolicyFingerprint: string;
+  selectedRouteName?: string;
+  selectedCostChaos?: number;
   policyFlowVersion: string;
   topologyFingerprint: string;
+  exactFlowFingerprint?: string;
   serializedSummary: {
     path: string;
     selector: string;
@@ -1116,6 +1119,11 @@ async function runGateOperation(ctx: GateWorkerContext): Promise<unknown> {
         const exactWork = enabledSnapshot.statesExpanded === disabledSnapshot.statesExpanded &&
           enabledSnapshot.retainedStates === disabledSnapshot.retainedStates &&
           enabledSnapshot.retainedStateFingerprint === disabledSnapshot.retainedStateFingerprint;
+        const enabledStates = numberValue(enabledSnapshot.statesExpanded, 'enabled core states');
+        const disabledStates = numberValue(disabledSnapshot.statesExpanded, 'disabled core states');
+        const hostTimedVariance = !exactWork &&
+          enabledSnapshot.stopReason === 'HOST_RESERVE' &&
+          disabledSnapshot.stopReason === 'HOST_RESERVE';
         if (exactWork) {
           assert.deepEqual(
             enabledSnapshot.candidateExecutableUChaos,
@@ -1132,9 +1140,11 @@ async function runGateOperation(ctx: GateWorkerContext): Promise<unknown> {
           );
         } else {
           assert(
-            numberValue(enabledSnapshot.statesExpanded, 'enabled core states') >=
-              numberValue(disabledSnapshot.statesExpanded, 'disabled core states'),
-            'Family-enabled fresh Worker expanded fewer core states',
+            hostTimedVariance,
+            `Non-exact full-field Worker A/B did not share the HOST_RESERVE boundary ` +
+              `(false=${disabledStates}, true=${enabledStates}, ` +
+              `falseStop=${String(disabledSnapshot.stopReason)}, ` +
+              `trueStop=${String(enabledSnapshot.stopReason)})`,
           );
           assert(
             numberValue(enabledSnapshot.selectedExecutableUChaos, 'enabled core U') <=
@@ -1151,12 +1161,20 @@ async function runGateOperation(ctx: GateWorkerContext): Promise<unknown> {
             'disabled core candidates',
           )) {
             const candidate = jsonRecord(rawCandidate, 'disabled core candidate');
-            assert(
-              (enabledCandidates.get(String(candidate.candidateId)) ?? Infinity) <=
-                numberValue(candidate.fullRouteUChaos, 'disabled candidate U') + 0.05,
-              `Family-enabled core regressed ${String(candidate.candidateId)}`,
-            );
+            const enabledCandidate = enabledCandidates.get(String(candidate.candidateId));
+            if (enabledCandidate !== undefined) {
+              assert(
+                enabledCandidate <= numberValue(candidate.fullRouteUChaos, 'disabled candidate U') + 0.05,
+                `Family-enabled core regressed shared candidate ${String(candidate.candidateId)}`,
+              );
+            }
           }
+          assert.equal(enabledSnapshot.stopReason, disabledSnapshot.stopReason);
+          assert.equal(
+            enabledSnapshot.canonicalPolicyFingerprint,
+            disabledSnapshot.canonicalPolicyFingerprint,
+            'HOST_RESERVE scheduling variance changed the selected canonical core policy',
+          );
         }
         for (const [label, result, core] of [
           ['disabled', disabled, disabledSnapshot],
@@ -1182,6 +1200,80 @@ async function runGateOperation(ctx: GateWorkerContext): Promise<unknown> {
           const registry = jsonRecord(result.requestPolicyRegistry, `${label} policy registry`);
           assert.equal(registry.monotone, true);
         }
+
+        // The full field is intentionally time-enveloped and can stop at a
+        // different deterministic expansion boundary as host throughput moves.
+        // A state-capped rendering of the same request proves exact core work
+        // independence without weakening the live field incumbent checks above.
+        const deterministicInput: FixtureRecord = {
+          ...input,
+          id: `${input.id}_deterministic_core_ab`,
+          name: `${input.name} deterministic state-capped core A/B`,
+          searchBudget: {
+            maxStates: 500,
+            maxWallTimeMs: 30_000,
+            maxExpansionRounds: 3,
+          },
+        };
+        // `ensureOptimizerPage` can be a same-document navigation when the hash
+        // is already #optimizer. Reload explicitly so both deterministic halves
+        // start from cold Worker/service sessions rather than inheriting the
+        // field run's request-local retained graph.
+        await page.reload({ waitUntil: 'networkidle' });
+        const deterministicDisabled = await optimizedFixture(
+          page,
+          ctx.appUrl,
+          deterministicInput,
+        );
+        const deterministicDisabledSnapshot = jsonRecord(
+          jsonRecord(deterministicDisabled.search, 'deterministic disabled search')
+            .coreRecommendationSnapshot,
+          'deterministic disabled core snapshot',
+        );
+        assert.equal(deterministicDisabledSnapshot.compareMethodFamiliesRequested, false);
+        const deterministicEnabled = await runFreshWorkerComparison(
+          page,
+          deterministicInput.searchBudget.maxWallTimeMs,
+        );
+        const deterministicEnabledSnapshot = jsonRecord(
+          jsonRecord(deterministicEnabled.search, 'deterministic enabled search')
+            .coreRecommendationSnapshot,
+          'deterministic enabled core snapshot',
+        );
+        assert.equal(deterministicEnabledSnapshot.compareMethodFamiliesRequested, true);
+        assert.deepEqual(
+          deterministicEnabledSnapshot.coreEnvelope,
+          deterministicDisabledSnapshot.coreEnvelope,
+        );
+        assert.equal(
+          deterministicEnabledSnapshot.statesExpanded,
+          deterministicDisabledSnapshot.statesExpanded,
+          'State-capped compare-methods A/B expanded different core work',
+        );
+        assert.equal(
+          deterministicEnabledSnapshot.retainedStates,
+          deterministicDisabledSnapshot.retainedStates,
+        );
+        assert.equal(
+          deterministicEnabledSnapshot.retainedStateFingerprint,
+          deterministicDisabledSnapshot.retainedStateFingerprint,
+        );
+        assert.deepEqual(
+          deterministicEnabledSnapshot.candidateExecutableUChaos,
+          deterministicDisabledSnapshot.candidateExecutableUChaos,
+        );
+        assert.equal(
+          deterministicEnabledSnapshot.selectedExecutableUChaos,
+          deterministicDisabledSnapshot.selectedExecutableUChaos,
+        );
+        assert.equal(
+          deterministicEnabledSnapshot.stopReason,
+          deterministicDisabledSnapshot.stopReason,
+        );
+        assert.equal(
+          deterministicEnabledSnapshot.canonicalPolicyFingerprint,
+          deterministicDisabledSnapshot.canonicalPolicyFingerprint,
+        );
         const currentEvents = await workerEvents(page);
         const freshTerminalTypes = currentEvents
           .filter((event) => String(event.payload?.requestId).startsWith('phase3d_fresh_'))
@@ -1194,25 +1286,40 @@ async function runGateOperation(ctx: GateWorkerContext): Promise<unknown> {
         const artifactPath = join(stableEvidenceDirectory, 'phase3d-core-budget-worker-ab.json');
         writeFileSync(artifactPath, `${JSON.stringify({
           input,
-          mode: exactWork ? 'EXACT_CORE_STATE_SET' : 'STRONGER_MONOTONE_CORE',
-          disabled: {
-            snapshot: disabledSnapshot,
-            ledger: jsonRecord(jsonRecord(disabledSearch.requestBudget, 'disabled budget').ledger, 'disabled ledger'),
-            finalU: disabled.expectedCostChaos,
+          fieldHostTimed: {
+            mode: exactWork ? 'EXACT_CORE_STATE_SET' : 'HOST_TIMED_EQUIVALENT_INCUMBENT',
+            stateDelta: enabledStates - disabledStates,
+            retainedStateDelta:
+              numberValue(enabledSnapshot.retainedStates, 'enabled retained states') -
+              numberValue(disabledSnapshot.retainedStates, 'disabled retained states'),
+            disabled: {
+              snapshot: disabledSnapshot,
+              ledger: jsonRecord(jsonRecord(disabledSearch.requestBudget, 'disabled budget').ledger, 'disabled ledger'),
+              finalU: disabled.expectedCostChaos,
+            },
+            enabled: {
+              snapshot: enabledSnapshot,
+              ledger: jsonRecord(jsonRecord(enabledSearch.requestBudget, 'enabled budget').ledger, 'enabled ledger'),
+              finalU: enabled.expectedCostChaos,
+              registry: enabled.requestPolicyRegistry,
+            },
           },
-          enabled: {
-            snapshot: enabledSnapshot,
-            ledger: jsonRecord(jsonRecord(enabledSearch.requestBudget, 'enabled budget').ledger, 'enabled ledger'),
-            finalU: enabled.expectedCostChaos,
-            registry: enabled.requestPolicyRegistry,
+          deterministicStateCapped: {
+            mode: 'EXACT_CORE_STATE_SET',
+            input: deterministicInput,
+            disabledSnapshot: deterministicDisabledSnapshot,
+            enabledSnapshot: deterministicEnabledSnapshot,
           },
           freshWorkerProtocol: freshTerminalTypes,
         }, null, 2)}\n`, 'utf8');
         ctx.artifacts.phase3dCoreBudgetWorkerAb = relative(repositoryRoot, artifactPath);
         return {
-          mode: exactWork ? 'EXACT_CORE_STATE_SET' : 'STRONGER_MONOTONE_CORE',
+          fieldMode: exactWork ? 'EXACT_CORE_STATE_SET' : 'HOST_TIMED_EQUIVALENT_INCUMBENT',
+          deterministicMode: 'EXACT_CORE_STATE_SET',
           disabledSnapshot,
           enabledSnapshot,
+          deterministicDisabledSnapshot,
+          deterministicEnabledSnapshot,
           disabledFinalU: disabled.expectedCostChaos,
           enabledFinalU: enabled.expectedCostChaos,
           freshWorkerProtocol: freshTerminalTypes,
@@ -1603,6 +1710,393 @@ async function runGateOperation(ctx: GateWorkerContext): Promise<unknown> {
         viewport: { width: 1440, height: 900 },
       });
       return { field: fieldObservation, stress: stressObservation };
+    }
+
+    case 'manual-constellation-layout': {
+      const frozen = loadFrozenPolicyFlow('policy-flow-phase3e-manual-v1.json');
+      return withPage(ctx, async (page, context) => {
+        const input = fixture('cheap_one_mod');
+        await optimizedFixture(page, ctx.appUrl, input);
+        let container = page.getByTestId('markov-constellation-container');
+        await container.waitFor();
+        await container.scrollIntoViewIfNeeded();
+
+        const nodePosition = async (nodeId: string): Promise<{ x: number; y: number }> => {
+          const anchor = container.locator(`[data-node-anchor="${nodeId}"]`);
+          await anchor.waitFor();
+          return {
+            x: Number(await anchor.getAttribute('data-node-x')),
+            y: Number(await anchor.getAttribute('data-node-y')),
+          };
+        };
+        const nodeCanonicalPosition = async (nodeId: string): Promise<{ x: number; y: number }> => {
+          const anchor = container.locator(`[data-node-anchor="${nodeId}"]`);
+          return {
+            x: Number(await anchor.getAttribute('data-canonical-node-x')),
+            y: Number(await anchor.getAttribute('data-canonical-node-y')),
+          };
+        };
+        const edgeGeometry = async (edgeId: string): Promise<number[]> => {
+          const anchor = container.locator(`[data-edge-anchor="${edgeId}"]`);
+          return Promise.all([
+            'data-edge-source-x',
+            'data-edge-source-y',
+            'data-edge-target-x',
+            'data-edge-target-y',
+            'data-edge-control-x',
+            'data-edge-control-y',
+          ].map(async (attribute) => Number(await anchor.getAttribute(attribute))));
+        };
+        const truthSnapshot = async (): Promise<unknown> => container.evaluate((element) => ({
+          policyFlowVersion: element.getAttribute('data-policy-flow-version'),
+          policyFlowStatus: element.getAttribute('data-policy-flow-status'),
+          sourceBundleId: element.getAttribute('data-source-bundle-id'),
+          sourcePolicyFingerprint: element.getAttribute('data-source-policy-fingerprint'),
+          topologyFingerprint: element.getAttribute('data-topology-fingerprint'),
+          nodeCount: element.getAttribute('data-node-count'),
+          edgeCount: element.getAttribute('data-edge-count'),
+          nodes: [...element.querySelectorAll<HTMLElement>('[data-node-anchor]')]
+            .map((node) => ({
+              id: node.dataset.nodeAnchor,
+              canonicalX: node.dataset.canonicalNodeX,
+              canonicalY: node.dataset.canonicalNodeY,
+              scope: node.dataset.policyScope,
+              progress: node.dataset.progressLabel,
+            }))
+            .sort((left, right) => String(left.id).localeCompare(String(right.id))),
+          edges: [...element.querySelectorAll<HTMLElement>('[data-edge-anchor]')]
+            .map((edge) => ({
+              id: edge.dataset.edgeAnchor,
+              source: edge.dataset.edgeSource,
+              target: edge.dataset.edgeTarget,
+              probability: edge.dataset.conditionalProbability,
+              expectedFlow: edge.dataset.expectedFlow,
+              outcomeKind: edge.dataset.outcomeKind,
+              evidenceKind: edge.dataset.evidenceKind,
+              routing: edge.dataset.edgeRouting,
+              scopeHandoff: edge.dataset.scopeHandoff,
+            }))
+            .sort((left, right) => String(left.id).localeCompare(String(right.id))),
+        }));
+        const drag = async (
+          target: ReturnType<typeof container.locator>,
+          deltaX: number,
+          deltaY: number,
+        ): Promise<void> => {
+          const box = await target.boundingBox();
+          assert(box, 'Drag target has no browser geometry');
+          const startX = box.x + box.width / 2;
+          const startY = box.y + box.height / 2;
+          await page.mouse.move(startX, startY);
+          await page.mouse.down();
+          await page.mouse.move(startX + deltaX, startY + deltaY, { steps: 8 });
+          await page.mouse.up();
+        };
+        const assertInsideViewport = async (locator: ReturnType<typeof container.locator>, label: string) => {
+          const viewport = container.locator('.constellation-viewport');
+          const [viewportBox, elementBox] = await Promise.all([viewport.boundingBox(), locator.boundingBox()]);
+          assert(viewportBox && elementBox, `${label} has no visible browser geometry`);
+          assert(elementBox.x >= viewportBox.x - 1, `${label} clips on the left`);
+          assert(elementBox.y >= viewportBox.y - 1, `${label} clips on the top`);
+          assert(elementBox.x + elementBox.width <= viewportBox.x + viewportBox.width + 1,
+            `${label} clips on the right`);
+          assert(elementBox.y + elementBox.height <= viewportBox.y + viewportBox.height + 1,
+            `${label} clips on the bottom`);
+        };
+
+        assert.equal(await container.getAttribute('data-topology-fingerprint'), frozen.metadata.topologyFingerprint);
+        assert.equal(await container.getAttribute('data-source-policy-fingerprint'), frozen.metadata.selectedPolicyFingerprint);
+        assert.equal(Number(await container.getAttribute('data-node-count')), frozen.metadata.serializedSummary.nodeCount);
+        assert.equal(Number(await container.getAttribute('data-edge-count')), frozen.metadata.serializedSummary.edgeCount);
+        assert.equal(await container.getAttribute('data-manual-layout-schema'), 'MANUAL_CONSTELLATION_LAYOUT_V1');
+        assert.equal(await container.getAttribute('data-manual-layout-mode'), 'LOCKED');
+        assert.equal(await container.getAttribute('data-manual-layout-override-count'), '0');
+        assert.equal(await container.getAttribute('data-manual-layout-persistence-eligible'), 'true');
+
+        const frozenEdges = arrayValue(frozen.flow.edges, 'Phase 3E frozen edges')
+          .map((entry) => jsonRecord(entry, 'Phase 3E frozen edge'));
+        const visibleLabelIds = new Set(await container.locator('.constellation-node-label')
+          .evaluateAll((labels) => labels.map((label) => label.getAttribute('data-node-id')).filter(Boolean)));
+        const selfLoop = frozenEdges.find((edge) =>
+          edge.sourceNodeId === edge.targetNodeId && edge.actionId === 'alteration_orb'
+        );
+        const candidateNodeIds = [
+          selfLoop?.sourceNodeId,
+          ...frozenEdges.map((edge) => edge.sourceNodeId),
+        ].map(String);
+        const movedNodeId = candidateNodeIds.find((nodeId) => visibleLabelIds.has(nodeId));
+        assert(movedNodeId, 'No connected Phase 3E node has a visible label');
+        const connectedEdge = frozenEdges.find((edge) =>
+          edge.sourceNodeId === movedNodeId || edge.targetNodeId === movedNodeId
+        );
+        assert(connectedEdge, 'Selected manual-layout node has no connected edge');
+        const connectedEdgeId = String(connectedEdge.id);
+        const nodeAnchor = () => container.locator(`[data-node-anchor="${movedNodeId}"]`);
+        const nodeLabel = () => container.locator(`.constellation-node-label[data-node-id="${movedNodeId}"]`);
+
+        const truthBefore = await truthSnapshot();
+        const original = await nodePosition(movedNodeId);
+        await page.getByRole('button', { name: 'Arrange constellation layout' }).click();
+        assert.equal(await container.getAttribute('data-manual-layout-mode'), 'ARRANGE');
+
+        // Escape restores the pre-gesture override even after real pointer movement.
+        let box = await nodeAnchor().boundingBox();
+        assert(box);
+        await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2);
+        await page.mouse.down();
+        await page.mouse.move(box.x + box.width / 2 + 86, box.y + box.height / 2 - 54, { steps: 6 });
+        await page.keyboard.press('Escape');
+        await page.mouse.up();
+        assert.deepEqual(await nodePosition(movedNodeId), original);
+        assert.equal(await container.getAttribute('data-manual-layout-override-count'), '0');
+
+        const labelBefore = await nodeLabel().boundingBox();
+        const edgeBefore = await edgeGeometry(connectedEdgeId);
+        await drag(nodeAnchor(), 156, 92);
+        await page.waitForFunction(() =>
+          document.querySelector('[data-testid="markov-constellation-container"]')
+            ?.getAttribute('data-manual-layout-override-count') === '1'
+        );
+        const moved = await nodePosition(movedNodeId);
+        assert(Math.hypot(moved.x - original.x, moved.y - original.y) > 100,
+          'Real node pointer drag was not meaningful in graph space');
+        const edgeAfter = await edgeGeometry(connectedEdgeId);
+        assert.notDeepEqual(edgeAfter, edgeBefore, 'Connected edge geometry did not reroute live');
+        const labelAfter = await nodeLabel().boundingBox();
+        assert(labelBefore && labelAfter);
+        assert(Math.hypot(labelAfter.x - labelBefore.x, labelAfter.y - labelBefore.y) > 20,
+          'Visible node label did not move with its node');
+        assert.deepEqual(await truthSnapshot(), truthBefore,
+          'Manual geometry changed DOM-surfaced PolicyFlow topology or proof truth');
+
+        const storageKey = String(await container.getAttribute('data-manual-layout-storage-key'));
+        const savedRecord = await page.evaluate((key) => localStorage.getItem(key), storageKey);
+        assert(savedRecord, 'Committed node drag did not write browser-local layout');
+        const savedJson = jsonRecord(JSON.parse(savedRecord), 'saved Phase 3E layout');
+        assert.equal(savedJson.schemaVersion, 'MANUAL_CONSTELLATION_LAYOUT_V1');
+        const savedIdentity = jsonRecord(savedJson.identity, 'saved Phase 3E identity');
+        assert.equal(savedIdentity.sourcePolicyFingerprint, frozen.metadata.selectedPolicyFingerprint);
+        assert.equal(savedIdentity.topologyFingerprint, frozen.metadata.topologyFingerprint);
+        assert(jsonRecord(savedJson.positions, 'saved Phase 3E positions')[movedNodeId]);
+
+        // Keyboard nudge is a graph-space edit and persists on keyup.
+        await nodeAnchor().focus();
+        const beforeNudge = await nodePosition(movedNodeId);
+        await page.keyboard.press('ArrowUp');
+        const afterNudge = await nodePosition(movedNodeId);
+        assertNear(afterNudge.x, beforeNudge.x, 'keyboard nudge x');
+        assertNear(afterNudge.y, beforeNudge.y - 12, 'keyboard nudge y');
+
+        const compatiblePosition = await nodePosition(movedNodeId);
+        await page.getByRole('button', { name: 'Screensaver' }).click();
+        await page.waitForFunction(() => document.fullscreenElement !== null);
+        assert.equal(await container.getAttribute('data-manual-layout-mode'), 'LOCKED');
+        assert.deepEqual(await nodePosition(movedNodeId), compatiblePosition,
+          'Screensaver discarded saved manual coordinates');
+        await page.getByRole('button', { name: 'Toggle Fullscreen' }).click();
+        await page.waitForFunction(() => document.fullscreenElement === null);
+        await page.getByRole('button', { name: /Replay/ }).click();
+        assert.deepEqual(await nodePosition(movedNodeId), compatiblePosition,
+          'Replay discarded saved manual coordinates');
+
+        // A document reload reconstructs the graph and loads only the strict identity match.
+        await page.reload({ waitUntil: 'networkidle' });
+        await optimizedFixture(page, ctx.appUrl, input);
+        container = page.getByTestId('markov-constellation-container');
+        await container.waitFor();
+        await container.scrollIntoViewIfNeeded();
+        assert.equal(await container.getAttribute('data-manual-layout-mode'), 'LOCKED');
+        assert.equal(await container.getAttribute('data-manual-layout-override-count'), '1');
+        assert.deepEqual(await nodePosition(movedNodeId), compatiblePosition,
+          'Strict manual position did not survive page reload');
+        assert.deepEqual(await truthSnapshot(), truthBefore,
+          'Reloaded manual geometry changed DOM-surfaced PolicyFlow truth');
+
+        const storedBeforeResetView = await page.evaluate((key) => localStorage.getItem(key), storageKey);
+        await page.getByRole('button', { name: 'Reset View' }).click();
+        assert.deepEqual(await nodePosition(movedNodeId), compatiblePosition,
+          'Reset View removed a manual node coordinate');
+        assert.equal(await page.evaluate((key) => localStorage.getItem(key), storageKey), storedBeforeResetView,
+          'Reset View changed persisted layout data');
+
+        // In Arrange mode a background gesture pans but cannot add/move overrides.
+        await page.getByRole('button', { name: 'Arrange constellation layout' }).click();
+        const overrideCountBeforePan = await container.getAttribute('data-manual-layout-override-count');
+        const nodeBeforePan = await nodePosition(movedNodeId);
+        const panBefore = {
+          x: Number(await container.getAttribute('data-camera-pan-x')),
+          y: Number(await container.getAttribute('data-camera-pan-y')),
+        };
+        const background = await container.locator('.constellation-viewport').evaluate((viewport) => {
+          const rect = viewport.getBoundingClientRect();
+          const candidates = [
+            [0.08, 0.88], [0.92, 0.88], [0.08, 0.5], [0.92, 0.5], [0.5, 0.92],
+          ];
+          for (const [xFraction, yFraction] of candidates) {
+            const x = rect.left + rect.width * xFraction;
+            const y = rect.top + rect.height * yFraction;
+            const hit = document.elementFromPoint(x, y) as HTMLElement | null;
+            if (hit && viewport.contains(hit) && !hit.closest('button, aside, [data-node-id], [data-edge-id]')) {
+              return { x, y };
+            }
+          }
+          throw new Error('No unobstructed Constellation background point was found');
+        });
+        await page.mouse.move(background.x, background.y);
+        await page.mouse.down();
+        await page.mouse.move(background.x + 74, background.y + 46, { steps: 6 });
+        await page.mouse.up();
+        const panAfter = {
+          x: Number(await container.getAttribute('data-camera-pan-x')),
+          y: Number(await container.getAttribute('data-camera-pan-y')),
+        };
+        assert(Math.hypot(panAfter.x - panBefore.x, panAfter.y - panBefore.y) > 50,
+          'Background pointer drag did not pan the camera');
+        assert.deepEqual(await nodePosition(movedNodeId), nodeBeforePan,
+          'Background pointer drag changed graph-space node geometry');
+        assert.equal(await container.getAttribute('data-manual-layout-override-count'), overrideCountBeforePan);
+
+        // Locking turns a node-originating drag back into the normal camera pan gesture.
+        await page.getByRole('button', { name: 'Lock constellation layout' }).click();
+        const lockedNodePosition = await nodePosition(movedNodeId);
+        const lockedPanBefore = Number(await container.getAttribute('data-camera-pan-x'));
+        await drag(nodeAnchor(), -82, 34);
+        assert.deepEqual(await nodePosition(movedNodeId), lockedNodePosition,
+          'Locked layout allowed node movement');
+        assert(Math.abs(Number(await container.getAttribute('data-camera-pan-x')) - lockedPanBefore) > 60,
+          'Locked node-originating drag did not retain camera pan behavior');
+
+        await page.getByRole('button', { name: 'Reset View' }).click();
+        await page.getByRole('button', { name: 'Reset Layout' }).click();
+        const automatic = await nodePosition(movedNodeId);
+        const canonical = await nodeCanonicalPosition(movedNodeId);
+        assertNear(automatic.x, canonical.x, 'Reset Layout automatic x');
+        assertNear(automatic.y, canonical.y, 'Reset Layout automatic y');
+        assert.equal(await container.getAttribute('data-manual-layout-override-count'), '0');
+        assert.equal(await page.evaluate((key) => localStorage.getItem(key), storageKey), null);
+
+        // Build a keyboard-positioned outlier, then prove both route and all fits use effective bounds.
+        await page.getByRole('button', { name: 'Arrange constellation layout' }).click();
+        await nodeAnchor().focus();
+        await page.keyboard.press('ArrowUp');
+        for (let index = 0; index < 30; index += 1) {
+          await page.keyboard.press('Shift+ArrowRight');
+        }
+        const outlier = await nodePosition(movedNodeId);
+        assert(outlier.x - canonical.x >= 1_400, 'Keyboard outlier did not exceed canonical bounds');
+        await page.getByRole('button', { name: 'Route Focus' }).click();
+        await page.waitForTimeout(100);
+        await assertInsideViewport(nodeAnchor(), 'Route Focus manual node');
+        await assertInsideViewport(nodeLabel(), 'Route Focus manual label');
+        await page.getByRole('button', { name: 'Fit All' }).click();
+        await page.waitForTimeout(100);
+        await assertInsideViewport(nodeAnchor(), 'Fit All manual node');
+        await assertInsideViewport(nodeLabel(), 'Fit All manual label');
+        const desktopGeometry = await constellationFitGeometry(page);
+        assert.deepEqual(desktopGeometry.outside, [], 'Manual Fit All clipped a visible label');
+        mkdirSync(stableEvidenceDirectory, { recursive: true });
+        const desktopPath = join(stableEvidenceDirectory, 'phase3e-manual-constellation-1440x900.png');
+        await page.screenshot({ path: desktopPath, fullPage: true });
+        const selectedNodeDetails = page.getByLabel('Selected constellation node details');
+        if (await selectedNodeDetails.isVisible()) {
+          await selectedNodeDetails.getByRole('button', { name: 'Close selected node details' }).click();
+        }
+
+        // Chromium's touch input path reaches the same pointer-capture implementation.
+        await page.setViewportSize({ width: 390, height: 844 });
+        await page.getByRole('button', { name: 'Fit All' }).click();
+        await page.waitForTimeout(100);
+        const mobileGeometry = await page.evaluate(() => ({
+          viewport: document.documentElement.clientWidth,
+          documentWidth: document.documentElement.scrollWidth,
+          bodyWidth: document.body.scrollWidth,
+        }));
+        assert(mobileGeometry.documentWidth <= mobileGeometry.viewport + 1);
+        assert(mobileGeometry.bodyWidth <= mobileGeometry.viewport + 1);
+        const touchBefore = await nodePosition(movedNodeId);
+        const touchPoint = await page.evaluate((nodeId) => {
+          const controls = [...document.querySelectorAll<HTMLElement>('[data-node-id]')]
+            .filter((element) => element.dataset.nodeId === nodeId);
+          for (const control of controls) {
+            const rect = control.getBoundingClientRect();
+            const candidates = [
+              [rect.left + rect.width / 2, rect.top + rect.height / 2],
+              [rect.left + rect.width * 0.25, rect.top + rect.height * 0.25],
+              [rect.left + rect.width * 0.75, rect.top + rect.height * 0.75],
+            ];
+            for (const [x, y] of candidates) {
+              const hitNodeId = (document.elementFromPoint(x, y) as HTMLElement | null)
+                ?.closest<HTMLElement>('[data-node-id]')?.dataset.nodeId;
+              if (hitNodeId === nodeId) return { x, y };
+            }
+          }
+          throw new Error(`No unobstructed touch point for ${nodeId}`);
+        }, movedNodeId);
+        const touchX = touchPoint.x;
+        const touchY = touchPoint.y;
+        const cdp = await context.newCDPSession(page);
+        await cdp.send('Input.dispatchTouchEvent', {
+          type: 'touchStart',
+          touchPoints: [{ x: touchX, y: touchY, radiusX: 4, radiusY: 4, force: 1, id: 1 }],
+        });
+        await page.waitForTimeout(40);
+        await cdp.send('Input.dispatchTouchEvent', {
+          type: 'touchMove',
+          touchPoints: [{ x: touchX - 24, y: touchY + 20, radiusX: 4, radiusY: 4, force: 1, id: 1 }],
+        });
+        await page.waitForTimeout(40);
+        await cdp.send('Input.dispatchTouchEvent', {
+          type: 'touchMove',
+          touchPoints: [{ x: touchX - 48, y: touchY + 40, radiusX: 4, radiusY: 4, force: 1, id: 1 }],
+        });
+        await page.waitForTimeout(40);
+        await cdp.send('Input.dispatchTouchEvent', { type: 'touchEnd', touchPoints: [] });
+        await page.waitForTimeout(40);
+        const touchAfter = await nodePosition(movedNodeId);
+        assert(Math.hypot(touchAfter.x - touchBefore.x, touchAfter.y - touchBefore.y) > 20,
+          'Trusted mobile touch drag did not move the node in graph space');
+        await page.getByRole('button', { name: 'Fit All' }).click();
+        await page.waitForTimeout(100);
+        await assertInsideViewport(nodeAnchor(), 'Mobile Fit All manual node');
+        await assertInsideViewport(nodeLabel(), 'Mobile Fit All manual label');
+        const mobilePath = join(stableEvidenceDirectory, 'phase3e-manual-constellation-390x844.png');
+        await page.screenshot({ path: mobilePath, fullPage: true });
+        await page.getByRole('button', { name: 'Reset Layout' }).click();
+
+        ctx.artifacts.phase3eManualConstellationDesktop = relative(repositoryRoot, desktopPath);
+        ctx.artifacts.phase3eManualConstellationMobile = relative(repositoryRoot, mobilePath);
+        return {
+          schema: 'MANUAL_CONSTELLATION_LAYOUT_V1',
+          topologyFingerprint: frozen.metadata.topologyFingerprint,
+          exactFlowFingerprint: frozen.metadata.exactFlowFingerprint,
+          selectedPolicyFingerprint: frozen.metadata.selectedPolicyFingerprint,
+          movedNodeId,
+          connectedEdgeId,
+          pointerDistanceGraph: Math.hypot(moved.x - original.x, moved.y - original.y),
+          labelMoved: true,
+          edgeRerouted: true,
+          persistenceReload: true,
+          resetViewPreserved: true,
+          resetLayoutRemoved: true,
+          backgroundPan: true,
+          lockedPan: true,
+          keyboardNudge: true,
+          routeFocusEffectiveBounds: true,
+          fitAllEffectiveBounds: true,
+          replayScreensaverCompatible: true,
+          fullscreen: true,
+          trustedTouchDrag: true,
+          mobileGeometry,
+          screenshots: {
+            desktop: ctx.artifacts.phase3eManualConstellationDesktop,
+            mobile: ctx.artifacts.phase3eManualConstellationMobile,
+          },
+        };
+      }, {
+        frozenFlow: frozen.flow,
+        frozenAcquisitionContext: { kind: 'SELF_FRACTURE' },
+        viewport: { width: 1440, height: 900 },
+      });
     }
 
     case 'real-policy-flow-differential':

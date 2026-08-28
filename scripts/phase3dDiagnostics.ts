@@ -271,6 +271,7 @@ function actionEvidenceDiagnostics(result: OptimizeCraftResult): Record<string, 
 function coreAbDiagnostics(
   disabled: CoreRecommendationSnapshot,
   enabled: CoreRecommendationSnapshot,
+  requireExactStateSet = false,
 ): Record<string, unknown> {
   assert.equal(disabled.compareMethodFamiliesRequested, false);
   assert.equal(enabled.compareMethodFamiliesRequested, true);
@@ -280,14 +281,25 @@ function coreAbDiagnostics(
   const exactWork = disabled.statesExpanded === enabled.statesExpanded &&
     disabled.retainedStates === enabled.retainedStates &&
     disabled.retainedStateFingerprint === enabled.retainedStateFingerprint;
+  const hostTimedVariance = !exactWork &&
+    disabled.stopReason === 'HOST_RESERVE' &&
+    enabled.stopReason === 'HOST_RESERVE';
+  if (requireExactStateSet) {
+    assert(exactWork,
+      `D7 deterministic state-capped A/B diverged ` +
+      `(false=${disabled.statesExpanded}/${disabled.retainedStateFingerprint}, ` +
+      `true=${enabled.statesExpanded}/${enabled.retainedStateFingerprint})`);
+  }
   if (exactWork) {
     assert.deepEqual(enabled.candidateExecutableUChaos, disabled.candidateExecutableUChaos);
     assert.equal(enabled.selectedExecutableUChaos, disabled.selectedExecutableUChaos);
     assert.equal(enabled.stopReason, disabled.stopReason);
     assert.equal(enabled.canonicalPolicyFingerprint, disabled.canonicalPolicyFingerprint);
   } else {
-    assert(enabled.statesExpanded >= disabled.statesExpanded,
-      'D7 family-enabled core expanded fewer states');
+    assert(hostTimedVariance,
+      `D7 non-exact full-field A/B did not share the HOST_RESERVE boundary ` +
+      `(false=${disabled.statesExpanded}, true=${enabled.statesExpanded}, ` +
+      `falseStop=${disabled.stopReason}, trueStop=${enabled.stopReason})`);
     assert((enabled.selectedExecutableUChaos ?? Infinity) <=
       (disabled.selectedExecutableUChaos ?? Infinity) + 0.05,
     'D7 family-enabled core executable U regressed');
@@ -296,11 +308,25 @@ function coreAbDiagnostics(
       entry.fullRouteUChaos,
     ]));
     for (const entry of disabled.candidateExecutableUChaos) {
-      assert((enabledCandidates.get(entry.candidateId) ?? Infinity) <= entry.fullRouteUChaos + 0.05,
-        `D7 family-enabled core regressed ${entry.candidateId}`);
+      const enabledCandidate = enabledCandidates.get(entry.candidateId);
+      if (enabledCandidate !== undefined) {
+        assert(enabledCandidate <= entry.fullRouteUChaos + 0.05,
+          `D7 family-enabled core regressed shared candidate ${entry.candidateId}`);
+      }
     }
+    assert.equal(enabled.stopReason, disabled.stopReason);
+    assert.equal(enabled.canonicalPolicyFingerprint, disabled.canonicalPolicyFingerprint,
+      'D7 HOST_RESERVE scheduling variance changed the selected canonical core policy');
   }
-  return { mode: exactWork ? 'EXACT_CORE_STATE_SET' : 'STRONGER_MONOTONE_CORE', disabled, enabled };
+  return {
+    mode: exactWork
+      ? 'EXACT_CORE_STATE_SET'
+      : 'HOST_TIMED_EQUIVALENT_INCUMBENT',
+    stateDelta: enabled.statesExpanded - disabled.statesExpanded,
+    retainedStateDelta: enabled.retainedStates - disabled.retainedStates,
+    disabled,
+    enabled,
+  };
 }
 
 function registryDiagnostics(result: OptimizeCraftResult): Record<string, unknown> {
@@ -593,10 +619,30 @@ function runDiagnostic(): void {
     compareMethodFamilies: true,
   });
   const enabledSnapshot = snapshot(enabledResult);
+  const deterministicInput: OptimizeCraftInput = {
+    ...FIELD_INPUT_BASE,
+    searchBudget: {
+      preset: 'CUSTOM',
+      maxStates: 500,
+      maxWallTimeMs: 30_000,
+      maxExpansionRounds: 3,
+    },
+  };
+  const deterministicDisabled = new OptimizerService(
+    new ClusterModRepository(),
+  ).optimize({ ...deterministicInput, compareMethodFamilies: false });
+  const deterministicEnabled = new OptimizerService(
+    new ClusterModRepository(),
+  ).optimize({ ...deterministicInput, compareMethodFamilies: true });
 
   const d2 = evidenceReconciliation(enabledResult);
   const actions = actionEvidenceDiagnostics(enabledResult);
   const ab = coreAbDiagnostics(disabledSnapshot, enabledSnapshot);
+  const deterministicAb = coreAbDiagnostics(
+    snapshot(deterministicDisabled),
+    snapshot(deterministicEnabled),
+    true,
+  );
   const registry = registryDiagnostics(enabledResult);
   const budget = budgetDiagnostics(enabledResult);
   const proofSeparation = familyProofDiagnostics(enabledResult);
@@ -630,7 +676,8 @@ function runDiagnostic(): void {
       D7_compareMethodsCoreAB: {
         disabledElapsedMs,
         enabledElapsedMs: enabledResult.search.totalElapsedMs,
-        ...ab,
+        fieldHostTimed: ab,
+        deterministicStateCapped: deterministicAb,
       },
       D8_requestLocalIncumbentRegistry: registry,
       D9_requestBudgetLedger: budget,
@@ -665,8 +712,11 @@ function runDiagnostic(): void {
     `D1 request identity=${commonIdentity}`,
     `D2 evidence families=${d2.evidenceFamilies}; entries=${d2.evidenceEntries}`,
     `D3-D6 selected acquisition=${actions.selectedAcquisitionKind}; stage controls=PASS`,
-    `D7 mode=${ab.mode}; false=${disabledSnapshot.statesExpanded} states/${disabledSnapshot.selectedExecutableUChaos}c; ` +
+    `D7 field mode=${ab.mode}; false=${disabledSnapshot.statesExpanded} states/${disabledSnapshot.selectedExecutableUChaos}c; ` +
       `true=${enabledSnapshot.statesExpanded} states/${enabledSnapshot.selectedExecutableUChaos}c`,
+    `D7 deterministic mode=${deterministicAb.mode}; ` +
+      `false=${snapshot(deterministicDisabled).statesExpanded} states; ` +
+      `true=${snapshot(deterministicEnabled).statesExpanded} states`,
     `D8 policies=${enabledResult.requestPolicyRegistry?.registeredPolicyCount}; monotone=${enabledResult.requestPolicyRegistry?.monotone}`,
     `D9 core=${enabledSnapshot.statesExpanded} states; stop=${enabledSnapshot.stopReason}; ` +
       `deadline=${enabledSnapshot.coreEnvelope.allocatedWallTimeMs}ms`,

@@ -1,0 +1,78 @@
+{
+  "fixtureId": "policy-flow-phase3e-manual-v1",
+  "fixtureVersion": 1,
+  "sourceAppCommit": "dc32528e107090bfd7b6bbbe321db93d8b4b1723",
+  "normalizedRequest": {
+    "baseType": "Large Cluster Jewel",
+    "clusterType": "12% increased Chaos Damage",
+    "itemLevel": 84,
+    "passiveCount": 8,
+    "target": {
+      "requiredMods": [
+        {
+          "modId": "Touch of Cruelty"
+        },
+        {
+          "modId": "Unspeakable Gifts"
+        },
+        {
+          "modId": "Unwaveringly Evil"
+        }
+      ],
+      "requiredRarity": "rare"
+    },
+    "prices": {
+      "currencyRates": {
+        "chaos": 1,
+        "divine": 213.5,
+        "fracturing": 298.6,
+        "annul": 11.66,
+        "exalt": 1.17,
+        "scour": 0.5391,
+        "alteration": 0.1336,
+        "transmutation": 0.005012,
+        "augmentation": 0.03941,
+        "regal": 0.03638,
+        "wildLifeforce": 0.02377,
+        "vividLifeforce": 0.08208,
+        "primalLifeforce": 0.04085
+      },
+      "cleanBaseCostChaos": 38,
+      "cleanBasePriceSource": "manual",
+      "cleanBasePriceProvenance": "Frozen Allflame ilvl 84 eight-passive 12% Chaos Damage clean-base quote reviewed by the Phase 3E plan"
+    },
+    "objective": {
+      "kind": "CHEAPEST_CHAOS"
+    },
+    "searchBudget": {
+      "preset": "NORMAL",
+      "maxStates": 5000,
+      "maxWallTimeMs": 30000,
+      "maxExpansionRounds": 3
+    },
+    "searchIntent": "RECOMMEND",
+    "allowResearchFallbackPrices": true,
+    "compareMethodFamilies": false
+  },
+  "selectedBundleId": "bundle:family_fracture_Unspeakable Gifts:independent",
+  "selectedPolicyFingerprint": "policy-1031a5cd",
+  "selectedRouteName": "Self-fracture Unspeakable Gifts",
+  "selectedCostChaos": 1660.1253603083733,
+  "policyFlowVersion": "SELECTED_POLICY_FLOW_V1",
+  "topologyFingerprint": "topology-c6ae1cff",
+  "exactFlowFingerprint": "flow-95543b18",
+  "serializedSummary": {
+    "path": "quality-lab/fixtures/policy-flow-phase3e-manual-v1-artifact.json",
+    "selector": "flow",
+    "artifactSha256": "bbdf04ed629da27927d620108b557132f5c000e2e93de0dbdca45711d262325d",
+    "normalizedSummarySha256": "14417ea81333802ec2827ea755cfabc684883c4ff94a5cf4a4ebcd1a8ed58936",
+    "nodeCount": 23,
+    "edgeCount": 49
+  },
+  "certificationScope": "Frozen real 23-node Normal self-fracture PolicyFlow used only to validate Phase 3E presentation overrides.",
+  "limitations": [
+    "Manual layout is browser-local presentation data and is absent from this PolicyFlow fixture.",
+    "The frozen renderer wrapper is Quality Lab-only.",
+    "Refreshing this fixture requires an explicit --refresh-fixture invocation."
+  ]
+}

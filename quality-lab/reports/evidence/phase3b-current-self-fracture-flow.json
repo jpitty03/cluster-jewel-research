@@ -1452,7 +1452,7 @@
           "exactExpectedFlow": 1.412476879104645
         }
       ],
-      "aggregationMs": 63.799999952316284
+      "aggregationMs": 66.7999997138977
     },
     "reconciliation": {
       "tolerance": 1e-7,
