@@ -62,7 +62,7 @@
   "policyFlowVersion": "SELECTED_POLICY_FLOW_V1",
   "topologyFingerprint": "topology-b6fb87a1",
   "serializedSummary": {
-    "path": "quality-lab/reports/evidence/phase3b-field-three-notable.json",
+    "path": "quality-lab/fixtures/policy-flow-phase3d-field-v1-artifact.json",
     "selector": "flow",
     "artifactSha256": "df1dbc45cf001bfc1e9a4f1e068a2e8c38415f3ddfac72e42bbe8417e881b87f",
     "normalizedSummarySha256": "90f245597cac6ba44664fd650b88db36e83bb11703fd567851440b4d9fbf286e",

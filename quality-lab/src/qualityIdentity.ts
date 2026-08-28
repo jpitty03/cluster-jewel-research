@@ -71,9 +71,10 @@ export interface ComputedQualityIdentity {
 }
 
 export function computeQualityIdentity(): ComputedQualityIdentity {
+  const fixtureDirectory = join(qualityDirectory, 'fixtures');
   const fixtureCorpusPath = join(qualityDirectory, 'fixtures', 'fixtureCorpus.json');
   const frozenFixturePath = join(qualityDirectory, 'fixtures', 'policy-flow-clean-v1.json');
-  const frozenFlowArtifactPath = join(qualityDirectory, 'reports', 'evidence', 'phase2z-browser-flow.json');
+  const frozenFlowArtifactPath = join(qualityDirectory, 'fixtures', 'policy-flow-clean-v1-artifact.json');
   const fixtureCorpus = JSON.parse(readFileSync(fixtureCorpusPath, 'utf8')) as FixtureCorpusRecord;
   const applicationHash = hashFiles([
     join(repositoryRoot, 'src'),
@@ -90,7 +91,7 @@ export function computeQualityIdentity(): ComputedQualityIdentity {
     join(qualityDirectory, 'package.json'),
     join(qualityDirectory, 'package-lock.json'),
   ]);
-  const fixtureCorpusHash = hashFiles([fixtureCorpusPath, frozenFixturePath, frozenFlowArtifactPath]);
+  const fixtureCorpusHash = hashFiles([fixtureDirectory]);
   const priceSnapshotIdentity = `prices-${digest([
     stableJson(fixtureCorpus.fixtures.map((fixture) => ({
       id: fixture.id,

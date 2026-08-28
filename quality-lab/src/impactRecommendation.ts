@@ -52,8 +52,8 @@ export function recommendForPaths(paths: readonly string[]): Recommendation {
     ['handoff', 'share-export', 'responsive'].forEach((tag) => tags.add(tag));
     reasons.add('Handoff/share changes require exact round-trip and responsive controls.');
   }
-  if (matches(/^quality-lab\//) || matches(/^scripts\/phase3aDiagnostics\.ts$/)) {
-    reasons.add('Harness changes require the Phase 3A direct diagnostic and a targeted DEV execution.');
+  if (matches(/^quality-lab\//)) {
+    reasons.add('Harness changes require static validation and a targeted DEV execution.');
   }
   if (tags.size === 0 && paths.length > 0) {
     ['worker', 'proof'].forEach((tag) => tags.add(tag));
@@ -61,7 +61,7 @@ export function recommendForPaths(paths: readonly string[]): Recommendation {
   }
   const sortedTags = [...tags].sort();
   const commands = sortedTags.map((tag) => `npm run -- lab:tag -- --tag ${tag}`);
-  if (paths.some((path) => path.startsWith('quality-lab/'))) commands.unshift('npm run diagnostic:phase3a');
+  if (paths.some((path) => path.startsWith('quality-lab/'))) commands.unshift('npm run lab:typecheck');
   commands.push('npm run lab:dev');
   commands.push('npm run lab:release  # once on final source; advisory final acceptance');
   return {

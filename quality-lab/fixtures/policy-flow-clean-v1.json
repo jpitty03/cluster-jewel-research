@@ -23,7 +23,7 @@
   "policyFlowVersion": "SELECTED_POLICY_FLOW_V1",
   "topologyFingerprint": "topology-4481a40d",
   "serializedSummary": {
-    "path": "quality-lab/reports/evidence/phase2z-browser-flow.json",
+    "path": "quality-lab/fixtures/policy-flow-clean-v1-artifact.json",
     "selector": "clean",
     "artifactSha256": "240b9065365eef61e9209df60fa6676d02bc61547f50288377bec55c0ee67be4",
     "normalizedSummarySha256": "12c4d104b9fd3f9c43499995e024d05df4fb9de90b9b0e72ca4233a8564d0746",

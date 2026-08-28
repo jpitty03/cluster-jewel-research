@@ -88,14 +88,11 @@ crafting-engine/
 4. **Passive Count Constraints**:
    - Max notables supported: Large (3), Medium (2), Small (1).
 
-## Running Tests & Diagnostics
+## Running and Validation
 
 ```bash
 # Run unit & regression test suites
 npm test
-
-# Run diagnostic mod-pool & blocked-group report for Reference Crafts A & B
-npx tsx crafting-engine/scripts/diagnosticReport.ts
 
 # Run single-action debug inspector (e.g. Exalted Orb probability distribution)
 npx tsx crafting-engine/scripts/debugAction.ts
@@ -105,6 +102,9 @@ npx tsx crafting-engine/scripts/optimizeCraftDemo.ts
 
 # Typecheck the engine
 npx tsc -b
+
+# Run the ordinary real-browser validation tier
+npm run lab:dev
 ```
 
 ## Validation Findings & Implementation Gaps (from First End-to-End Run)

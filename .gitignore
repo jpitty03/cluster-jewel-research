@@ -33,6 +33,8 @@ dist-ssr
 *.sw?
 .claude/
 
-# Real-browser videos, traces, and transient run directories. Stable evidence is
-# copied to quality-lab/reports/evidence/ by the release harness.
+# Regenerable diagnostics and real-browser evidence. CI uploads these directories
+# when a run needs to be retained; they are not source inputs or release artifacts.
+/output*.txt
 /quality-lab/artifacts/
+/quality-lab/reports/

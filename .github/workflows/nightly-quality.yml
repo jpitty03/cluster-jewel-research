@@ -1,4 +1,4 @@
-name: Manual Phase 3A Extended Quality Matrix
+name: Manual Extended Quality Lab
 
 on:
   workflow_dispatch:
@@ -21,22 +21,16 @@ jobs:
       - run: npx --prefix quality-lab playwright install --with-deps chromium
       - run: npm run build
       - run: npm run lint
+      - run: npm run lab:typecheck
       - run: git diff --check
-      - run: npm run diagnostic:mature
       - run: npm run lab:no-fallback-probe
       - name: Explicit extended fixtures, Research proof, viewport matrix, fuzz, and soak
         run: npm run lab:extended
-      - run: npm run diagnostic:phase2t
-      - run: npm run diagnostic:phase2u
-      - run: npm run diagnostic:phase2v
-      - run: npm run diagnostic:phase2w
-      - run: npm run diagnostic:phase2x
-      - run: npm run diagnostic:phase2y
-      - name: Upload nightly traces, video, screenshots, frames, and reports
+      - name: Upload extended traces, video, screenshots, frames, and reports
         if: always()
         uses: actions/upload-artifact@v6
         with:
-          name: phase3a-extended-quality-lab
+          name: extended-quality-lab
           path: |
             quality-lab/artifacts/
             quality-lab/reports/

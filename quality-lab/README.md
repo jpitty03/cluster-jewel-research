@@ -1,4 +1,4 @@
-# Phase 3A Real-Browser Quality Lab
+# Real-Browser Quality Lab
 
 The Quality Lab is a black-box release harness for the built Cluster Jewel Optimizer. It launches Vite's production preview from `dist/`, drives Playwright Chromium, and observes the rendered DOM, downloads, clipboard, browser geometry, and native module Worker protocol. Missing production assets or browser executables fail closed; there is no simulated application fallback.
 
@@ -23,7 +23,7 @@ npm run lab:release
 - `lab:extended` is explicit/manual only. It contains five-minute replay/memory soak, exhaustive viewport, Research-depth field proof, and generated fuzz work.
 - `lab:legacy-release` preserves the old serialized 115+ gate matrix as a manual audit tool. It is not the default release command.
 
-GitHub Pages remains lean: install, build, lint, diff hygiene, committed-evidence audit, deploy. It does not execute browser solvers or long soaks. The extended workflow is `workflow_dispatch` only.
+GitHub Pages remains lean: install, build, lint, diff hygiene, deploy. It does not execute browser solvers or long soaks. The extended workflow is `workflow_dispatch` only.
 
 ## Targeted execution
 
@@ -64,10 +64,10 @@ Every gate prints `RUN`, five-second heartbeats when needed, and `PASS`/`FAIL` w
 
 ## Frozen PolicyFlowSummary
 
-`fixtures/policy-flow-clean-v1.json` records the source commit, normalized request, selected bundle/policy fingerprint, policy-flow version, topology, artifact hash, and normalized summary hash. The serialized summary remains in the reviewed Phase 2Z browser-flow artifact.
+`fixtures/policy-flow-clean-v1.json` records the source commit, normalized request, selected bundle/policy fingerprint, policy-flow version, topology, artifact hash, and normalized summary hash. Its serialized summary is a versioned fixture beside the metadata.
 
 The frozen renderer gate uses a harness-only Worker wrapper to deliver that summary to the production renderer. It is valid only for renderer/interaction testing. RELEASE separately regenerates the same clean flow through the real Worker and differentially compares the summary and DOM topology, so the fixture cannot certify or replace current solver mechanics.
 
 Updating this fixture requires an explicit regeneration command and reviewed metadata/hash diff.
 
-Transient traces, screenshots, shard reports, and downloads are written under `quality-lab/artifacts/` and ignored. Stable reviewed evidence and consolidated reports are written under `quality-lab/reports/`.
+Traces, screenshots, shard reports, downloads, and consolidated reports are written under `quality-lab/artifacts/` and `quality-lab/reports/`. Both directories are regenerable and ignored; CI uploads them when a run needs retained evidence.

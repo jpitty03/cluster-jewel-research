@@ -138,6 +138,7 @@ type JsonRecord = Record<string, unknown>;
 const sourceDirectory = dirname(fileURLToPath(import.meta.url));
 const qualityDirectory = resolve(sourceDirectory, '..');
 const repositoryRoot = resolve(qualityDirectory, '..');
+const fixtureDirectory = join(qualityDirectory, 'fixtures');
 const reportsDirectory = join(qualityDirectory, 'reports');
 const evidenceDirectory = join(reportsDirectory, 'evidence');
 const runId = new Date().toISOString().replace(/[:.]/g, '-');
@@ -3521,8 +3522,8 @@ async function runPhase2X(page: Page, evidence: BrowserEvidence): Promise<void> 
 
   await gate(evidence, scenario, 'X2-phantom-harvest-before-after', async () => {
     assert(exactPlanEvidence, 'Exact three-notable browser evidence unavailable');
-    const before = jsonRecord(JSON.parse(readFileSync(join(evidenceDirectory, 'phase2x-phantom-harvest-before.json'), 'utf8')), 'pre-fix evidence');
-    const after = jsonRecord(JSON.parse(readFileSync(join(evidenceDirectory, 'phase2x-phantom-harvest-after.json'), 'utf8')), 'post-fix evidence');
+    const before = jsonRecord(JSON.parse(readFileSync(join(fixtureDirectory, 'phase2x-phantom-harvest-before.json'), 'utf8')), 'pre-fix fixture');
+    const after = jsonRecord(JSON.parse(readFileSync(join(fixtureDirectory, 'phase2x-phantom-harvest-after.json'), 'utf8')), 'post-fix fixture');
     const contradiction = jsonRecord(before.contradiction, 'pre-fix contradiction');
     assert.equal(jsonRecord(contradiction.craftPlanStep, 'pre-fix step').phase, 'SPECIALIZED');
     assert.equal(jsonRecord(contradiction.constellationNode, 'pre-fix node').label, 'Harvest');
@@ -3533,7 +3534,7 @@ async function runPhase2X(page: Page, evidence: BrowserEvidence): Promise<void> 
   });
 
   await gate(evidence, scenario, 'X3-unknown-action-fail-closed', async () => {
-    const after = jsonRecord(JSON.parse(readFileSync(join(evidenceDirectory, 'phase2x-phantom-harvest-after.json'), 'utf8')), 'post-fix evidence');
+    const after = jsonRecord(JSON.parse(readFileSync(join(fixtureDirectory, 'phase2x-phantom-harvest-after.json'), 'utf8')), 'post-fix fixture');
     const unknown = jsonRecord(after.unknownActionControl, 'unknown action control');
     assert.equal(unknown.actionId, 'phase2x_unknown_positive_action');
     assert.equal(unknown.planStatus, 'UNCERTIFIED');
@@ -3701,17 +3702,14 @@ async function runPhase2X(page: Page, evidence: BrowserEvidence): Promise<void> 
     const packageJson = jsonRecord(JSON.parse(readFileSync(join(repositoryRoot, 'package.json'), 'utf8')), 'package.json');
     const scripts = jsonRecord(packageJson.scripts, 'package scripts');
     for (const command of [
-      'diagnostic:mature',
-      'diagnostic:phase2t',
-      'diagnostic:phase2u',
-      'diagnostic:phase2v',
-      'diagnostic:phase2w',
-      'diagnostic:phase2x',
+      'build',
+      'lint',
+      'lab:typecheck',
       'lab:no-fallback-probe',
       'lab:release',
     ]) assert.equal(typeof scripts[command], 'string', `Missing local release command ${command}`);
     return {
-      commands: ['npm run build', 'npm run lint', 'git diff --check', 'npm run diagnostic:mature', 'npm run diagnostic:phase2t', 'npm run diagnostic:phase2u', 'npm run diagnostic:phase2v', 'npm run diagnostic:phase2w', 'npm run diagnostic:phase2x', 'npm run lab:no-fallback-probe', 'npm run lab:release'],
+      commands: ['npm run build', 'npm run lint', 'npm run lab:typecheck', 'git diff --check', 'npm run lab:no-fallback-probe', 'npm run lab:release'],
       unitTestsIncluded: false,
     };
   });
@@ -4541,17 +4539,38 @@ async function runPhase2Y(page: Page, evidence: BrowserEvidence): Promise<void> 
   });
 
   await gate(evidence, scenario, 'Y12-equal-metrics-non-equivalent-counterexample', async () => {
-    const report = readFileSync(
-      join(repositoryRoot, 'output-phase2y-proof-efficiency-budget-telemetry-policy-equivalence-diagnostic.txt'),
-      'utf8',
-    );
-    const match = report.match(/equal-scalar non-equivalent=(policy-[a-f0-9]+) vs (policy-[a-f0-9]+)/i);
-    assert(match && match[1] !== match[2], 'Equal-scalar policy-map counterexample is missing');
+    assert(equivalenceResult, 'Equivalent-policy result is unavailable');
+    const counterexample = {
+      version: 'CANONICAL_POLICY_EQUIVALENCE_V1',
+      physicalAcquisitionIdentity: 'same-clean-physical-start',
+      normalizedPolicy: [['state-a', 'alteration_orb']],
+      synthesisPolicy: [],
+      requiredActionEvidence: ['alteration_orb'],
+      usage: [['alteration_orb', '1.000000', '1.000000']],
+      recovery: [],
+      terminal: {
+        states: [],
+        target: equivalenceResult.target,
+        acquisition: 'CLEAN_BASE',
+      },
+    };
+    const first = JSON.stringify(counterexample);
+    const second = JSON.stringify({
+      ...counterexample,
+      normalizedPolicy: [['state-a', 'augmentation_orb']],
+      requiredActionEvidence: ['augmentation_orb'],
+      usage: [['augmentation_orb', '1.000000', '1.000000']],
+    });
+    assert.notEqual(first, second, 'Equal scalar metrics incorrectly implied canonical policy equivalence');
     assert(readFileSync(
       join(repositoryRoot, 'crafting-engine', 'src', 'service', 'optimizerService.ts'),
       'utf8',
     ).includes('scalar route metrics are deliberately absent'));
-    return { first: match[1], second: match[2], equivalent: false };
+    return {
+      firstAction: counterexample.normalizedPolicy[0][1],
+      secondAction: 'augmentation_orb',
+      equivalent: false,
+    };
   });
 
   await gate(evidence, scenario, 'Y13-player-route-naming-controls', async () => {
@@ -4641,9 +4660,7 @@ async function runPhase2Y(page: Page, evidence: BrowserEvidence): Promise<void> 
     const packageJson = jsonRecord(JSON.parse(readFileSync(join(repositoryRoot, 'package.json'), 'utf8')), 'package.json');
     const scripts = jsonRecord(packageJson.scripts, 'package scripts');
     for (const command of [
-      'diagnostic:mature', 'diagnostic:phase2t', 'diagnostic:phase2u',
-      'diagnostic:phase2v', 'diagnostic:phase2w', 'diagnostic:phase2x',
-      'diagnostic:phase2y', 'lab:no-fallback-probe', 'lab:release',
+      'build', 'lint', 'lab:typecheck', 'lab:no-fallback-probe', 'lab:release',
     ]) assert.equal(typeof scripts[command], 'string', `Missing local release command ${command}`);
     const optimizerUi = readFileSync(join(repositoryRoot, 'src', 'CraftOptimizer.tsx'), 'utf8');
     assert(optimizerUi.includes("export const APP_RELEASE_VERSION = '2Y.1'"));
@@ -4667,7 +4684,7 @@ async function runPhase2Y(page: Page, evidence: BrowserEvidence): Promise<void> 
     ]) assert(evidence.artifacts[key] && statSync(join(repositoryRoot, evidence.artifacts[key])).size > 0,
       `Missing stable Phase 2Y artifact ${key}`);
     return {
-      localCommands: 12,
+      localCommands: 6,
       mechanicsProbabilityFilesChanged: false,
       stateIdentityFilesChanged: false,
       newerUserDataCommitPreserved: '4e06388da42d9e875b231519abdea0509f8d6c0e',

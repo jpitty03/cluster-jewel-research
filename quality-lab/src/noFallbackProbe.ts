@@ -25,4 +25,4 @@ try {
 }
 assert(browserRejected, 'The release launcher did not fail for an unavailable browser executable');
 
-console.log('Phase 2T no-fallback probe observed hard failures for unavailable app and browser.');
+console.log('Quality Lab no-fallback probe observed hard failures for unavailable app and browser.');
