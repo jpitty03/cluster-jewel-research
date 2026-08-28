@@ -1,6 +1,6 @@
 {
   "schemaVersion": "PHASE3A_QUALITY_REPORT_V1",
-  "runId": "2026-08-28T03-52-41-611Z",
+  "runId": "2026-08-28T06-26-10-644Z",
   "suite": "DEV",
   "requestedGateIds": [
     "A-clean-worker-canonical",
@@ -10,6 +10,7 @@
     "C-full-route-policy-evidence",
     "D-constellation-large-scc-layout",
     "D-constellation-scope-fit",
+    "D-constellation-detail-overlay",
     "D-real-policy-flow-differential",
     "D-frozen-policy-flow-renderer"
   ],
@@ -21,20 +22,21 @@
     "C-full-route-policy-evidence",
     "D-constellation-large-scc-layout",
     "D-constellation-scope-fit",
+    "D-constellation-detail-overlay",
     "D-real-policy-flow-differential",
     "D-frozen-policy-flow-renderer"
   ],
-  "startedAt": "2026-08-28T03:52:41.611Z",
-  "finishedAt": "2026-08-28T03:55:16.500Z",
+  "startedAt": "2026-08-28T06:26:10.645Z",
+  "finishedAt": "2026-08-28T06:28:50.459Z",
   "status": "PASSED",
   "identity": {
-    "applicationSourceBuildHash": "app-47d4aa425661843070d4",
-    "fixtureCorpusVersion": "Phase3E-Frozen-Browser-Corpus-1",
-    "fixtureCorpusHash": "corpus-6e041387c3013608472a",
-    "priceSnapshotIdentity": "prices-80b6d66416a4b254",
+    "applicationSourceBuildHash": "app-4cbcfdb6be746d212186",
+    "fixtureCorpusVersion": "Phase3F-Frozen-Browser-Corpus-1",
+    "fixtureCorpusHash": "corpus-a34b02ab821eb35a1c54",
+    "priceSnapshotIdentity": "prices-e4cad19151cb813b",
     "browserVersion": "151.0.7922.34",
     "harnessVersion": "PHASE3A_QUALITY_LAB_V1",
-    "compatibilityHash": "compatible-d48b4ea0477254dce8327a54"
+    "compatibilityHash": "compatible-86b2800360789796aa9021bf"
   },
   "scheduling": {
     "processLevelShards": [
@@ -75,6 +77,7 @@
         "gateIds": [
           "D-constellation-large-scc-layout",
           "D-constellation-scope-fit",
+          "D-constellation-detail-overlay",
           "D-real-policy-flow-differential",
           "D-frozen-policy-flow-renderer"
         ],
@@ -83,11 +86,11 @@
     ]
   },
   "counts": {
-    "passed": 9,
+    "passed": 10,
     "failed": 0,
     "resumed": 0,
     "skipped": 0,
-    "total": 9
+    "total": 10
   },
   "results": [
     {
@@ -104,9 +107,9 @@
       "costClass": "FAST",
       "status": "PASS",
       "passed": true,
-      "startedAt": "2026-08-28T03:52:42.477Z",
-      "finishedAt": "2026-08-28T03:52:44.795Z",
-      "durationMs": 2318,
+      "startedAt": "2026-08-28T06:26:11.555Z",
+      "finishedAt": "2026-08-28T06:26:13.548Z",
+      "durationMs": 1993,
       "details": {
         "fixture": "cheap_one_mod",
         "protocol": {
@@ -137,14 +140,14 @@
         }
       },
       "executionIdentity": {
-        "applicationSourceBuildHash": "app-47d4aa425661843070d4",
+        "applicationSourceBuildHash": "app-4cbcfdb6be746d212186",
         "gateIdVersion": "A-clean-worker-canonical@1",
-        "fixtureCorpusVersion": "Phase3E-Frozen-Browser-Corpus-1",
+        "fixtureCorpusVersion": "Phase3F-Frozen-Browser-Corpus-1",
         "fixtureInputHash": "fixture-a8a605222b9c93d082e9",
-        "priceSnapshotIdentity": "prices-80b6d66416a4b254",
+        "priceSnapshotIdentity": "prices-e4cad19151cb813b",
         "browserVersion": "151.0.7922.34",
         "harnessVersion": "PHASE3A_QUALITY_LAB_V1",
-        "compatibilityHash": "compatible-d48b4ea0477254dce8327a54"
+        "compatibilityHash": "compatible-86b2800360789796aa9021bf"
       }
     },
     {
@@ -164,9 +167,9 @@
       "costClass": "SOLVER_HEAVY",
       "status": "PASS",
       "passed": true,
-      "startedAt": "2026-08-28T03:53:00.007Z",
-      "finishedAt": "2026-08-28T03:53:26.894Z",
-      "durationMs": 26887,
+      "startedAt": "2026-08-28T06:26:31.710Z",
+      "finishedAt": "2026-08-28T06:26:59.347Z",
+      "durationMs": 27638,
       "details": {
         "conserved": {
           "nodes": 18,
@@ -256,14 +259,14 @@
         "artifact": "quality-lab\\reports\\evidence\\phase3b-current-self-fracture-flow.json"
       },
       "executionIdentity": {
-        "applicationSourceBuildHash": "app-47d4aa425661843070d4",
+        "applicationSourceBuildHash": "app-4cbcfdb6be746d212186",
         "gateIdVersion": "B-self-fracture-policy@2",
-        "fixtureCorpusVersion": "Phase3E-Frozen-Browser-Corpus-1",
+        "fixtureCorpusVersion": "Phase3F-Frozen-Browser-Corpus-1",
         "fixtureInputHash": "fixture-2f70c545c1e6acdbe389",
-        "priceSnapshotIdentity": "prices-80b6d66416a4b254",
+        "priceSnapshotIdentity": "prices-e4cad19151cb813b",
         "browserVersion": "151.0.7922.34",
         "harnessVersion": "PHASE3A_QUALITY_LAB_V1",
-        "compatibilityHash": "compatible-d48b4ea0477254dce8327a54"
+        "compatibilityHash": "compatible-86b2800360789796aa9021bf"
       }
     },
     {
@@ -283,9 +286,9 @@
       "costClass": "SOLVER_HEAVY",
       "status": "PASS",
       "passed": true,
-      "startedAt": "2026-08-28T03:53:26.894Z",
-      "finishedAt": "2026-08-28T03:53:55.279Z",
-      "durationMs": 28385,
+      "startedAt": "2026-08-28T06:26:59.348Z",
+      "finishedAt": "2026-08-28T06:27:28.730Z",
+      "durationMs": 29382,
       "details": {
         "route": {
           "recommendationStatus": "PROVISIONAL_RESOLVED",
@@ -352,14 +355,14 @@
         "flowArtifact": "quality-lab\\reports\\evidence\\phase3b-alter-self-loop-flow.json"
       },
       "executionIdentity": {
-        "applicationSourceBuildHash": "app-47d4aa425661843070d4",
+        "applicationSourceBuildHash": "app-4cbcfdb6be746d212186",
         "gateIdVersion": "B-fractured-magic-alter-price-reversal@1",
-        "fixtureCorpusVersion": "Phase3E-Frozen-Browser-Corpus-1",
+        "fixtureCorpusVersion": "Phase3F-Frozen-Browser-Corpus-1",
         "fixtureInputHash": "fixture-f6b9fbf1b8b89d388877",
-        "priceSnapshotIdentity": "prices-80b6d66416a4b254",
+        "priceSnapshotIdentity": "prices-e4cad19151cb813b",
         "browserVersion": "151.0.7922.34",
         "harnessVersion": "PHASE3A_QUALITY_LAB_V1",
-        "compatibilityHash": "compatible-d48b4ea0477254dce8327a54"
+        "compatibilityHash": "compatible-86b2800360789796aa9021bf"
       }
     },
     {
@@ -377,9 +380,9 @@
       "costClass": "SOLVER_HEAVY",
       "status": "PASS",
       "passed": true,
-      "startedAt": "2026-08-28T03:53:55.279Z",
-      "finishedAt": "2026-08-28T03:54:17.490Z",
-      "durationMs": 22210,
+      "startedAt": "2026-08-28T06:27:28.730Z",
+      "finishedAt": "2026-08-28T06:27:50.817Z",
+      "durationMs": 22088,
       "details": {
         "objective": {
           "kind": "FEWEST_ACTIONS_WITHIN_COST",
@@ -402,14 +405,14 @@
         }
       },
       "executionIdentity": {
-        "applicationSourceBuildHash": "app-47d4aa425661843070d4",
+        "applicationSourceBuildHash": "app-4cbcfdb6be746d212186",
         "gateIdVersion": "B-harvest-objective-policy@1",
-        "fixtureCorpusVersion": "Phase3E-Frozen-Browser-Corpus-1",
+        "fixtureCorpusVersion": "Phase3F-Frozen-Browser-Corpus-1",
         "fixtureInputHash": "fixture-00e49a73585df6bded7e",
-        "priceSnapshotIdentity": "prices-80b6d66416a4b254",
+        "priceSnapshotIdentity": "prices-e4cad19151cb813b",
         "browserVersion": "151.0.7922.34",
         "harnessVersion": "PHASE3A_QUALITY_LAB_V1",
-        "compatibilityHash": "compatible-d48b4ea0477254dce8327a54"
+        "compatibilityHash": "compatible-86b2800360789796aa9021bf"
       }
     },
     {
@@ -430,9 +433,9 @@
       "costClass": "SOLVER_HEAVY",
       "status": "PASS",
       "passed": true,
-      "startedAt": "2026-08-28T03:54:18.467Z",
-      "finishedAt": "2026-08-28T03:55:16.401Z",
-      "durationMs": 57933,
+      "startedAt": "2026-08-28T06:27:51.774Z",
+      "finishedAt": "2026-08-28T06:28:50.363Z",
+      "durationMs": 58589,
       "details": {
         "selectedAcquisitionKind": "SELF_FRACTURE",
         "primordialFamilyId": "family_fracture_Primordial Bond",
@@ -464,14 +467,14 @@
         "screenshot": "quality-lab\\reports\\evidence\\phase3d-full-route-policy-evidence-desktop.png"
       },
       "executionIdentity": {
-        "applicationSourceBuildHash": "app-47d4aa425661843070d4",
+        "applicationSourceBuildHash": "app-4cbcfdb6be746d212186",
         "gateIdVersion": "C-full-route-policy-evidence@1",
-        "fixtureCorpusVersion": "Phase3E-Frozen-Browser-Corpus-1",
-        "fixtureInputHash": "fixture-c0956dc4af1bc5d29323",
-        "priceSnapshotIdentity": "prices-80b6d66416a4b254",
+        "fixtureCorpusVersion": "Phase3F-Frozen-Browser-Corpus-1",
+        "fixtureInputHash": "fixture-c0061b5b400157946293",
+        "priceSnapshotIdentity": "prices-e4cad19151cb813b",
         "browserVersion": "151.0.7922.34",
         "harnessVersion": "PHASE3A_QUALITY_LAB_V1",
-        "compatibilityHash": "compatible-d48b4ea0477254dce8327a54"
+        "compatibilityHash": "compatible-86b2800360789796aa9021bf"
       }
     },
     {
@@ -489,9 +492,9 @@
       "costClass": "FAST",
       "status": "PASS",
       "passed": true,
-      "startedAt": "2026-08-28T03:52:42.532Z",
-      "finishedAt": "2026-08-28T03:52:48.181Z",
-      "durationMs": 5649,
+      "startedAt": "2026-08-28T06:26:11.555Z",
+      "finishedAt": "2026-08-28T06:26:16.514Z",
+      "durationMs": 4959,
       "details": {
         "topologyFingerprint": "topology-3c852336",
         "nodeCount": 43,
@@ -534,14 +537,14 @@
         }
       },
       "executionIdentity": {
-        "applicationSourceBuildHash": "app-47d4aa425661843070d4",
+        "applicationSourceBuildHash": "app-4cbcfdb6be746d212186",
         "gateIdVersion": "D-constellation-large-scc-layout@1",
-        "fixtureCorpusVersion": "Phase3E-Frozen-Browser-Corpus-1",
-        "fixtureInputHash": "fixture-89dab0a1ee7217729555",
-        "priceSnapshotIdentity": "prices-80b6d66416a4b254",
+        "fixtureCorpusVersion": "Phase3F-Frozen-Browser-Corpus-1",
+        "fixtureInputHash": "fixture-847b9f28112a9ba071cc",
+        "priceSnapshotIdentity": "prices-e4cad19151cb813b",
         "browserVersion": "151.0.7922.34",
         "harnessVersion": "PHASE3A_QUALITY_LAB_V1",
-        "compatibilityHash": "compatible-d48b4ea0477254dce8327a54"
+        "compatibilityHash": "compatible-86b2800360789796aa9021bf"
       }
     },
     {
@@ -559,9 +562,9 @@
       "costClass": "FAST",
       "status": "PASS",
       "passed": true,
-      "startedAt": "2026-08-28T03:52:48.181Z",
-      "finishedAt": "2026-08-28T03:52:55.378Z",
-      "durationMs": 7197,
+      "startedAt": "2026-08-28T06:26:16.514Z",
+      "finishedAt": "2026-08-28T06:26:23.588Z",
+      "durationMs": 7074,
       "details": {
         "field": {
           "topologyFingerprint": "topology-b6fb87a1",
@@ -639,9 +642,9 @@
           "mobileFit": {
             "viewport": {
               "left": 44.796875,
-              "top": 531.265625,
+              "top": 941.265625,
               "right": 345.1875,
-              "bottom": 961.265625,
+              "bottom": 1371.265625,
               "width": 300.390625,
               "height": 430
             },
@@ -687,14 +690,59 @@
         }
       },
       "executionIdentity": {
-        "applicationSourceBuildHash": "app-47d4aa425661843070d4",
+        "applicationSourceBuildHash": "app-4cbcfdb6be746d212186",
         "gateIdVersion": "D-constellation-scope-fit@1",
-        "fixtureCorpusVersion": "Phase3E-Frozen-Browser-Corpus-1",
-        "fixtureInputHash": "fixture-89dab0a1ee7217729555",
-        "priceSnapshotIdentity": "prices-80b6d66416a4b254",
+        "fixtureCorpusVersion": "Phase3F-Frozen-Browser-Corpus-1",
+        "fixtureInputHash": "fixture-847b9f28112a9ba071cc",
+        "priceSnapshotIdentity": "prices-e4cad19151cb813b",
         "browserVersion": "151.0.7922.34",
         "harnessVersion": "PHASE3A_QUALITY_LAB_V1",
-        "compatibilityHash": "compatible-d48b4ea0477254dce8327a54"
+        "compatibilityHash": "compatible-86b2800360789796aa9021bf"
+      }
+    },
+    {
+      "id": "D-constellation-detail-overlay",
+      "title": "Constellation technical overlays exclude graph gestures and retain manual layout",
+      "phase": "3F",
+      "shard": "D",
+      "tags": [
+        "phase3f",
+        "phase3e",
+        "constellation",
+        "interaction",
+        "accessibility"
+      ],
+      "costClass": "MEDIUM",
+      "status": "PASS",
+      "passed": true,
+      "startedAt": "2026-08-28T06:26:23.588Z",
+      "finishedAt": "2026-08-28T06:26:27.369Z",
+      "durationMs": 3782,
+      "details": {
+        "selectedNodeId": "policy_downstream_b32b2bea",
+        "connectedEdgeId": "flow_downstream_93f8fa7d",
+        "manualDistanceGraph": 107.42940849692881,
+        "liveEdgeReroute": true,
+        "modifierDetailsRetained": true,
+        "policyDetailsRetained": true,
+        "technicalTextSelectionRetained": true,
+        "edgeDetailsRetained": true,
+        "emptyGraphClosed": true,
+        "escapeClosed": true,
+        "manualPositionRetained": true,
+        "persistenceRetained": true,
+        "resetLayoutRestored": true,
+        "screenshot": "quality-lab\\reports\\evidence\\phase3f-constellation-detail-overlay-1440x900.png"
+      },
+      "executionIdentity": {
+        "applicationSourceBuildHash": "app-4cbcfdb6be746d212186",
+        "gateIdVersion": "D-constellation-detail-overlay@1",
+        "fixtureCorpusVersion": "Phase3F-Frozen-Browser-Corpus-1",
+        "fixtureInputHash": "fixture-a8a605222b9c93d082e9",
+        "priceSnapshotIdentity": "prices-e4cad19151cb813b",
+        "browserVersion": "151.0.7922.34",
+        "harnessVersion": "PHASE3A_QUALITY_LAB_V1",
+        "compatibilityHash": "compatible-86b2800360789796aa9021bf"
       }
     },
     {
@@ -712,9 +760,9 @@
       "costClass": "FAST",
       "status": "PASS",
       "passed": true,
-      "startedAt": "2026-08-28T03:52:55.378Z",
-      "finishedAt": "2026-08-28T03:52:57.220Z",
-      "durationMs": 1843,
+      "startedAt": "2026-08-28T06:26:27.369Z",
+      "finishedAt": "2026-08-28T06:26:29.014Z",
+      "durationMs": 1645,
       "details": {
         "sourceAppCommit": "df49b94ecca555671d8c78268d3149c2b8c84c7b",
         "normalizedSummarySha256": "12c4d104b9fd3f9c43499995e024d05df4fb9de90b9b0e72ca4233a8564d0746",
@@ -727,14 +775,14 @@
         "workerToDom": true
       },
       "executionIdentity": {
-        "applicationSourceBuildHash": "app-47d4aa425661843070d4",
+        "applicationSourceBuildHash": "app-4cbcfdb6be746d212186",
         "gateIdVersion": "D-real-policy-flow-differential@1",
-        "fixtureCorpusVersion": "Phase3E-Frozen-Browser-Corpus-1",
+        "fixtureCorpusVersion": "Phase3F-Frozen-Browser-Corpus-1",
         "fixtureInputHash": "fixture-eae470b544f63a5880cc",
-        "priceSnapshotIdentity": "prices-80b6d66416a4b254",
+        "priceSnapshotIdentity": "prices-e4cad19151cb813b",
         "browserVersion": "151.0.7922.34",
         "harnessVersion": "PHASE3A_QUALITY_LAB_V1",
-        "compatibilityHash": "compatible-d48b4ea0477254dce8327a54"
+        "compatibilityHash": "compatible-86b2800360789796aa9021bf"
       }
     },
     {
@@ -750,9 +798,9 @@
       "costClass": "FAST",
       "status": "PASS",
       "passed": true,
-      "startedAt": "2026-08-28T03:52:57.221Z",
-      "finishedAt": "2026-08-28T03:52:59.045Z",
-      "durationMs": 1825,
+      "startedAt": "2026-08-28T06:26:29.014Z",
+      "finishedAt": "2026-08-28T06:26:30.788Z",
+      "durationMs": 1773,
       "details": {
         "certificationScope": "RENDERER_INTERACTION_ONLY",
         "topologyFingerprint": "topology-4481a40d",
@@ -761,87 +809,95 @@
         "branchInteraction": true
       },
       "executionIdentity": {
-        "applicationSourceBuildHash": "app-47d4aa425661843070d4",
+        "applicationSourceBuildHash": "app-4cbcfdb6be746d212186",
         "gateIdVersion": "D-frozen-policy-flow-renderer@1",
-        "fixtureCorpusVersion": "Phase3E-Frozen-Browser-Corpus-1",
+        "fixtureCorpusVersion": "Phase3F-Frozen-Browser-Corpus-1",
         "fixtureInputHash": "fixture-eae470b544f63a5880cc",
-        "priceSnapshotIdentity": "prices-80b6d66416a4b254",
+        "priceSnapshotIdentity": "prices-e4cad19151cb813b",
         "browserVersion": "151.0.7922.34",
         "harnessVersion": "PHASE3A_QUALITY_LAB_V1",
-        "compatibilityHash": "compatible-d48b4ea0477254dce8327a54"
+        "compatibilityHash": "compatible-86b2800360789796aa9021bf"
       }
     }
   ],
   "runtime": {
-    "totalWallMs": 154890,
-    "summedGateMs": 154247,
-    "appStartupMs": 1373,
+    "totalWallMs": 159815,
+    "summedGateMs": 158923,
+    "appStartupMs": 1442,
     "browserStartupMs": 323,
-    "solverHeavyMs": 135415,
-    "visualInteractionMs": 71786,
-    "harnessOverheadMs": 1996,
+    "solverHeavyMs": 137697,
+    "visualInteractionMs": 76253,
+    "harnessOverheadMs": 2038,
     "categoryTotalsMs": {
-      "worker": 139576,
-      "solver": 139576,
-      "proof": 139576,
-      "clean": 2318,
-      "phase3b": 55272,
-      "fracture": 113205,
-      "handoff": 26887,
-      "constellation": 71786,
-      "visual": 44899,
-      "objectives": 22210,
-      "harvest": 80143,
-      "phase3d": 65130,
-      "phase3c": 63582,
-      "method-family": 57933,
-      "responsive": 12846,
-      "accessibility": 14671
+      "worker": 141335,
+      "solver": 141335,
+      "proof": 141335,
+      "clean": 1993,
+      "phase3b": 57020,
+      "fracture": 115609,
+      "handoff": 27638,
+      "constellation": 76253,
+      "visual": 44833,
+      "objectives": 22088,
+      "harvest": 80677,
+      "phase3d": 65663,
+      "phase3c": 63548,
+      "method-family": 58589,
+      "responsive": 12033,
+      "accessibility": 17588,
+      "phase3f": 3782,
+      "phase3e": 3782,
+      "interaction": 3782
     },
     "slowestGates": [
       {
         "id": "C-full-route-policy-evidence",
-        "durationMs": 57933,
+        "durationMs": 58589,
         "status": "PASS"
       },
       {
         "id": "B-fractured-magic-alter-price-reversal",
-        "durationMs": 28385,
+        "durationMs": 29382,
         "status": "PASS"
       },
       {
         "id": "B-self-fracture-policy",
-        "durationMs": 26887,
+        "durationMs": 27638,
         "status": "PASS"
       },
       {
         "id": "B-harvest-objective-policy",
-        "durationMs": 22210,
+        "durationMs": 22088,
         "status": "PASS"
       },
       {
         "id": "D-constellation-scope-fit",
-        "durationMs": 7197,
+        "durationMs": 7074,
         "status": "PASS"
       },
       {
         "id": "D-constellation-large-scc-layout",
-        "durationMs": 5649,
+        "durationMs": 4959,
+        "status": "PASS"
+      },
+      {
+        "id": "D-constellation-detail-overlay",
+        "durationMs": 3782,
         "status": "PASS"
       },
       {
         "id": "A-clean-worker-canonical",
-        "durationMs": 2318,
-        "status": "PASS"
-      },
-      {
-        "id": "D-real-policy-flow-differential",
-        "durationMs": 1843,
+        "durationMs": 1993,
         "status": "PASS"
       },
       {
         "id": "D-frozen-policy-flow-renderer",
-        "durationMs": 1825,
+        "durationMs": 1773,
+        "status": "PASS"
+      },
+      {
+        "id": "D-real-policy-flow-differential",
+        "durationMs": 1645,
         "status": "PASS"
       }
     ]
@@ -858,12 +914,13 @@
     "phase3dConstellationScopeDesktop": "quality-lab\\reports\\evidence\\phase3d-constellation-scope-1440x900.png",
     "phase3dConstellationScopeWide": "quality-lab\\reports\\evidence\\phase3d-constellation-scope-1920x1080.png",
     "phase3dConstellationScopeMobile": "quality-lab\\reports\\evidence\\phase3d-constellation-scope-390x844.png",
+    "phase3fConstellationDetailOverlay": "quality-lab\\reports\\evidence\\phase3f-constellation-detail-overlay-1440x900.png",
     "phase3bCurrentSelfFractureFlow": "quality-lab\\reports\\evidence\\phase3b-current-self-fracture-flow.json",
     "phase3bAlterSelfLoopScreenshot": "quality-lab\\reports\\evidence\\phase3b-alter-self-loop.png",
     "phase3bAlterSelfLoopFlow": "quality-lab\\reports\\evidence\\phase3b-alter-self-loop-flow.json",
     "phase3dPolicyEvidenceBrowser": "quality-lab\\reports\\evidence\\phase3d-full-route-policy-evidence-browser.json",
     "phase3dPolicyEvidenceScreenshot": "quality-lab\\reports\\evidence\\phase3d-full-route-policy-evidence-desktop.png",
-    "runReport": "quality-lab\\artifacts\\phase3a-2026-08-28T03-52-41-611Z\\report.json",
+    "runReport": "quality-lab\\artifacts\\phase3a-2026-08-28T06-26-10-644Z\\report.json",
     "stableReport": "quality-lab\\reports\\phase3a-dev-gate.json",
     "summary": "quality-lab\\reports\\phase3a-dev-summary.md"
   }

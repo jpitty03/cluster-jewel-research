@@ -1,8 +1,8 @@
 {
   "phase": "3C",
   "kind": "POST_REPAIR_REPRODUCTION",
-  "generatedAt": "2026-08-28T03:50:40.000Z",
-  "elapsedMs": 28564,
+  "generatedAt": "2026-08-28T06:34:57.459Z",
+  "elapsedMs": 28238,
   "request": {
     "baseType": "Large Cluster Jewel",
     "clusterType": "Minions deal 10% increased Damage",
@@ -91,7 +91,7 @@
   "risk": {
     "onPolicyReachableStates": 588,
     "onPolicyTerminalStates": 16,
-    "terminalAbsorptionProbability": 0.9999999990014549,
+    "terminalAbsorptionProbability": 0.9999999989735652,
     "selectedPolicyProper": true,
     "unresolvedOnPolicyProbability": 0
   },
@@ -107,7 +107,7 @@
     "intent": "RECOMMEND",
     "statesExpanded": 1336,
     "cumulativeExpansionWork": 1336,
-    "elapsedMs": 2590,
+    "elapsedMs": 2171,
     "expansionRounds": 2,
     "maxStates": 5000,
     "maxWallTimeMs": 30000,
@@ -118,9 +118,9 @@
     "roundBudgetExhausted": false,
     "budgetExhausted": false,
     "returnedAtBudget": false,
-    "timeToFirstCompletedRoundMs": 1398,
-    "timeToFirstCertifiedPolicyMs": 1398,
-    "timeToFirstUsefulRecommendationMs": 1398,
+    "timeToFirstCompletedRoundMs": 1182,
+    "timeToFirstCertifiedPolicyMs": 1183,
+    "timeToFirstUsefulRecommendationMs": 1183,
     "expansionMode": "PERSISTENT_EXTENDED",
     "repeatedStatesExpanded": 0,
     "seedStatesExpanded": 1,
@@ -190,14 +190,14 @@
         "round": 1,
         "upperBoundChaos": 53.49605093026165,
         "statesExpanded": 1336,
-        "elapsedMs": 1398,
+        "elapsedMs": 1183,
         "phase": "FIRST_CERTIFIED"
       },
       {
         "round": 2,
         "upperBoundChaos": 53.49605093026165,
         "statesExpanded": 1336,
-        "elapsedMs": 2590,
+        "elapsedMs": 2171,
         "phase": "REFINEMENT"
       }
     ],
@@ -210,20 +210,20 @@
     "hostGuardDeadlineMs": 30250,
     "shutdownReserveMs": 1000,
     "hostGuardTriggered": false,
-    "timeToFirstUsefulExecutableRecommendationMs": 1398,
+    "timeToFirstUsefulExecutableRecommendationMs": 1183,
     "stageTimingMs": {
       "seedResultMs": 1,
-      "transitionGenerationMs": 15,
-      "graphAggregationAndSetupMs": 111,
-      "bellmanMs": 2358,
-      "candidateClassificationAndTrustMs": 87,
-      "absorptionMs": 6,
-      "occupancyMs": 1,
-      "competitiveFrontierCollectionMs": 4,
-      "resultAssemblyMs": 4,
-      "repeatedRoundWorkMs": 1397,
+      "transitionGenerationMs": 13,
+      "graphAggregationAndSetupMs": 104,
+      "bellmanMs": 1939,
+      "candidateClassificationAndTrustMs": 95,
+      "absorptionMs": 7,
+      "occupancyMs": 3,
+      "competitiveFrontierCollectionMs": 3,
+      "resultAssemblyMs": 3,
+      "repeatedRoundWorkMs": 1181,
       "unattributedOrInterruptedMs": 3,
-      "serializationMs": 7.208900000001449
+      "serializationMs": 10.13329999999769
     },
     "sessionReuse": {
       "status": "COLD",
@@ -232,13 +232,13 @@
       "retainedTransitionDistributions": 0,
       "scope": "FRACTURE_DOWNSTREAM"
     },
-    "totalElapsedMs": 28554,
+    "totalElapsedMs": 28225,
     "workScopes": {
-      "portfolioTotalStatesExpanded": 11669,
-      "portfolioRetainedStates": 11490,
+      "portfolioTotalStatesExpanded": 10002,
+      "portfolioRetainedStates": 14974,
       "selectedPolicyGraphStates": 1336,
-      "acquisitionSynthesisStates": 1667,
-      "methodFamilyStates": 10,
+      "acquisitionSynthesisStates": 3334,
+      "methodFamilyStates": 247,
       "proofBoundStates": 0
     },
     "harvestActionScope": {
@@ -277,8 +277,7 @@
     },
     "requestStopReason": "WALL_TIME",
     "secondaryStopReasons": [
-      "STATE_CAP",
-      "NO_PRODUCTIVE_PROOF_WORK"
+      "STATE_CAP"
     ],
     "requestBudget": {
       "semantics": "UP_TO_CAPS",
@@ -290,21 +289,20 @@
       },
       "used": {
         "statesExpanded": 3334,
-        "retainedStates": 11500,
-        "elapsedMs": 28554,
+        "retainedStates": 15221,
+        "elapsedMs": 28225,
         "expansionRounds": 2,
-        "transitionsGenerated": 77329,
-        "transitionsReused": 6299
+        "transitionsGenerated": 62565,
+        "transitionsReused": 947
       },
       "stop": {
         "primary": "WALL_TIME",
         "secondary": [
-          "STATE_CAP",
-          "NO_PRODUCTIVE_PROOF_WORK"
+          "STATE_CAP"
         ],
         "evidence": [
           "requested up to 5,000 states / 30000ms / 3 rounds",
-          "used 3,334 expanded; 11,500 retained; 28554ms elapsed",
+          "used 3,334 expanded; 15,221 retained; 28225ms elapsed",
           "selected graph limits: state=false; wall=false; round=false",
           "Expanded states is the request high-water distinct-state graph; retained totals and stage allocations include independent reusable scopes and are intentionally non-additive.",
           "3 acquisition candidate(s) and 0 objective family/families retain proof debt."
@@ -317,56 +315,56 @@
           "wallTimeMs": 4005,
           "transitionsGenerated": 17250,
           "transitionsReused": 232,
-          "transitionGenerationMs": 32,
-          "bellmanMs": 2400,
-          "occupancyMs": 4
-        },
-        "fractureAcquisition": {
-          "statesExpanded": 3335,
-          "retainedStates": 3335,
-          "wallTimeMs": 8279,
-          "transitionsGenerated": 25074,
-          "transitionsReused": 657,
-          "transitionGenerationMs": 67,
-          "bellmanMs": 2101,
+          "transitionGenerationMs": 33,
+          "bellmanMs": 2080,
           "occupancyMs": 2
         },
+        "fractureAcquisition": {
+          "statesExpanded": 6668,
+          "retainedStates": 6668,
+          "wallTimeMs": 8131,
+          "transitionsGenerated": 25074,
+          "transitionsReused": 657,
+          "transitionGenerationMs": 89,
+          "bellmanMs": 4700,
+          "occupancyMs": 5
+        },
         "fractureDownstream": {
-          "statesExpanded": 6488,
-          "retainedStates": 6488,
-          "wallTimeMs": 12940,
-          "transitionsGenerated": 27252,
-          "transitionsReused": 261,
-          "transitionGenerationMs": 66,
-          "bellmanMs": 10661,
-          "occupancyMs": 6
+          "statesExpanded": 8306,
+          "retainedStates": 8306,
+          "wallTimeMs": 14767,
+          "transitionsGenerated": 33007,
+          "transitionsReused": 278,
+          "transitionGenerationMs": 107,
+          "bellmanMs": 11769,
+          "occupancyMs": 7
         },
         "lowerBoundProbes": {
-          "statesExpanded": 1667,
-          "retainedStates": 1667,
-          "wallTimeMs": 1839,
-          "transitionsGenerated": 5758,
-          "transitionsReused": 5369,
-          "transitionGenerationMs": 11,
-          "bellmanMs": 97,
+          "statesExpanded": 0,
+          "retainedStates": 0,
+          "wallTimeMs": 0,
+          "transitionsGenerated": 0,
+          "transitionsReused": 0,
+          "transitionGenerationMs": 0,
+          "bellmanMs": 0,
           "occupancyMs": 0
         },
         "bellmanAndOccupancy": {
-          "bellmanMs": 15217,
-          "occupancyMs": 9
+          "bellmanMs": 18408,
+          "occupancyMs": 15
         },
         "methodFamilyComparison": {
-          "statesExpanded": 5038,
-          "retainedStates": 10,
-          "wallTimeMs": 3833.6850000000013,
-          "transitionsGenerated": 14998,
+          "statesExpanded": 331,
+          "retainedStates": 247,
+          "wallTimeMs": 3500.723399999999,
+          "transitionsGenerated": 237,
           "transitionsReused": 0,
-          "transitionGenerationMs": 37,
+          "transitionGenerationMs": 5,
           "bellmanMs": 0,
           "occupancyMs": 0
         },
         "serializationAndPresentationReserve": {
-          "usedMs": 7.208900000001449,
+          "usedMs": 10.13329999999769,
           "reservedMs": 1000
         }
       },
@@ -378,93 +376,93 @@
         "coreDeadlineAtRequestMs": 24650,
         "coreDeadlineFraction": 0.85,
         "hostSerializationReserveMs": 1000,
-        "hostReserveEnteredAtRequestMs": 24675.8075,
+        "hostReserveEnteredAtRequestMs": 24677.4717,
         "entries": [
           {
             "stage": "CORE_PORTFOLIO_SEARCH",
             "accounting": "EXCLUSIVE",
             "startedAtRequestMs": 0,
-            "finishedAtRequestMs": 24675.8075,
-            "usedWallTimeMs": 24675.8075,
-            "statesExpanded": 6669,
-            "retainedStates": 11490,
+            "finishedAtRequestMs": 24677.4717,
+            "usedWallTimeMs": 24677.4717,
+            "statesExpanded": 10002,
+            "retainedStates": 14974,
             "stopReason": "HOST_RESERVE",
             "remainingRequestMsAtStart": 30000,
-            "remainingRequestMsAtFinish": 5324.192500000001
+            "remainingRequestMsAtFinish": 5322.528300000002
           },
           {
             "stage": "METHOD_FAMILY_SEARCH",
             "accounting": "EXCLUSIVE",
-            "startedAtRequestMs": 24675.8075,
-            "finishedAtRequestMs": 28509.4989,
-            "usedWallTimeMs": 3189.8773000000074,
-            "statesExpanded": 5038,
-            "retainedStates": 10,
-            "remainingRequestMsAtStart": 5324.192500000001,
-            "remainingRequestMsAtFinish": 1490.5011000000013
+            "startedAtRequestMs": 24677.4717,
+            "finishedAtRequestMs": 28178.1979,
+            "usedWallTimeMs": 2873.093700000005,
+            "statesExpanded": 331,
+            "retainedStates": 247,
+            "remainingRequestMsAtStart": 5322.528300000002,
+            "remainingRequestMsAtFinish": 1821.8021000000008
           },
           {
             "stage": "POLICY_ADMISSIBILITY_REVALIDATION",
             "accounting": "EXCLUSIVE",
-            "startedAtRequestMs": 24675.8075,
-            "finishedAtRequestMs": 28509.4989,
-            "usedWallTimeMs": 643.8076999999939,
+            "startedAtRequestMs": 24677.4717,
+            "finishedAtRequestMs": 28178.1979,
+            "usedWallTimeMs": 627.629699999994,
             "statesExpanded": 0,
             "retainedStates": 0,
-            "remainingRequestMsAtStart": 5324.192500000001,
-            "remainingRequestMsAtFinish": 1490.5011000000013
+            "remainingRequestMsAtStart": 5322.528300000002,
+            "remainingRequestMsAtFinish": 1821.8021000000008
           },
           {
             "stage": "POLICY_EQUIVALENCE_PRESENTATION",
             "accounting": "EXCLUSIVE",
-            "startedAtRequestMs": 28509.4989,
-            "finishedAtRequestMs": 28546.2881,
-            "usedWallTimeMs": 36.78920000000289,
+            "startedAtRequestMs": 28178.1979,
+            "finishedAtRequestMs": 28214.101899999998,
+            "usedWallTimeMs": 35.90399999999863,
             "statesExpanded": 0,
             "retainedStates": 0,
-            "remainingRequestMsAtStart": 1490.5011000000013,
-            "remainingRequestMsAtFinish": 1453.7118999999984
+            "remainingRequestMsAtStart": 1821.8021000000008,
+            "remainingRequestMsAtFinish": 1785.8981000000022
           },
           {
             "stage": "HOST_SERIALIZATION_RESERVE",
             "accounting": "EXCLUSIVE",
-            "startedAtRequestMs": 28546.2888,
-            "finishedAtRequestMs": 28553.5287,
-            "usedWallTimeMs": 7.208900000001449,
+            "startedAtRequestMs": 28214.102499999997,
+            "finishedAtRequestMs": 28224.2788,
+            "usedWallTimeMs": 10.13329999999769,
             "statesExpanded": 0,
             "retainedStates": 0,
-            "remainingRequestMsAtStart": 1453.7112000000016,
-            "remainingRequestMsAtFinish": 1446.471300000001
+            "remainingRequestMsAtStart": 1785.8975000000028,
+            "remainingRequestMsAtFinish": 1775.7212
           },
           {
             "stage": "ACQUISITION_SYNTHESIS",
             "accounting": "NESTED_CORE_DETAIL",
-            "startedAtRequestMs": 4060.3454,
-            "finishedAtRequestMs": 21310.9435,
-            "usedWallTimeMs": 8279,
-            "statesExpanded": 3335,
-            "retainedStates": 3335,
-            "remainingRequestMsAtStart": 25939.6546,
-            "remainingRequestMsAtFinish": 8689.056499999999
+            "startedAtRequestMs": 4058.4202999999998,
+            "finishedAtRequestMs": 18313.223199999997,
+            "usedWallTimeMs": 8131,
+            "statesExpanded": 6668,
+            "retainedStates": 6668,
+            "remainingRequestMsAtStart": 25941.579700000002,
+            "remainingRequestMsAtFinish": 11686.776800000003
           },
           {
             "stage": "PROOF_BOUND_WORK",
             "accounting": "NESTED_CORE_DETAIL",
-            "startedAtRequestMs": 21311.7686,
-            "finishedAtRequestMs": 23150.7686,
-            "usedWallTimeMs": 1839,
-            "statesExpanded": 1667,
-            "retainedStates": 1667,
-            "remainingRequestMsAtStart": 8688.2314,
-            "remainingRequestMsAtFinish": 6849.231400000001
+            "startedAtRequestMs": 0,
+            "finishedAtRequestMs": 0,
+            "usedWallTimeMs": 0,
+            "statesExpanded": 0,
+            "retainedStates": 0,
+            "remainingRequestMsAtStart": 30000,
+            "remainingRequestMsAtFinish": 30000
           }
         ],
-        "exclusiveAccountedMs": 28553.490600000005,
-        "unclassifiedMs": 0.03809999999430147,
+        "exclusiveAccountedMs": 28224.232399999994,
+        "unclassifiedMs": 0.04640000000654254,
         "reconciled": true,
         "explanation": [
           "Core envelope is 85% of the engine deadline and is independent of compareMethodFamilies=true.",
-          "Core stopped at 6,669 expanded states with HOST_RESERVE.",
+          "Core stopped at 10,002 expanded states with HOST_RESERVE.",
           "Acquisition synthesis and proof-bound rows are measured nested details and are not added to exclusive request time.",
           "Family search excludes separately timed policy-admissibility revalidation."
         ]
@@ -491,11 +489,15 @@
         {
           "candidateId": "candidate_2",
           "fullRouteUChaos": 1636.3811154830044
+        },
+        {
+          "candidateId": "candidate_3",
+          "fullRouteUChaos": 1636.3811154829793
         }
       ],
-      "retainedStateFingerprint": "states-d78fbbf7",
-      "statesExpanded": 6669,
-      "retainedStates": 11490,
+      "retainedStateFingerprint": "states-f2128875",
+      "statesExpanded": 10002,
+      "retainedStates": 14974,
       "stopReason": "HOST_RESERVE",
       "canonicalPolicyFingerprint": "core-c8da05a5"
     }
@@ -643,7 +645,7 @@
       "maxStates": 5000,
       "maxWallTimeMs": 8000,
       "maxExpansionRounds": 3,
-      "elapsedMs": 2590
+      "elapsedMs": 2171
     },
     "policyEquivalenceFingerprint": "policy-9e41c4f9",
     "policyEquivalenceEvidence": {
@@ -1470,7 +1472,7 @@
       "maxStates": 5000,
       "maxWallTimeMs": 265,
       "maxExpansionRounds": 3,
-      "elapsedMs": 635
+      "elapsedMs": 617
     },
     "policyEquivalenceFingerprint": "policy-9e41c4f9",
     "policyEquivalenceEvidence": {

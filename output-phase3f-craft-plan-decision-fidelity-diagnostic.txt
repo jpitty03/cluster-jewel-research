@@ -1,0 +1,12 @@
+PHASE 3F CRAFT-PLAN DECISION FIDELITY DIAGNOSTIC
+F1 route=Self-fracture Primordial Bond; U=1459.7923662160777; flow=CERTIFIED=PASS
+F2 Promote scope=ACQUISITION/PREPARATION/magic; actions=alteration_orb,augmentation_orb,regal_orb=PASS
+F3 Alter=208/323.68085106349275; Augment=13/82.92021276587121; Regal=1/3.9999999999958216=PASS
+F4 rules=268; groups=4; withheld=0=PASS
+F5 Exalt-vs-Scour groups=2=PASS
+F6 preparation=1; final=3=PASS
+F7 clean=Start clean base; preparationRules=0=PASS
+F8 harvest enabled=1; policy=0; plan=0=PASS
+Evidence SHA-256: 675586f541ab25d2a7c79e590b8390d63d5aa2c7f2b6c6669bcaa5b0b1e30afe
+Unit tests added/run: NO
+EXTENDED/nightly/legacy/long-soak run: NO

@@ -906,6 +906,202 @@ async function runGateOperation(ctx: GateWorkerContext): Promise<unknown> {
         };
       });
 
+    case 'craft-plan-decision-fidelity':
+      return withPage(ctx, async (page) => {
+        const fieldFixture = fixture('phase3c_primordial_renewal_rotten_claws');
+        // The NORMAL fixture's wall-clock portfolio frontier can legitimately
+        // improve from the frozen self-fracture incumbent to a clean incumbent
+        // on a faster browser runtime. Bound only this presentation gate at the
+        // audited Phase 3D core frontier so it exercises the intended real
+        // selected self-fracture policy without changing production ranking.
+        const input: FixtureRecord = {
+          ...fieldFixture,
+          searchBudget: { ...fieldFixture.searchBudget, maxStates: 3_334 },
+        };
+        const result = await optimizedFixture(page, ctx.appUrl, input);
+        assert.equal(jsonRecord(result.recommended, 'Phase 3F recommendation').name,
+          'Self-fracture Primordial Bond');
+        assertNear(numberValue(result.expectedCostChaos, 'Phase 3F selected U'),
+          1459.7923662160777, 'Phase 3F selected U');
+        const craftPlan = jsonRecord(result.craftPlan, 'Phase 3F craft plan');
+        assert.equal(craftPlan.status, 'CERTIFIED');
+        assert.deepEqual(arrayValue(craftPlan.withheldDecisionDetails, 'withheld decisions'), []);
+        const steps = arrayValue(craftPlan.steps, 'craft-plan steps')
+          .map((entry) => jsonRecord(entry, 'craft-plan step'));
+        const promoteStep = steps.find((step) => step.phase === 'PROMOTE');
+        assert(promoteStep, 'Phase 3F result omitted PROMOTE');
+        const promoteGroup = arrayValue(promoteStep.decisionDetails, 'PROMOTE decisions')
+          .map((entry) => jsonRecord(entry, 'PROMOTE decision'))
+          .find((group) => {
+            const cohort = jsonRecord(group.cohort, 'PROMOTE cohort');
+            return cohort.policyScope === 'ACQUISITION' &&
+              cohort.progressKind === 'PREPARATION' && cohort.rarity === 'magic';
+          });
+        assert(promoteGroup, 'Rendered plan source omitted the Magic preparation cohort');
+        assert.equal(promoteGroup.evidenceStatus, 'RECONCILED');
+        const promoteCohort = jsonRecord(promoteGroup.cohort, 'Magic preparation cohort');
+        assert.deepEqual(canonicalIds(arrayValue(promoteCohort.targetModIds, 'prep targets')),
+          ['Primordial Bond']);
+        const promoteOptions = arrayValue(promoteGroup.options, 'PROMOTE options')
+          .map((entry) => jsonRecord(entry, 'PROMOTE option'));
+        const optionByAction = new Map(promoteOptions.map((option) => [String(option.actionId), option]));
+        assert.deepEqual(canonicalIds([...optionByAction.keys()]), [
+          'alteration_orb',
+          'augmentation_orb',
+          'regal_orb',
+        ]);
+        const aggregate = (
+          actionId: string,
+          representedStateCount: number,
+          expectedVisits: number,
+        ) => {
+          const option = optionByAction.get(actionId);
+          assert(option, `PROMOTE omitted ${actionId}`);
+          assert.equal(option.representedStateCount, representedStateCount);
+          assertNear(numberValue(option.expectedVisits, `${actionId} visits`), expectedVisits,
+            `${actionId} visits`, 1e-9);
+          return option;
+        };
+        const alter = aggregate('alteration_orb', 208, 323.68085106349275);
+        const augment = aggregate('augmentation_orb', 13, 82.92021276587121);
+        const regal = aggregate('regal_orb', 1, 3.9999999999958216);
+        const explanation = arrayValue(result.policyExplanation, 'policy explanation')
+          .map((entry) => jsonRecord(entry, 'policy explanation rule'));
+        for (const option of [alter, augment, regal]) {
+          const indices = arrayValue(option.policyRuleIndices, 'option rule indices').map(Number);
+          assert(indices.length > 0);
+          const rules = indices.map((index) => explanation[index]);
+          assert(rules.every((rule) => rule.actionId === option.actionId));
+          assert(rules.every((rule) => {
+            const context = jsonRecord(rule.context, 'option rule context');
+            return context.policyScope === 'ACQUISITION' &&
+              context.progressKind === 'PREPARATION' && context.rarity === 'magic' &&
+              Number(context.prefixCount) === arrayValue(context.prefixes, 'prefixes').length &&
+              Number(context.suffixCount) === arrayValue(context.suffixes, 'suffixes').length &&
+              arrayValue(rule.sourceStateKeys, 'source state keys').length ===
+                numberValue(rule.representedStateCount, 'represented states');
+          }), `${String(option.actionId)} contains malformed rule context`);
+          assert.equal(
+            rules.reduce((sum, rule) => sum + numberValue(rule.representedStateCount, 'rule states'), 0),
+            option.representedStateCount,
+          );
+          assertNear(
+            rules.reduce((sum, rule) => sum + numberValue(rule.expectedVisits, 'rule visits'), 0),
+            numberValue(option.expectedVisits, 'option visits'),
+            `${String(option.actionId)} aggregate`,
+            1e-9,
+          );
+        }
+
+        const craftGuide = page.locator('.craft-guide');
+        const promoteDom = craftGuide.locator('.craft-plan-step[data-phase="PROMOTE"]');
+        await promoteDom.waitFor();
+        assert.match(await promoteDom.locator('h3').innerText(), /Promote the keepable Magic states/i);
+        const promoteDetail = promoteDom.locator(
+          'details.craft-plan-decision-details[data-policy-scope="ACQUISITION"]' +
+          '[data-progress-kind="PREPARATION"][data-rarity-cohort="magic"]',
+        );
+        await promoteDetail.locator('summary').click();
+        const promoteText = await promoteDetail.innerText();
+        assert.match(promoteText, /Acquisition-preparation Magic states/);
+        assert.doesNotMatch(promoteText, /rare\s+0P\/0S/i);
+        assert.doesNotMatch(promoteText,
+          /no target modifier present;\s*all target modifiers present/i);
+        const renderedActions = canonicalIds(await promoteDetail.locator('li[data-action-id]')
+          .evaluateAll((items) => items.map((item) => item.getAttribute('data-action-id'))));
+        assert.deepEqual(renderedActions, ['alteration_orb', 'augmentation_orb', 'regal_orb']);
+        const renderedExamples: Record<string, string> = {};
+        for (const actionId of renderedActions) {
+          const item = promoteDetail.locator(`li[data-action-id="${actionId}"]`);
+          const text = await item.innerText();
+          renderedExamples[actionId] = text;
+          assert.match(text, /Example:\s+magic\s/i, `${actionId} example is not Magic`);
+          assert.match(text, /preparation target:/i);
+          assert.match(text, /prep progress:\s*[01]\/1/i);
+          const ruleIndex = Number(await item.getAttribute('data-example-policy-rule-index'));
+          const rule = explanation[ruleIndex];
+          assert(rule, `Rendered ${actionId} example has no source rule`);
+          assert.equal(rule.actionId, actionId);
+          const context = jsonRecord(rule.context, `${actionId} rendered context`);
+          assert.equal(context.rarity, 'magic');
+          assert.equal(context.policyScope, 'ACQUISITION');
+        }
+        assert.match(await promoteDetail.locator('li[data-action-id="regal_orb"]').innerText(),
+          /exact affix state:.*prefix .+.*suffix Primordial Bond/is);
+
+        const finishDom = craftGuide.locator('.craft-plan-step[data-phase="FINISH"]');
+        await finishDom.waitFor();
+        const finishDetails = finishDom.locator(
+          'details.craft-plan-decision-details[data-policy-scope="DOWNSTREAM"]' +
+          '[data-progress-kind="FINAL"][data-rarity-cohort="rare"]',
+        );
+        let finishContrastFound = false;
+        for (let index = 0; index < await finishDetails.count(); index += 1) {
+          const detail = finishDetails.nth(index);
+          const actions = canonicalIds(await detail.locator('li[data-action-id]')
+            .evaluateAll((items) => items.map((item) => item.getAttribute('data-action-id'))));
+          if (actions.includes('exalted_orb') && actions.includes('scouring_orb')) {
+            await detail.locator('summary').click();
+            assert.match(await detail.innerText(), /Final-craft Rare states.*final progress 2\/3/is);
+            finishContrastFound = true;
+            break;
+          }
+        }
+        assert(finishContrastFound, 'Rendered FINISH plan omitted Exalt-vs-Scour');
+
+        const advancedDetails = page.locator('details.advanced-optimizer-details');
+        await advancedDetails.locator(':scope > summary').click();
+        const exactBranches = advancedDetails.locator('details.exact-policy-branches');
+        await exactBranches.locator(':scope > summary').click();
+        const sourceIdentityCounts = await exactBranches.locator('.craft-rule')
+          .evaluateAll((rules) => rules.map((rule) => {
+            try {
+              const sourceStateKeys = JSON.parse(rule.getAttribute('data-source-state-keys') ?? '[]');
+              return Array.isArray(sourceStateKeys) ? sourceStateKeys.length : 0;
+            } catch {
+              return 0;
+            }
+          }));
+        assert(sourceIdentityCounts.length === explanation.length);
+        assert(sourceIdentityCounts.every((count) => count > 0));
+        await exactBranches.locator(':scope > summary').click();
+        await advancedDetails.locator(':scope > summary').click();
+        assert(!await craftGuide.innerText().then((text) =>
+          /no target modifier present;\s*all target modifiers present/i.test(text)
+        ));
+        mkdirSync(stableEvidenceDirectory, { recursive: true });
+        const screenshotPath = join(
+          stableEvidenceDirectory,
+          'phase3f-craft-plan-decision-details-1440x900.png',
+        );
+        await promoteDom.scrollIntoViewIfNeeded();
+        await page.screenshot({ path: screenshotPath });
+        ctx.artifacts.phase3fCraftPlanDecisionDetails = relative(repositoryRoot, screenshotPath);
+        return {
+          selectedRoute: jsonRecord(result.recommended, 'recommendation').name,
+          expectedCostChaos: result.expectedCostChaos,
+          promote: {
+            cohort: promoteCohort,
+            actions: renderedActions,
+            aggregates: {
+              alteration_orb: alter,
+              augmentation_orb: augment,
+              regal_orb: regal,
+            },
+            examplesMagic: true,
+            renderedExamples,
+            forbiddenActionsAbsent: true,
+          },
+          finishExaltScour: true,
+          sourceIdentityCounts: {
+            rules: sourceIdentityCounts.length,
+            minimum: Math.min(...sourceIdentityCounts),
+          },
+          contradictionAbsent: true,
+          screenshot: ctx.artifacts.phase3fCraftPlanDecisionDetails,
+        };
+      }, { viewport: { width: 1440, height: 900 } });
+
     case 'full-route-policy-evidence':
       return withPage(ctx, async (page) => {
         const input = fixture('phase3c_primordial_renewal_rotten_claws');
@@ -1711,6 +1907,168 @@ async function runGateOperation(ctx: GateWorkerContext): Promise<unknown> {
       });
       return { field: fieldObservation, stress: stressObservation };
     }
+
+    case 'constellation-detail-overlay-interaction':
+      return withPage(ctx, async (page) => {
+        const input = fixture('cheap_one_mod');
+        const result = await optimizedFixture(page, ctx.appUrl, input);
+        const flow = selectedPolicyFlow(result, 'Phase 3F overlay interaction flow');
+        const nodes = arrayValue(flow.nodes, 'overlay nodes').map((entry) =>
+          jsonRecord(entry, 'overlay node')
+        );
+        const edges = arrayValue(flow.edges, 'overlay edges').map((entry) =>
+          jsonRecord(entry, 'overlay edge')
+        );
+        const selectedNode = nodes.find((node) =>
+          arrayValue(node.matchedTargetModIds, 'matched target IDs').length > 0 &&
+          edges.some((edge) => edge.sourceNodeId === node.id || edge.targetNodeId === node.id)
+        );
+        assert(selectedNode, 'Overlay gate found no connected node with technical modifier evidence');
+        const selectedNodeId = String(selectedNode.id);
+        const connectedEdge = edges.find((edge) =>
+          edge.sourceNodeId === selectedNodeId || edge.targetNodeId === selectedNodeId
+        );
+        assert(connectedEdge, 'Overlay gate node has no connected edge');
+        const connectedEdgeId = String(connectedEdge.id);
+        const container = page.getByTestId('markov-constellation-container');
+        await container.waitFor();
+        await container.scrollIntoViewIfNeeded();
+        const nodeAnchor = () => container.locator(`[data-node-anchor="${selectedNodeId}"]`);
+        const nodePosition = async () => ({
+          x: Number(await nodeAnchor().getAttribute('data-node-x')),
+          y: Number(await nodeAnchor().getAttribute('data-node-y')),
+        });
+        const edgeGeometry = async () => {
+          const edge = container.locator(`[data-edge-anchor="${connectedEdgeId}"]`);
+          return Promise.all([
+            'data-edge-source-x',
+            'data-edge-source-y',
+            'data-edge-target-x',
+            'data-edge-target-y',
+            'data-edge-control-x',
+            'data-edge-control-y',
+          ].map(async (attribute) => Number(await edge.getAttribute(attribute))));
+        };
+        const drag = async (target: ReturnType<typeof container.locator>, x: number, y: number) => {
+          const box = await target.boundingBox();
+          assert(box, 'Overlay drag target has no geometry');
+          const startX = box.x + box.width / 2;
+          const startY = box.y + box.height / 2;
+          await page.mouse.move(startX, startY);
+          await page.mouse.down();
+          await page.mouse.move(startX + x, startY + y, { steps: 8 });
+          await page.mouse.up();
+        };
+        const selectTextWithPointer = async (locator: ReturnType<typeof container.locator>) => {
+          const box = await locator.boundingBox();
+          assert(box, 'Technical text has no browser geometry');
+          await locator.dblclick({
+            position: {
+              x: Math.min(Math.max(box.width / 3, 8), box.width - 2),
+              y: Math.min(Math.max(box.height / 2, 2), box.height - 2),
+            },
+          });
+        };
+
+        assert.equal(await container.getAttribute('data-manual-layout-mode'), 'LOCKED');
+        const original = await nodePosition();
+        const edgeBefore = await edgeGeometry();
+        await page.getByRole('button', { name: 'Arrange constellation layout' }).click();
+        await drag(nodeAnchor(), 132, 76);
+        const moved = await nodePosition();
+        assert(Math.hypot(moved.x - original.x, moved.y - original.y) > 50);
+        assert.notDeepEqual(await edgeGeometry(), edgeBefore);
+        const storageKey = String(await container.getAttribute('data-manual-layout-storage-key'));
+        const savedBeforeOverlay = await page.evaluate((key) => localStorage.getItem(key), storageKey);
+        assert(savedBeforeOverlay, 'Manual node move was not persisted before overlay interaction');
+
+        await nodeAnchor().click();
+        const nodeDetail = page.getByLabel('Selected constellation node details');
+        await nodeDetail.waitFor();
+        const modifierDetails = nodeDetail.locator('details')
+          .filter({ hasText: 'Technical modifier details' });
+        assert.equal(await modifierDetails.count(), 1, 'Selected node omitted technical modifier details');
+        await modifierDetails.locator('summary').click();
+        assert(await nodeDetail.isVisible(), 'Modifier details click closed the node overlay');
+        const policyDetails = nodeDetail.locator('details')
+          .filter({ hasText: 'Technical policy evidence' });
+        await policyDetails.locator('summary').click();
+        assert(await nodeDetail.isVisible(), 'Policy evidence click closed the node overlay');
+        await selectTextWithPointer(policyDetails.locator('code').first());
+        assert(await nodeDetail.isVisible(), 'Technical text selection closed the node overlay');
+        const selectionLength = await page.evaluate(() => window.getSelection()?.toString().length ?? 0);
+        assert(selectionLength > 0, 'Pointer interaction did not select technical overlay text');
+        assert.deepEqual(await nodePosition(), moved, 'Node overlay interaction changed manual geometry');
+        assert.equal(await page.evaluate((key) => localStorage.getItem(key), storageKey), savedBeforeOverlay);
+        mkdirSync(stableEvidenceDirectory, { recursive: true });
+        const screenshotPath = join(
+          stableEvidenceDirectory,
+          'phase3f-constellation-detail-overlay-1440x900.png',
+        );
+        await page.screenshot({ path: screenshotPath });
+        ctx.artifacts.phase3fConstellationDetailOverlay = relative(repositoryRoot, screenshotPath);
+
+        await nodeDetail.getByRole('button', { name: 'Close selected node details' }).click();
+        const edgeAnchor = container.locator(`[data-edge-anchor="${connectedEdgeId}"]`);
+        await edgeAnchor.focus();
+        await page.keyboard.press('Enter');
+        const edgeDetail = page.getByLabel('Selected constellation edge details');
+        await edgeDetail.waitFor();
+        const transitionDetails = edgeDetail.locator('details')
+          .filter({ hasText: 'Technical transition evidence' });
+        await transitionDetails.locator('summary').click();
+        assert(await edgeDetail.isVisible(), 'Transition evidence click closed the edge overlay');
+        await selectTextWithPointer(transitionDetails.locator('code').first());
+        assert(await edgeDetail.isVisible(), 'Edge technical text selection closed the overlay');
+
+        const emptyPoint = await page.evaluate(() => {
+          const viewport = document.querySelector<HTMLElement>('.constellation-viewport');
+          if (!viewport) throw new Error('Constellation viewport missing');
+          const rect = viewport.getBoundingClientRect();
+          const candidates = [
+            [rect.left + 18, rect.top + 18],
+            [rect.left + rect.width * 0.5, rect.top + 18],
+            [rect.left + 18, rect.top + rect.height * 0.5],
+          ];
+          for (const [x, y] of candidates) {
+            const hit = document.elementFromPoint(x, y) as HTMLElement | null;
+            if (!hit?.closest('[data-node-id],[data-edge-id],[data-constellation-interaction-exclusion]')) {
+              return { x, y };
+            }
+          }
+          throw new Error('No empty graph point was available');
+        });
+        await page.mouse.click(emptyPoint.x, emptyPoint.y);
+        await edgeDetail.waitFor({ state: 'detached' });
+        assert.deepEqual(await nodePosition(), moved, 'Empty graph deselect changed manual geometry');
+
+        await nodeAnchor().focus();
+        await page.keyboard.press('Enter');
+        await nodeDetail.waitFor();
+        await page.keyboard.press('Escape');
+        await nodeDetail.waitFor({ state: 'detached' });
+        assert.deepEqual(await nodePosition(), moved, 'Escape close changed manual geometry');
+        assert.equal(await page.evaluate((key) => localStorage.getItem(key), storageKey), savedBeforeOverlay);
+        await page.getByRole('button', { name: 'Reset Layout' }).click();
+        assert.deepEqual(await nodePosition(), original);
+        assert.equal(await page.evaluate((key) => localStorage.getItem(key), storageKey), null);
+        return {
+          selectedNodeId,
+          connectedEdgeId,
+          manualDistanceGraph: Math.hypot(moved.x - original.x, moved.y - original.y),
+          liveEdgeReroute: true,
+          modifierDetailsRetained: true,
+          policyDetailsRetained: true,
+          technicalTextSelectionRetained: true,
+          edgeDetailsRetained: true,
+          emptyGraphClosed: true,
+          escapeClosed: true,
+          manualPositionRetained: true,
+          persistenceRetained: true,
+          resetLayoutRestored: true,
+          screenshot: ctx.artifacts.phase3fConstellationDetailOverlay,
+        };
+      }, { viewport: { width: 1440, height: 900 } });
 
     case 'manual-constellation-layout': {
       const frozen = loadFrozenPolicyFlow('policy-flow-phase3e-manual-v1.json');

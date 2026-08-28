@@ -69,6 +69,24 @@ export interface CraftPlanDecisionGroup {
   representedStateCount: number;
   expectedVisits: number;
   options: CraftPlanDecisionOption[];
+  evidenceStatus: 'RECONCILED';
+  cohort: {
+    policyScope: PolicyExplanationRule['context']['policyScope'];
+    progressKind: PolicyExplanationRule['context']['progressKind'];
+    rarity: PolicyExplanationRule['context']['rarity'];
+    targetModIds: string[];
+    matchedProgressCounts: number[];
+    prefixCounts: number[];
+    suffixCounts: number[];
+    policyRuleIndices: number[];
+    focalPhase: CraftPlanPhase;
+  };
+}
+
+export interface WithheldCraftPlanDecisionGroup {
+  cohortKey: string;
+  policyRuleIndices: number[];
+  reasons: string[];
 }
 
 export interface CraftPlanStep {
@@ -100,6 +118,7 @@ export interface CraftPlanSummary {
   recovery?: CraftPlanRecovery;
   targetOrderPreference: TargetOrderPreference;
   detailedDecisionCount: number;
+  withheldDecisionDetails: WithheldCraftPlanDecisionGroup[];
   exactPolicyBranchCount: number;
   exactPolicyBranchesHiddenByDefault: number;
   selectedActionIds: string[];
@@ -277,6 +296,8 @@ function deriveTargetOrderPreference(
   const targetIds = targetRequirementIds(target);
   const behaviors: TargetOrderBehaviorEvidence[] = targetIds.map((targetModId) => {
     const applicable = rules.filter((rule) =>
+      rule.context.policyScope === 'DOWNSTREAM' &&
+      rule.context.progressKind === 'FINAL' &&
       rule.context.rarity === 'magic' &&
       rule.context.matchedTargetModIds.length === 1 &&
       rule.context.matchedTargetModIds[0] === targetModId &&
@@ -328,6 +349,8 @@ function deriveTargetOrderPreference(
   const analogous = new Map<string, Map<string, 'PRESERVE' | 'REROLL' | 'MIXED'>>();
   for (const rule of rules) {
     if (
+      rule.context.policyScope !== 'DOWNSTREAM' ||
+      rule.context.progressKind !== 'FINAL' ||
       rule.context.rarity !== 'magic' ||
       rule.context.matchedTargetModIds.length !== 1 ||
       !targetIds.includes(rule.context.matchedTargetModIds[0]) ||
@@ -425,6 +448,9 @@ function deriveTargetOrderPreference(
 
 function coarseContextKey(context: PolicyExplanationRule['context']): string {
   return JSON.stringify({
+    policyScope: context.policyScope,
+    progressKind: context.progressKind,
+    targetModIds: context.targetModIds,
     rarity: context.rarity,
     prefixCount: context.prefixCount,
     suffixCount: context.suffixCount,
@@ -436,17 +462,115 @@ function coarseContextKey(context: PolicyExplanationRule['context']): string {
   });
 }
 
+function comparableDecisionContextKey(context: PolicyExplanationRule['context']): string {
+  if (
+    context.policyScope === 'ACQUISITION' &&
+    context.progressKind === 'PREPARATION' &&
+    context.rarity === 'magic'
+  ) {
+    // Alter, Augment, and Regal are comparable decisions in the broad Magic
+    // preparation stage even though exact affix counts/progress differ. Later
+    // Normal/Rare acquisition states retain their narrower physical context.
+    return JSON.stringify({
+      policyScope: context.policyScope,
+      progressKind: context.progressKind,
+      targetModIds: context.targetModIds,
+      rarity: context.rarity,
+      influenced: context.influenced,
+      synthesised: context.synthesised,
+      acquisitionMenu: context.acquisitionMenu,
+    });
+  }
+  return coarseContextKey(context);
+}
+
+function exactStringSet(values: readonly string[]): string[] {
+  return [...new Set(values)].sort();
+}
+
+function exactNumberSet(values: readonly number[]): number[] {
+  return [...new Set(values)].sort((left, right) => left - right);
+}
+
+function sameStrings(left: readonly string[], right: readonly string[]): boolean {
+  return JSON.stringify(exactStringSet(left)) === JSON.stringify(exactStringSet(right));
+}
+
+function policyRuleEvidenceErrors(rule: PolicyExplanationRule): string[] {
+  const errors: string[] = [];
+  const context = rule.context;
+  if (context.prefixCount !== context.prefixes.length) {
+    errors.push(`prefix count ${context.prefixCount} != ${context.prefixes.length} exact prefixes`);
+  }
+  if (context.suffixCount !== context.suffixes.length) {
+    errors.push(`suffix count ${context.suffixCount} != ${context.suffixes.length} exact suffixes`);
+  }
+  const matched = exactStringSet(context.matchedTargetModIds);
+  const unmatched = exactStringSet(context.unmatchedTargetModIds);
+  const overlap = matched.filter((targetModId) => unmatched.includes(targetModId));
+  if (overlap.length > 0) errors.push(`matched/missing target overlap: ${overlap.join(', ')}`);
+  if (!sameStrings([...matched, ...unmatched], context.targetModIds)) {
+    errors.push('matched + missing targets do not reconcile with the context target definition');
+  }
+  if (!Number.isInteger(rule.representedStateCount) || rule.representedStateCount <= 0) {
+    errors.push(`invalid represented-state count ${rule.representedStateCount}`);
+  }
+  if (rule.sourceStateKeys.length !== rule.representedStateCount) {
+    errors.push(
+      `${rule.sourceStateKeys.length} source-state identities != ` +
+      `${rule.representedStateCount} represented states`,
+    );
+  }
+  if (!Number.isFinite(rule.expectedVisits) || rule.expectedVisits < 0) {
+    errors.push(`invalid expected visits ${rule.expectedVisits}`);
+  }
+  for (const affix of [...context.prefixes, ...context.suffixes]) {
+    if (typeof affix.isFractured !== 'boolean') {
+      errors.push(`affix ${affix.modId} omitted authoritative fracture status`);
+    }
+  }
+  return errors;
+}
+
+function decisionGroupSummary(
+  rules: PolicyExplanationRule[],
+  indices: number[],
+): string {
+  const contexts = indices.map((index) => rules[index].context);
+  const first = contexts[0];
+  const prefixCounts = exactNumberSet(contexts.map((context) => context.prefixCount));
+  const suffixCounts = exactNumberSet(contexts.map((context) => context.suffixCount));
+  const progressCounts = exactNumberSet(
+    contexts.map((context) => context.matchedTargetModIds.length),
+  );
+  const totalTargets = first.targetModIds.length;
+  const rarity = `${first.rarity[0].toUpperCase()}${first.rarity.slice(1)}`;
+  const affixShape = prefixCounts.length === 1 && suffixCounts.length === 1
+    ? `${prefixCounts[0]}P/${suffixCounts[0]}S`
+    : `variable affix counts (prefixes ${prefixCounts.join('/')}; suffixes ${suffixCounts.join('/')})`;
+  const progressLabel = progressCounts.length === 1
+    ? `${first.progressKind === 'PREPARATION' ? 'prep' : 'final'} progress ` +
+      `${progressCounts[0]}/${totalTargets}`
+    : `varying ${first.progressKind === 'PREPARATION' ? 'preparation' : 'final-target'} progress ` +
+      `(${progressCounts.map((count) => `${count}/${totalTargets}`).join(', ')})`;
+  const scope = first.policyScope === 'ACQUISITION'
+    ? 'Acquisition-preparation'
+    : 'Final-craft';
+  return `${scope} ${rarity} states with ${affixShape} at ${progressLabel} choose different ` +
+    'actions based on exact current affixes.';
+}
+
 function decisionGroups(
   rules: PolicyExplanationRule[],
   selectedPhysicalActionIds: ReadonlySet<string>,
-): Array<{
-  group: CraftPlanDecisionGroup;
-  phase: CraftPlanPhase;
-}> {
+): {
+  groups: Array<{ group: CraftPlanDecisionGroup; phase: CraftPlanPhase }>;
+  withheld: WithheldCraftPlanDecisionGroup[];
+} {
   const contexts = new Map<string, number[]>();
   for (const [index, rule] of rules.entries()) {
     if (rule.context.acquisitionMenu || !selectedPhysicalActionIds.has(rule.actionId)) continue;
-    const key = coarseContextKey(rule.context);
+    const key = comparableDecisionContextKey(rule.context);
     const indices = contexts.get(key) ?? [];
     indices.push(index);
     contexts.set(key, indices);
@@ -463,9 +587,21 @@ function decisionGroups(
     'SUCCESS',
   ];
   const groups: Array<{ group: CraftPlanDecisionGroup; phase: CraftPlanPhase }> = [];
-  for (const indices of contexts.values()) {
+  const withheld: WithheldCraftPlanDecisionGroup[] = [];
+  for (const [cohortKey, indices] of contexts) {
     const distinctActions = new Set(indices.map((index) => rules[index].actionId));
     if (distinctActions.size < 2) continue;
+    const evidenceErrors = indices.flatMap((index) =>
+      policyRuleEvidenceErrors(rules[index]).map((error) => `rule ${index}: ${error}`)
+    );
+    if (evidenceErrors.length > 0) {
+      withheld.push({
+        cohortKey,
+        policyRuleIndices: [...indices],
+        reasons: evidenceErrors,
+      });
+      continue;
+    }
     const byAction = new Map<string, CraftPlanDecisionOption>();
     for (const index of indices) {
       const rule = rules[index];
@@ -487,22 +623,78 @@ function decisionGroups(
     const phase = phasePriority.find((candidate) => phases.includes(candidate));
     if (phase === undefined) continue;
     const first = rules[indices[0]];
+    const cohortContexts = indices.map((index) => rules[index].context);
+    const targetDefinitions = new Set(
+      cohortContexts.map((context) => JSON.stringify(exactStringSet(context.targetModIds))),
+    );
+    const scopeKinds = new Set(
+      cohortContexts.map((context) => `${context.policyScope}|${context.progressKind}|${context.rarity}`),
+    );
+    if (targetDefinitions.size !== 1 || scopeKinds.size !== 1) {
+      withheld.push({
+        cohortKey,
+        policyRuleIndices: [...indices],
+        reasons: ['cohort mixed policy scope, progress semantics, rarity, or target definition'],
+      });
+      continue;
+    }
+    const options = [...byAction.values()].sort((left, right) =>
+      right.expectedVisits - left.expectedVisits || left.actionId.localeCompare(right.actionId)
+    );
+    for (const option of options) {
+      const representedStateCount = option.policyRuleIndices.reduce(
+        (sum, index) => sum + rules[index].representedStateCount,
+        0,
+      );
+      const expectedVisits = option.policyRuleIndices.reduce(
+        (sum, index) => sum + rules[index].expectedVisits,
+        0,
+      );
+      if (representedStateCount !== option.representedStateCount ||
+          Math.abs(expectedVisits - option.expectedVisits) > 1e-9) {
+        withheld.push({
+          cohortKey,
+          policyRuleIndices: [...indices],
+          reasons: [`option ${option.actionId} aggregate evidence did not reconcile`],
+        });
+        continue;
+      }
+      if (option.policyRuleIndices.some((index) => rules[index].actionId !== option.actionId)) {
+        withheld.push({
+          cohortKey,
+          policyRuleIndices: [...indices],
+          reasons: [`option ${option.actionId} contains a different selected action`],
+        });
+        continue;
+      }
+    }
+    if (withheld.some((entry) => entry.cohortKey === cohortKey)) continue;
     groups.push({
       phase,
       group: {
         id: `decision_${groups.length + 1}`,
-        summary:
-          `${first.context.rarity} ${first.context.prefixCount}P/${first.context.suffixCount}S states ` +
-          'with the same target progress choose different actions based on exact current affixes.',
+        summary: decisionGroupSummary(rules, indices),
         representedStateCount: indices.reduce((sum, index) => sum + rules[index].representedStateCount, 0),
         expectedVisits: indices.reduce((sum, index) => sum + rules[index].expectedVisits, 0),
-        options: [...byAction.values()].sort((left, right) =>
-          right.expectedVisits - left.expectedVisits || left.actionId.localeCompare(right.actionId)
-        ),
+        options,
+        evidenceStatus: 'RECONCILED',
+        cohort: {
+          policyScope: first.context.policyScope,
+          progressKind: first.context.progressKind,
+          rarity: first.context.rarity,
+          targetModIds: [...first.context.targetModIds],
+          matchedProgressCounts: exactNumberSet(
+            cohortContexts.map((context) => context.matchedTargetModIds.length),
+          ),
+          prefixCounts: exactNumberSet(cohortContexts.map((context) => context.prefixCount)),
+          suffixCounts: exactNumberSet(cohortContexts.map((context) => context.suffixCount)),
+          policyRuleIndices: [...indices],
+          focalPhase: phase,
+        },
       },
     });
   }
-  return groups;
+  return { groups, withheld };
 }
 
 function unique<T>(values: T[]): T[] {
@@ -594,6 +786,7 @@ export function buildCraftPlan(source: CraftPlanSource): CraftPlanSummary {
       steps: [],
       targetOrderPreference,
       detailedDecisionCount: 0,
+      withheldDecisionDetails: [],
       exactPolicyBranchCount,
       exactPolicyBranchesHiddenByDefault: exactPolicyBranchCount,
       selectedActionIds: [],
@@ -679,7 +872,7 @@ export function buildCraftPlan(source: CraftPlanSource): CraftPlanSummary {
   }
   const conflicts = decisionGroups(source.policyExplanation, selectedPhysicalActionIdSet);
   const detailsByPhase = new Map<CraftPlanPhase, CraftPlanDecisionGroup[]>();
-  for (const { group, phase } of conflicts) {
+  for (const { group, phase } of conflicts.groups) {
     const entries = detailsByPhase.get(phase) ?? [];
     entries.push(group);
     detailsByPhase.set(phase, entries);
@@ -717,6 +910,7 @@ export function buildCraftPlan(source: CraftPlanSource): CraftPlanSummary {
       steps: [],
       targetOrderPreference,
       detailedDecisionCount: 0,
+      withheldDecisionDetails: conflicts.withheld,
       exactPolicyBranchCount,
       exactPolicyBranchesHiddenByDefault: exactPolicyBranchCount,
       selectedActionIds: selectedPhysicalActionIds,
@@ -827,7 +1021,8 @@ export function buildCraftPlan(source: CraftPlanSource): CraftPlanSummary {
     steps: status === 'CERTIFIED' ? steps : [],
     recovery,
     targetOrderPreference,
-    detailedDecisionCount: conflicts.length,
+    detailedDecisionCount: conflicts.groups.length,
+    withheldDecisionDetails: conflicts.withheld,
     exactPolicyBranchCount,
     exactPolicyBranchesHiddenByDefault: exactPolicyBranchCount,
     selectedActionIds: selectedPhysicalActionIds,

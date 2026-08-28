@@ -9,4 +9,4 @@ C7 sameFingerprint=true
 C8 nodes=43; edges=191; bands=5; span=1120x1456; overlaps=0
 C9 topology=topology-3c852336; reconciled=true
 C10 fractured Magic self-loop=0.25; open-side=0.75
-Evidence SHA-256: 94be149180213d2697641ff133457370794e29d1272a41ab8b63bdd88881adb8
+Evidence SHA-256: d2018b941100d9bc31e06271e669876d6a2cad33bbedcac639dfe253ed5bdf50

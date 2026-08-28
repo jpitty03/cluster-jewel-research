@@ -68,6 +68,7 @@
     "diagnostic:phase3c": "tsx scripts/phase3cDiagnostics.ts",
     "diagnostic:phase3d": "tsx scripts/phase3dDiagnostics.ts",
     "diagnostic:phase3e": "tsx scripts/phase3eDiagnostics.ts",
+    "diagnostic:phase3f": "tsx scripts/phase3fDiagnostics.ts",
     "browser:smoke": "tsx scripts/browserPhase2sSmoke.ts",
     "publish": "npm run scrape && npm run price && node scripts/publish.mjs"
   },

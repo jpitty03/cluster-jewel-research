@@ -1,6 +1,6 @@
 {
   "phase": "3D",
-  "generatedAt": "2026-08-28T03:52:02.137Z",
+  "generatedAt": "2026-08-28T06:36:17.130Z",
   "baseline": {
     "implementationBaselineSha": "debd00c",
     "planReviewedBaselineSha": "621996531b025e4d7356fae7a9163c87f95723eb"
@@ -62,8 +62,8 @@
       }
     },
     "D2_fullRouteEvidenceReconciled": {
-      "evidenceFamilies": 13,
-      "evidenceEntries": 91
+      "evidenceFamilies": 17,
+      "evidenceEntries": 128
     },
     "D3_D6_stageAwareMechanicsAndNegativeControls": {
       "selectedAcquisitionKind": "SELF_FRACTURE",
@@ -554,12 +554,12 @@
       ]
     },
     "D7_compareMethodsCoreAB": {
-      "disabledElapsedMs": 24742,
-      "enabledElapsedMs": 28194,
+      "disabledElapsedMs": 24744,
+      "enabledElapsedMs": 28226,
       "fieldHostTimed": {
-        "mode": "HOST_TIMED_EQUIVALENT_INCUMBENT",
-        "stateDelta": -1667,
-        "retainedStateDelta": -1667,
+        "mode": "EXACT_CORE_STATE_SET",
+        "stateDelta": 0,
+        "retainedStateDelta": 0,
         "disabled": {
           "version": "CORE_RECOMMENDATION_SNAPSHOT_PHASE3D_V1",
           "compareMethodFamiliesRequested": false,
@@ -581,11 +581,15 @@
             {
               "candidateId": "candidate_2",
               "fullRouteUChaos": 1636.3811154830044
+            },
+            {
+              "candidateId": "candidate_3",
+              "fullRouteUChaos": 1636.3811154829793
             }
           ],
-          "retainedStateFingerprint": "states-d78fbbf7",
-          "statesExpanded": 6669,
-          "retainedStates": 11490,
+          "retainedStateFingerprint": "states-f2128875",
+          "statesExpanded": 10002,
+          "retainedStates": 16641,
           "stopReason": "HOST_RESERVE",
           "canonicalPolicyFingerprint": "core-c8da05a5"
         },
@@ -600,17 +604,25 @@
           "selectedExecutableUChaos": 1459.7923662160783,
           "candidateExecutableUChaos": [
             {
+              "candidateId": "candidate_0",
+              "fullRouteUChaos": 4767.73126396295
+            },
+            {
               "candidateId": "candidate_1",
               "fullRouteUChaos": 1459.7923662160783
             },
             {
               "candidateId": "candidate_2",
               "fullRouteUChaos": 1636.3811154830044
+            },
+            {
+              "candidateId": "candidate_3",
+              "fullRouteUChaos": 1636.3811154829793
             }
           ],
-          "retainedStateFingerprint": "states-c233b212",
-          "statesExpanded": 5002,
-          "retainedStates": 9823,
+          "retainedStateFingerprint": "states-f2128875",
+          "statesExpanded": 10002,
+          "retainedStates": 16641,
           "stopReason": "HOST_RESERVE",
           "canonicalPolicyFingerprint": "core-c8da05a5"
         }
@@ -682,8 +694,22 @@
     "D8_requestLocalIncumbentRegistry": {
       "production": {
         "version": "REQUEST_POLICY_REGISTRY_PHASE3D_V1",
-        "registeredPolicyCount": 2,
+        "registeredPolicyCount": 5,
         "familyIncumbents": [
+          {
+            "familyId": "family_conventional",
+            "bundleId": "bundle:family_conventional:known-policy",
+            "fullRouteUChaos": 4767.731263962971,
+            "identity": {
+              "targetIdentity": "phase2j-2aa2618e",
+              "mechanicsSessionIdentity": "phase2j-5c874aeb",
+              "economicsEffortIdentity": "phase2j-4a01d024",
+              "physicalAcquisitionIdentity": "{\"state\":\"Large Cluster Jewel|Minions deal 10% increased Damage|84|8|normal|influenced=false|synthesised=false|acquisitionMenu=false|methodFamilyActionEvidence=\",\"kind\":\"CLEAN\",\"method\":\"clean-base\",\"synthesisTerminalSemantics\":\"CLEAN_BASE\"}",
+              "acquisitionKind": "CLEAN",
+              "canonicalPolicyFingerprint": "policy-9e41c4f9"
+            },
+            "validationSource": "FAMILY_ADMISSIBILITY_REVALIDATION"
+          },
           {
             "familyId": "family_fracture_Primordial Bond",
             "bundleId": "bundle:family_fracture_Primordial Bond:independent",
@@ -711,9 +737,53 @@
               "canonicalPolicyFingerprint": "policy-71928620"
             },
             "validationSource": "SOLVER_CERTIFICATION"
+          },
+          {
+            "familyId": "family_fracture_Rotten Claws",
+            "bundleId": "bundle:family_fracture_Rotten Claws:independent",
+            "fullRouteUChaos": 1636.3811154829789,
+            "identity": {
+              "targetIdentity": "phase2j-2aa2618e",
+              "mechanicsSessionIdentity": "phase2j-5c874aeb",
+              "economicsEffortIdentity": "phase2j-4a01d024",
+              "physicalAcquisitionIdentity": "{\"state\":\"Large Cluster Jewel|Minions deal 10% increased Damage|84|8|magic|influenced=false|synthesised=false|acquisitionMenu=false|methodFamilyActionEvidence=|Prefix:Rotten Claws:1:F:\",\"kind\":\"SELF_FRACTURE\",\"method\":\"self-fracture_executable\",\"synthesisTerminalSemantics\":\"Terminal when the requested modifier is present AND fractured, and no unmatched removable explicit affix remains, so the resulting physical state is a legal reusable starting base for downstream crafting.\"}",
+              "acquisitionKind": "SELF_FRACTURE",
+              "canonicalPolicyFingerprint": "policy-75ceb6b8"
+            },
+            "validationSource": "SOLVER_CERTIFICATION"
+          },
+          {
+            "familyId": "family_open",
+            "bundleId": "core:clean-open-policy",
+            "fullRouteUChaos": 4767.731263962971,
+            "identity": {
+              "targetIdentity": "phase2j-2aa2618e",
+              "mechanicsSessionIdentity": "phase2j-5c874aeb",
+              "economicsEffortIdentity": "phase2j-4a01d024",
+              "physicalAcquisitionIdentity": "{\"state\":\"Large Cluster Jewel|Minions deal 10% increased Damage|84|8|normal|influenced=false|synthesised=false|acquisitionMenu=false|methodFamilyActionEvidence=\",\"kind\":\"CLEAN\",\"method\":\"clean-base\",\"synthesisTerminalSemantics\":\"CLEAN_BASE\"}",
+              "acquisitionKind": "CLEAN",
+              "canonicalPolicyFingerprint": "policy-9e41c4f9"
+            },
+            "validationSource": "SOLVER_CERTIFICATION"
           }
         ],
         "events": [
+          {
+            "familyId": "family_open",
+            "bundleId": "core:clean-open-policy",
+            "policyFingerprint": "policy-9e41c4f9",
+            "candidateUChaos": 4767.731263962971,
+            "resultingFamilyUChaos": 4767.731263962971,
+            "outcome": "INITIAL_INCUMBENT"
+          },
+          {
+            "familyId": "family_conventional",
+            "bundleId": "bundle:family_conventional:known-policy",
+            "policyFingerprint": "policy-9e41c4f9",
+            "candidateUChaos": 4767.731263962971,
+            "resultingFamilyUChaos": 4767.731263962971,
+            "outcome": "INITIAL_INCUMBENT"
+          },
           {
             "familyId": "family_fracture_Primordial Bond",
             "bundleId": "bundle:family_fracture_Primordial Bond:independent",
@@ -737,6 +807,14 @@
             "policyFingerprint": "policy-71928620",
             "candidateUChaos": 1636.3811154830041,
             "resultingFamilyUChaos": 1636.3811154830041,
+            "outcome": "INITIAL_INCUMBENT"
+          },
+          {
+            "familyId": "family_fracture_Rotten Claws",
+            "bundleId": "bundle:family_fracture_Rotten Claws:independent",
+            "policyFingerprint": "policy-75ceb6b8",
+            "candidateUChaos": 1636.3811154829789,
+            "resultingFamilyUChaos": 1636.3811154829789,
             "outcome": "INITIAL_INCUMBENT"
           }
         ],
@@ -792,93 +870,93 @@
         "coreDeadlineAtRequestMs": 24650,
         "coreDeadlineFraction": 0.85,
         "hostSerializationReserveMs": 1000,
-        "hostReserveEnteredAtRequestMs": 24665.450999999997,
+        "hostReserveEnteredAtRequestMs": 24669.6918,
         "entries": [
           {
             "stage": "CORE_PORTFOLIO_SEARCH",
             "accounting": "EXCLUSIVE",
             "startedAtRequestMs": 0,
-            "finishedAtRequestMs": 24665.450999999997,
-            "usedWallTimeMs": 24665.450999999997,
-            "statesExpanded": 5002,
-            "retainedStates": 9823,
+            "finishedAtRequestMs": 24669.6918,
+            "usedWallTimeMs": 24669.6918,
+            "statesExpanded": 10002,
+            "retainedStates": 16641,
             "stopReason": "HOST_RESERVE",
             "remainingRequestMsAtStart": 30000,
-            "remainingRequestMsAtFinish": 5334.549000000003
+            "remainingRequestMsAtFinish": 5330.3081999999995
           },
           {
             "stage": "METHOD_FAMILY_SEARCH",
             "accounting": "EXCLUSIVE",
-            "startedAtRequestMs": 24665.450999999997,
-            "finishedAtRequestMs": 28165.693000000003,
-            "usedWallTimeMs": 3489.181400000016,
-            "statesExpanded": 6704,
-            "retainedStates": 1676,
-            "remainingRequestMsAtStart": 5334.549000000003,
-            "remainingRequestMsAtFinish": 1834.306999999997
+            "startedAtRequestMs": 24669.6918,
+            "finishedAtRequestMs": 28184.2221,
+            "usedWallTimeMs": 2929.5620999999883,
+            "statesExpanded": 303,
+            "retainedStates": 247,
+            "remainingRequestMsAtStart": 5330.3081999999995,
+            "remainingRequestMsAtFinish": 1815.777900000001
           },
           {
             "stage": "POLICY_ADMISSIBILITY_REVALIDATION",
             "accounting": "EXCLUSIVE",
-            "startedAtRequestMs": 24665.450999999997,
-            "finishedAtRequestMs": 28165.693000000003,
-            "usedWallTimeMs": 11.059699999983422,
+            "startedAtRequestMs": 24669.6918,
+            "finishedAtRequestMs": 28184.2221,
+            "usedWallTimeMs": 584.9678000000131,
             "statesExpanded": 0,
             "retainedStates": 0,
-            "remainingRequestMsAtStart": 5334.549000000003,
-            "remainingRequestMsAtFinish": 1834.306999999997
+            "remainingRequestMsAtStart": 5330.3081999999995,
+            "remainingRequestMsAtFinish": 1815.777900000001
           },
           {
             "stage": "POLICY_EQUIVALENCE_PRESENTATION",
             "accounting": "EXCLUSIVE",
-            "startedAtRequestMs": 28165.693000000003,
-            "finishedAtRequestMs": 28186.6922,
-            "usedWallTimeMs": 20.999199999998382,
+            "startedAtRequestMs": 28184.2221,
+            "finishedAtRequestMs": 28216.245600000002,
+            "usedWallTimeMs": 32.02350000000297,
             "statesExpanded": 0,
             "retainedStates": 0,
-            "remainingRequestMsAtStart": 1834.306999999997,
-            "remainingRequestMsAtFinish": 1813.3077999999987
+            "remainingRequestMsAtStart": 1815.777900000001,
+            "remainingRequestMsAtFinish": 1783.754399999998
           },
           {
             "stage": "HOST_SERIALIZATION_RESERVE",
             "accounting": "EXCLUSIVE",
-            "startedAtRequestMs": 28186.692700000003,
-            "finishedAtRequestMs": 28193.8745,
-            "usedWallTimeMs": 7.154800000003888,
+            "startedAtRequestMs": 28216.246100000004,
+            "finishedAtRequestMs": 28226.605799999998,
+            "usedWallTimeMs": 10.273199999995995,
             "statesExpanded": 0,
             "retainedStates": 0,
-            "remainingRequestMsAtStart": 1813.3072999999968,
-            "remainingRequestMsAtFinish": 1806.1254999999983
+            "remainingRequestMsAtStart": 1783.753899999996,
+            "remainingRequestMsAtFinish": 1773.3942000000025
           },
           {
             "stage": "ACQUISITION_SYNTHESIS",
             "accounting": "NESTED_CORE_DETAIL",
-            "startedAtRequestMs": 4036.8152999999984,
-            "finishedAtRequestMs": 19587.5831,
-            "usedWallTimeMs": 8270,
-            "statesExpanded": 3335,
-            "retainedStates": 3335,
-            "remainingRequestMsAtStart": 25963.1847,
-            "remainingRequestMsAtFinish": 10412.4169
+            "startedAtRequestMs": 4046.9066999999995,
+            "finishedAtRequestMs": 18218.6725,
+            "usedWallTimeMs": 8591,
+            "statesExpanded": 6668,
+            "retainedStates": 6668,
+            "remainingRequestMsAtStart": 25953.0933,
+            "remainingRequestMsAtFinish": 11781.3275
           },
           {
             "stage": "PROOF_BOUND_WORK",
             "accounting": "NESTED_CORE_DETAIL",
-            "startedAtRequestMs": 19587.922199999997,
-            "finishedAtRequestMs": 23246.922199999997,
-            "usedWallTimeMs": 3659,
+            "startedAtRequestMs": 21647.4983,
+            "finishedAtRequestMs": 23152.4983,
+            "usedWallTimeMs": 1505,
             "statesExpanded": 1667,
             "retainedStates": 1667,
-            "remainingRequestMsAtStart": 10412.077800000003,
-            "remainingRequestMsAtFinish": 6753.077800000003
+            "remainingRequestMsAtStart": 8352.5017,
+            "remainingRequestMsAtFinish": 6847.501700000001
           }
         ],
-        "exclusiveAccountedMs": 28193.8461,
-        "unclassifiedMs": 0.02840000000287546,
+        "exclusiveAccountedMs": 28226.5184,
+        "unclassifiedMs": 0.08739999999670545,
         "reconciled": true,
         "explanation": [
           "Core envelope is 85% of the engine deadline and is independent of compareMethodFamilies=true.",
-          "Core stopped at 5,002 expanded states with HOST_RESERVE.",
+          "Core stopped at 10,002 expanded states with HOST_RESERVE.",
           "Acquisition synthesis and proof-bound rows are measured nested details and are not added to exclusive request time.",
           "Family search excludes separately timed policy-admissibility revalidation."
         ]
@@ -901,17 +979,25 @@
         "selectedExecutableUChaos": 1459.7923662160783,
         "candidateExecutableUChaos": [
           {
+            "candidateId": "candidate_0",
+            "fullRouteUChaos": 4767.73126396295
+          },
+          {
             "candidateId": "candidate_1",
             "fullRouteUChaos": 1459.7923662160783
           },
           {
             "candidateId": "candidate_2",
             "fullRouteUChaos": 1636.3811154830044
+          },
+          {
+            "candidateId": "candidate_3",
+            "fullRouteUChaos": 1636.3811154829793
           }
         ],
-        "retainedStateFingerprint": "states-c233b212",
-        "statesExpanded": 5002,
-        "retainedStates": 9823,
+        "retainedStateFingerprint": "states-f2128875",
+        "statesExpanded": 10002,
+        "retainedStates": 16641,
         "stopReason": "HOST_RESERVE",
         "canonicalPolicyFingerprint": "core-c8da05a5"
       },
@@ -919,6 +1005,14 @@
     },
     "D10_executionVsFamilyOptimum": {
       "imported": [
+        {
+          "familyId": "family_conventional",
+          "incumbentSource": "ADMISSIBLE_KNOWN_POLICY",
+          "policyExecutionStatus": "FULLY RESOLVED / PROPER / ABSORBING / COST-RECONCILED",
+          "policyProofLevel": "BEST FULLY RESOLVED POLICY FOUND",
+          "familySearchStatus": "BEST_FOUND_UNPROVEN",
+          "fullRouteU": 4767.731263962971
+        },
         {
           "familyId": "family_fracture_Primordial Bond",
           "incumbentSource": "ADMISSIBLE_KNOWN_POLICY",
@@ -929,6 +1023,13 @@
         }
       ],
       "revalidated": [
+        {
+          "familyId": "family_conventional",
+          "incumbentSource": "ADMISSIBLE_KNOWN_POLICY",
+          "policyExecutionStatus": "FULLY RESOLVED / PROPER / ABSORBING / COST-RECONCILED",
+          "familySearchStatus": "BEST_FOUND_UNPROVEN",
+          "fullRouteU": 4767.731263962971
+        },
         {
           "familyId": "family_fracture_Primordial Bond",
           "incumbentSource": "ADMISSIBLE_KNOWN_POLICY",
@@ -944,7 +1045,15 @@
           "policyExecutionStatus": "FULLY RESOLVED / PROPER / ABSORBING / COST-RECONCILED",
           "policyProofLevel": "BEST FULLY RESOLVED POLICY FOUND",
           "familySearchStatus": "BEST_FOUND_UNPROVEN",
-          "fullRouteU": 1459.7923662160783
+          "fullRouteU": 4767.731263962971
+        },
+        {
+          "familyId": "family_conventional",
+          "incumbentSource": "ADMISSIBLE_KNOWN_POLICY",
+          "policyExecutionStatus": "FULLY RESOLVED / PROPER / ABSORBING / COST-RECONCILED",
+          "policyProofLevel": "BEST FULLY RESOLVED POLICY FOUND",
+          "familySearchStatus": "BEST_FOUND_UNPROVEN",
+          "fullRouteU": 4767.731263962971
         },
         {
           "familyId": "family_fracture_Primordial Bond",
@@ -961,6 +1070,14 @@
           "policyProofLevel": "BEST FULLY RESOLVED POLICY FOUND",
           "familySearchStatus": "BEST_FOUND_UNPROVEN",
           "fullRouteU": 1636.3811154830041
+        },
+        {
+          "familyId": "family_fracture_Rotten Claws",
+          "incumbentSource": "INDEPENDENT_DISCOVERY",
+          "policyExecutionStatus": "FULLY RESOLVED / PROPER / ABSORBING / COST-RECONCILED",
+          "policyProofLevel": "BEST FULLY RESOLVED POLICY FOUND",
+          "familySearchStatus": "BEST_FOUND_UNPROVEN",
+          "fullRouteU": 1636.3811154829789
         }
       ]
     },

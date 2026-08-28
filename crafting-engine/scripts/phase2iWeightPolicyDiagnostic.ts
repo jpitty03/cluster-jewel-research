@@ -388,7 +388,11 @@ function syntheticPresentationPlan(run: SyntheticRun) {
       representedStateCount: 1,
       expectedVisits: rule.expectedVisits,
       exampleState: rule.stateKey,
+      sourceStateKeys: [rule.stateKey],
       context: {
+        policyScope: 'DOWNSTREAM',
+        progressKind: 'FINAL',
+        targetModIds: [TARGET_A, TARGET_B],
         rarity: rule.state.rarity,
         prefixCount: rule.state.prefixes.length,
         suffixCount: rule.state.suffixes.length,
@@ -397,13 +401,13 @@ function syntheticPresentationPlan(run: SyntheticRun) {
         prefixes: rule.state.prefixes.map((affix) => ({
           modId: affix.modId,
           tier: affix.tier,
-          isFractured: false,
+          isFractured: affix.isFractured,
           currentRoll: affix.currentRoll,
         })),
         suffixes: rule.state.suffixes.map((affix) => ({
           modId: affix.modId,
           tier: affix.tier,
-          isFractured: false,
+          isFractured: affix.isFractured,
           currentRoll: affix.currentRoll,
         })),
         influenced: false,

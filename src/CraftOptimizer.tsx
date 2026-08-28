@@ -268,13 +268,21 @@ function renderPolicyCondition(
     ...context.prefixes.map((affix) => `prefix ${formatAffix(affix)}`),
     ...context.suffixes.map((affix) => `suffix ${formatAffix(affix)}`),
   ];
+  const progressNoun = context.progressKind === 'PREPARATION' ? 'preparation' : 'final';
+  const progressLabel = context.progressKind === 'PREPARATION' ? 'prep' : 'final';
+  const targetDefinition = context.targetModIds.length > 0
+    ? `${progressNoun} target${context.targetModIds.length === 1 ? '' : 's'}: ` +
+      context.targetModIds.map(display).join(', ')
+    : `${progressNoun} target context unavailable`;
   const details = [
+    targetDefinition,
+    `${progressLabel} progress: ${context.matchedTargetModIds.length}/${context.targetModIds.length}`,
     context.matchedTargetModIds.length > 0
-      ? `target present: ${context.matchedTargetModIds.map(display).join(', ')}`
-      : 'no target modifier present',
+      ? `${progressNoun} target present: ${context.matchedTargetModIds.map(display).join(', ')}`
+      : undefined,
     context.unmatchedTargetModIds.length > 0
-      ? `target missing: ${context.unmatchedTargetModIds.map(display).join(', ')}`
-      : 'all target modifiers present',
+      ? `${progressNoun} target missing: ${context.unmatchedTargetModIds.map(display).join(', ')}`
+      : undefined,
     context.disambiguateAffixes && exactAffixState.length > 0
       ? `exact affix state: ${exactAffixState.join(', ')}`
       : undefined,
@@ -2455,7 +2463,17 @@ export function CraftOptimizer({ seed = null, onBackToClusterJewels }: CraftOpti
                           </details>
                         )}
                         {step.decisionDetails.map((decision) => (
-                          <details className="craft-plan-decision-details" key={decision.id}>
+                          <details
+                            className="craft-plan-decision-details"
+                            key={decision.id}
+                            data-decision-id={decision.id}
+                            data-evidence-status={decision.evidenceStatus}
+                            data-policy-scope={decision.cohort.policyScope}
+                            data-progress-kind={decision.cohort.progressKind}
+                            data-rarity-cohort={decision.cohort.rarity}
+                            data-focal-phase={decision.cohort.focalPhase}
+                            data-policy-rule-indices={decision.cohort.policyRuleIndices.join(',')}
+                          >
                             <summary>Decision details</summary>
                             <p>{publicModifierText(decision.summary, targetDescriptors, 'primary')}</p>
                             <ul>{decision.options.map((option) => {
@@ -2464,11 +2482,12 @@ export function CraftOptimizer({ seed = null, onBackToClusterJewels }: CraftOpti
                                 key={option.actionId}
                                 data-action-id={option.actionId}
                                 data-policy-rule-indices={option.policyRuleIndices.join(',')}
+                                data-example-policy-rule-index={option.policyRuleIndices[0]}
                               >
                                 <strong>{publicModifierText(playerActionName(option.actionId, option.action, recommendedStart), targetDescriptors, 'primary')}</strong>
                                 <span>{option.representedStateCount} represented states · {count(option.expectedVisits)} expected visits</span>
                                 {exampleRule && <span className="craft-plan-decision-example">Example: {renderPolicyCondition(exampleRule, eligibleMods)}</span>}
-                                {option.policyRuleIndices.length > 1 && <span className="muted">{option.policyRuleIndices.length - 1} more exact cases are retained in Advanced optimizer details.</span>}
+                                {option.representedStateCount > 1 && <span className="muted">{option.representedStateCount - 1} more exact states are traceable in Advanced optimizer details.</span>}
                               </li>;
                             })}</ul>
                           </details>
@@ -2826,6 +2845,10 @@ export function CraftOptimizer({ seed = null, onBackToClusterJewels }: CraftOpti
                       data-condition={renderedCondition}
                       data-action={rule.action}
                       data-action-id={rule.actionId}
+                      data-policy-scope={rule.context.policyScope}
+                      data-progress-kind={rule.context.progressKind}
+                      data-rarity={rule.context.rarity}
+                      data-source-state-keys={JSON.stringify(rule.sourceStateKeys)}
                     >
                       <div><span>If</span><strong>{renderedCondition}</strong></div>
                       <span className="craft-rule-arrow" aria-hidden="true">→</span>
@@ -2835,6 +2858,10 @@ export function CraftOptimizer({ seed = null, onBackToClusterJewels }: CraftOpti
                         <p>{rule.representedStateCount} represented states · {count(rule.expectedVisits)} expected visits</p>
                         <p className="muted">Optimizer action: {rule.action}</p>
                         <p className="muted">Example engine state: {rule.exampleState}</p>
+                        <details>
+                          <summary>Source state identities ({rule.sourceStateKeys.length})</summary>
+                          <code>{rule.sourceStateKeys.join('\n')}</code>
+                        </details>
                       </details>
                     </article>;
                   })}

@@ -297,7 +297,13 @@ export interface PolicyExplanationRule {
   representedStateCount: number;
   expectedVisits: number;
   exampleState: string;
+  /** Canonical source-state identities represented by this explanation rule. */
+  sourceStateKeys: string[];
   context: {
+    policyScope: 'ACQUISITION' | 'DOWNSTREAM';
+    progressKind: 'ACQUISITION_MENU' | 'PREPARATION' | 'FINAL';
+    /** Complete identity set against which matched/missing progress reconciles. */
+    targetModIds: string[];
     rarity: ItemRarity;
     prefixCount: number;
     suffixCount: number;
@@ -3246,13 +3252,16 @@ function policyConditionContext(
 ): PolicyExplanationRule['context'] {
   const requirements = getAllTargetModRequirements(target);
   const affixes = getAllAffixes(state);
-  const matchedTargetModIds = [...new Set(affixes
-    .filter((mod) => requirements.some((requirement) => matchesModRequirement(mod, requirement)))
-    .map((mod) => mod.modId))]
+  const identifiedRequirements = requirements.map((requirement, index) => ({
+    requirement,
+    id: targetRequirementIdentity(requirement, index),
+  }));
+  const matchedTargetModIds = identifiedRequirements
+    .filter(({ requirement }) => affixes.some((mod) => matchesModRequirement(mod, requirement)))
+    .map(({ id }) => id)
     .sort();
-  const unmatchedTargetModIds = requirements
-    .map((requirement, index) => ({ requirement, id: targetRequirementIdentity(requirement, index) }))
-    .filter(({ requirement }) => !affixes.some((mod) => matchesModRequirement(mod, requirement)))
+  const unmatchedTargetModIds = identifiedRequirements
+    .filter(({ id }) => !matchedTargetModIds.includes(id))
     .map(({ id }) => id)
     .sort();
   const describeAffix = (mod: ItemState['prefixes'][number]) => ({
@@ -3262,6 +3271,9 @@ function policyConditionContext(
     currentRoll: mod.currentRoll ? [...mod.currentRoll] : undefined,
   });
   return {
+    policyScope: 'DOWNSTREAM',
+    progressKind: 'FINAL',
+    targetModIds: identifiedRequirements.map(({ id }) => id).sort(),
     rarity: state.rarity,
     prefixCount: state.prefixes.length,
     suffixCount: state.suffixes.length,
@@ -3314,6 +3326,7 @@ function buildPolicyExplanation(
     if (existing) {
       existing.representedStateCount++;
       existing.expectedVisits += rule.expectedVisits;
+      existing.sourceStateKeys.push(rule.stateKey);
       continue;
     }
     grouped.set(key, {
@@ -3323,6 +3336,7 @@ function buildPolicyExplanation(
       representedStateCount: 1,
       expectedVisits: rule.expectedVisits,
       exampleState: describePolicyState(rule.state),
+      sourceStateKeys: [rule.stateKey],
       context,
     });
   }
@@ -3544,7 +3558,11 @@ function acquisitionMenuExplanation(
     representedStateCount: 1,
     expectedVisits: 1,
     exampleState: 'Choose an acquisition route',
+    sourceStateKeys: [`acquisition-menu:${route.actionId}`],
     context: {
+      policyScope: 'ACQUISITION',
+      progressKind: 'ACQUISITION_MENU',
+      targetModIds: [],
       rarity: start.state.rarity,
       prefixCount: 0,
       suffixCount: 0,
@@ -3563,7 +3581,7 @@ function acquisitionMenuExplanation(
 }
 
 function synthesisPolicyExplanation(
-  synthesis: AcquisitionSynthesisSummary | undefined,
+  synthesis: { policy?: AcquisitionSynthesisResult['policy'] } | undefined,
 ): PolicyExplanationRule[] {
   return (synthesis?.policy ?? []).map((rule) => ({
     condition: `Self-fracture preparation: ${rule.state}`,
@@ -3572,18 +3590,13 @@ function synthesisPolicyExplanation(
     representedStateCount: 1,
     expectedVisits: rule.expectedVisits,
     exampleState: rule.state,
+    sourceStateKeys: [rule.stateKey],
     context: {
-      rarity: 'rare' as const,
-      prefixCount: 0,
-      suffixCount: 0,
-      matchedTargetModIds: [],
-      unmatchedTargetModIds: [],
-      prefixes: [],
-      suffixes: [],
-      influenced: false,
-      synthesised: false,
+      ...rule.context,
       acquisitionMenu: false,
-      disambiguateAffixes: false,
+      // Acquisition decisions are compressed into state-comparable cohorts;
+      // retain the exact physical affixes for every rendered example.
+      disambiguateAffixes: true,
     },
   }));
 }
@@ -6233,7 +6246,11 @@ export class OptimizerService {
         representedStateCount: 1,
         expectedVisits: 1,
         exampleState: 'Choose an acquisition route',
+        sourceStateKeys: [`acquisition-menu:${fastCleanRoute.actionId}`],
         context: {
+          policyScope: 'ACQUISITION',
+          progressKind: 'ACQUISITION_MENU',
+          targetModIds: [],
           rarity: cleanStart.state.rarity,
           prefixCount: 0,
           suffixCount: 0,
@@ -6250,27 +6267,7 @@ export class OptimizerService {
         },
       });
 } else if (usesDirectFracturePolicy && bestFractureRoute && bestFractureSynthesis) {
-      const fracturePolicyExplanation: PolicyExplanationRule[] = (bestFractureSynthesis.policy ?? []).map((rule) => ({
-        condition: `Self-fracture preparation: ${rule.state}`,
-        actionId: rule.selectedActionId,
-        action: rule.selectedAction,
-        representedStateCount: 1,
-        expectedVisits: rule.expectedVisits,
-        exampleState: rule.state,
-        context: {
-          rarity: 'rare' as const,
-          prefixCount: 0,
-          suffixCount: 0,
-          matchedTargetModIds: [],
-          unmatchedTargetModIds: [],
-          prefixes: [],
-          suffixes: [],
-          influenced: false,
-          synthesised: false,
-          acquisitionMenu: false,
-          disambiguateAffixes: false,
-        },
-      }));
+      const fracturePolicyExplanation = synthesisPolicyExplanation(bestFractureSynthesis);
       policyExplanation.unshift(
         {
           condition: 'Start: choose an acquisition route',
@@ -6279,7 +6276,11 @@ export class OptimizerService {
           representedStateCount: 1,
           expectedVisits: 1,
           exampleState: 'Choose an acquisition route',
+          sourceStateKeys: [`acquisition-menu:${bestFractureRoute.actionId}`],
           context: {
+            policyScope: 'ACQUISITION',
+            progressKind: 'ACQUISITION_MENU',
+            targetModIds: [],
             rarity: starts[bestFractureCandidateIndex!].state.rarity,
             prefixCount: 0,
             suffixCount: 0,

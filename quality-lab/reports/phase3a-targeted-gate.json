@@ -1,289 +1,295 @@
 {
   "schemaVersion": "PHASE3A_QUALITY_REPORT_V1",
-  "runId": "2026-08-28T04-01-26-941Z",
+  "runId": "2026-08-28T06-25-43-950Z",
   "suite": "TARGETED",
   "requestedGateIds": [
-    "C-core-budget-isolation"
+    "D-constellation-scope-fit",
+    "D-manual-constellation-layout"
   ],
   "selectedGateIds": [
-    "C-core-budget-isolation"
+    "D-constellation-scope-fit",
+    "D-manual-constellation-layout"
   ],
-  "startedAt": "2026-08-28T04:01:26.941Z",
-  "finishedAt": "2026-08-28T04:02:43.763Z",
+  "startedAt": "2026-08-28T06:25:43.950Z",
+  "finishedAt": "2026-08-28T06:26:04.044Z",
   "status": "PASSED",
   "identity": {
-    "applicationSourceBuildHash": "app-47d4aa425661843070d4",
-    "fixtureCorpusVersion": "Phase3E-Frozen-Browser-Corpus-1",
-    "fixtureCorpusHash": "corpus-6e041387c3013608472a",
-    "priceSnapshotIdentity": "prices-80b6d66416a4b254",
+    "applicationSourceBuildHash": "app-4cbcfdb6be746d212186",
+    "fixtureCorpusVersion": "Phase3F-Frozen-Browser-Corpus-1",
+    "fixtureCorpusHash": "corpus-a34b02ab821eb35a1c54",
+    "priceSnapshotIdentity": "prices-e4cad19151cb813b",
     "browserVersion": "151.0.7922.34",
     "harnessVersion": "PHASE3A_QUALITY_LAB_V1",
-    "compatibilityHash": "compatible-b6c47d084934ced04700a82a"
+    "compatibilityHash": "compatible-86b2800360789796aa9021bf"
   },
   "scheduling": {
     "processLevelShards": [
-      "C"
+      "D"
     ],
     "browserLightParallelism": 2,
     "solverHeavyConcurrency": 1,
     "longSoakAutomatic": false,
     "shardPlan": [
       {
-        "shard": "C",
+        "shard": "D",
         "gateIds": [
-          "C-core-budget-isolation"
+          "D-constellation-scope-fit",
+          "D-manual-constellation-layout"
         ],
-        "mode": "SERIAL_SOLVER_HEAVY"
+        "mode": "PARALLEL_BROWSER_LIGHT"
       }
     ]
   },
   "counts": {
-    "passed": 1,
+    "passed": 2,
     "failed": 0,
     "resumed": 0,
     "skipped": 0,
-    "total": 1
+    "total": 2
   },
   "results": [
     {
-      "id": "C-core-budget-isolation",
-      "title": "Fresh real Workers preserve the frozen core snapshot across Compare Methods false/true",
+      "id": "D-constellation-scope-fit",
+      "title": "Frozen 23-node handoff and 40+ node stress flows retain scope truth and label-aware Fit All",
       "phase": "3D",
-      "shard": "C",
+      "shard": "D",
       "tags": [
         "phase3d",
-        "worker",
-        "solver",
-        "proof",
-        "budget",
-        "method-family"
+        "constellation",
+        "visual",
+        "responsive",
+        "accessibility"
       ],
-      "costClass": "SOLVER_HEAVY",
+      "costClass": "FAST",
       "status": "PASS",
       "passed": true,
-      "startedAt": "2026-08-28T04:01:27.836Z",
-      "finishedAt": "2026-08-28T04:02:43.643Z",
-      "durationMs": 75808,
+      "startedAt": "2026-08-28T06:25:44.861Z",
+      "finishedAt": "2026-08-28T06:25:51.769Z",
+      "durationMs": 6907,
       "details": {
-        "fieldMode": "EXACT_CORE_STATE_SET",
-        "deterministicMode": "EXACT_CORE_STATE_SET",
-        "disabledSnapshot": {
-          "version": "CORE_RECOMMENDATION_SNAPSHOT_PHASE3D_V1",
-          "compareMethodFamiliesRequested": false,
-          "coreEnvelope": {
-            "deadlineFraction": 0.85,
-            "deadlineAtRequestMs": 24650,
-            "allocatedWallTimeMs": 24650
-          },
-          "selectedExecutableUChaos": 1459.7923662160783,
-          "candidateExecutableUChaos": [
-            {
-              "candidateId": "candidate_0",
-              "fullRouteUChaos": 4767.73126396295
-            },
-            {
-              "candidateId": "candidate_1",
-              "fullRouteUChaos": 1459.7923662160783
-            },
-            {
-              "candidateId": "candidate_2",
-              "fullRouteUChaos": 1636.3811154830044
-            },
-            {
-              "candidateId": "candidate_3",
-              "fullRouteUChaos": 1636.3811154829793
-            }
+        "field": {
+          "topologyFingerprint": "topology-b6fb87a1",
+          "acquisitionProgress": [
+            "Prep target 0/1 - Normal",
+            "Prep target 0/1 - Magic",
+            "Prep target 0/1 - Magic",
+            "Prep target 0/1 - Magic",
+            "Prep target 0/1 - Rare",
+            "Prep target 0/1 - Magic",
+            "Prep target 0/1 - Rare",
+            "Prep target 0/1 - Rare",
+            "Fracture prep complete - 1/1 prep target - Rare · 1 fractured",
+            "Prep target 0/1 - Magic"
           ],
-          "retainedStateFingerprint": "states-d6d23c8a",
-          "statesExpanded": 13336,
-          "retainedStates": 21944,
-          "stopReason": "HOST_RESERVE",
-          "canonicalPolicyFingerprint": "core-c8da05a5"
-        },
-        "enabledSnapshot": {
-          "version": "CORE_RECOMMENDATION_SNAPSHOT_PHASE3D_V1",
-          "compareMethodFamiliesRequested": true,
-          "coreEnvelope": {
-            "deadlineFraction": 0.85,
-            "deadlineAtRequestMs": 24650,
-            "allocatedWallTimeMs": 24650
-          },
-          "selectedExecutableUChaos": 1459.7923662160783,
-          "candidateExecutableUChaos": [
-            {
-              "candidateId": "candidate_0",
-              "fullRouteUChaos": 4767.73126396295
-            },
-            {
-              "candidateId": "candidate_1",
-              "fullRouteUChaos": 1459.7923662160783
-            },
-            {
-              "candidateId": "candidate_2",
-              "fullRouteUChaos": 1636.3811154830044
-            },
-            {
-              "candidateId": "candidate_3",
-              "fullRouteUChaos": 1636.3811154829793
-            }
+          "downstreamProgress": [
+            "Final targets 1/3 - Magic · 1 fractured",
+            "Final targets 1/3 - Magic · 1 fractured",
+            "Final targets 2/3 - Magic · 1 fractured",
+            "Final targets 2/3 - Rare · 1 fractured",
+            "Final targets 2/3 - Rare · 1 fractured",
+            "Final targets 2/3 - Rare · 1 fractured",
+            "Final targets 2/3 - Magic · 1 fractured",
+            "Final targets 2/3 - Rare · 1 fractured",
+            "Final targets 2/3 - Rare · 1 fractured",
+            "Final targets 2/3 - Rare · 1 fractured",
+            "Final targets 2/3 - Rare · 1 fractured",
+            "Final targets 2/3 - Rare · 1 fractured",
+            "Final target complete"
           ],
-          "retainedStateFingerprint": "states-d6d23c8a",
-          "statesExpanded": 13336,
-          "retainedStates": 21944,
-          "stopReason": "HOST_RESERVE",
-          "canonicalPolicyFingerprint": "core-c8da05a5"
-        },
-        "deterministicDisabledSnapshot": {
-          "version": "CORE_RECOMMENDATION_SNAPSHOT_PHASE3D_V1",
-          "compareMethodFamiliesRequested": false,
-          "coreEnvelope": {
-            "deadlineFraction": 0.85,
-            "deadlineAtRequestMs": 24650,
-            "allocatedWallTimeMs": 24650
+          "handoffCount": 1,
+          "desktopGeometry": {
+            "viewport": {
+              "left": 85.796875,
+              "top": 117.125,
+              "right": 1325.796875,
+              "bottom": 817.125,
+              "width": 1240,
+              "height": 700
+            },
+            "nodeLabelCount": 22,
+            "scopeHeaderCount": 2,
+            "handoffLabelCount": 1,
+            "outside": [],
+            "collisionCount": 0,
+            "goalCount": 1,
+            "visibleGoalLabelCount": 1,
+            "topGap": 209.90625,
+            "bottomGap": 214.609375
           },
-          "selectedExecutableUChaos": 1470.9021039623508,
-          "candidateExecutableUChaos": [
-            {
-              "candidateId": "candidate_1",
-              "fullRouteUChaos": 1470.9021039623508
+          "wideGeometry": {
+            "viewport": {
+              "left": 137,
+              "top": 117.125,
+              "right": 1377,
+              "bottom": 894.71875,
+              "width": 1240,
+              "height": 777.59375
             },
-            {
-              "candidateId": "candidate_2",
-              "fullRouteUChaos": 1920.0429293777156
-            },
-            {
-              "candidateId": "candidate_3",
-              "fullRouteUChaos": 1920.0429293777029
-            }
-          ],
-          "retainedStateFingerprint": "states-33cbbde1",
-          "statesExpanded": 2000,
-          "retainedStates": 4500,
-          "stopReason": "STATE_CAP",
-          "canonicalPolicyFingerprint": "core-f2e36fe5"
-        },
-        "deterministicEnabledSnapshot": {
-          "version": "CORE_RECOMMENDATION_SNAPSHOT_PHASE3D_V1",
-          "compareMethodFamiliesRequested": true,
-          "coreEnvelope": {
-            "deadlineFraction": 0.85,
-            "deadlineAtRequestMs": 24650,
-            "allocatedWallTimeMs": 24650
+            "nodeLabelCount": 21,
+            "scopeHeaderCount": 2,
+            "handoffLabelCount": 1,
+            "outside": [],
+            "collisionCount": 0,
+            "goalCount": 1,
+            "visibleGoalLabelCount": 1,
+            "topGap": 248.90625,
+            "bottomGap": 253.203125
           },
-          "selectedExecutableUChaos": 1470.9021039623508,
-          "candidateExecutableUChaos": [
-            {
-              "candidateId": "candidate_1",
-              "fullRouteUChaos": 1470.9021039623508
+          "mobileGeometry": {
+            "viewport": 390,
+            "documentWidth": 390,
+            "bodyWidth": 390
+          },
+          "mobileFit": {
+            "viewport": {
+              "left": 44.796875,
+              "top": 531.265625,
+              "right": 345.1875,
+              "bottom": 961.265625,
+              "width": 300.390625,
+              "height": 430
             },
-            {
-              "candidateId": "candidate_2",
-              "fullRouteUChaos": 1920.0429293777156
-            },
-            {
-              "candidateId": "candidate_3",
-              "fullRouteUChaos": 1920.0429293777029
-            }
-          ],
-          "retainedStateFingerprint": "states-33cbbde1",
-          "statesExpanded": 2000,
-          "retainedStates": 4500,
-          "stopReason": "STATE_CAP",
-          "canonicalPolicyFingerprint": "core-f2e36fe5"
+            "nodeLabelCount": 11,
+            "scopeHeaderCount": 2,
+            "handoffLabelCount": 1,
+            "outside": [],
+            "collisionCount": 0,
+            "goalCount": 1,
+            "visibleGoalLabelCount": 1,
+            "topGap": 123.0625,
+            "bottomGap": 124.125
+          },
+          "screenshots": {
+            "desktop": "quality-lab\\reports\\evidence\\phase3d-constellation-scope-1440x900.png",
+            "wide": "quality-lab\\reports\\evidence\\phase3d-constellation-scope-1920x1080.png",
+            "mobile": "quality-lab\\reports\\evidence\\phase3d-constellation-scope-390x844.png"
+          }
         },
-        "disabledFinalU": 1459.7923662158182,
-        "enabledFinalU": 1459.7923662158182,
-        "freshWorkerProtocol": [
-          "PROGRESS",
-          "PROGRESS",
-          "PROGRESS",
-          "PROGRESS",
-          "PROGRESS",
-          "PROGRESS",
-          "PROGRESS",
-          "PROGRESS",
-          "PROGRESS",
-          "PROGRESS",
-          "PROGRESS",
-          "PROGRESS",
-          "PROGRESS",
-          "PROGRESS",
-          "PROGRESS",
-          "PROGRESS",
-          "PROGRESS",
-          "PROGRESS",
-          "PROGRESS",
-          "PROGRESS",
-          "PROGRESS",
-          "PROGRESS",
-          "PROGRESS",
-          "PROGRESS",
-          "PROGRESS",
-          "PROGRESS",
-          "COMPLETE",
-          "RESULT",
-          "PROGRESS",
-          "PROGRESS",
-          "PROGRESS",
-          "PROGRESS",
-          "PROGRESS",
-          "PROGRESS",
-          "PROGRESS",
-          "PROGRESS",
-          "PROGRESS",
-          "PROGRESS",
-          "PROGRESS",
-          "PROGRESS",
-          "PROGRESS",
-          "PROGRESS",
-          "PROGRESS",
-          "PROGRESS",
-          "PROGRESS",
-          "PROGRESS",
-          "PROGRESS",
-          "PROGRESS",
-          "PROGRESS",
-          "PROGRESS",
-          "PROGRESS",
-          "PROGRESS",
-          "PROGRESS",
-          "COMPLETE",
-          "RESULT"
-        ],
-        "artifact": "quality-lab\\reports\\evidence\\phase3d-core-budget-worker-ab.json"
+        "stress": {
+          "topologyFingerprint": "topology-3c852336",
+          "nodeCount": 43,
+          "largeSccNodeCount": 42,
+          "geometry": {
+            "viewport": {
+              "left": 85.796875,
+              "top": 117.125,
+              "right": 1325.796875,
+              "bottom": 817.125,
+              "width": 1240,
+              "height": 700
+            },
+            "nodeLabelCount": 33,
+            "scopeHeaderCount": 1,
+            "handoffLabelCount": 0,
+            "outside": [],
+            "collisionCount": 0,
+            "goalCount": 1,
+            "visibleGoalLabelCount": 1,
+            "topGap": 63.71875,
+            "bottomGap": 69.328125
+          }
+        }
       },
       "executionIdentity": {
-        "applicationSourceBuildHash": "app-47d4aa425661843070d4",
-        "gateIdVersion": "C-core-budget-isolation@1",
-        "fixtureCorpusVersion": "Phase3E-Frozen-Browser-Corpus-1",
-        "fixtureInputHash": "fixture-c0956dc4af1bc5d29323",
-        "priceSnapshotIdentity": "prices-80b6d66416a4b254",
+        "applicationSourceBuildHash": "app-4cbcfdb6be746d212186",
+        "gateIdVersion": "D-constellation-scope-fit@1",
+        "fixtureCorpusVersion": "Phase3F-Frozen-Browser-Corpus-1",
+        "fixtureInputHash": "fixture-847b9f28112a9ba071cc",
+        "priceSnapshotIdentity": "prices-e4cad19151cb813b",
         "browserVersion": "151.0.7922.34",
         "harnessVersion": "PHASE3A_QUALITY_LAB_V1",
-        "compatibilityHash": "compatible-b6c47d084934ced04700a82a"
+        "compatibilityHash": "compatible-86b2800360789796aa9021bf"
+      }
+    },
+    {
+      "id": "D-manual-constellation-layout",
+      "title": "Strict saved manual layout follows real pointer, keyboard, camera, and reset behavior",
+      "phase": "3E",
+      "shard": "D",
+      "tags": [
+        "phase3e",
+        "phase3d",
+        "phase3c",
+        "constellation",
+        "visual",
+        "responsive",
+        "accessibility"
+      ],
+      "costClass": "MEDIUM",
+      "status": "PASS",
+      "passed": true,
+      "startedAt": "2026-08-28T06:25:51.769Z",
+      "finishedAt": "2026-08-28T06:26:03.915Z",
+      "durationMs": 12146,
+      "details": {
+        "schema": "MANUAL_CONSTELLATION_LAYOUT_V1",
+        "topologyFingerprint": "topology-c6ae1cff",
+        "exactFlowFingerprint": "flow-95543b18",
+        "selectedPolicyFingerprint": "policy-1031a5cd",
+        "movedNodeId": "policy_acquisition_277e773e",
+        "connectedEdgeId": "flow_acquisition_13e74d8a",
+        "pointerDistanceGraph": 584.5892492973163,
+        "labelMoved": true,
+        "edgeRerouted": true,
+        "persistenceReload": true,
+        "resetViewPreserved": true,
+        "resetLayoutRemoved": true,
+        "backgroundPan": true,
+        "lockedPan": true,
+        "keyboardNudge": true,
+        "routeFocusEffectiveBounds": true,
+        "fitAllEffectiveBounds": true,
+        "replayScreensaverCompatible": true,
+        "fullscreen": true,
+        "trustedTouchDrag": true,
+        "mobileGeometry": {
+          "viewport": 390,
+          "documentWidth": 390,
+          "bodyWidth": 390
+        },
+        "screenshots": {
+          "desktop": "quality-lab\\reports\\evidence\\phase3e-manual-constellation-1440x900.png",
+          "mobile": "quality-lab\\reports\\evidence\\phase3e-manual-constellation-390x844.png"
+        }
+      },
+      "executionIdentity": {
+        "applicationSourceBuildHash": "app-4cbcfdb6be746d212186",
+        "gateIdVersion": "D-manual-constellation-layout@1",
+        "fixtureCorpusVersion": "Phase3F-Frozen-Browser-Corpus-1",
+        "fixtureInputHash": "fixture-f6ab8902f22f63e1772b",
+        "priceSnapshotIdentity": "prices-e4cad19151cb813b",
+        "browserVersion": "151.0.7922.34",
+        "harnessVersion": "PHASE3A_QUALITY_LAB_V1",
+        "compatibilityHash": "compatible-86b2800360789796aa9021bf"
       }
     }
   ],
   "runtime": {
-    "totalWallMs": 76822,
-    "summedGateMs": 75808,
-    "appStartupMs": 338,
-    "browserStartupMs": 69,
-    "solverHeavyMs": 75808,
-    "visualInteractionMs": 0,
-    "harnessOverheadMs": 473,
+    "totalWallMs": 20094,
+    "summedGateMs": 19053,
+    "appStartupMs": 382,
+    "browserStartupMs": 105,
+    "solverHeavyMs": 0,
+    "visualInteractionMs": 19053,
+    "harnessOverheadMs": 580,
     "categoryTotalsMs": {
-      "phase3d": 75808,
-      "worker": 75808,
-      "solver": 75808,
-      "proof": 75808,
-      "budget": 75808,
-      "method-family": 75808
+      "phase3d": 19053,
+      "constellation": 19053,
+      "visual": 19053,
+      "responsive": 19053,
+      "accessibility": 19053,
+      "phase3e": 12146,
+      "phase3c": 12146
     },
     "slowestGates": [
       {
-        "id": "C-core-budget-isolation",
-        "durationMs": 75808,
+        "id": "D-manual-constellation-layout",
+        "durationMs": 12146,
+        "status": "PASS"
+      },
+      {
+        "id": "D-constellation-scope-fit",
+        "durationMs": 6907,
         "status": "PASS"
       }
     ]
@@ -294,8 +300,12 @@
     "network": []
   },
   "artifacts": {
-    "phase3dCoreBudgetWorkerAb": "quality-lab\\reports\\evidence\\phase3d-core-budget-worker-ab.json",
-    "runReport": "quality-lab\\artifacts\\phase3a-2026-08-28T04-01-26-941Z\\report.json",
+    "phase3dConstellationScopeDesktop": "quality-lab\\reports\\evidence\\phase3d-constellation-scope-1440x900.png",
+    "phase3dConstellationScopeWide": "quality-lab\\reports\\evidence\\phase3d-constellation-scope-1920x1080.png",
+    "phase3dConstellationScopeMobile": "quality-lab\\reports\\evidence\\phase3d-constellation-scope-390x844.png",
+    "phase3eManualConstellationDesktop": "quality-lab\\reports\\evidence\\phase3e-manual-constellation-1440x900.png",
+    "phase3eManualConstellationMobile": "quality-lab\\reports\\evidence\\phase3e-manual-constellation-390x844.png",
+    "runReport": "quality-lab\\artifacts\\phase3a-2026-08-28T06-25-43-950Z\\report.json",
     "stableReport": "quality-lab\\reports\\phase3a-targeted-gate.json",
     "summary": "quality-lab\\reports\\phase3a-targeted-summary.md"
   }

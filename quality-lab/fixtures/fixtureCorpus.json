@@ -1,5 +1,5 @@
 {
-  "version": "Phase3E-Frozen-Browser-Corpus-1",
+  "version": "Phase3F-Frozen-Browser-Corpus-1",
   "fixtures": [
     {
       "id": "phase3e_manual_constellation_field",
@@ -60,6 +60,7 @@
           "vividLifeforce": 0.08208,
           "primalLifeforce": 0.04085
         },
+        "marketFracturedPricesChaos": {},
         "cleanBaseCostChaos": 40,
         "cleanBasePriceSource": "manual",
         "cleanBasePriceProvenance": "Phase 3C frozen Primordial Bond + Renewal + Rotten Claws field fixture"

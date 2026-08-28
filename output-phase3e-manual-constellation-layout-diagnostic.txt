@@ -9,6 +9,6 @@ E7 policy/topology/node mismatch rejection=PASS
 E8 malformed/non-finite/missing/unknown storage handling=PASS
 E9 Reset View preserves; Reset Layout removes=PASS
 E10 outlier=policy_acquisition_a5f0a601; effective Fit All bounds=PASS
-Evidence SHA-256: 1a560e7f3ba39f70b15eda84422b83239da87b8daf6df8592eff9ce560d44087
+Evidence SHA-256: 62b829ccdf5ef1bf6c2a9dddfc0ff9b1e1d09474eb770cdb63fd2bc40f127c14
 Unit tests added/run: NO
 EXTENDED/nightly/legacy/long-soak run: NO

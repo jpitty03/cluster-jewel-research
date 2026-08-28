@@ -1,6 +1,6 @@
 {
   "phase": "3B",
-  "generatedAt": "2026-08-27T22:01:52.891Z",
+  "generatedAt": "2026-08-28T06:34:14.815Z",
   "implementation": {
     "defect": "The one-fractured-affix analytical and sampled Alteration shortcut discarded the requested same-side roll shape and renormalized all probability onto the open opposite side.",
     "sharedContract": {
@@ -384,9 +384,9 @@
         7
       ],
       "stageTimingMs": {
-        "transitionGenerationMs": 1,
-        "bellmanMs": 13,
-        "occupancyMs": 1
+        "transitionGenerationMs": 2,
+        "bellmanMs": 8,
+        "occupancyMs": 0
       },
       "previouslyExpandedNodesRevisited": 1,
       "previouslyExpandedNodesRevisitedByRound": [
@@ -394,7 +394,7 @@
       ],
       "acquisitionFeasibilityStatesExpanded": 0,
       "interruptedStatesExpanded": 0,
-      "elapsedMs": 28,
+      "elapsedMs": 21,
       "budgetExhausted": false,
       "maxStates": 1000,
       "graphHitStateLimit": false,

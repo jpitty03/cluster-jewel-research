@@ -779,6 +779,10 @@ export const MarkovConstellation: React.FC<MarkovConstellationProps> = ({
     if (event.pointerType === 'mouse' && event.button !== 0) return;
     showControls();
     const targetElement = event.target as HTMLElement;
+    // Graph-owned overlays live inside the viewport for positioning, but their
+    // controls and selectable text are not graph canvas. Do not begin a pan,
+    // deselect, or node-layout gesture from any marked interactive UI surface.
+    if (targetElement.closest('[data-constellation-interaction-exclusion]')) return;
     const targetNodeId = targetElement.closest<HTMLElement>('[data-node-id]')?.dataset.nodeId;
     const targetNode = targetNodeId
       ? effectiveGraph.nodes.find((node) => node.id === targetNodeId)
@@ -1429,7 +1433,12 @@ export const MarkovConstellation: React.FC<MarkovConstellationProps> = ({
         </div>
 
         {selectedNode && (
-          <aside className="node-detail-overlay" aria-label="Selected constellation node details" data-selected-node-id={selectedNode.id}>
+          <aside
+            className="node-detail-overlay"
+            aria-label="Selected constellation node details"
+            data-selected-node-id={selectedNode.id}
+            data-constellation-interaction-exclusion="detail-overlay"
+          >
             <div className="node-detail-heading">
               <span>{advancedLabels && selectedNode.stepNumber
                 ? `Traversal index ${selectedNode.stepNumber}`
@@ -1480,7 +1489,12 @@ export const MarkovConstellation: React.FC<MarkovConstellationProps> = ({
         )}
 
         {selectedEdge && (
-          <aside className="node-detail-overlay edge-detail-overlay" aria-label="Selected constellation edge details" data-selected-edge-id={selectedEdge.id}>
+          <aside
+            className="node-detail-overlay edge-detail-overlay"
+            aria-label="Selected constellation edge details"
+            data-selected-edge-id={selectedEdge.id}
+            data-constellation-interaction-exclusion="detail-overlay"
+          >
             <div className="node-detail-heading">
               <span>{selectedEdge.isScopeHandoff
                 ? 'CERTIFIED ACQUISITION HANDOFF'

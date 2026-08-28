@@ -1,5 +1,5 @@
 import type { SolverContext } from '../domain/CraftAction.ts';
-import type { ItemState } from '../domain/ItemState.ts';
+import type { ItemRarity, ItemState } from '../domain/ItemState.ts';
 import { getAllAffixes, getPhysicalStateSignature, normalizeItemState } from '../domain/ItemState.ts';
 import {
   buildPolicyFlowComponent,
@@ -115,6 +115,21 @@ export interface AcquisitionPolicyRule {
   selectedAction: string;
   expectedVisits: number;
   totalCostChaos: number | null;
+  /** Exact presentation evidence from the authoritative on-policy source state. */
+  context: {
+    policyScope: 'ACQUISITION';
+    progressKind: 'PREPARATION';
+    targetModIds: string[];
+    rarity: ItemRarity;
+    prefixCount: number;
+    suffixCount: number;
+    matchedTargetModIds: string[];
+    unmatchedTargetModIds: string[];
+    prefixes: Array<{ modId: string; tier: number; isFractured: boolean; currentRoll?: number[] }>;
+    suffixes: Array<{ modId: string; tier: number; isFractured: boolean; currentRoll?: number[] }>;
+    influenced: boolean;
+    synthesised: boolean;
+  };
 }
 
 export interface WrongFractureRecoverySummary {
@@ -327,6 +342,61 @@ function describeState(state: ItemState): string {
     .join(' + ')}`;
 }
 
+function acquisitionRequirementIdentity(requirement: ModRequirement, index: number): string {
+  return requirement.modId ?? requirement.name ?? requirement.modGroup ??
+    `preparation target ${index + 1}`;
+}
+
+function acquisitionPolicyContext(
+  state: ItemState,
+  requirement: PhysicalStateRequirement,
+): AcquisitionPolicyRule['context'] {
+  // Preparation progress means owning the modifier that will be fractured; the
+  // fracture flag remains exact affix evidence but is not required to count the
+  // modifier as present during Alter/Augment/Regal preparation.
+  const preparationRequirements: ModRequirement[] = [{
+    ...requirement.fracturedMod,
+    mustBeFractured: undefined,
+  }];
+  const identified = preparationRequirements.map((targetRequirement, index) => ({
+    requirement: targetRequirement,
+    id: acquisitionRequirementIdentity(targetRequirement, index),
+  }));
+  const affixes = getAllAffixes(state);
+  const matchedTargetModIds = identified
+    .filter(({ requirement: targetRequirement }) =>
+      affixes.some((mod) => matchesModRequirement(mod, targetRequirement))
+    )
+    .map(({ id }) => id)
+    .sort();
+  const unmatchedTargetModIds = identified
+    .filter(({ id }) => !matchedTargetModIds.includes(id))
+    .map(({ id }) => id)
+    .sort();
+  const describeAffix = (mod: ItemState['prefixes'][number]) => ({
+    modId: mod.modId,
+    tier: mod.tier,
+    isFractured: mod.isFractured,
+    currentRoll: mod.currentRoll ? [...mod.currentRoll] : undefined,
+  });
+  return {
+    policyScope: 'ACQUISITION',
+    progressKind: 'PREPARATION',
+    targetModIds: identified.map(({ id }) => id).sort(),
+    rarity: state.rarity,
+    prefixCount: state.prefixes.length,
+    suffixCount: state.suffixes.length,
+    matchedTargetModIds,
+    unmatchedTargetModIds,
+    prefixes: state.prefixes.map(describeAffix)
+      .sort((left, right) => left.modId.localeCompare(right.modId)),
+    suffixes: state.suffixes.map(describeAffix)
+      .sort((left, right) => left.modId.localeCompare(right.modId)),
+    influenced: state.flags?.influenced === true,
+    synthesised: state.flags?.synthesised === true,
+  };
+}
+
 function finiteOrUndefined(value: number): number | undefined {
   return Number.isFinite(value) ? value : undefined;
 }
@@ -512,6 +582,7 @@ export function synthesizeAcquisition(
       selectedAction: rule.selectedActionName,
       expectedVisits: rule.expectedVisits,
       totalCostChaos: finiteOrUndefined(rule.totalCostChaos) ?? null,
+      context: acquisitionPolicyContext(rule.state, request.desiredPhysicalState),
     }));
 
   const expectedRestarts = restartUsage?.expectedCount ?? 0;

@@ -90,7 +90,11 @@ const policyExplanation: PolicyExplanationRule[] = search.onPolicyRules.map((rul
     representedStateCount: 1,
     expectedVisits: rule.expectedVisits,
     exampleState: rule.stateKey,
+    sourceStateKeys: [rule.stateKey],
     context: {
+      policyScope: 'DOWNSTREAM',
+      progressKind: 'FINAL',
+      targetModIds: [targetModId],
       rarity: rule.state.rarity,
       prefixCount: rule.state.prefixes.length,
       suffixCount: rule.state.suffixes.length,
@@ -99,13 +103,13 @@ const policyExplanation: PolicyExplanationRule[] = search.onPolicyRules.map((rul
       prefixes: rule.state.prefixes.map((affix) => ({
         modId: affix.modId,
         tier: affix.tier,
-        isFractured: false,
+        isFractured: affix.isFractured,
         currentRoll: affix.currentRoll,
       })),
       suffixes: rule.state.suffixes.map((affix) => ({
         modId: affix.modId,
         tier: affix.tier,
-        isFractured: false,
+        isFractured: affix.isFractured,
         currentRoll: affix.currentRoll,
       })),
       influenced: false,

@@ -30,6 +30,7 @@
         "vividLifeforce": 0.08208,
         "primalLifeforce": 0.04085
       },
+      "marketFracturedPricesChaos": {},
       "cleanBaseCostChaos": 40,
       "cleanBasePriceSource": "manual",
       "cleanBasePriceProvenance": "Phase 3C frozen Primordial Bond + Renewal + Rotten Claws field fixture"
@@ -86,89 +87,89 @@
         "coreDeadlineAtRequestMs": 24650,
         "coreDeadlineFraction": 0.85,
         "hostSerializationReserveMs": 1000,
-        "hostReserveEnteredAtRequestMs": 24675,
+        "hostReserveEnteredAtRequestMs": 24673.5,
         "entries": [
           {
             "stage": "CORE_PORTFOLIO_SEARCH",
             "accounting": "EXCLUSIVE",
             "startedAtRequestMs": 0,
-            "finishedAtRequestMs": 24675,
-            "usedWallTimeMs": 24675,
+            "finishedAtRequestMs": 24673.5,
+            "usedWallTimeMs": 24673.5,
             "statesExpanded": 13336,
             "retainedStates": 21944,
             "stopReason": "HOST_RESERVE",
             "remainingRequestMsAtStart": 30000,
-            "remainingRequestMsAtFinish": 5325
+            "remainingRequestMsAtFinish": 5326.5
           },
           {
             "stage": "METHOD_FAMILY_SEARCH",
             "accounting": "EXCLUSIVE",
-            "startedAtRequestMs": 24675,
-            "finishedAtRequestMs": 24693.5,
-            "usedWallTimeMs": 9.09999966621399,
+            "startedAtRequestMs": 24673.5,
+            "finishedAtRequestMs": 24690.5,
+            "usedWallTimeMs": 7.699999809265137,
             "statesExpanded": 0,
             "retainedStates": 0,
-            "remainingRequestMsAtStart": 5325,
-            "remainingRequestMsAtFinish": 5306.5
+            "remainingRequestMsAtStart": 5326.5,
+            "remainingRequestMsAtFinish": 5309.5
           },
           {
             "stage": "POLICY_ADMISSIBILITY_REVALIDATION",
             "accounting": "EXCLUSIVE",
-            "startedAtRequestMs": 24675,
-            "finishedAtRequestMs": 24693.5,
-            "usedWallTimeMs": 9.40000033378601,
+            "startedAtRequestMs": 24673.5,
+            "finishedAtRequestMs": 24690.5,
+            "usedWallTimeMs": 9.300000190734863,
             "statesExpanded": 0,
             "retainedStates": 0,
-            "remainingRequestMsAtStart": 5325,
-            "remainingRequestMsAtFinish": 5306.5
+            "remainingRequestMsAtStart": 5326.5,
+            "remainingRequestMsAtFinish": 5309.5
           },
           {
             "stage": "POLICY_EQUIVALENCE_PRESENTATION",
             "accounting": "EXCLUSIVE",
-            "startedAtRequestMs": 24693.5,
-            "finishedAtRequestMs": 24718.199999809265,
-            "usedWallTimeMs": 24.699999809265137,
+            "startedAtRequestMs": 24690.5,
+            "finishedAtRequestMs": 24716.799999952316,
+            "usedWallTimeMs": 26.299999952316284,
             "statesExpanded": 0,
             "retainedStates": 0,
-            "remainingRequestMsAtStart": 5306.5,
-            "remainingRequestMsAtFinish": 5281.800000190735
+            "remainingRequestMsAtStart": 5309.5,
+            "remainingRequestMsAtFinish": 5283.200000047684
           },
           {
             "stage": "HOST_SERIALIZATION_RESERVE",
             "accounting": "EXCLUSIVE",
-            "startedAtRequestMs": 24718.199999809265,
-            "finishedAtRequestMs": 24724.799999952316,
-            "usedWallTimeMs": 6.5,
+            "startedAtRequestMs": 24716.799999952316,
+            "finishedAtRequestMs": 24725.900000095367,
+            "usedWallTimeMs": 9.100000143051147,
             "statesExpanded": 0,
             "retainedStates": 0,
-            "remainingRequestMsAtStart": 5281.800000190735,
-            "remainingRequestMsAtFinish": 5275.200000047684
+            "remainingRequestMsAtStart": 5283.200000047684,
+            "remainingRequestMsAtFinish": 5274.099999904633
           },
           {
             "stage": "ACQUISITION_SYNTHESIS",
             "accounting": "NESTED_CORE_DETAIL",
-            "startedAtRequestMs": 4042.0999999046326,
-            "finishedAtRequestMs": 12687.599999904633,
-            "usedWallTimeMs": 5809,
+            "startedAtRequestMs": 4040.9000000953674,
+            "finishedAtRequestMs": 11982.900000095367,
+            "usedWallTimeMs": 5131,
             "statesExpanded": 10002,
             "retainedStates": 10002,
-            "remainingRequestMsAtStart": 25957.900000095367,
-            "remainingRequestMsAtFinish": 17312.400000095367
+            "remainingRequestMsAtStart": 25959.099999904633,
+            "remainingRequestMsAtFinish": 18017.099999904633
           },
           {
             "stage": "PROOF_BOUND_WORK",
             "accounting": "NESTED_CORE_DETAIL",
-            "startedAtRequestMs": 14607.799999952316,
-            "finishedAtRequestMs": 19880.39999985695,
-            "usedWallTimeMs": 5272,
+            "startedAtRequestMs": 13772.400000095367,
+            "finishedAtRequestMs": 18759.099999904633,
+            "usedWallTimeMs": 4986,
             "statesExpanded": 3636,
             "retainedStates": 3636,
-            "remainingRequestMsAtStart": 15392.200000047684,
-            "remainingRequestMsAtFinish": 10119.600000143051
+            "remainingRequestMsAtStart": 16227.599999904633,
+            "remainingRequestMsAtFinish": 11240.900000095367
           }
         ],
-        "exclusiveAccountedMs": 24724.699999809265,
-        "unclassifiedMs": 0.10000014305114746,
+        "exclusiveAccountedMs": 24725.900000095367,
+        "unclassifiedMs": 0,
         "reconciled": true,
         "explanation": [
           "Core envelope is 85% of the engine deadline and is independent of compareMethodFamilies=false.",
@@ -221,89 +222,89 @@
         "coreDeadlineAtRequestMs": 24650,
         "coreDeadlineFraction": 0.85,
         "hostSerializationReserveMs": 1000,
-        "hostReserveEnteredAtRequestMs": 24675.900000095367,
+        "hostReserveEnteredAtRequestMs": 24670.900000095367,
         "entries": [
           {
             "stage": "CORE_PORTFOLIO_SEARCH",
             "accounting": "EXCLUSIVE",
             "startedAtRequestMs": 0,
-            "finishedAtRequestMs": 24675.900000095367,
-            "usedWallTimeMs": 24675.900000095367,
+            "finishedAtRequestMs": 24670.900000095367,
+            "usedWallTimeMs": 24670.900000095367,
             "statesExpanded": 13336,
             "retainedStates": 21944,
             "stopReason": "HOST_RESERVE",
             "remainingRequestMsAtStart": 30000,
-            "remainingRequestMsAtFinish": 5324.099999904633
+            "remainingRequestMsAtFinish": 5329.099999904633
           },
           {
             "stage": "METHOD_FAMILY_SEARCH",
             "accounting": "EXCLUSIVE",
-            "startedAtRequestMs": 24675.900000095367,
-            "finishedAtRequestMs": 28295.799999952316,
-            "usedWallTimeMs": 3308.799999475479,
-            "statesExpanded": 319,
-            "retainedStates": 263,
-            "remainingRequestMsAtStart": 5324.099999904633,
-            "remainingRequestMsAtFinish": 1704.2000000476837
+            "startedAtRequestMs": 24670.900000095367,
+            "finishedAtRequestMs": 28405.400000095367,
+            "usedWallTimeMs": 3415.7999997138977,
+            "statesExpanded": 375,
+            "retainedStates": 291,
+            "remainingRequestMsAtStart": 5329.099999904633,
+            "remainingRequestMsAtFinish": 1594.5999999046326
           },
           {
             "stage": "POLICY_ADMISSIBILITY_REVALIDATION",
             "accounting": "EXCLUSIVE",
-            "startedAtRequestMs": 24675.900000095367,
-            "finishedAtRequestMs": 28295.799999952316,
-            "usedWallTimeMs": 311.1000003814697,
+            "startedAtRequestMs": 24670.900000095367,
+            "finishedAtRequestMs": 28405.400000095367,
+            "usedWallTimeMs": 318.7000002861023,
             "statesExpanded": 0,
             "retainedStates": 0,
-            "remainingRequestMsAtStart": 5324.099999904633,
-            "remainingRequestMsAtFinish": 1704.2000000476837
+            "remainingRequestMsAtStart": 5329.099999904633,
+            "remainingRequestMsAtFinish": 1594.5999999046326
           },
           {
             "stage": "POLICY_EQUIVALENCE_PRESENTATION",
             "accounting": "EXCLUSIVE",
-            "startedAtRequestMs": 28295.799999952316,
-            "finishedAtRequestMs": 28327.700000047684,
-            "usedWallTimeMs": 31.90000009536743,
+            "startedAtRequestMs": 28405.400000095367,
+            "finishedAtRequestMs": 28434.700000047684,
+            "usedWallTimeMs": 29.299999952316284,
             "statesExpanded": 0,
             "retainedStates": 0,
-            "remainingRequestMsAtStart": 1704.2000000476837,
-            "remainingRequestMsAtFinish": 1672.2999999523163
+            "remainingRequestMsAtStart": 1594.5999999046326,
+            "remainingRequestMsAtFinish": 1565.2999999523163
           },
           {
             "stage": "HOST_SERIALIZATION_RESERVE",
             "accounting": "EXCLUSIVE",
-            "startedAtRequestMs": 28327.700000047684,
-            "finishedAtRequestMs": 28337.799999952316,
-            "usedWallTimeMs": 10.099999904632568,
+            "startedAtRequestMs": 28434.700000047684,
+            "finishedAtRequestMs": 28445.400000095367,
+            "usedWallTimeMs": 10.600000143051147,
             "statesExpanded": 0,
             "retainedStates": 0,
-            "remainingRequestMsAtStart": 1672.2999999523163,
-            "remainingRequestMsAtFinish": 1662.2000000476837
+            "remainingRequestMsAtStart": 1565.2999999523163,
+            "remainingRequestMsAtFinish": 1554.5999999046326
           },
           {
             "stage": "ACQUISITION_SYNTHESIS",
             "accounting": "NESTED_CORE_DETAIL",
-            "startedAtRequestMs": 4041.5999999046326,
-            "finishedAtRequestMs": 13280.200000047684,
-            "usedWallTimeMs": 6125,
+            "startedAtRequestMs": 4039.600000143051,
+            "finishedAtRequestMs": 12079.300000190735,
+            "usedWallTimeMs": 5289,
             "statesExpanded": 10002,
             "retainedStates": 10002,
-            "remainingRequestMsAtStart": 25958.400000095367,
-            "remainingRequestMsAtFinish": 16719.799999952316
+            "remainingRequestMsAtStart": 25960.39999985695,
+            "remainingRequestMsAtFinish": 17920.699999809265
           },
           {
             "stage": "PROOF_BOUND_WORK",
             "accounting": "NESTED_CORE_DETAIL",
-            "startedAtRequestMs": 14741.799999952316,
-            "finishedAtRequestMs": 19905.299999952316,
-            "usedWallTimeMs": 5163,
+            "startedAtRequestMs": 13539.100000143051,
+            "finishedAtRequestMs": 18853,
+            "usedWallTimeMs": 5313,
             "statesExpanded": 3636,
             "retainedStates": 3636,
-            "remainingRequestMsAtStart": 15258.200000047684,
-            "remainingRequestMsAtFinish": 10094.700000047684
+            "remainingRequestMsAtStart": 16460.89999985695,
+            "remainingRequestMsAtFinish": 11147
           }
         ],
-        "exclusiveAccountedMs": 28337.799999952316,
-        "unclassifiedMs": 0,
+        "exclusiveAccountedMs": 28445.300000190735,
+        "unclassifiedMs": 0.09999990463256836,
         "reconciled": true,
         "explanation": [
           "Core envelope is 85% of the engine deadline and is independent of compareMethodFamilies=true.",
@@ -507,6 +508,7 @@
           "vividLifeforce": 0.08208,
           "primalLifeforce": 0.04085
         },
+        "marketFracturedPricesChaos": {},
         "cleanBaseCostChaos": 40,
         "cleanBasePriceSource": "manual",
         "cleanBasePriceProvenance": "Phase 3C frozen Primordial Bond + Renewal + Rotten Claws field fixture"
