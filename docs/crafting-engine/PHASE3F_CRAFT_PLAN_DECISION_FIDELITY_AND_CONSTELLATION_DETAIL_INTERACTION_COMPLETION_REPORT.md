@@ -210,10 +210,13 @@ Self-review found and repaired five integration issues before closeout:
 
 ## 11. Commit, push, and deployment
 
-- Implementation/evidence/report commit: pending.
-- Push to `origin/main`: pending.
-- GitHub Pages workflow/deployment: pending.
-- Verified deployed product SHA: pending.
+- Implementation/evidence/report commit: `c1f6a41c250320c89949d41b5e3352810396efca` (`feat: repair craft plan decision evidence`).
+- Push: `b5d27a370d22bb9f6d7c775b97a63746a79ef7c9..c1f6a41c250320c89949d41b5e3352810396efca` to `origin/main`.
+- GitHub Pages workflow: `33148676583`, `Deploy to GitHub Pages`, successful; validate/build job `98775366355`, deploy job `98775434036`.
+- GitHub Pages deployment: `6136857278`, status `success`, environment `github-pages`, status record `17448337524`.
+- Verified deployed product SHA: `c1f6a41c250320c89949d41b5e3352810396efca`.
 - Live URL: `https://jpitty03.github.io/cluster-jewel-research/`.
 
-The deployment evidence above is completed after the implementation commit is pushed and Pages publishes that exact product SHA. A documentation-only closeout then records those immutable IDs without changing product behavior or acceptance evidence.
+Uncached live HTML returned HTTP 200 and referenced `assets/index-CLSfhv0V.js`; that bundle returned HTTP 200 and contains both `Source state identities` and the Constellation interaction-exclusion marker. The published `assets/index-DcmK7a3E.css` returned HTTP 200 and contains the overlay `user-select:text` rule.
+
+This documentation-only closeout records the already deployed product commit and changes no product behavior or acceptance evidence. Its own push/deployment is verified in the final handoff so `main` and Pages also contain this completed report.
