@@ -172,4 +172,13 @@ Self-review additionally verified that disabled alternatives are omitted rather 
 
 ## 12. Commit, push, and deployment
 
-Implementation/report commit, documentation closeout commit, workflow/job/deployment IDs, live URL, and verified deployed SHA are recorded here after the corresponding pushes complete.
+- Implementation/evidence/report commit: `b93ffb8c4e476216cde9b959414e166b5884a3ef` (`feat: support acceptable alternative modifier targets`).
+- Push: `e738e689616e3db8d58d0e118d0e201ea3d03a36..b93ffb8c4e476216cde9b959414e166b5884a3ef` to `origin/main`.
+- GitHub Pages workflow: `33220431765`, `Deploy to GitHub Pages`, successful; validate/build job `99013128437`, deploy job `99013183179`.
+- GitHub Pages deployment: `6150157471`, status `success`, environment `github-pages`, status record `17484142505`.
+- Verified deployed product SHA: `b93ffb8c4e476216cde9b959414e166b5884a3ef`.
+- Live URL: `https://jpitty03.github.io/cluster-jewel-research/`.
+
+Uncached live HTML returned HTTP 200 and referenced `assets/index-DVjG3S9i.js`. That bundle returned HTTP 200, identifies release `3G.1`, and contains the `Must have all` and `Acceptable fourth modifier` UI contracts. The successful GitHub Pages deployment record names the exact product SHA above.
+
+This documentation-only closeout records the already deployed product commit and changes no application behavior or acceptance evidence. Its own commit, workflow/deployment IDs, and final deployed SHA are verified in the final handoff so `main` and Pages also contain this completed report.
