@@ -1,6 +1,6 @@
 # Phase 3E Manual Constellation Layout Completion Report
 
-Status: **COMPLETE / TARGETED + DEV + RELEASE-REPAIR ACCEPTANCE PASS / PAGES DEPLOYMENT PENDING**
+Status: **COMPLETE / TARGETED + DEV + RELEASE-REPAIR ACCEPTANCE PASS / DEPLOYED**
 
 Date: 2026-08-27
 
@@ -227,9 +227,11 @@ Self-review found and repaired four validation/integration issues before closeou
 
 ## 10. Commit, push, and deployment
 
-- Implementation/evidence/report commit: pending commit assignment.
-- Push to `origin/main`: pending.
-- GitHub Pages workflow and deployment: pending.
-- Deployed product SHA verification: pending.
+- Implementation/evidence/report commit: `8514d9f31ba6096024eda7a156f1edce234b9e95` (`feat: add manual constellation layout`).
+- Push: `70161ea2f427724bae9f0a8decb34ba7ed2d7794..8514d9f31ba6096024eda7a156f1edce234b9e95` to `origin/main`.
+- GitHub Pages workflow: `33141166375`, `Deploy to GitHub Pages`, successful; validate/build job `98752131761`, deploy job `98752170163`.
+- GitHub Pages deployment: `6135480500`, status `success`, environment `github-pages`, status record `17444690383`.
+- Verified deployed product SHA: `8514d9f31ba6096024eda7a156f1edce234b9e95`.
+- Live URL: `https://jpitty03.github.io/cluster-jewel-research/`; uncached HTML and `assets/index-xXpxlXyD.js` both returned HTTP 200, and the published bundle contains `MANUAL_CONSTELLATION_LAYOUT_V1`.
 
-The exact implementation commit and verified Pages deployment will be recorded in a documentation-only closeout. That closeout will not change product, mechanics, search, PolicyFlow, layout behavior, or acceptance evidence.
+This documentation-only closeout records the already deployed product commit and changes no product, mechanics, search, PolicyFlow, layout behavior, or acceptance evidence. Its own push/deployment is verified in the final handoff so `main` and Pages also contain this completed report.
