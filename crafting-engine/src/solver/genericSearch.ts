@@ -14,6 +14,7 @@ import {
 import type { PriceConfidence, PriceSource } from '../domain/PriceBook.ts';
 import type { RandomSource } from '../probability/random.ts';
 import {
+  evaluateTargetProgress,
   getAllTargetModRequirements,
   matchesModRequirement,
   satisfiesTarget,
@@ -1437,6 +1438,7 @@ export class GenericSearchEngine {
     if (!this.defaultOptions.prioritizeTargetProgress) return competitiveBonus;
     const affixes = [...state.prefixes, ...state.suffixes];
     const requirements = getAllTargetModRequirements(this.target);
+    const progress = evaluateTargetProgress(state, this.target);
     let score: number;
     if (searchIntent === 'RECOMMEND' && this.minimumFeasibleRarity.rarity === 'magic') {
       score = state.rarity === 'magic' ? 20 : state.rarity === 'normal' ? 10 : 0;
@@ -1446,9 +1448,11 @@ export class GenericSearchEngine {
       score = state.rarity === 'rare' ? 20 : state.rarity === 'magic' ? 10 : 0;
     }
     score += affixes.length;
+    score += progress.required.matchedRequirementIds.length * 100;
+    score += progress.acceptable.satisfied ? 100 : 0;
     for (const requirement of requirements) {
       if (affixes.some((mod) => matchesModRequirement(mod, requirement))) {
-        score += requirement.mustBeFractured ? 1000 : 100;
+        score += requirement.mustBeFractured ? 1000 : 0;
         continue;
       }
       if (requirement.mustBeFractured) {
@@ -1820,13 +1824,12 @@ export class GenericSearchEngine {
     const transitionProbabilityMassToUnexpandedStates =
       totalTransitionsCount > 0 ? totalUnexpandedProbMass / totalTransitionsCount : 0;
 
-    const targetRequirements = getAllTargetModRequirements(this.target);
     const targetProgressKey = (state: ItemState): string => {
-      const affixes = [...state.prefixes, ...state.suffixes];
-      const matched = targetRequirements.filter((requirement) =>
-        affixes.some((mod) => matchesModRequirement(mod, requirement))
-      ).length;
-      return `${matched}/${targetRequirements.length}`;
+      const progress = evaluateTargetProgress(state, this.target);
+      const alternative = progress.acceptable.required
+        ? `|acceptable:${progress.acceptable.satisfied ? '1/1' : '0/1'}`
+        : '';
+      return `required:${progress.required.matchedRequirementIds.length}/${progress.required.requirementIds.length}${alternative}`;
     };
     const targetProgressCounts: Record<string, number> = {};
     for (const node of nodes.values()) {

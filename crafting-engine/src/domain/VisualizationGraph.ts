@@ -52,6 +52,12 @@ export interface VisualizationNode {
     exactStateCount: number;
     rarity?: 'normal' | 'magic' | 'rare';
     matchedTargetModIds: string[];
+    requiredTargetModIds: string[];
+    matchedRequiredTargetModIds: string[];
+    acceptableTargetBranches: string[][];
+    matchedAcceptableTargetModIds: string[];
+    acceptableAlternativeSatisfied: boolean;
+    satisfiedAcceptableBranchIndices: number[];
     fracturedTargetModIds: string[];
     representativeState?: string;
     representativeStateKey?: string;
@@ -470,7 +476,7 @@ function componentLayout(flow: PolicyFlowSummary, width: number, height: number)
           const right = nodeById.get(rightId)!;
           const leftAffixes = (left.prefixCount ?? 0) + (left.suffixCount ?? 0);
           const rightAffixes = (right.prefixCount ?? 0) + (right.suffixCount ?? 0);
-          return right.matchedTargetModIds.length - left.matchedTargetModIds.length ||
+          return structuredProgressScore(right) - structuredProgressScore(left) ||
             leftAffixes - rightAffixes ||
             (left.selectedActionId ?? '').localeCompare(right.selectedActionId ?? '') ||
             right.expectedVisits - left.expectedVisits ||
@@ -512,7 +518,7 @@ function componentLayout(flow: PolicyFlowSummary, width: number, height: number)
             group.sort((left, right) => {
               const leftNode = nodeById.get(left)!;
               const rightNode = nodeById.get(right)!;
-              return rightNode.matchedTargetModIds.length - leftNode.matchedTargetModIds.length ||
+              return structuredProgressScore(rightNode) - structuredProgressScore(leftNode) ||
                 (barycenter.get(left) ?? Infinity) - (barycenter.get(right) ?? Infinity) ||
                 baseCompare(left, right);
             });
@@ -613,14 +619,35 @@ function deterministicPolicyOrder(flow: PolicyFlowSummary): string[] {
 }
 
 function scopeTargetCount(node: PolicyFlowSummary['nodes'][number]): number {
+  if (node.requiredTargetModIds?.length) return node.requiredTargetModIds.length;
   const legacy = /\b\d+\/(\d+) targets\b/.exec(node.stateSummary);
   return legacy ? Number(legacy[1]) : Math.max(1, node.matchedTargetModIds.length);
 }
 
+function structuredProgressScore(node: PolicyFlowSummary['nodes'][number]): number {
+  const required = node.matchedRequiredTargetModIds?.length ?? node.matchedTargetModIds.length;
+  const alternative = node.acceptableAlternativeSatisfied ? 1 : 0;
+  return required * 2 + alternative;
+}
+
 function scopeProgressLabel(node: PolicyFlowSummary['nodes'][number]): string {
-  if (node.terminal) return 'Final target complete';
   const targetCount = scopeTargetCount(node);
-  const matched = node.matchedTargetModIds.length;
+  const requiredIds = node.requiredTargetModIds ?? [];
+  const matchedRequiredIds = node.matchedRequiredTargetModIds ?? node.matchedTargetModIds;
+  const matched = matchedRequiredIds.length;
+  const acceptableBranches = node.acceptableTargetBranches ?? [];
+  const acceptableMatchedIds = node.matchedAcceptableTargetModIds ?? [];
+  const acceptableSatisfied = node.acceptableAlternativeSatisfied ?? false;
+  const hasStructuredAlternatives = acceptableBranches.length > 0;
+  const alternative = acceptableBranches.length > 0
+    ? ` · Alternative ${acceptableSatisfied ? '1/1' : '0/1'}${acceptableMatchedIds.length > 0
+        ? ` - ${acceptableMatchedIds.join(', ')}`
+        : ''}`
+    : '';
+  if (node.terminal && !hasStructuredAlternatives) return 'Final target complete';
+  if (node.terminal) {
+    return `Final target complete · Required ${matched}/${requiredIds.length || targetCount}${alternative}`;
+  }
   const rarity = node.rarity
     ? `${node.rarity[0].toUpperCase()}${node.rarity.slice(1)}`
     : 'State';
@@ -633,7 +660,8 @@ function scopeProgressLabel(node: PolicyFlowSummary['nodes'][number]): string {
       : `Prep target ${matched}/${targetCount}`;
     return `${progress} - ${rarity}${fractured}`;
   }
-  return `Final targets ${matched}/${targetCount} - ${rarity}${fractured}`;
+  if (!hasStructuredAlternatives) return `Final targets ${matched}/${targetCount} - ${rarity}${fractured}`;
+  return `Required ${matched}/${requiredIds.length || targetCount}${alternative} - ${rarity}${fractured}`;
 }
 
 /** Deterministic, cycle-aware layout of the exact selected-policy flow summary. */
@@ -653,7 +681,16 @@ export function buildVisualizationGraph(
   const nodes: VisualizationNode[] = flow.nodes.map((node) => {
     const position = layout.positionByNodeId.get(node.id) ?? { x: 100, y: layout.height / 2 };
     const normalizedVisits = visitScale > 0 ? Math.log1p(node.expectedVisits) / visitScale : 0;
-    const technicalModifiers = [...new Set([...node.matchedTargetModIds, ...node.fracturedTargetModIds])]
+    const requiredTargetModIds = node.requiredTargetModIds ?? [];
+    const matchedRequiredTargetModIds = node.matchedRequiredTargetModIds ?? node.matchedTargetModIds;
+    const acceptableTargetBranches = node.acceptableTargetBranches ?? [];
+    const matchedAcceptableTargetModIds = node.matchedAcceptableTargetModIds ?? [];
+    const technicalModifiers = [...new Set([
+      ...node.matchedTargetModIds,
+      ...matchedRequiredTargetModIds,
+      ...matchedAcceptableTargetModIds,
+      ...node.fracturedTargetModIds,
+    ])]
       .flatMap((modId) => descriptorById.get(modId) ?? []);
     const progressLabel = scopeProgressLabel(node);
     const scopeLabel = node.scope === 'ACQUISITION'
@@ -696,6 +733,12 @@ export function buildVisualizationGraph(
         exactStateCount: node.exactStateCount,
         rarity: node.rarity,
         matchedTargetModIds: [...node.matchedTargetModIds],
+        requiredTargetModIds: [...requiredTargetModIds],
+        matchedRequiredTargetModIds: [...matchedRequiredTargetModIds],
+        acceptableTargetBranches: acceptableTargetBranches.map((branch) => [...branch]),
+        matchedAcceptableTargetModIds: [...matchedAcceptableTargetModIds],
+        acceptableAlternativeSatisfied: node.acceptableAlternativeSatisfied ?? false,
+        satisfiedAcceptableBranchIndices: [...(node.satisfiedAcceptableBranchIndices ?? [])],
         fracturedTargetModIds: [...node.fracturedTargetModIds],
         representativeState: node.representativeState,
         representativeStateKey: node.representativeStateKey,

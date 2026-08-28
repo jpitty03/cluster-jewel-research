@@ -2,6 +2,11 @@ import type { CraftingPlugin } from '../Plugin.ts';
 import type { CraftAction, CraftOutcome, CurrencyCost, SolverContext } from '../../domain/CraftAction.ts';
 import type { ItemState } from '../../domain/ItemState.ts';
 import { consolidateOutcomes } from '../../domain/CraftResult.ts';
+import {
+  evaluateTargetProgress,
+  getAllTargetModRequirements,
+  matchesModRequirement,
+} from '../../domain/TargetDefinition.ts';
 
 export class AllflamePlugin implements CraftingPlugin {
   readonly id = 'allflame';
@@ -51,23 +56,14 @@ export class AllflameExaltAction implements CraftAction {
     const scoredOutcomes = baseOutcomes.map((o) => {
       let score = 0;
       if (target) {
-        // Count how many target requirements are satisfied by this outcome
-        const satisfiedCount = target.requiredMods.filter((req) =>
-          [...o.state.prefixes, ...o.state.suffixes].some(
-            (m) =>
-              (req.modId ? m.modId === req.modId : true) &&
-              (req.modGroup ? m.modGroup === req.modGroup : true) &&
-              (req.maxTierNumber !== undefined ? m.tier <= req.maxTierNumber : true)
-          )
-        ).length;
+        const progress = evaluateTargetProgress(o.state, target);
+        const satisfiedCount = progress.required.matchedRequirementIds.length +
+          (progress.acceptable.satisfied ? 1 : 0);
 
         // Check if the newly added mod was a target mod
         const newMod = [...o.state.prefixes, ...o.state.suffixes].slice(-1)[0];
-        const isTargetMod = newMod ? target.requiredMods.some((req) =>
-          (req.modId ? newMod.modId === req.modId : true) &&
-          (req.modGroup ? newMod.modGroup === req.modGroup : true) &&
-          (req.maxTierNumber !== undefined ? newMod.tier <= req.maxTierNumber : true)
-        ) : false;
+        const isTargetMod = newMod ? getAllTargetModRequirements(target)
+          .some((requirement) => matchesModRequirement(newMod, requirement)) : false;
 
         // Higher progress score = lower cost (better)
         score = -(satisfiedCount * 100 + (isTargetMod ? 50 : 0));

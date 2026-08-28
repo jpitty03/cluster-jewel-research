@@ -933,6 +933,27 @@ td a {
   margin-top: 18px;
 }
 
+.acceptable-target-list {
+  padding: 14px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: color-mix(in srgb, var(--surface-2) 78%, transparent);
+}
+
+.acceptable-target-toggle {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 9px;
+  color: var(--text-h);
+  font-weight: 650;
+}
+
+.acceptable-target-toggle input {
+  width: auto;
+  margin: 0;
+}
+
 .target-summary {
   margin-top: 16px;
   padding: 12px;

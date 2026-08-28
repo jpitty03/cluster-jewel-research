@@ -1,7 +1,13 @@
 import type { ClusterModRepository } from '../data/clusterModRepository.ts';
 import type { BaseType, ItemRarity } from '../domain/ItemState.ts';
-import type { ModRequirement } from '../domain/TargetDefinition.ts';
+import { ModPool } from '../domain/ModPool.ts';
+import {
+  canonicalizeTargetDefinition,
+  getTargetRequirementScenarios,
+  modRequirementIdentity,
+} from '../domain/TargetDefinition.ts';
 import { getMaxNotables, getMaxPrefixes, getMaxSuffixes } from '../rules/affixRules.ts';
+import { deriveMinimumFeasibleRarity } from '../solver/targetFeasibility.ts';
 import type { OptimizeCraftInput } from './optimizerService.ts';
 
 export type OptimizerValidationField =
@@ -10,6 +16,7 @@ export type OptimizerValidationField =
   | 'passiveCount'
   | 'itemLevel'
   | 'target.requiredMods'
+  | 'target.acceptableAnyOf'
   | 'target.requiredRarity'
   | 'target.finalStateConstraints'
   | 'searchBudget'
@@ -34,23 +41,6 @@ const PASSIVE_COUNTS: Record<BaseType, readonly number[]> = {
   'Small Cluster Jewel': [2, 3],
 };
 
-function modRequirementIdentity(requirement: ModRequirement): string {
-  return JSON.stringify([
-    requirement.modId ?? null,
-    requirement.modGroup ?? null,
-    requirement.name ?? null,
-    requirement.minTierNumber ?? null,
-    requirement.maxTierNumber ?? null,
-    requirement.mustBeFractured ?? null,
-  ]);
-}
-
-function canonicalRequiredMods(requiredMods: readonly ModRequirement[]): ModRequirement[] {
-  return [...requiredMods].sort((left, right) =>
-    modRequirementIdentity(left).localeCompare(modRequirementIdentity(right))
-  );
-}
-
 function runtimeBaseType(value: unknown): value is BaseType {
   return value === 'Large Cluster Jewel' ||
     value === 'Medium Cluster Jewel' ||
@@ -62,6 +52,12 @@ function maximumRarity(input: OptimizeCraftInput): ItemRarity {
   return 'rare';
 }
 
+function exclusionConflict(left: { modGroup: string; modGroups: string[] }, right: { modGroup: string; modGroups: string[] }): boolean {
+  const leftGroups = new Set(left.modGroups.length > 0 ? left.modGroups : [left.modGroup]);
+  const rightGroups = right.modGroups.length > 0 ? right.modGroups : [right.modGroup];
+  return rightGroups.some((group) => leftGroups.has(group));
+}
+
 /** Shared browser/worker/service validator for the exact-ID optimizer contract. */
 export function validateOptimizeCraftInput(
   repository: ClusterModRepository,
@@ -70,14 +66,9 @@ export function validateOptimizeCraftInput(
   const errors: OptimizerValidationIssue[] = [];
   const notices: OptimizerValidationIssue[] = [];
   const modCount = input.target.requiredMods.length;
-  const autoRare = modCount >= 3 && input.target.requiredRarity === undefined;
-  const normalizedInput: OptimizeCraftInput = {
+  let normalizedInput: OptimizeCraftInput = {
     ...input,
-    target: {
-      ...input.target,
-      requiredMods: canonicalRequiredMods(input.target.requiredMods),
-      requiredRarity: autoRare ? 'rare' : input.target.requiredRarity,
-    },
+    target: canonicalizeTargetDefinition(input.target),
   };
 
   if (!runtimeBaseType(input.baseType) || !repository.getBaseTypes().includes(input.baseType)) {
@@ -97,40 +88,93 @@ export function validateOptimizeCraftInput(
     errors.push({ code: 'INVALID_MOD_COUNT', field: 'target.requiredMods', message: 'Choose between 1 and 4 exact modifiers.' });
   }
   if (input.target.requiredMods.some((requirement) => !requirement.modId)) {
-    errors.push({ code: 'EXACT_MOD_ID_REQUIRED', field: 'target.requiredMods', message: 'Every desired modifier must use an exact modifier ID.' });
+    errors.push({ code: 'EXACT_MOD_ID_REQUIRED', field: 'target.requiredMods', message: 'Every required modifier must use an exact modifier ID.' });
   }
 
-  const requestedIds = normalizedInput.target.requiredMods.flatMap((requirement) =>
+  const requestedIds = input.target.requiredMods.flatMap((requirement) =>
     requirement.modId ? [requirement.modId] : []
   );
   if (new Set(requestedIds).size !== requestedIds.length) {
-    errors.push({ code: 'DUPLICATE_MOD_ID', field: 'target.requiredMods', message: 'Desired modifier IDs must be unique.' });
+    errors.push({ code: 'DUPLICATE_MOD_ID', field: 'target.requiredMods', message: 'Required modifier IDs must be unique.' });
+  }
+
+  const rawAlternativeBranches = input.target.acceptableAnyOf;
+  const rawAlternativeRequirements = rawAlternativeBranches?.flat() ?? [];
+  const alternativeIds = rawAlternativeRequirements.flatMap((requirement) =>
+    requirement.modId ? [requirement.modId] : []
+  );
+  if (rawAlternativeBranches !== undefined && rawAlternativeBranches.length === 0) {
+    errors.push({
+      code: 'EMPTY_ACCEPTABLE_ALTERNATIVE_GROUP',
+      field: 'target.acceptableAnyOf',
+      message: 'An enabled acceptable-alternative group must contain at least one valid branch.',
+    });
+  }
+  if (rawAlternativeBranches?.some((branch) => branch.length === 0)) {
+    errors.push({
+      code: 'EMPTY_ACCEPTABLE_ALTERNATIVE_BRANCH',
+      field: 'target.acceptableAnyOf',
+      message: 'Acceptable-alternative branches cannot be empty.',
+    });
+  }
+  if (rawAlternativeRequirements.some((requirement) => !requirement.modId)) {
+    errors.push({
+      code: 'EXACT_ALTERNATIVE_MOD_ID_REQUIRED',
+      field: 'target.acceptableAnyOf',
+      message: 'Every acceptable alternative must use an exact modifier ID.',
+    });
+  }
+  if (new Set(alternativeIds).size !== alternativeIds.length) {
+    errors.push({
+      code: 'DUPLICATE_ACCEPTABLE_ALTERNATIVE',
+      field: 'target.acceptableAnyOf',
+      message: 'Acceptable alternative modifier IDs must be unique across branches.',
+    });
+  }
+  const branchIdentities = rawAlternativeBranches?.map((branch) =>
+    JSON.stringify([...new Set(branch.map(modRequirementIdentity))].sort())
+  ) ?? [];
+  if (new Set(branchIdentities).size !== branchIdentities.length) {
+    errors.push({
+      code: 'DUPLICATE_ACCEPTABLE_ALTERNATIVE_BRANCH',
+      field: 'target.acceptableAnyOf',
+      message: 'Acceptable-alternative branches must be unique.',
+    });
+  }
+  const requiredIdSet = new Set(requestedIds);
+  const overlappingIds = [...new Set(alternativeIds.filter((modId) => requiredIdSet.has(modId)))];
+  if (overlappingIds.length > 0) {
+    errors.push({
+      code: 'REQUIRED_ALTERNATIVE_OVERLAP',
+      field: 'target.acceptableAnyOf',
+      message: `Acceptable alternatives cannot duplicate required modifiers: ${overlappingIds.join(', ')}.`,
+    });
   }
 
   const pool = baseValid && repository.getClusterTypes(input.baseType).includes(input.clusterType)
     ? repository.getCombinedModPool(input.baseType, input.clusterType)
     : [];
   const eligibleById = new Map(pool.filter((mod) => mod.ilvl <= input.itemLevel).map((mod) => [mod.modId, mod]));
-  const selectedMods = requestedIds.flatMap((modId) => {
+  const resolveIds = (ids: readonly string[], field: 'target.requiredMods' | 'target.acceptableAnyOf') => ids.flatMap((modId) => {
     const mod = eligibleById.get(modId);
     if (!mod) {
       errors.push({
         code: 'INELIGIBLE_MOD_ID',
-        field: 'target.requiredMods',
-        message: `${modId} is not eligible for this base, enchantment, and item level.`,
+        field,
+        message: `${field === 'target.requiredMods' ? 'Required modifier' : 'Acceptable alternative'} ${modId} is not eligible for this base, enchantment, and item level.`,
       });
       return [];
     }
     return [mod];
   });
+  const selectedMods = resolveIds(requestedIds, 'target.requiredMods');
+  resolveIds(alternativeIds, 'target.acceptableAnyOf');
 
   for (let leftIndex = 0; leftIndex < selectedMods.length; leftIndex++) {
     const left = selectedMods[leftIndex];
-    const leftGroups = new Set(left.modGroups.length > 0 ? left.modGroups : [left.modGroup]);
     for (let rightIndex = leftIndex + 1; rightIndex < selectedMods.length; rightIndex++) {
       const right = selectedMods[rightIndex];
-      const rightGroups = right.modGroups.length > 0 ? right.modGroups : [right.modGroup];
-      if (rightGroups.some((group) => leftGroups.has(group))) {
+      if (exclusionConflict(left, right)) {
         errors.push({
           code: 'MOD_GROUP_CONFLICT',
           field: 'target.requiredMods',
@@ -140,6 +184,15 @@ export function validateOptimizeCraftInput(
     }
   }
 
+  const eligiblePool = new ModPool([...eligibleById.values()]);
+  const minimumFeasible = deriveMinimumFeasibleRarity(normalizedInput.target, eligiblePool);
+  const autoRare = input.target.requiredRarity === undefined && minimumFeasible.rarity === 'rare';
+  if (autoRare) {
+    normalizedInput = {
+      ...normalizedInput,
+      target: { ...normalizedInput.target, requiredRarity: 'rare' },
+    };
+  }
   const rarity = maximumRarity(normalizedInput);
   const prefixCount = selectedMods.filter((mod) => mod.genType === 'Prefix').length;
   const suffixCount = selectedMods.filter((mod) => mod.genType === 'Suffix').length;
@@ -157,6 +210,41 @@ export function validateOptimizeCraftInput(
       field: 'target.requiredMods',
       message: `${input.baseType} cannot hold ${notableCount} notable modifiers.`,
     });
+  }
+  const scenarios = getTargetRequirementScenarios(normalizedInput.target);
+  for (const [scenarioIndex, requirements] of scenarios.entries()) {
+    const scenarioMods = requirements.flatMap((requirement) =>
+      requirement.modId ? eligibleById.get(requirement.modId) ?? [] : []
+    );
+    for (let leftIndex = 0; leftIndex < scenarioMods.length; leftIndex++) {
+      for (let rightIndex = leftIndex + 1; rightIndex < scenarioMods.length; rightIndex++) {
+        if (!exclusionConflict(scenarioMods[leftIndex], scenarioMods[rightIndex])) continue;
+        errors.push({
+          code: 'ALTERNATIVE_MOD_GROUP_CONFLICT',
+          field: normalizedInput.target.acceptableAnyOf
+            ? 'target.acceptableAnyOf'
+            : 'target.requiredMods',
+          message: `${scenarioMods[leftIndex].name} and ${scenarioMods[rightIndex].name} cannot coexist in completion scenario ${scenarioIndex + 1}.`,
+        });
+      }
+    }
+    const scenarioPrefixes = scenarioMods.filter((mod) => mod.genType === 'Prefix').length;
+    const scenarioSuffixes = scenarioMods.filter((mod) => mod.genType === 'Suffix').length;
+    if (scenarioPrefixes > getMaxPrefixes(rarity) || scenarioSuffixes > getMaxSuffixes(rarity)) {
+      errors.push({
+        code: 'SCENARIO_AFFIX_CAPACITY_EXCEEDED',
+        field: normalizedInput.target.acceptableAnyOf ? 'target.acceptableAnyOf' : 'target.requiredRarity',
+        message: `${rarity} items cannot hold completion scenario ${scenarioIndex + 1} (${scenarioPrefixes}P/${scenarioSuffixes}S).`,
+      });
+    }
+    const scenarioNotables = scenarioMods.filter((mod) => mod.isNotable).length;
+    if (baseValid && scenarioNotables > getMaxNotables(input.baseType)) {
+      errors.push({
+        code: 'SCENARIO_NOTABLE_CAPACITY_EXCEEDED',
+        field: normalizedInput.target.acceptableAnyOf ? 'target.acceptableAnyOf' : 'target.requiredMods',
+        message: `${input.baseType} cannot hold completion scenario ${scenarioIndex + 1} with ${scenarioNotables} notable modifiers.`,
+      });
+    }
   }
   if (normalizedInput.target.requiredRarity === 'normal' && modCount > 0) {
     errors.push({ code: 'RARITY_INFEASIBLE', field: 'target.requiredRarity', message: 'A normal item cannot satisfy explicit modifier requirements.' });
@@ -181,32 +269,40 @@ export function validateOptimizeCraftInput(
     }
     const maxPrefixes = getMaxPrefixes(rarity);
     const maxSuffixes = getMaxSuffixes(rarity);
+    const minimumScenarioAffixes = Math.min(...scenarios.map((scenario) => scenario.length));
     if (
       finalConstraints.maxTotalExplicitAffixes !== undefined &&
-      finalConstraints.maxTotalExplicitAffixes < modCount
+      finalConstraints.maxTotalExplicitAffixes < minimumScenarioAffixes
     ) {
       errors.push({
         code: 'FINAL_AFFIX_CAP_BELOW_TARGET_COUNT',
         field: 'target.finalStateConstraints',
-        message: 'Maximum final explicit affixes cannot be lower than the number of requested modifiers.',
+        message: 'Maximum final explicit affixes cannot be lower than the smallest valid completion scenario.',
       });
     }
-    if (
-      (finalConstraints.minOpenPrefixes ?? 0) + prefixCount > maxPrefixes ||
-      (finalConstraints.minOpenSuffixes ?? 0) + suffixCount > maxSuffixes
-    ) {
-      errors.push({
-        code: 'FINAL_OPEN_SLOT_REQUIREMENT_INFEASIBLE',
-        field: 'target.finalStateConstraints',
-        message: `${rarity} items cannot hold the requested modifiers and preserve the requested open slots.`,
-      });
+    for (const [scenarioIndex, requirements] of scenarios.entries()) {
+      const scenarioMods = requirements.flatMap((requirement) =>
+        requirement.modId ? eligibleById.get(requirement.modId) ?? [] : []
+      );
+      const scenarioPrefixes = scenarioMods.filter((mod) => mod.genType === 'Prefix').length;
+      const scenarioSuffixes = scenarioMods.filter((mod) => mod.genType === 'Suffix').length;
+      if (
+        (finalConstraints.minOpenPrefixes ?? 0) + scenarioPrefixes > maxPrefixes ||
+        (finalConstraints.minOpenSuffixes ?? 0) + scenarioSuffixes > maxSuffixes
+      ) {
+        errors.push({
+          code: 'FINAL_OPEN_SLOT_REQUIREMENT_INFEASIBLE',
+          field: 'target.finalStateConstraints',
+          message: `${rarity} completion scenario ${scenarioIndex + 1} cannot preserve the requested open slots.`,
+        });
+      }
     }
   }
   if (autoRare) {
     notices.push({
       code: 'RARITY_AUTOMATICALLY_RARE',
       field: 'target.requiredRarity',
-      message: 'Final rarity was set to Rare because three or more explicit modifiers were requested.',
+      message: `Final rarity was set to Rare because the minimum valid completion shape is ${minimumFeasible.requiredPrefixes}P/${minimumFeasible.requiredSuffixes}S.`,
     });
   }
 

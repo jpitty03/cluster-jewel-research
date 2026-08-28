@@ -1,6 +1,27 @@
 {
-  "version": "Phase3F-Frozen-Browser-Corpus-1",
+  "version": "Phase3G-Frozen-Browser-Corpus-1",
   "fixtures": [
+    {
+      "id": "phase3g_spell_damage_alternatives",
+      "name": "Phase 3G Spell Damage required-three plus any-one acceptable alternative",
+      "baseType": "Large Cluster Jewel",
+      "clusterType": "10% increased Spell Damage",
+      "itemLevel": 84,
+      "passiveCount": 12,
+      "finalRarity": "rare",
+      "extraAffixes": "allow-extra",
+      "targetMods": [
+        "AfflictionJewelSmallPassivesGrantES3",
+        "AfflictionJewelSmallPassivesGrantInt3",
+        "AfflictionJewelSmallPassivesHaveIncreasedEffect2"
+      ],
+      "acceptableAnyOf": [
+        ["AfflictionJewelSmallPassivesGrantAttributes3"],
+        ["AfflictionJewelSmallPassivesGrantStr3_"],
+        ["Added Small Passive Skills also grant: #% increased Cast Speed_T1"]
+      ],
+      "searchBudget": { "maxStates": 5000, "maxWallTimeMs": 30000, "maxExpansionRounds": 3 }
+    },
     {
       "id": "phase3e_manual_constellation_field",
       "name": "Phase 3E Touch of Cruelty plus Unspeakable Gifts plus Unwaveringly Evil manual-layout field",

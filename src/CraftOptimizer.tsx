@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { BaseType } from '../crafting-engine/src/domain/ItemState.ts';
+import type { TargetDefinition } from '../crafting-engine/src/domain/TargetDefinition.ts';
 import type {
   AcquisitionCandidateSummary,
   AcquisitionPortfolioProofReason,
@@ -242,6 +243,22 @@ function playerModName(
   return mods.find((mod) => mod.modId === modId)?.primaryText ?? 'Exact modifier (see Technical details)';
 }
 
+function targetRequirementName(
+  requirement: TargetDefinition['requiredMods'][number],
+  mods: ReturnType<typeof browserCraftingCatalog.getEligibleMods>,
+): string {
+  return requirement.modId
+    ? playerModName(requirement.modId, mods)
+    : requirement.name ?? requirement.modGroup ?? 'Exact modifier';
+}
+
+function acceptableBranchName(
+  branch: TargetDefinition['requiredMods'],
+  mods: ReturnType<typeof browserCraftingCatalog.getEligibleMods>,
+): string {
+  return branch.map((requirement) => targetRequirementName(requirement, mods)).join(' + ');
+}
+
 function renderPolicyCondition(
   rule: PolicyExplanationRule,
   mods: ReturnType<typeof browserCraftingCatalog.getEligibleMods>,
@@ -270,18 +287,29 @@ function renderPolicyCondition(
   ];
   const progressNoun = context.progressKind === 'PREPARATION' ? 'preparation' : 'final';
   const progressLabel = context.progressKind === 'PREPARATION' ? 'prep' : 'final';
-  const targetDefinition = context.targetModIds.length > 0
-    ? `${progressNoun} target${context.targetModIds.length === 1 ? '' : 's'}: ` +
-      context.targetModIds.map(display).join(', ')
+  const targetDefinition = context.requiredTargetModIds.length > 0
+    ? `${context.progressKind === 'PREPARATION' ? 'preparation target' : 'required modifiers'}: ` +
+      context.requiredTargetModIds.map(display).join(', ')
     : `${progressNoun} target context unavailable`;
+  const acceptableDefinition = context.acceptableTargetBranches.length > 0
+    ? `acceptable alternatives (any one): ${context.acceptableTargetBranches
+        .map((branch) => branch.map(display).join(' + ')).join(' OR ')}`
+    : undefined;
+  const matchedAcceptable = context.matchedAcceptableTargetModIds.map(display);
   const details = [
     targetDefinition,
-    `${progressLabel} progress: ${context.matchedTargetModIds.length}/${context.targetModIds.length}`,
-    context.matchedTargetModIds.length > 0
-      ? `${progressNoun} target present: ${context.matchedTargetModIds.map(display).join(', ')}`
+    `${progressLabel === 'prep' ? 'prep' : 'required'} progress: ` +
+      `${context.matchedRequiredTargetModIds.length}/${context.requiredTargetModIds.length}`,
+    context.matchedRequiredTargetModIds.length > 0
+      ? `${progressNoun} required present: ${context.matchedRequiredTargetModIds.map(display).join(', ')}`
       : undefined,
-    context.unmatchedTargetModIds.length > 0
-      ? `${progressNoun} target missing: ${context.unmatchedTargetModIds.map(display).join(', ')}`
+    context.unmatchedRequiredTargetModIds.length > 0
+      ? `${progressNoun} required missing: ${context.unmatchedRequiredTargetModIds.map(display).join(', ')}`
+      : undefined,
+    acceptableDefinition,
+    context.acceptableTargetBranches.length > 0
+      ? `acceptable alternative: ${context.acceptableAlternativeSatisfied ? '1/1' : '0/1'}` +
+        (matchedAcceptable.length > 0 ? ` - ${matchedAcceptable.join(', ')}` : '')
       : undefined,
     context.disambiguateAffixes && exactAffixState.length > 0
       ? `exact affix state: ${exactAffixState.join(', ')}`
@@ -606,7 +634,7 @@ export function SearchActivityVisualizer({
   );
 }
 
-export const APP_RELEASE_VERSION = '2Y.1';
+export const APP_RELEASE_VERSION = '3G.1';
 
 interface CraftOptimizerProps {
   seed?: OptimizerSeed | null;
@@ -629,6 +657,9 @@ export function CraftOptimizer({ seed = null, onBackToClusterJewels }: CraftOpti
   const [passiveCount, setPassiveCount] = useState(passiveCounts.at(-1) ?? 12);
   const [itemLevel, setItemLevel] = useState(DEFAULT_ITEM_LEVEL);
   const [targetModIds, setTargetModIds] = useState(['']);
+  const [acceptableAlternativesEnabled, setAcceptableAlternativesEnabled] = useState(false);
+  const [acceptableAlternativeModIds, setAcceptableAlternativeModIds] = useState(['', '']);
+  const [preserveDecodedSingleAlternative, setPreserveDecodedSingleAlternative] = useState(false);
   const [finalRarity, setFinalRarity] = useState<'any' | 'magic' | 'rare'>('any');
   const [finishCondition, setFinishCondition] = useState<'any-match' | 'no-unwanted'>('any-match');
   const [cleanBaseCost, setCleanBaseCost] = useState('');
@@ -707,7 +738,10 @@ export function CraftOptimizer({ seed = null, onBackToClusterJewels }: CraftOpti
     [baseType, clusterType, itemLevel, league, passiveCount],
   );
   const selectedTargetIds = useMemo(() => targetModIds.filter(Boolean), [targetModIds]);
-  const effectiveRarity = selectedTargetIds.length >= 3 ? 'rare' : finalRarity;
+  const selectedAlternativeIds = useMemo(
+    () => acceptableAlternativeModIds.filter(Boolean),
+    [acceptableAlternativeModIds],
+  );
 
   const [objectiveKind, setObjectiveKind] = useState<OptimizationObjectiveKind>('CHEAPEST_CHAOS');
   const [costConstraintType, setCostConstraintType] = useState<'PREMIUM_PERCENT' | 'PREMIUM_CHAOS' | 'ABSOLUTE'>('PREMIUM_PERCENT');
@@ -732,6 +766,9 @@ export function CraftOptimizer({ seed = null, onBackToClusterJewels }: CraftOpti
         m1 || fallbackNotables[0]?.modId || '',
         m2 || fallbackNotables[1]?.modId || '',
       ]);
+      setAcceptableAlternativesEnabled(false);
+      setAcceptableAlternativeModIds(['', '']);
+      setPreserveDecodedSingleAlternative(false);
       setFinalRarity('rare');
     } else if (preset === 'es-small') {
       const base: BaseType = 'Small Cluster Jewel';
@@ -742,6 +779,9 @@ export function CraftOptimizer({ seed = null, onBackToClusterJewels }: CraftOpti
       setPassiveCount(2);
       const eligible = browserCraftingCatalog.getEligibleMods(base, cluster, 84);
       setTargetModIds([eligible[0]?.modId || '']);
+      setAcceptableAlternativesEnabled(false);
+      setAcceptableAlternativeModIds(['', '']);
+      setPreserveDecodedSingleAlternative(false);
       setFinalRarity('magic');
     }
     setResult(null);
@@ -788,7 +828,10 @@ export function CraftOptimizer({ seed = null, onBackToClusterJewels }: CraftOpti
       passiveCount,
       target: {
         requiredMods: selectedTargetIds.map((modId) => ({ modId })),
-        requiredRarity: effectiveRarity === 'any' ? undefined : effectiveRarity,
+        ...(acceptableAlternativesEnabled
+          ? { acceptableAnyOf: selectedAlternativeIds.map((modId) => [{ modId }]) }
+          : {}),
+        requiredRarity: finalRarity === 'any' ? undefined : finalRarity,
         finalStateConstraints: finishCondition === 'no-unwanted'
           ? { maxUnmatchedAffixes: 0 }
           : undefined,
@@ -826,11 +869,12 @@ export function CraftOptimizer({ seed = null, onBackToClusterJewels }: CraftOpti
     };
   }, [
     allowFallback,
+    acceptableAlternativesEnabled,
     baseType,
     cleanBaseCost,
     clusterType,
     draftObjective,
-    effectiveRarity,
+    finalRarity,
     finishCondition,
     itemLevel,
     importedMarketContext,
@@ -843,6 +887,7 @@ export function CraftOptimizer({ seed = null, onBackToClusterJewels }: CraftOpti
     saleValue,
     searchDepthPreset,
     searchIntent,
+    selectedAlternativeIds,
     selectedTargetIds,
   ]);
   const validation = useMemo(() => validateBrowserOptimizeInput(draftInput), [draftInput]);
@@ -858,6 +903,12 @@ export function CraftOptimizer({ seed = null, onBackToClusterJewels }: CraftOpti
     if (decoded.itemLevel) setItemLevel(decoded.itemLevel);
     if (decoded.passiveCount) setPassiveCount(decoded.passiveCount);
     setTargetModIds(decoded.targetMods.length > 0 ? decoded.targetMods : ['']);
+    const decodedAlternativeIds = decoded.acceptableAnyOf?.flatMap((branch) =>
+      branch.length === 1 && branch[0].modId ? [branch[0].modId] : []
+    ) ?? [];
+    setAcceptableAlternativesEnabled(decoded.acceptableAnyOf !== undefined);
+    setAcceptableAlternativeModIds(decodedAlternativeIds.length > 0 ? decodedAlternativeIds : ['', '']);
+    setPreserveDecodedSingleAlternative(decodedAlternativeIds.length === 1);
     if (decoded.finalRarity) setFinalRarity(decoded.finalRarity);
     if (decoded.objectiveSpec) setObjectiveKind(decoded.objectiveSpec.kind);
     if (decoded.costConstraintType) setCostConstraintType(decoded.costConstraintType);
@@ -932,6 +983,9 @@ export function CraftOptimizer({ seed = null, onBackToClusterJewels }: CraftOpti
     setPassiveCount(seed.passiveCount ?? seed.passiveRange?.min ?? 1);
     setItemLevel(seed.itemLevel);
     setTargetModIds(seed.targetModIds.length > 0 ? [...seed.targetModIds] : ['']);
+    setAcceptableAlternativesEnabled(false);
+    setAcceptableAlternativeModIds(['', '']);
+    setPreserveDecodedSingleAlternative(false);
     setFinalRarity('any');
     setFinishCondition('any-match');
     setCleanBaseCost('');
@@ -959,7 +1013,14 @@ export function CraftOptimizer({ seed = null, onBackToClusterJewels }: CraftOpti
     return () => cancelAnimationFrame(frame);
   }, [activeSeed]);
 
-  const validationError = validation.errors.map((issue) => issue.message).join(' ') || null;
+  const alternativeSelectionError = acceptableAlternativesEnabled &&
+    selectedAlternativeIds.length < 2 && !preserveDecodedSingleAlternative
+    ? 'Choose at least two acceptable alternatives, or disable the acceptable-alternative group.'
+    : null;
+  const validationError = [
+    ...validation.errors.map((issue) => issue.message),
+    alternativeSelectionError,
+  ].filter((message): message is string => message !== null).join(' ') || null;
 
   const changeBase = (nextBase: BaseType) => {
     const nextClusterTypes = browserCraftingCatalog.getClusterTypes(nextBase);
@@ -968,17 +1029,30 @@ export function CraftOptimizer({ seed = null, onBackToClusterJewels }: CraftOpti
     setClusterType(nextClusterTypes[0] ?? '');
     setPassiveCount(nextPassiveCounts.at(-1) ?? 1);
     setTargetModIds(['']);
+    setAcceptableAlternativesEnabled(false);
+    setAcceptableAlternativeModIds(['', '']);
+    setPreserveDecodedSingleAlternative(false);
     setResult(null);
   };
 
   const changeCluster = (nextCluster: string) => {
     setClusterType(nextCluster);
     setTargetModIds(['']);
+    setAcceptableAlternativesEnabled(false);
+    setAcceptableAlternativeModIds(['', '']);
+    setPreserveDecodedSingleAlternative(false);
     setResult(null);
   };
 
   const updateTarget = (index: number, modId: string) => {
     setTargetModIds((current) => current.map((value, i) => (i === index ? modId : value)));
+  };
+
+  const updateAcceptableAlternative = (index: number, modId: string) => {
+    setPreserveDecodedSingleAlternative(false);
+    setAcceptableAlternativeModIds((current) =>
+      current.map((value, i) => (i === index ? modId : value))
+    );
   };
 
   const optimize = async (
@@ -1052,9 +1126,14 @@ export function CraftOptimizer({ seed = null, onBackToClusterJewels }: CraftOpti
 
   const copyShoppingList = (res: OptimizeCraftResult) => {
     const lines: string[] = ['=== CLUSTER JEWEL CRAFTING SHOPPING LIST ==='];
-    lines.push(`Target: ${res.target.requiredMods.map((requirement) =>
-      requirement.modId ? playerModName(requirement.modId, eligibleMods) : requirement.name ?? requirement.modGroup ?? 'Exact modifier'
+    lines.push(`Must have all: ${res.target.requiredMods.map((requirement) =>
+      targetRequirementName(requirement, eligibleMods)
     ).join(' + ')}`);
+    if (res.target.acceptableAnyOf?.length) {
+      lines.push(`And at least one: ${res.target.acceptableAnyOf.map((branch) =>
+        acceptableBranchName(branch, eligibleMods)
+      ).join(' OR ')}`);
+    }
     lines.push(`Selected Route: ${publicSelectedRouteName ?? 'none certified'}`);
     lines.push(`Expected Total Cost: ~${chaos(res.expectedCostChaos)}`);
     lines.push('\nEstimated Materials & Bases:');
@@ -1080,9 +1159,14 @@ export function CraftOptimizer({ seed = null, onBackToClusterJewels }: CraftOpti
 
   const copyCraftGuide = (res: OptimizeCraftResult) => {
     const lines: string[] = ['=== CLUSTER JEWEL CRAFTING PLAYBOOK ==='];
-    lines.push(`Target: ${res.target.requiredMods.map((requirement) =>
-      requirement.modId ? playerModName(requirement.modId, eligibleMods) : requirement.name ?? requirement.modGroup ?? 'Exact modifier'
+    lines.push(`Must have all: ${res.target.requiredMods.map((requirement) =>
+      targetRequirementName(requirement, eligibleMods)
     ).join(' + ')}`);
+    if (res.target.acceptableAnyOf?.length) {
+      lines.push(`And at least one: ${res.target.acceptableAnyOf.map((branch) =>
+        acceptableBranchName(branch, eligibleMods)
+      ).join(' OR ')}`);
+    }
     lines.push(`Selected route: ${publicSelectedRouteName ?? 'none certified'}`);
     lines.push(`Starting Point: ${publicSelectedRouteName ?? recommendedStart}`);
     lines.push(`Physical Start: ${recommendedStart}`);
@@ -1114,14 +1198,19 @@ export function CraftOptimizer({ seed = null, onBackToClusterJewels }: CraftOpti
 
   const copyShareUrl = () => {
     const payload: CraftSharePayload = {
-      version: '2Y.1',
+      version: '3G.1',
       baseType,
       clusterType,
       itemLevel,
       passiveCount,
-      targetMods: targetModIds.filter(Boolean),
+      targetMods: validation.normalizedInput.target.requiredMods.flatMap((requirement) =>
+        requirement.modId ? [requirement.modId] : []
+      ),
+      acceptableAnyOf: validation.normalizedInput.target.acceptableAnyOf,
       selectedRouteName: publicSelectedRouteName,
-      finalRarity: effectiveRarity,
+      finalRarity: validation.normalizedInput.target.requiredRarity === 'normal'
+        ? 'any'
+        : validation.normalizedInput.target.requiredRarity ?? 'any',
       objectiveSpec: draftObjective,
       costConstraintType,
       costConstraintValue,
@@ -1149,14 +1238,19 @@ export function CraftOptimizer({ seed = null, onBackToClusterJewels }: CraftOpti
 
   const copyBugReport = (res?: OptimizeCraftResult) => {
     const payload: CraftSharePayload = {
-      version: '2Y.1',
+      version: '3G.1',
       baseType,
       clusterType,
       itemLevel,
       passiveCount,
-      targetMods: targetModIds.filter(Boolean),
+      targetMods: validation.normalizedInput.target.requiredMods.flatMap((requirement) =>
+        requirement.modId ? [requirement.modId] : []
+      ),
+      acceptableAnyOf: validation.normalizedInput.target.acceptableAnyOf,
       selectedRouteName: publicSelectedRouteName,
-      finalRarity: effectiveRarity,
+      finalRarity: validation.normalizedInput.target.requiredRarity === 'normal'
+        ? 'any'
+        : validation.normalizedInput.target.requiredRarity ?? 'any',
       objectiveSpec: draftObjective,
       costConstraintType,
       costConstraintValue,
@@ -1200,6 +1294,20 @@ export function CraftOptimizer({ seed = null, onBackToClusterJewels }: CraftOpti
         if (input.itemLevel) setItemLevel(input.itemLevel);
         if (input.passiveCount) setPassiveCount(input.passiveCount);
         setTargetModIds(targetMods.length > 0 ? targetMods : ['']);
+        const importedAlternatives = Array.isArray(input.acceptableAnyOf)
+          ? input.acceptableAnyOf
+          : Array.isArray(input.target?.acceptableAnyOf)
+            ? input.target.acceptableAnyOf
+            : undefined;
+        const importedAlternativeIds: string[] = importedAlternatives?.flatMap(
+          (branch: Array<{ modId?: string }>) =>
+            branch.length === 1 && branch[0]?.modId ? [branch[0].modId] : []
+        ) ?? [];
+        setAcceptableAlternativesEnabled(importedAlternatives !== undefined);
+        setAcceptableAlternativeModIds(
+          importedAlternativeIds.length > 0 ? importedAlternativeIds : ['', '']
+        );
+        setPreserveDecodedSingleAlternative(importedAlternativeIds.length === 1);
 
         const rarity = input.finalRarity || input.target?.requiredRarity;
         if (rarity) setFinalRarity(rarity);
@@ -1259,7 +1367,7 @@ export function CraftOptimizer({ seed = null, onBackToClusterJewels }: CraftOpti
     const exportBundle = {
       appVersion: APP_RELEASE_VERSION,
       exportedAt: new Date().toISOString(),
-      requestInput: draftInput,
+      requestInput: validation.normalizedInput,
       optimizerSeedContext: activeSeed,
       resultSummary: {
         expectedCostChaos: res.expectedCostChaos,
@@ -1320,8 +1428,9 @@ export function CraftOptimizer({ seed = null, onBackToClusterJewels }: CraftOpti
     (method) => method.id === result?.acquisition.selectedMethodId,
   );
   const targetDescriptors = useMemo(
-    () => selectedTargetIds.flatMap((modId) => eligibleMods.find((mod) => mod.modId === modId) ?? []),
-    [eligibleMods, selectedTargetIds],
+    () => [...selectedTargetIds, ...selectedAlternativeIds]
+      .flatMap((modId) => eligibleMods.find((mod) => mod.modId === modId) ?? []),
+    [eligibleMods, selectedAlternativeIds, selectedTargetIds],
   );
   const publicSelectedRouteName = result?.presentation.selectedRouteName
     ? publicModifierText(result.presentation.selectedRouteName, targetDescriptors)
@@ -1341,6 +1450,7 @@ export function CraftOptimizer({ seed = null, onBackToClusterJewels }: CraftOpti
     ))
   ) ?? [];
   const seedTargetIdentityMatches = activeSeed !== null &&
+    !acceptableAlternativesEnabled &&
     activeSeed.targetModIds.length === selectedTargetIds.length &&
     activeSeed.targetModIds.every((modId, index) => selectedTargetIds[index] === modId);
   const seedIdentityMatches = activeSeed !== null &&
@@ -1499,8 +1609,7 @@ export function CraftOptimizer({ seed = null, onBackToClusterJewels }: CraftOpti
           <label>
             <span>Final rarity</span>
             <select
-              value={effectiveRarity}
-              disabled={selectedTargetIds.length >= 3}
+              value={finalRarity}
               onChange={(event) => setFinalRarity(event.target.value as typeof finalRarity)}
             >
               <option value="any">Any</option>
@@ -1569,16 +1678,20 @@ export function CraftOptimizer({ seed = null, onBackToClusterJewels }: CraftOpti
           )}
         </details>
 
-        <div className="target-list">
-          <h3>Desired exact modifiers ({selectedTargetIds.length}/4)</h3>
+        <div className="target-list required-target-list" data-testid="required-modifier-editor">
+          <h3>Required modifiers ({selectedTargetIds.length}/4)</h3>
+          <p className="muted">All of these must be present.</p>
           {targetModIds.map((modId, index) => (
             <div className="target-row" key={index}>
               <SearchableModifierSelect
                 value={modId}
                 onChange={(nextModId) => updateTarget(index, nextModId)}
                 eligibleMods={eligibleMods}
-                disabledModIds={targetModIds.filter((id, i) => i !== index && Boolean(id))}
-                ariaLabel={`Desired modifier ${index + 1}`}
+                disabledModIds={[
+                  ...targetModIds.filter((id, i) => i !== index && Boolean(id)),
+                  ...selectedAlternativeIds,
+                ]}
+                ariaLabel={`Required modifier ${index + 1}`}
                 placeholder="Select an eligible modifier…"
               />
               {targetModIds.length > 1 && (
@@ -1608,14 +1721,79 @@ export function CraftOptimizer({ seed = null, onBackToClusterJewels }: CraftOpti
           </p>
         </div>
 
-        <section className="target-summary">
+        <div className="target-list acceptable-target-list" data-testid="acceptable-alternative-editor">
+          <h3>Acceptable fourth modifier</h3>
+          <label className="acceptable-target-toggle">
+            <input
+              type="checkbox"
+              checked={acceptableAlternativesEnabled}
+              onChange={(event) => {
+                setPreserveDecodedSingleAlternative(false);
+                setAcceptableAlternativesEnabled(event.target.checked);
+                if (event.target.checked && acceptableAlternativeModIds.length < 2) {
+                  setAcceptableAlternativeModIds(['', '']);
+                }
+              }}
+            />
+            <span>Require one acceptable alternative</span>
+          </label>
+          <p className="muted">At least one of these must be present. Every selected alternative is equally acceptable.</p>
+          {acceptableAlternativesEnabled && (
+            <>
+              {acceptableAlternativeModIds.map((modId, index) => (
+                <div className="target-row" key={index}>
+                  <SearchableModifierSelect
+                    value={modId}
+                    onChange={(nextModId) => updateAcceptableAlternative(index, nextModId)}
+                    eligibleMods={eligibleMods}
+                    disabledModIds={[
+                      ...selectedTargetIds,
+                      ...acceptableAlternativeModIds.filter((id, i) => i !== index && Boolean(id)),
+                    ]}
+                    ariaLabel={`Acceptable alternative ${index + 1}`}
+                    placeholder="Select an equally acceptable modifier..."
+                  />
+                  {acceptableAlternativeModIds.length > 1 && (
+                    <button
+                      type="button"
+                      className="secondary remove-target-btn"
+                      onClick={() => {
+                        setPreserveDecodedSingleAlternative(false);
+                        setAcceptableAlternativeModIds((current) => current.filter((_, i) => i !== index));
+                      }}
+                      title="Remove acceptable alternative"
+                    >
+                      Remove
+                    </button>
+                  )}
+                </div>
+              ))}
+              {acceptableAlternativeModIds.length < 6 && (
+                <button
+                  type="button"
+                  className="secondary add-target-btn"
+                  onClick={() => {
+                    setPreserveDecodedSingleAlternative(false);
+                    setAcceptableAlternativeModIds((current) => [...current, '']);
+                  }}
+                >
+                  + Add acceptable alternative
+                </button>
+              )}
+              {alternativeSelectionError && <p className="optimizer-validation">{alternativeSelectionError}</p>}
+            </>
+          )}
+        </div>
+
+        <section className="target-summary" data-testid="structured-target-summary">
           <h3>Target summary</h3>
           <p>{baseType} · {clusterType} · ilvl {itemLevel} · {passiveCount} passives</p>
           <p>Final rarity: {validation.normalizedInput.target.requiredRarity ?? 'Any'}</p>
           <p>Extra affixes: {validation.normalizedInput.target.finalStateConstraints?.maxUnmatchedAffixes === 0 ? 'No unwanted affixes' : 'Allowed'}</p>
-          <ul>
+          <h4>Must have all</h4>
+          <ul data-testid="required-modifier-summary">
             {validation.normalizedInput.target.requiredMods.map((requirement, index) => (
-              <li key={`${requirement.modId}-${index}`} data-mod-id={requirement.modId}>
+              <li key={`${requirement.modId}-${index}`} data-mod-id={requirement.modId} data-target-role="required">
                 {(() => {
                   const mod = eligibleMods.find((candidate) => candidate.modId === requirement.modId);
                   return mod ? (
@@ -1633,6 +1811,33 @@ export function CraftOptimizer({ seed = null, onBackToClusterJewels }: CraftOpti
               </li>
             ))}
           </ul>
+          {validation.normalizedInput.target.acceptableAnyOf && (
+            <>
+              <h4>And at least one</h4>
+              <ul data-testid="acceptable-alternative-summary">
+                {validation.normalizedInput.target.acceptableAnyOf.map((branch, branchIndex) => {
+                  const requirement = branch[0];
+                  const mod = eligibleMods.find((candidate) => candidate.modId === requirement?.modId);
+                  return (
+                    <li
+                      key={`${requirement?.modId}-${branchIndex}`}
+                      data-mod-id={requirement?.modId}
+                      data-target-role="acceptable-alternative"
+                    >
+                      {mod ? (
+                        <>
+                          <strong>{mod.primaryText}</strong> · {mod.genType}, ilvl {mod.requiredItemLevel}
+                          <details><summary>Technical modifier details</summary><code>{mod.technicalLabel}</code></details>
+                        </>
+                      ) : (
+                        <strong>Exact acceptable alternative unavailable in the current eligible pool</strong>
+                      )}
+                    </li>
+                  );
+                })}
+              </ul>
+            </>
+          )}
           {validation.notices.map((notice) => <p className="muted" key={notice.code}>{notice.message}</p>)}
         </section>
 
@@ -1860,10 +2065,24 @@ export function CraftOptimizer({ seed = null, onBackToClusterJewels }: CraftOpti
               </div>
             )}
             <div className="recommendation-target">
-              <span>Target</span>
-              <strong>{result.target.requiredMods.map((requirement) =>
-                requirement.modId ? playerModName(requirement.modId, eligibleMods) : requirement.name ?? requirement.modGroup ?? 'Exact modifier'
-              ).join(' + ')} · {result.target.requiredRarity ?? 'Any rarity'}</strong>
+              <span>Required modifiers</span>
+              <strong data-testid="result-required-modifiers">
+                {result.target.requiredMods.map((requirement) =>
+                  targetRequirementName(requirement, eligibleMods)
+                ).join(' + ')}
+              </strong>
+              {result.target.acceptableAnyOf?.length ? (
+                <>
+                  <span>Acceptable alternative</span>
+                  <strong data-testid="result-acceptable-alternatives">
+                    Any one of {result.target.acceptableAnyOf.map((branch) =>
+                      acceptableBranchName(branch, eligibleMods)
+                    ).join(' OR ')}
+                  </strong>
+                </>
+              ) : null}
+              <span>Final rarity</span>
+              <strong>{result.target.requiredRarity ?? 'Any rarity'}</strong>
             </div>
             <dl className="recommendation-facts">
               <dt>Selected route</dt><dd>{publicSelectedRouteName ?? 'none certified'}</dd>

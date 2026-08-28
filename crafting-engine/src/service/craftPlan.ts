@@ -1,4 +1,4 @@
-import { getAllTargetModRequirements, type TargetDefinition } from '../domain/TargetDefinition.ts';
+import type { TargetDefinition } from '../domain/TargetDefinition.ts';
 import {
   CRAFT_MECHANICS,
   type DiscoveredActionType,
@@ -75,7 +75,11 @@ export interface CraftPlanDecisionGroup {
     progressKind: PolicyExplanationRule['context']['progressKind'];
     rarity: PolicyExplanationRule['context']['rarity'];
     targetModIds: string[];
+    requiredTargetModIds: string[];
+    acceptableTargetBranches: string[][];
     matchedProgressCounts: number[];
+    matchedRequiredProgressCounts: number[];
+    acceptableProgressCounts: number[];
     prefixCounts: number[];
     suffixCounts: number[];
     policyRuleIndices: number[];
@@ -283,7 +287,7 @@ export function craftPlanPhaseForAction(actionId: string): CraftPlanPhase | unde
 }
 
 function targetRequirementIds(target: TargetDefinition): string[] {
-  return getAllTargetModRequirements(target).map((requirement, index) =>
+  return target.requiredMods.map((requirement, index) =>
     requirement.modId ?? requirement.modGroup ?? requirement.name ?? `target_${index + 1}`
   );
 }
@@ -299,8 +303,8 @@ function deriveTargetOrderPreference(
       rule.context.policyScope === 'DOWNSTREAM' &&
       rule.context.progressKind === 'FINAL' &&
       rule.context.rarity === 'magic' &&
-      rule.context.matchedTargetModIds.length === 1 &&
-      rule.context.matchedTargetModIds[0] === targetModId &&
+      rule.context.matchedRequiredTargetModIds.length === 1 &&
+      rule.context.matchedRequiredTargetModIds[0] === targetModId &&
       rule.expectedVisits > 0
     );
     const byAction = new Map<string, { representedStates: number; expectedVisits: number }>();
@@ -352,11 +356,11 @@ function deriveTargetOrderPreference(
       rule.context.policyScope !== 'DOWNSTREAM' ||
       rule.context.progressKind !== 'FINAL' ||
       rule.context.rarity !== 'magic' ||
-      rule.context.matchedTargetModIds.length !== 1 ||
-      !targetIds.includes(rule.context.matchedTargetModIds[0]) ||
+      rule.context.matchedRequiredTargetModIds.length !== 1 ||
+      !targetIds.includes(rule.context.matchedRequiredTargetModIds[0]) ||
       rule.expectedVisits <= 0
     ) continue;
-    const targetModId = rule.context.matchedTargetModIds[0];
+    const targetModId = rule.context.matchedRequiredTargetModIds[0];
     const normalizedAffixes = [
       ...rule.context.prefixes.map((affix) => ({ side: 'P', ...affix })),
       ...rule.context.suffixes.map((affix) => ({ side: 'S', ...affix })),
@@ -451,6 +455,8 @@ function coarseContextKey(context: PolicyExplanationRule['context']): string {
     policyScope: context.policyScope,
     progressKind: context.progressKind,
     targetModIds: context.targetModIds,
+    requiredTargetModIds: context.requiredTargetModIds,
+    acceptableTargetBranches: context.acceptableTargetBranches,
     rarity: context.rarity,
     prefixCount: context.prefixCount,
     suffixCount: context.suffixCount,
@@ -475,6 +481,8 @@ function comparableDecisionContextKey(context: PolicyExplanationRule['context'])
       policyScope: context.policyScope,
       progressKind: context.progressKind,
       targetModIds: context.targetModIds,
+      requiredTargetModIds: context.requiredTargetModIds,
+      acceptableTargetBranches: context.acceptableTargetBranches,
       rarity: context.rarity,
       influenced: context.influenced,
       synthesised: context.synthesised,
@@ -512,6 +520,29 @@ function policyRuleEvidenceErrors(rule: PolicyExplanationRule): string[] {
   if (!sameStrings([...matched, ...unmatched], context.targetModIds)) {
     errors.push('matched + missing targets do not reconcile with the context target definition');
   }
+  const matchedRequired = exactStringSet(context.matchedRequiredTargetModIds);
+  const unmatchedRequired = exactStringSet(context.unmatchedRequiredTargetModIds);
+  if (!sameStrings([...matchedRequired, ...unmatchedRequired], context.requiredTargetModIds)) {
+    errors.push('matched + missing required modifiers do not reconcile with required target definition');
+  }
+  const acceptableIds = exactStringSet(context.acceptableTargetBranches.flat());
+  if (context.matchedAcceptableTargetModIds.some((modId) => !acceptableIds.includes(modId))) {
+    errors.push('matched acceptable modifier is absent from acceptable branch definition');
+  }
+  const computedSatisfiedBranches = context.acceptableTargetBranches.flatMap((branch, index) =>
+    branch.every((modId) => context.matchedAcceptableTargetModIds.includes(modId)) ? [index] : []
+  );
+  if (!sameStrings(
+    computedSatisfiedBranches.map(String),
+    context.satisfiedAcceptableBranchIndices.map(String),
+  )) {
+    errors.push('satisfied acceptable branch indices do not reconcile with matched alternatives');
+  }
+  const acceptableSatisfied = context.acceptableTargetBranches.length === 0 ||
+    computedSatisfiedBranches.length > 0;
+  if (acceptableSatisfied !== context.acceptableAlternativeSatisfied) {
+    errors.push('acceptable-alternative completion flag does not reconcile with branch evidence');
+  }
   if (!Number.isInteger(rule.representedStateCount) || rule.representedStateCount <= 0) {
     errors.push(`invalid represented-state count ${rule.representedStateCount}`);
   }
@@ -540,23 +571,33 @@ function decisionGroupSummary(
   const first = contexts[0];
   const prefixCounts = exactNumberSet(contexts.map((context) => context.prefixCount));
   const suffixCounts = exactNumberSet(contexts.map((context) => context.suffixCount));
-  const progressCounts = exactNumberSet(
-    contexts.map((context) => context.matchedTargetModIds.length),
+  const requiredProgressCounts = exactNumberSet(
+    contexts.map((context) => context.matchedRequiredTargetModIds.length),
   );
-  const totalTargets = first.targetModIds.length;
+  const requiredTotal = first.requiredTargetModIds.length;
+  const acceptableProgressCounts = exactNumberSet(
+    contexts.map((context) => context.acceptableAlternativeSatisfied ? 1 : 0),
+  );
   const rarity = `${first.rarity[0].toUpperCase()}${first.rarity.slice(1)}`;
   const affixShape = prefixCounts.length === 1 && suffixCounts.length === 1
     ? `${prefixCounts[0]}P/${suffixCounts[0]}S`
     : `variable affix counts (prefixes ${prefixCounts.join('/')}; suffixes ${suffixCounts.join('/')})`;
-  const progressLabel = progressCounts.length === 1
-    ? `${first.progressKind === 'PREPARATION' ? 'prep' : 'final'} progress ` +
-      `${progressCounts[0]}/${totalTargets}`
-    : `varying ${first.progressKind === 'PREPARATION' ? 'preparation' : 'final-target'} progress ` +
-      `(${progressCounts.map((count) => `${count}/${totalTargets}`).join(', ')})`;
+  const requiredProgressLabel = requiredProgressCounts.length === 1
+    ? `${first.progressKind === 'PREPARATION'
+        ? 'prep'
+        : first.acceptableTargetBranches.length > 0 ? 'required' : 'final'} progress ` +
+      `${requiredProgressCounts[0]}/${requiredTotal}`
+    : `varying ${first.progressKind === 'PREPARATION'
+        ? 'preparation'
+        : first.acceptableTargetBranches.length > 0 ? 'required-target' : 'final-target'} progress ` +
+      `(${requiredProgressCounts.map((count) => `${count}/${requiredTotal}`).join(', ')})`;
+  const acceptableProgressLabel = first.acceptableTargetBranches.length === 0
+    ? ''
+    : `; acceptable alternative ${acceptableProgressCounts.map((count) => `${count}/1`).join(' or ')}`;
   const scope = first.policyScope === 'ACQUISITION'
     ? 'Acquisition-preparation'
     : 'Final-craft';
-  return `${scope} ${rarity} states with ${affixShape} at ${progressLabel} choose different ` +
+  return `${scope} ${rarity} states with ${affixShape} at ${requiredProgressLabel}${acceptableProgressLabel} choose different ` +
     'actions based on exact current affixes.';
 }
 
@@ -624,9 +665,11 @@ function decisionGroups(
     if (phase === undefined) continue;
     const first = rules[indices[0]];
     const cohortContexts = indices.map((index) => rules[index].context);
-    const targetDefinitions = new Set(
-      cohortContexts.map((context) => JSON.stringify(exactStringSet(context.targetModIds))),
-    );
+    const targetDefinitions = new Set(cohortContexts.map((context) => JSON.stringify({
+      all: exactStringSet(context.targetModIds),
+      required: exactStringSet(context.requiredTargetModIds),
+      acceptable: context.acceptableTargetBranches,
+    })));
     const scopeKinds = new Set(
       cohortContexts.map((context) => `${context.policyScope}|${context.progressKind}|${context.rarity}`),
     );
@@ -683,8 +726,16 @@ function decisionGroups(
           progressKind: first.context.progressKind,
           rarity: first.context.rarity,
           targetModIds: [...first.context.targetModIds],
+          requiredTargetModIds: [...first.context.requiredTargetModIds],
+          acceptableTargetBranches: first.context.acceptableTargetBranches.map((branch) => [...branch]),
           matchedProgressCounts: exactNumberSet(
             cohortContexts.map((context) => context.matchedTargetModIds.length),
+          ),
+          matchedRequiredProgressCounts: exactNumberSet(
+            cohortContexts.map((context) => context.matchedRequiredTargetModIds.length),
+          ),
+          acceptableProgressCounts: exactNumberSet(
+            cohortContexts.map((context) => context.acceptableAlternativeSatisfied ? 1 : 0),
           ),
           prefixCounts: exactNumberSet(cohortContexts.map((context) => context.prefixCount)),
           suffixCounts: exactNumberSet(cohortContexts.map((context) => context.suffixCount)),

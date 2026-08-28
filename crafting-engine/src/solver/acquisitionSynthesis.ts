@@ -120,6 +120,13 @@ export interface AcquisitionPolicyRule {
     policyScope: 'ACQUISITION';
     progressKind: 'PREPARATION';
     targetModIds: string[];
+    requiredTargetModIds: string[];
+    acceptableTargetBranches: string[][];
+    matchedRequiredTargetModIds: string[];
+    unmatchedRequiredTargetModIds: string[];
+    matchedAcceptableTargetModIds: string[];
+    acceptableAlternativeSatisfied: boolean;
+    satisfiedAcceptableBranchIndices: number[];
     rarity: ItemRarity;
     prefixCount: number;
     suffixCount: number;
@@ -383,6 +390,13 @@ function acquisitionPolicyContext(
     policyScope: 'ACQUISITION',
     progressKind: 'PREPARATION',
     targetModIds: identified.map(({ id }) => id).sort(),
+    requiredTargetModIds: identified.map(({ id }) => id).sort(),
+    acceptableTargetBranches: [],
+    matchedRequiredTargetModIds: matchedTargetModIds,
+    unmatchedRequiredTargetModIds: unmatchedTargetModIds,
+    matchedAcceptableTargetModIds: [],
+    acceptableAlternativeSatisfied: true,
+    satisfiedAcceptableBranchIndices: [],
     rarity: state.rarity,
     prefixCount: state.prefixes.length,
     suffixCount: state.suffixes.length,

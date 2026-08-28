@@ -48,6 +48,156 @@ export interface TargetDefinition {
   saleValueChaos?: number;
 }
 
+/** Stable identity for one modifier requirement. Player-facing text is never required. */
+export function modRequirementIdentity(requirement: ModRequirement): string {
+  return JSON.stringify([
+    requirement.modId ?? null,
+    requirement.modGroup ?? null,
+    requirement.name ?? null,
+    requirement.minTierNumber ?? null,
+    requirement.maxTierNumber ?? null,
+    requirement.mustBeFractured ?? null,
+  ]);
+}
+
+function canonicalRequirements(requirements: readonly ModRequirement[]): ModRequirement[] {
+  const byIdentity = new Map<string, ModRequirement>();
+  for (const requirement of requirements) {
+    const identity = modRequirementIdentity(requirement);
+    if (!byIdentity.has(identity)) byIdentity.set(identity, { ...requirement });
+  }
+  return [...byIdentity.entries()]
+    .sort(([left], [right]) => left.localeCompare(right))
+    .map(([, requirement]) => requirement);
+}
+
+/** Canonical OR branches retain their boundaries while ignoring selection order. */
+export function canonicalAcceptableAnyOf(
+  branches: readonly (readonly ModRequirement[])[] | undefined,
+): ModRequirement[][] | undefined {
+  if (branches === undefined) return undefined;
+  const canonical = branches.map((branch) => canonicalRequirements(branch));
+  return canonical.sort((left, right) =>
+    JSON.stringify(left.map(modRequirementIdentity)).localeCompare(
+      JSON.stringify(right.map(modRequirementIdentity)),
+    )
+  );
+}
+
+/** Shared canonical target shape for validation, Worker/session keys, sharing, and replay. */
+export function canonicalizeTargetDefinition(target: TargetDefinition): TargetDefinition {
+  const { acceptableAnyOf: rawAcceptableAnyOf, ...targetWithoutAcceptableAnyOf } = target;
+  const acceptableAnyOf = canonicalAcceptableAnyOf(rawAcceptableAnyOf);
+  return {
+    ...targetWithoutAcceptableAnyOf,
+    requiredMods: canonicalRequirements(target.requiredMods),
+    outcomeBranches: target.outcomeBranches?.map((branch) => ({
+      ...branch,
+      requiredMods: canonicalRequirements(branch.requiredMods),
+    })),
+    ...(acceptableAnyOf === undefined ? {} : { acceptableAnyOf }),
+    finalRollRequirements: target.finalRollRequirements?.map((requirement) => ({ ...requirement })),
+    finalStateConstraints: target.finalStateConstraints
+      ? { ...target.finalStateConstraints }
+      : undefined,
+  };
+}
+
+/** JSON-safe material whose OR branch boundaries are part of canonical target identity. */
+export function canonicalTargetFingerprintMaterial(target: TargetDefinition): TargetDefinition {
+  return canonicalizeTargetDefinition(target);
+}
+
+/** Every independently feasible completion scenario, never the union of OR alternatives. */
+export function getTargetRequirementScenarios(target: TargetDefinition): ModRequirement[][] {
+  let scenarios: ModRequirement[][] = [[...target.requiredMods]];
+  if (target.outcomeBranches?.length) {
+    scenarios = scenarios.flatMap((base) =>
+      target.outcomeBranches!.map((branch) => [...base, ...branch.requiredMods])
+    );
+  }
+  if (target.acceptableAnyOf?.length) {
+    scenarios = scenarios.flatMap((base) =>
+      target.acceptableAnyOf!.map((branch) => [...base, ...branch])
+    );
+  }
+  return scenarios.map(canonicalRequirements);
+}
+
+function requirementDisplayIdentity(requirement: ModRequirement, index: number): string {
+  return requirement.modId ?? requirement.modGroup ?? requirement.name ?? `target_${index + 1}`;
+}
+
+export interface TargetProgressEvaluation {
+  required: {
+    requirementIds: string[];
+    matchedRequirementIds: string[];
+    missingRequirementIds: string[];
+    complete: boolean;
+  };
+  acceptable: {
+    required: boolean;
+    branchRequirementIds: string[][];
+    matchedRequirementIds: string[];
+    satisfiedBranchIndices: number[];
+    satisfied: boolean;
+  };
+  terminal: boolean;
+}
+
+/** Structured progress keeps mandatory completion separate from acceptable OR progress. */
+export function evaluateTargetProgress(
+  state: ItemState,
+  target: TargetDefinition,
+): TargetProgressEvaluation {
+  const affixes = [...state.prefixes, ...state.suffixes];
+  const required = canonicalRequirements(target.requiredMods);
+  const requiredRows = required.map((requirement, index) => ({
+    requirement,
+    id: requirementDisplayIdentity(requirement, index),
+  }));
+  const matchedRequired = requiredRows
+    .filter(({ requirement }) => affixes.some((mod) => matchesModRequirement(mod, requirement)))
+    .map(({ id }) => id);
+  const missingRequired = requiredRows
+    .filter(({ id }) => !matchedRequired.includes(id))
+    .map(({ id }) => id);
+
+  const branches = canonicalAcceptableAnyOf(target.acceptableAnyOf) ?? [];
+  const branchRows = branches.map((branch) => branch.map((requirement, index) => ({
+    requirement,
+    id: requirementDisplayIdentity(requirement, index),
+  })));
+  const satisfiedBranchIndices = branchRows.flatMap((branch, index) =>
+    branch.every(({ requirement }) =>
+      affixes.some((mod) => matchesModRequirement(mod, requirement))
+    ) ? [index] : []
+  );
+  const matchedAcceptable = [...new Set(branchRows.flatMap((branch) =>
+    branch
+      .filter(({ requirement }) => affixes.some((mod) => matchesModRequirement(mod, requirement)))
+      .map(({ id }) => id)
+  ))].sort();
+  const acceptableRequired = branches.length > 0;
+
+  return {
+    required: {
+      requirementIds: requiredRows.map(({ id }) => id).sort(),
+      matchedRequirementIds: matchedRequired.sort(),
+      missingRequirementIds: missingRequired.sort(),
+      complete: missingRequired.length === 0,
+    },
+    acceptable: {
+      required: acceptableRequired,
+      branchRequirementIds: branchRows.map((branch) => branch.map(({ id }) => id).sort()),
+      matchedRequirementIds: matchedAcceptable,
+      satisfiedBranchIndices,
+      satisfied: !acceptableRequired || satisfiedBranchIndices.length > 0,
+    },
+    terminal: satisfiesTarget(state, target),
+  };
+}
+
 /** Flatten all mod-shaped target requirements once for identity, discovery, and heuristics. */
 export function getAllTargetModRequirements(target: TargetDefinition): ModRequirement[] {
   const requirements = [
@@ -57,14 +207,7 @@ export function getAllTargetModRequirements(target: TargetDefinition): ModRequir
   ];
   const seen = new Set<string>();
   return requirements.filter((requirement) => {
-    const key = [
-      requirement.modId ?? '',
-      requirement.modGroup ?? '',
-      requirement.name ?? '',
-      requirement.minTierNumber ?? '',
-      requirement.maxTierNumber ?? '',
-      requirement.mustBeFractured ?? '',
-    ].join('|');
+    const key = modRequirementIdentity(requirement);
     if (seen.has(key)) return false;
     seen.add(key);
     return true;

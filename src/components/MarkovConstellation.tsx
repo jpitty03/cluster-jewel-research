@@ -1478,7 +1478,16 @@ export const MarkovConstellation: React.FC<MarkovConstellationProps> = ({
             )}
             <details className="node-technical-details">
               <summary>Technical policy evidence</summary>
-              <code>matched target IDs: {selectedNode.details.matchedTargetModIds.join(', ') || 'none'}</code>
+              <code>required target IDs: {selectedNode.details.requiredTargetModIds.join(', ') || 'legacy evidence unavailable'}</code>
+              <code>matched required IDs: {selectedNode.details.matchedRequiredTargetModIds.join(', ') || 'none'}</code>
+              <code>acceptable branches: {selectedNode.details.acceptableTargetBranches
+                .map((branch) => `[${branch.join(' + ')}]`).join(' OR ') || 'none'}</code>
+              <code>acceptable requirement: {selectedNode.details.acceptableTargetBranches.length === 0
+                ? 'not configured'
+                : selectedNode.details.acceptableAlternativeSatisfied ? '1/1 - matched' : '0/1 - not matched'}</code>
+              <code>matched acceptable IDs: {selectedNode.details.matchedAcceptableTargetModIds.join(', ') || 'none'}</code>
+              <code>satisfied acceptable branch indices: {selectedNode.details.satisfiedAcceptableBranchIndices.join(', ') || 'none'}</code>
+              <code>combined technical target IDs: {selectedNode.details.matchedTargetModIds.join(', ') || 'none'}</code>
               <code>fractured target IDs: {selectedNode.details.fracturedTargetModIds.join(', ') || 'none'}</code>
               <code>technical state: {selectedNode.details.technicalStateSummary}</code>
               {selectedNode.details.representativeState && <code>representative: {selectedNode.details.representativeState}</code>}

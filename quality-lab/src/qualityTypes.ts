@@ -136,6 +136,7 @@ export interface FixtureRecord {
   finalRarity: 'magic' | 'rare' | 'any';
   extraAffixes: 'allow-extra' | 'no-unwanted';
   targetMods: string[];
+  acceptableAnyOf?: string[][];
   priceContext?: Record<string, unknown>;
   marketContext?: Record<string, unknown>;
   expectedSaleValueChaos?: number;

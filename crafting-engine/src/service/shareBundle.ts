@@ -1,4 +1,8 @@
 import type { BaseType } from '../domain/ItemState.ts';
+import {
+  canonicalAcceptableAnyOf,
+  type ModRequirement,
+} from '../domain/TargetDefinition.ts';
 import type {
   OptimizationObjectiveSpec,
   OptimizeCraftPriceContext,
@@ -13,12 +17,14 @@ const VALID_BASE_TYPES = new Set<string>([
 ]);
 
 export interface CraftSharePayload {
-  version: '2R.1' | '2W.1' | '2X.1' | '2Y.1';
+  version: '2R.1' | '2W.1' | '2X.1' | '2Y.1' | '3G.1';
   baseType: BaseType;
   clusterType: string;
   itemLevel: number;
   passiveCount?: number;
   targetMods: string[];
+  /** Canonical OR branches. Missing on legacy required-only payloads. */
+  acceptableAnyOf?: ModRequirement[][];
   /** Presentation-only evidence; never used to reconstruct or rank a policy. */
   selectedRouteName?: string;
   finalRarity?: 'magic' | 'rare' | 'any';
@@ -49,7 +55,7 @@ export interface CraftSharePayload {
 }
 
 export interface BugReportBundle {
-  reportVersion: '2R.1';
+  reportVersion: '3G.1';
   createdAt: string;
   appVersion: string;
   userAgent: string;
@@ -111,11 +117,20 @@ export function decodeCraftFromUrl(encoded: string): CraftSharePayload | null {
     const parsed = JSON.parse(json) as Partial<CraftSharePayload>;
 
     // Strict schema & enum validation
-    if (parsed.version !== '2R.1' && parsed.version !== '2W.1' && parsed.version !== '2X.1' && parsed.version !== '2Y.1') return null;
+    if (parsed.version !== '2R.1' && parsed.version !== '2W.1' && parsed.version !== '2X.1' && parsed.version !== '2Y.1' && parsed.version !== '3G.1') return null;
     if (!parsed.baseType || !VALID_BASE_TYPES.has(parsed.baseType)) return null;
     if (typeof parsed.clusterType !== 'string' || parsed.clusterType.trim().length === 0) return null;
     if (typeof parsed.itemLevel !== 'number' || parsed.itemLevel < 1 || parsed.itemLevel > 100 || !Number.isFinite(parsed.itemLevel)) return null;
     if (!Array.isArray(parsed.targetMods) || !parsed.targetMods.every((m) => typeof m === 'string')) return null;
+    if (parsed.acceptableAnyOf !== undefined && (
+      !Array.isArray(parsed.acceptableAnyOf) ||
+      !parsed.acceptableAnyOf.every((branch) =>
+        Array.isArray(branch) && branch.length > 0 && branch.every((requirement) =>
+          typeof requirement === 'object' && requirement !== null &&
+          typeof requirement.modId === 'string' && requirement.modId.length > 0
+        )
+      )
+    )) return null;
     if (parsed.selectedRouteName !== undefined &&
       (typeof parsed.selectedRouteName !== 'string' || parsed.selectedRouteName.trim().length === 0)) {
       return null;
@@ -132,7 +147,10 @@ export function decodeCraftFromUrl(encoded: string): CraftSharePayload | null {
       return null;
     }
 
-    return parsed as CraftSharePayload;
+    return {
+      ...parsed,
+      acceptableAnyOf: canonicalAcceptableAnyOf(parsed.acceptableAnyOf),
+    } as CraftSharePayload;
   } catch {
     return null;
   }
@@ -144,10 +162,10 @@ export function decodeCraftFromUrl(encoded: string): CraftSharePayload | null {
 export function generateBugReportBundle(
   input: CraftSharePayload,
   result?: OptimizeCraftResult,
-  appVersion = 'Phase2R'
+  appVersion = '3G.1'
 ): BugReportBundle {
   return {
-    reportVersion: '2R.1',
+    reportVersion: '3G.1',
     createdAt: new Date().toISOString(),
     appVersion,
     userAgent: typeof navigator !== 'undefined' ? navigator.userAgent : 'Node-Diagnostic-Environment',

@@ -3,7 +3,8 @@ import { getAllAffixes, type ItemState } from '../domain/ItemState.ts';
 import type { Mod, GenType } from '../domain/Mod.ts';
 import type { PriceConfidence } from '../domain/PriceBook.ts';
 import {
-  getAllTargetModRequirements,
+  canonicalTargetFingerprintMaterial,
+  getTargetRequirementScenarios,
   matchesModRequirement,
   type ModRequirement,
   type TargetDefinition,
@@ -93,26 +94,6 @@ function targetProgressRequirement(requirement: ModRequirement): ModRequirement 
   // Fracture creation is bounded independently by mandatoryMechanicsLowerBound.
   // Ignoring the fracture predicate here makes this abstraction strictly easier.
   return { ...requirement, mustBeFractured: undefined };
-}
-
-function scenarioRequirements(target: TargetDefinition): ModRequirement[][] {
-  const branchOptions = target.outcomeBranches?.length
-    ? target.outcomeBranches.map((branch) => branch.requiredMods)
-    : [[]];
-  const anyOptions = target.acceptableAnyOf?.length ? target.acceptableAnyOf : [[]];
-  const scenarios: ModRequirement[][] = [];
-  for (const branch of branchOptions) {
-    for (const any of anyOptions) {
-      const seen = new Set<string>();
-      scenarios.push([...target.requiredMods, ...branch, ...any].filter((requirement) => {
-        const key = requirementIdentity(requirement);
-        if (seen.has(key)) return false;
-        seen.add(key);
-        return true;
-      }));
-    }
-  }
-  return scenarios.length > 0 ? scenarios : [[]];
 }
 
 function groups(mod: Mod): Set<string> {
@@ -366,13 +347,7 @@ export function evaluateRelaxedTargetProgressLowerBound(
       rarity: state.rarity,
       affixes: getAllAffixes(state).map((mod) => [mod.modId, mod.isFractured]).sort(),
     },
-    target: getAllTargetModRequirements(target).map(requirementIdentity).sort(),
-    targetShape: {
-      branches: target.outcomeBranches?.map((branch) =>
-        branch.requiredMods.map(requirementIdentity).sort()
-      ),
-      any: target.acceptableAnyOf?.map((branch) => branch.map(requirementIdentity).sort()),
-    },
+    target: canonicalTargetFingerprintMaterial(target),
     pool: context.pool.getAllMods().map((mod) => [
       mod.modId,
       mod.genType,
@@ -409,7 +384,7 @@ export function evaluateRelaxedTargetProgressLowerBound(
     };
   }
 
-  const scenarios = scenarioRequirements(target);
+  const scenarios = getTargetRequirementScenarios(target);
   const evaluated = scenarios.map((scenario) => {
     const results = scenario.map((requirement) => evaluateRequirement(
       context,

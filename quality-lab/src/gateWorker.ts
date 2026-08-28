@@ -29,6 +29,7 @@ import type {
   QualityShardReport,
   QualitySuiteIdentity,
 } from './qualityTypes.ts';
+import { runPhase3GDomainSolverDiagnostics } from './phase3gDiagnostics.ts';
 
 type JsonRecord = Record<string, unknown>;
 
@@ -331,6 +332,9 @@ async function importFixture(page: Page, input: FixtureRecord): Promise<void> {
       itemLevel: input.itemLevel,
       passiveCount: input.passiveCount,
       targetMods: input.targetMods,
+      acceptableAnyOf: input.acceptableAnyOf?.map((branch) =>
+        branch.map((modId) => ({ modId }))
+      ),
       finalRarity: input.finalRarity,
       maxUnmatchedAffixes: input.extraAffixes === 'no-unwanted' ? 0 : undefined,
       prices: input.priceContext,
@@ -338,13 +342,22 @@ async function importFixture(page: Page, input: FixtureRecord): Promise<void> {
       expectedSaleValueChaos: input.expectedSaleValueChaos,
     })),
   });
-  await page.waitForFunction((expectedIds) => {
-    const observed = [...document.querySelectorAll('.target-summary li[data-mod-id]')]
+  await page.waitForFunction(({ required, acceptable }) => {
+    const observedRequired = [...document.querySelectorAll(
+      '[data-testid="required-modifier-summary"] li[data-mod-id]',
+    )]
       .map((element) => element.getAttribute('data-mod-id'))
       .filter((id): id is string => typeof id === 'string')
       .sort((left, right) => left.localeCompare(right));
-    return JSON.stringify(observed) === JSON.stringify([...expectedIds].sort((left, right) => left.localeCompare(right)));
-  }, input.targetMods);
+    const observedAcceptable = [...document.querySelectorAll(
+      '[data-testid="acceptable-alternative-summary"] li[data-mod-id]',
+    )]
+      .map((element) => element.getAttribute('data-mod-id'))
+      .filter((id): id is string => typeof id === 'string')
+      .sort((left, right) => left.localeCompare(right));
+    return JSON.stringify(observedRequired) === JSON.stringify([...required].sort()) &&
+      JSON.stringify(observedAcceptable) === JSON.stringify([...acceptable].sort());
+  }, { required: input.targetMods, acceptable: input.acceptableAnyOf?.flat() ?? [] });
 }
 
 async function setBudget(page: Page, budget: FixtureRecord['searchBudget']): Promise<void> {
@@ -601,6 +614,13 @@ function assertTarget(result: JsonRecord, input: FixtureRecord): void {
   const ids = arrayValue(target.requiredMods, 'target modifiers')
     .map((entry) => jsonRecord(entry, 'target modifier').modId);
   assert.deepEqual(canonicalIds(ids), canonicalIds(input.targetMods));
+  const alternatives = arrayValue(target.acceptableAnyOf ?? [], 'acceptable alternatives')
+    .map((branch) => arrayValue(branch, 'acceptable branch')
+      .map((entry) => jsonRecord(entry, 'acceptable requirement').modId));
+  assert.deepEqual(
+    alternatives.map((branch) => canonicalIds(branch)).sort(),
+    (input.acceptableAnyOf ?? []).map((branch) => canonicalIds(branch)).sort(),
+  );
 }
 
 function phase3bRouteEvidence(result: JsonRecord): JsonRecord {
@@ -717,6 +737,43 @@ async function runGateOperation(ctx: GateWorkerContext): Promise<unknown> {
           accounting: assertCanonicalAccounting(result),
           proofStatus: result.objectiveProofStatus,
           noFallback: await noFallbackProbe(ctx),
+        };
+      });
+
+    case 'phase3g-alternative-domain-solver':
+      return withPage(ctx, async (page) => {
+        const input = fixture('phase3g_spell_damage_alternatives');
+        const direct = runPhase3GDomainSolverDiagnostics({
+          baseType: 'Large Cluster Jewel',
+          clusterType: input.clusterType,
+          itemLevel: input.itemLevel,
+          passiveCount: input.passiveCount,
+          requiredIds: input.targetMods,
+          acceptableIds: input.acceptableAnyOf?.flat() ?? [],
+        });
+        const result = await optimizedFixture(page, ctx.appUrl, input);
+        assertTarget(result, input);
+        const flow = selectedPolicyFlow(result, 'Phase 3G field target');
+        const solver = jsonRecord(result.solver, 'Phase 3G solver reconciliation');
+        const risk = jsonRecord(result.risk, 'Phase 3G policy risk');
+        assert.equal(solver.bellmanConverged, true);
+        assert.equal(solver.occupancyConverged, true);
+        assert.equal(solver.costReconciled, true);
+        if (risk.selectedPolicyProper === true) {
+          assertNear(numberValue(risk.terminalAbsorptionProbability, 'terminal absorption'), 1,
+            'Phase 3G terminal absorption');
+        }
+        assert(numberValue(risk.unresolvedOnPolicyProbability, 'unresolved policy mass') >= 0);
+        return {
+          direct,
+          G7: {
+            flow: assertFlowConservation(flow, 'Phase 3G field target'),
+            accounting: assertCanonicalAccounting(result),
+            solver,
+            risk,
+            unresolvedCompetitors: jsonRecord(result.proof, 'Phase 3G proof').unresolvedCompetitiveCandidates,
+          },
+          protocol: assertWorkerProtocol(await workerEvents(page)),
         };
       });
 
@@ -1584,6 +1641,110 @@ async function runGateOperation(ctx: GateWorkerContext): Promise<unknown> {
           shareHashLength: new URL(shareUrl).hash.length,
           targetIds: input.targetMods,
           policyFlowExported: true,
+        };
+      });
+
+    case 'phase3g-alternative-browser-roundtrip':
+      return withPage(ctx, async (page) => {
+        const input = fixture('phase3g_spell_damage_alternatives');
+        const result = await optimizedFixture(page, ctx.appUrl, input);
+        assertTarget(result, input);
+        const requiredSummary = page.getByTestId('required-modifier-summary');
+        const acceptableSummary = page.getByTestId('acceptable-alternative-summary');
+        assert.equal(await requiredSummary.locator('li[data-target-role="required"]').count(), 3);
+        assert.equal(await acceptableSummary.locator('li[data-target-role="acceptable-alternative"]').count(), 3);
+        const summaryText = await page.getByTestId('structured-target-summary').innerText();
+        assert.match(summaryText, /Final rarity:\s*rare/i);
+        assert.match(summaryText, /Extra affixes:\s*Allowed/i);
+        assert.match(summaryText, /Must have all/i);
+        assert.match(summaryText, /And at least one/i);
+        assert.doesNotMatch(summaryText, /6\s+(?:required|desired)/i);
+
+        const target = jsonRecord(result.target, 'Phase 3G rendered target');
+        const explanationText = JSON.stringify(result.policyExplanation);
+        const craftPlanText = JSON.stringify(result.craftPlan);
+        assert.doesNotMatch(`${explanationText}\n${craftPlanText}`, /4\/6/);
+        const finalContexts = arrayValue(result.policyExplanation, 'Phase 3G policy explanation')
+          .map((entry) => jsonRecord(jsonRecord(entry, 'Phase 3G explanation rule').context, 'Phase 3G explanation context'))
+          .filter((context) => context.policyScope === 'DOWNSTREAM' && context.progressKind === 'FINAL');
+        assert(finalContexts.length > 0);
+        for (const context of finalContexts) {
+          const requiredIds = canonicalIds(arrayValue(context.requiredTargetModIds, 'final required IDs'));
+          const alternativeIds = canonicalIds(arrayValue(context.acceptableTargetBranches, 'final acceptable branches').flat());
+          assert.deepEqual(requiredIds, canonicalIds(input.targetMods));
+          assert.deepEqual(alternativeIds, canonicalIds(input.acceptableAnyOf!.flat()));
+          assert(arrayValue(context.unmatchedRequiredTargetModIds, 'unmatched required IDs')
+            .every((modId) => requiredIds.includes(String(modId))));
+          assert(arrayValue(context.matchedAcceptableTargetModIds, 'matched acceptable IDs')
+            .every((modId) => alternativeIds.includes(String(modId))));
+        }
+        assert.equal(arrayValue(target.requiredMods, 'Phase 3G required target').length, 3);
+        assert.equal(arrayValue(target.acceptableAnyOf, 'Phase 3G acceptable target').length, 3);
+
+        const flow = selectedPolicyFlow(result, 'Phase 3G browser');
+        const nodes = arrayValue(flow.nodes, 'Phase 3G flow nodes')
+          .map((entry) => jsonRecord(entry, 'Phase 3G flow node'));
+        const terminalNodes = nodes.filter((node) => node.terminal === true);
+        assert(terminalNodes.length > 0);
+        assert(terminalNodes.every((node) =>
+          arrayValue(node.matchedRequiredTargetModIds, 'terminal required IDs').length === 3 &&
+          node.acceptableAlternativeSatisfied === true
+        ));
+        const requiredOnlyNodes = nodes.filter((node) =>
+          node.terminal !== true &&
+          arrayValue(node.matchedRequiredTargetModIds ?? [], 'nonterminal required IDs').length === 3 &&
+          node.acceptableAlternativeSatisfied === false
+        );
+        assert(requiredOnlyNodes.length > 0, 'Selected policy omitted the required 3/3 + alternative 0/1 frontier');
+
+        const constellation = page.getByTestId('markov-constellation-container');
+        await constellation.waitFor();
+        const terminalId = String(terminalNodes[0].id);
+        await constellation.locator(`.constellation-node-access-list button[data-node-id="${terminalId}"]`).click();
+        const detail = page.getByLabel('Selected constellation node details');
+        const detailText = await detail.innerText();
+        assert.match(detailText, /Required\s+3\/3/i);
+        assert.match(detailText, /Alternative\s+1\/1/i);
+        assert(input.acceptableAnyOf!.flat().some((modId) => detailText.includes(modId)),
+          'Terminal Constellation evidence did not name a matched alternative');
+
+        const exportPath = join(ctx.invocation.artifactsDirectory, 'phase3g-alternative-export.json');
+        const exported = await downloadExport(page, exportPath);
+        const requestInput = jsonRecord(exported.requestInput, 'Phase 3G exported request');
+        const exportedTarget = jsonRecord(requestInput.target, 'Phase 3G exported target');
+        assert.deepEqual(exportedTarget.acceptableAnyOf, target.acceptableAnyOf);
+        ctx.artifacts.phase3gAlternativeExport = relative(repositoryRoot, exportPath);
+
+        await page.getByRole('button', { name: /Copy Shopping List/ }).click();
+        const shopping = await page.evaluate(() => navigator.clipboard.readText());
+        assert.match(shopping, /Must have all:/i);
+        assert.match(shopping, /And at least one:/i);
+        assert.doesNotMatch(shopping, /4\/6/);
+
+        await page.getByRole('button', { name: /Share Link/ }).click();
+        const shareUrl = await page.evaluate(() => navigator.clipboard.readText());
+        assert.match(shareUrl, /#craft=/);
+        await page.goto(shareUrl, { waitUntil: 'networkidle' });
+        await page.waitForFunction(({ required, acceptable }) => {
+          const requiredIds = [...document.querySelectorAll('[data-testid="required-modifier-summary"] li')]
+            .map((node) => node.getAttribute('data-mod-id')).filter(Boolean).sort();
+          const acceptableIds = [...document.querySelectorAll('[data-testid="acceptable-alternative-summary"] li')]
+            .map((node) => node.getAttribute('data-mod-id')).filter(Boolean).sort();
+          return JSON.stringify(requiredIds) === JSON.stringify([...required].sort()) &&
+            JSON.stringify(acceptableIds) === JSON.stringify([...acceptable].sort());
+        }, { required: input.targetMods, acceptable: input.acceptableAnyOf!.flat() });
+        const restoredSummary = await page.getByTestId('structured-target-summary').innerText();
+        assert.match(restoredSummary, /Must have all/i);
+        assert.match(restoredSummary, /And at least one/i);
+        return {
+          fixture: input.id,
+          requiredCount: 3,
+          acceptableCount: 3,
+          terminalCount: terminalNodes.length,
+          requiredOnlyFrontierCount: requiredOnlyNodes.length,
+          matchedAlternativeEvidence: true,
+          shareHashLength: new URL(shareUrl).hash.length,
+          export: ctx.artifacts.phase3gAlternativeExport,
         };
       });
 

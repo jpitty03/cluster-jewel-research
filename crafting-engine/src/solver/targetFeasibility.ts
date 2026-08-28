@@ -2,7 +2,10 @@ import type { ItemRarity } from '../domain/ItemState.ts';
 import type { ModPool } from '../domain/ModPool.ts';
 import type { GenType } from '../domain/Mod.ts';
 import type { ModRequirement, TargetDefinition } from '../domain/TargetDefinition.ts';
-import { matchesModRequirement } from '../domain/TargetDefinition.ts';
+import {
+  getTargetRequirementScenarios,
+  matchesModRequirement,
+} from '../domain/TargetDefinition.ts';
 import { getMaxPrefixes, getMaxSuffixes } from '../rules/affixRules.ts';
 
 export interface MinimumFeasibleRarityResult {
@@ -11,42 +14,6 @@ export interface MinimumFeasibleRarityResult {
   requiredSuffixes: number;
   complete: boolean;
   reason: string;
-}
-
-function requirementKey(requirement: ModRequirement): string {
-  return [
-    requirement.modId ?? '',
-    requirement.modGroup ?? '',
-    requirement.name ?? '',
-    requirement.minTierNumber ?? '',
-    requirement.maxTierNumber ?? '',
-    requirement.mustBeFractured ?? '',
-  ].join('|');
-}
-
-function uniqueRequirements(requirements: ModRequirement[]): ModRequirement[] {
-  const seen = new Set<string>();
-  return requirements.filter((requirement) => {
-    const key = requirementKey(requirement);
-    if (seen.has(key)) return false;
-    seen.add(key);
-    return true;
-  });
-}
-
-function targetRequirementSets(target: TargetDefinition): ModRequirement[][] {
-  let sets: ModRequirement[][] = [[...target.requiredMods]];
-  if (target.outcomeBranches?.length) {
-    sets = sets.flatMap((base) =>
-      target.outcomeBranches!.map((branch) => [...base, ...branch.requiredMods])
-    );
-  }
-  if (target.acceptableAnyOf?.length) {
-    sets = sets.flatMap((base) =>
-      target.acceptableAnyOf!.map((branch) => [...base, ...branch])
-    );
-  }
-  return sets.map(uniqueRequirements);
 }
 
 function possibleGenTypes(requirement: ModRequirement, pool: ModPool): GenType[] {
@@ -77,7 +44,7 @@ export function deriveMinimumFeasibleRarity(
   let best: MinimumFeasibleRarityResult | undefined;
   let missingRequirement = false;
 
-  for (const requirements of targetRequirementSets(target)) {
+  for (const requirements of getTargetRequirementScenarios(target)) {
     const assignments: Array<{ prefixes: number; suffixes: number }> = [{ prefixes: 0, suffixes: 0 }];
     for (const requirement of requirements) {
       const types = possibleGenTypes(requirement, pool);

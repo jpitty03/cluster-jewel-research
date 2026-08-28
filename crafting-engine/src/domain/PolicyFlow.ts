@@ -4,6 +4,7 @@ import {
   type ItemState,
 } from './ItemState.ts';
 import {
+  evaluateTargetProgress,
   getAllTargetModRequirements,
   matchesModRequirement,
   type TargetDefinition,
@@ -34,6 +35,12 @@ export interface PolicyFlowNode {
   selectedActionName?: string;
   rarity?: ItemState['rarity'];
   matchedTargetModIds: string[];
+  requiredTargetModIds?: string[];
+  matchedRequiredTargetModIds?: string[];
+  acceptableTargetBranches?: string[][];
+  matchedAcceptableTargetModIds?: string[];
+  acceptableAlternativeSatisfied?: boolean;
+  satisfiedAcceptableBranchIndices?: number[];
   fracturedTargetModIds: string[];
   prefixCount?: number;
   suffixCount?: number;
@@ -179,11 +186,18 @@ function requirementIdentity(
 
 function stateEvidence(state: ItemState, target: TargetDefinition): {
   matchedTargetModIds: string[];
+  requiredTargetModIds: string[];
+  matchedRequiredTargetModIds: string[];
+  acceptableTargetBranches: string[][];
+  matchedAcceptableTargetModIds: string[];
+  acceptableAlternativeSatisfied: boolean;
+  satisfiedAcceptableBranchIndices: number[];
   fracturedTargetModIds: string[];
   targetPrefixCount: number;
   targetSuffixCount: number;
 } {
   const requirements = getAllTargetModRequirements(target);
+  const progress = evaluateTargetProgress(state, target);
   const matchingRequirementIds = (mod: ItemState['prefixes'][number]): string[] =>
     requirements.flatMap((requirement, index) =>
       matchesModRequirement(mod, requirement)
@@ -200,6 +214,12 @@ function stateEvidence(state: ItemState, target: TargetDefinition): {
   )].sort();
   return {
     matchedTargetModIds,
+    requiredTargetModIds: progress.required.requirementIds,
+    matchedRequiredTargetModIds: progress.required.matchedRequirementIds,
+    acceptableTargetBranches: progress.acceptable.branchRequirementIds,
+    matchedAcceptableTargetModIds: progress.acceptable.matchedRequirementIds,
+    acceptableAlternativeSatisfied: progress.acceptable.satisfied,
+    satisfiedAcceptableBranchIndices: progress.acceptable.satisfiedBranchIndices,
     fracturedTargetModIds,
     targetPrefixCount: state.prefixes.filter((mod) => matchingRequirementIds(mod).length > 0).length,
     targetSuffixCount: state.suffixes.filter((mod) => matchingRequirementIds(mod).length > 0).length,
@@ -246,11 +266,20 @@ function stateSummary(
   target: TargetDefinition,
 ): string {
   if (state.flags?.acquisitionMenu) return 'Selected acquisition decision';
-  const targetCount = getAllTargetModRequirements(target).length;
   const affixCount = state.prefixes.length + state.suffixes.length;
   const fractured = evidence.fracturedTargetModIds.length;
+  if (!target.acceptableAnyOf?.length) {
+    return `${state.rarity[0].toUpperCase()}${state.rarity.slice(1)} · ` +
+      `${evidence.matchedTargetModIds.length}/${getAllTargetModRequirements(target).length} targets · ` +
+      `${affixCount} affixes` +
+      (fractured > 0 ? ` · ${fractured} fractured` : '');
+  }
+  const acceptableProgress = evidence.acceptableTargetBranches.length > 0
+    ? ` · Alternative ${evidence.acceptableAlternativeSatisfied ? '1/1' : '0/1'}`
+    : '';
   return `${state.rarity[0].toUpperCase()}${state.rarity.slice(1)} · ` +
-    `${evidence.matchedTargetModIds.length}/${targetCount} targets · ${affixCount} affixes` +
+    `Required ${evidence.matchedRequiredTargetModIds.length}/${evidence.requiredTargetModIds.length}` +
+    `${acceptableProgress} · ${affixCount} affixes` +
     (fractured > 0 ? ` · ${fractured} fractured` : '');
 }
 
@@ -260,12 +289,32 @@ function macroKeyForState(
   selectedActionId: string | undefined,
   terminal: boolean,
 ): string {
-  if (terminal) return 'terminal:goal';
+  if (terminal && !target.acceptableAnyOf?.length) return 'terminal:goal';
   const evidence = stateEvidence(state, target);
+  if (!target.acceptableAnyOf?.length) {
+    return JSON.stringify({
+      selectedActionId: selectedActionId ?? 'UNRESOLVED',
+      rarity: state.rarity,
+      matchedTargetModIds: evidence.matchedTargetModIds,
+      fracturedTargetModIds: evidence.fracturedTargetModIds,
+      prefixCount: state.prefixes.length,
+      suffixCount: state.suffixes.length,
+      targetPrefixCount: evidence.targetPrefixCount,
+      targetSuffixCount: evidence.targetSuffixCount,
+      influenced: state.flags?.influenced === true,
+      synthesised: state.flags?.synthesised === true,
+      acquisitionMenu: state.flags?.acquisitionMenu === true,
+      methodFamilyActionEvidence: state.flags?.methodFamilyActionEvidence ?? [],
+    });
+  }
   return JSON.stringify({
+    terminal,
     selectedActionId: selectedActionId ?? 'UNRESOLVED',
     rarity: state.rarity,
     matchedTargetModIds: evidence.matchedTargetModIds,
+    matchedRequiredTargetModIds: evidence.matchedRequiredTargetModIds,
+    acceptableAlternativeSatisfied: evidence.acceptableAlternativeSatisfied,
+    matchedAcceptableTargetModIds: evidence.matchedAcceptableTargetModIds,
     fracturedTargetModIds: evidence.fracturedTargetModIds,
     prefixCount: state.prefixes.length,
     suffixCount: state.suffixes.length,
@@ -482,13 +531,26 @@ export function buildPolicyFlowComponent(
         ? 'Goal'
         : compactActionName(selectedActionId, selectedActionName),
       stateSummary: terminal
-        ? 'Selected target satisfied'
+        ? result.target.acceptableAnyOf?.length
+          ? `Final target complete · Required ${evidence.matchedRequiredTargetModIds.length}/${evidence.requiredTargetModIds.length}` +
+            ` · Alternative 1/1${evidence.matchedAcceptableTargetModIds.length > 0
+              ? ` - ${evidence.matchedAcceptableTargetModIds.join(', ')}`
+              : ''}`
+          : 'Selected target satisfied'
         : stateSummary(state, evidence, result.target),
       scope,
       selectedActionId,
       selectedActionName,
       rarity: state.rarity,
       matchedTargetModIds: evidence.matchedTargetModIds,
+      ...(result.target.acceptableAnyOf?.length ? {
+        requiredTargetModIds: evidence.requiredTargetModIds,
+        matchedRequiredTargetModIds: evidence.matchedRequiredTargetModIds,
+        acceptableTargetBranches: evidence.acceptableTargetBranches,
+        matchedAcceptableTargetModIds: evidence.matchedAcceptableTargetModIds,
+        acceptableAlternativeSatisfied: evidence.acceptableAlternativeSatisfied,
+        satisfiedAcceptableBranchIndices: evidence.satisfiedAcceptableBranchIndices,
+      } : {}),
       fracturedTargetModIds: evidence.fracturedTargetModIds,
       prefixCount: state.prefixes.length,
       suffixCount: state.suffixes.length,

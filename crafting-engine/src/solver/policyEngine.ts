@@ -313,7 +313,32 @@ export class CraftingPolicyEngine {
       }
     }
 
-    // 3c. Compute compatible pairs for each target suffix group
+    // 3c. Acceptable alternative suffixes. These are roll candidates, not
+    // additional mandatory targets: compatiblePairs below asks the authoritative
+    // target predicate whether a concrete pair is terminal.
+    for (const branch of target.acceptableAnyOf ?? []) {
+      for (const req of branch) {
+        const found = allSuffixes.find((mod) => matchesModRequirement(mod, req));
+        if (!found || found.genType !== 'Suffix') continue;
+        if (this.targetSuffixGroups.some((group) => group.modGroup === found.modGroup)) continue;
+        const groupMods = allSuffixes.filter((mod) => mod.modGroup === found.modGroup);
+        const targetGroup: SuffixTargetGroup = {
+          id: req.modGroup ?? found.modGroup,
+          name: found.name,
+          modGroup: found.modGroup,
+          modId: req.modId ?? found.modId,
+          tier: req.maxTierNumber ?? found.tier,
+          weight: found.weight,
+          groupTotalWeight: calculateTotalWeight(groupMods) || 1200,
+          isBaseRequired: false,
+          branchName: 'Acceptable alternative',
+        };
+        this.targetSuffixGroups.push(targetGroup);
+        this.suffixGroupMap.set(targetGroup.id, targetGroup);
+      }
+    }
+
+    // 3d. Compute compatible pairs for each target suffix group
     for (const g1 of this.targetSuffixGroups) {
       const compSet = new Set<string>();
       for (const g2 of this.targetSuffixGroups) {

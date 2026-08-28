@@ -15,7 +15,13 @@ import {
   type PolicyFlowSummary,
 } from '../domain/PolicyFlow.ts';
 import type { TargetDefinition } from '../domain/TargetDefinition.ts';
-import { getAllTargetModRequirements, matchesModRequirement } from '../domain/TargetDefinition.ts';
+import {
+  canonicalTargetFingerprintMaterial,
+  evaluateTargetProgress,
+  getAllTargetModRequirements,
+  getTargetRequirementScenarios,
+  matchesModRequirement,
+} from '../domain/TargetDefinition.ts';
 import type {
   AcquisitionMethodDefinition,
   AcquisitionPortfolioCandidate,
@@ -304,6 +310,13 @@ export interface PolicyExplanationRule {
     progressKind: 'ACQUISITION_MENU' | 'PREPARATION' | 'FINAL';
     /** Complete identity set against which matched/missing progress reconciles. */
     targetModIds: string[];
+    requiredTargetModIds: string[];
+    acceptableTargetBranches: string[][];
+    matchedRequiredTargetModIds: string[];
+    unmatchedRequiredTargetModIds: string[];
+    matchedAcceptableTargetModIds: string[];
+    acceptableAlternativeSatisfied: boolean;
+    satisfiedAcceptableBranchIndices: number[];
     rarity: ItemRarity;
     prefixCount: number;
     suffixCount: number;
@@ -3252,6 +3265,7 @@ function policyConditionContext(
 ): PolicyExplanationRule['context'] {
   const requirements = getAllTargetModRequirements(target);
   const affixes = getAllAffixes(state);
+  const progress = evaluateTargetProgress(state, target);
   const identifiedRequirements = requirements.map((requirement, index) => ({
     requirement,
     id: targetRequirementIdentity(requirement, index),
@@ -3274,6 +3288,13 @@ function policyConditionContext(
     policyScope: 'DOWNSTREAM',
     progressKind: 'FINAL',
     targetModIds: identifiedRequirements.map(({ id }) => id).sort(),
+    requiredTargetModIds: progress.required.requirementIds,
+    acceptableTargetBranches: progress.acceptable.branchRequirementIds,
+    matchedRequiredTargetModIds: progress.required.matchedRequirementIds,
+    unmatchedRequiredTargetModIds: progress.required.missingRequirementIds,
+    matchedAcceptableTargetModIds: progress.acceptable.matchedRequirementIds,
+    acceptableAlternativeSatisfied: progress.acceptable.satisfied,
+    satisfiedAcceptableBranchIndices: progress.acceptable.satisfiedBranchIndices,
     rarity: state.rarity,
     prefixCount: state.prefixes.length,
     suffixCount: state.suffixes.length,
@@ -3563,6 +3584,13 @@ function acquisitionMenuExplanation(
       policyScope: 'ACQUISITION',
       progressKind: 'ACQUISITION_MENU',
       targetModIds: [],
+      requiredTargetModIds: [],
+      acceptableTargetBranches: [],
+      matchedRequiredTargetModIds: [],
+      unmatchedRequiredTargetModIds: [],
+      matchedAcceptableTargetModIds: [],
+      acceptableAlternativeSatisfied: true,
+      satisfiedAcceptableBranchIndices: [],
       rarity: start.state.rarity,
       prefixCount: 0,
       suffixCount: 0,
@@ -4393,7 +4421,11 @@ export class OptimizerService {
       allStructuralBoundsProven
     ) {
       const requestedIntent = input.searchIntent ?? 'RECOMMEND';
-      const isComplexMultiMod = validation.normalizedInput.target.requiredMods.length >= 3;
+      const minimumScenarioSize = Math.min(
+        ...getTargetRequirementScenarios(validation.normalizedInput.target)
+          .map((scenario) => scenario.length),
+      );
+      const isComplexMultiMod = minimumScenarioSize >= 3;
       const fastWallTimeCeiling = requestedIntent === 'RECOMMEND'
         ? (isComplexMultiMod ? Math.min(4_000, Math.floor(runtimeBudget.engineDeadlineMs * 0.18)) : Math.min(10_000, Math.floor(runtimeBudget.engineDeadlineMs * 0.35)))
         : isComplexMultiMod
@@ -6251,6 +6283,13 @@ export class OptimizerService {
           policyScope: 'ACQUISITION',
           progressKind: 'ACQUISITION_MENU',
           targetModIds: [],
+          requiredTargetModIds: [],
+          acceptableTargetBranches: [],
+          matchedRequiredTargetModIds: [],
+          unmatchedRequiredTargetModIds: [],
+          matchedAcceptableTargetModIds: [],
+          acceptableAlternativeSatisfied: true,
+          satisfiedAcceptableBranchIndices: [],
           rarity: cleanStart.state.rarity,
           prefixCount: 0,
           suffixCount: 0,
@@ -6281,6 +6320,13 @@ export class OptimizerService {
             policyScope: 'ACQUISITION',
             progressKind: 'ACQUISITION_MENU',
             targetModIds: [],
+            requiredTargetModIds: [],
+            acceptableTargetBranches: [],
+            matchedRequiredTargetModIds: [],
+            unmatchedRequiredTargetModIds: [],
+            matchedAcceptableTargetModIds: [],
+            acceptableAlternativeSatisfied: true,
+            satisfiedAcceptableBranchIndices: [],
             rarity: starts[bestFractureCandidateIndex!].state.rarity,
             prefixCount: 0,
             suffixCount: 0,
@@ -6933,7 +6979,9 @@ export class OptimizerService {
     const resolvedBundles: ResolvedPolicyBundle[] = [];
     const requestPolicyRegistry =
       new RequestLocalExecutablePolicyRegistry<ResolvedPolicyBundle>();
-    const registryTargetIdentity = hashIdentity(JSON.stringify(input.target));
+    const registryTargetIdentity = hashIdentity(JSON.stringify(
+      canonicalTargetFingerprintMaterial(input.target),
+    ));
     const registryEconomicsEffortIdentity = hashIdentity(JSON.stringify({
       cleanBaseEvidence: cleanEvidence,
       currencyRates: sortedRecord({
