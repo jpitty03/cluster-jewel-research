@@ -68,6 +68,9 @@ export interface BugReportBundle {
     recommendedRouteName?: string;
     presentation?: OptimizeCraftResult['presentation'];
     policyFlow?: OptimizeCraftResult['policyFlow'];
+    craftPlan?: OptimizeCraftResult['craftPlan'];
+    policyExplanation?: OptimizeCraftResult['policyExplanation'];
+    policyRules?: OptimizeCraftResult['policyRules'];
     fullRouteUsage?: OptimizeCraftResult['fullRouteUsage'];
     harvestComparison?: OptimizeCraftResult['harvestComparison'];
     methodFamilies?: Array<{
@@ -185,6 +188,9 @@ export function generateBugReportBundle(
       recommendedRouteName: result.recommended?.name,
       presentation: result.presentation,
       policyFlow: result.policyFlow,
+      craftPlan: result.craftPlan,
+      policyExplanation: result.policyExplanation,
+      policyRules: result.policyRules,
       fullRouteUsage: result.fullRouteUsage,
       harvestComparison: result.harvestComparison,
       methodFamilies: result.methodPortfolio?.map((family) => ({

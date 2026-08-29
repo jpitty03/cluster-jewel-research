@@ -2,12 +2,12 @@ export const OPTIMIZER_PRIMARY_RESULT_GROUPS = [
   'Recommendation',
   'How to craft it',
   'Shopping list',
+  'Markov Policy Constellation',
 ] as const;
 
 export const OPTIMIZER_RESEARCH_RESULT_GROUPS = [
   'Search & proof',
   'Alternative methods',
-  'Strategy visualization',
   'Cost & usage details',
   'Research diagnostics',
 ] as const;
@@ -17,7 +17,6 @@ export const OPTIMIZER_DISCLOSURE_DEFAULTS = Object.freeze({
   settings: false,
   searchProof: false,
   alternativeMethods: false,
-  strategyVisualization: false,
   costUsage: false,
   researchDiagnostics: false,
 });

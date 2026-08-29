@@ -179,14 +179,29 @@ export const optimizer = new CraftingOptimizer();
 export const optimizerService = new OptimizerService(new ClusterModRepository());
 
 export { OptimizerService } from './service/optimizerService.ts';
-export { buildCraftPlan, craftPlanPhaseForAction } from './service/craftPlan.ts';
+export {
+  buildCraftPlan,
+  classifyPlayerRuleAffixes,
+  compilePlayerCraftRules,
+  craftPlanPhaseForAction,
+} from './service/craftPlan.ts';
 export type {
+  CraftPlanModifierMetadata,
   CraftPlanDecisionGroup,
   CraftPlanDecisionOption,
   CraftPlanPhase,
   CraftPlanRecovery,
   CraftPlanStep,
   CraftPlanSummary,
+  PlayerCraftFinishRule,
+  PlayerCraftRule,
+  PlayerCraftRuleAffixEvidence,
+  PlayerCraftRuleCertification,
+  PlayerCraftRuleCondition,
+  PlayerCraftRuleOutcome,
+  PlayerCraftRuleStage,
+  PlayerJunkKind,
+  PlayerModifierRole,
   TargetOrderBehaviorEvidence,
   TargetOrderPreference,
 } from './service/craftPlan.ts';

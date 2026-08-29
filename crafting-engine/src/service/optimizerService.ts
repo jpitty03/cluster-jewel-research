@@ -6891,7 +6891,10 @@ export class OptimizerService {
       warningDetails: uniqueWarningDetails,
       warnings: [...new Set(uniqueWarningDetails.map((warning) => warning.message))],
     };
-    const craftPlan = buildCraftPlan(outputWithoutCraftPlan);
+    const craftPlan = buildCraftPlan({
+      ...outputWithoutCraftPlan,
+      modifierMetadata: pool.getAllMods(),
+    });
     const snapshotMethodFamilyWork = () => [...searchSessionRecord.methodFamilies.values()]
       .reduce((snapshot, continuation) => ({
         retainedStates: snapshot.retainedStates + continuation.expansion.nodes.size,
@@ -7502,6 +7505,7 @@ export class OptimizerService {
       policyExplanation: consistencyFailed ? [] : finalPolicyExplanation,
       acquisition: finalAcquisition,
       proof: { globalOptimality: finalProofGlobalOptimality },
+      modifierMetadata: pool.getAllMods(),
     });
     for (const family of methodPortfolio) {
       if (family.spec.id === selectedFamilyId && canonicalRecommended) family.craftPlan = finalCraftPlan;

@@ -2105,6 +2105,134 @@ td a {
   font-size: 13px;
 }
 
+.simple-craft-instructions {
+  display: grid;
+  gap: 16px;
+}
+
+.craft-guide-orientation {
+  margin: 0;
+  color: var(--text-h);
+}
+
+.player-target-legend,
+.player-junk-legend {
+  display: grid;
+  gap: 4px;
+  padding: 12px 14px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--surface-2);
+}
+
+.player-target-legend p,
+.player-junk-legend p {
+  margin: 0;
+}
+
+.player-rule-stage > h3 {
+  margin: 0 0 8px;
+  color: var(--text-h);
+  font-size: 15px;
+}
+
+.player-rule-list {
+  display: grid;
+  gap: 10px;
+}
+
+.player-craft-rule {
+  display: grid;
+  grid-template-columns: minmax(0, 1.35fr) minmax(150px, 0.65fr) minmax(0, 1.2fr);
+  gap: 10px;
+  padding: 14px;
+  border: 1px solid var(--border);
+  border-radius: 9px;
+  background: var(--surface-2);
+}
+
+.player-rule-command {
+  min-width: 0;
+  padding-left: 10px;
+  border-left: 3px solid var(--border);
+}
+
+.player-rule-command.when { border-left-color: var(--accent); }
+.player-rule-command.use { border-left-color: var(--accent-2); }
+.player-rule-command.then { border-left-color: var(--success); }
+
+.player-rule-command > strong {
+  display: block;
+  margin-bottom: 5px;
+  color: var(--text-h);
+  font-size: 11px;
+  letter-spacing: 0.11em;
+}
+
+.player-rule-command p,
+.player-rule-command ul {
+  margin: 0;
+}
+
+.player-rule-command ul {
+  padding-left: 17px;
+}
+
+.player-rule-command.use p {
+  color: var(--text-h);
+  font-weight: 700;
+}
+
+.player-rule-evidence-link {
+  grid-column: 1 / -1;
+  justify-self: start;
+  min-height: 34px;
+  padding: 5px 9px;
+  border: 0;
+  background: transparent;
+  color: var(--accent-2);
+  text-decoration: underline;
+}
+
+.finish-rule {
+  grid-template-columns: minmax(0, 1fr);
+}
+
+.advanced-player-rule-list {
+  display: grid;
+  gap: 10px;
+}
+
+.advanced-player-rule {
+  padding: 12px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  overflow-wrap: anywhere;
+}
+
+.advanced-player-rule:focus {
+  outline: 2px solid var(--accent-2);
+  outline-offset: 3px;
+}
+
+.constellation-top-level {
+  overflow: visible;
+}
+
+.optimizer-results {
+  display: flex;
+  flex-direction: column;
+}
+
+.optimizer-results > .recommendation-hero { order: 1; }
+.optimizer-results > .craft-guide { order: 2; }
+.optimizer-results > .compact-shopping-list { order: 3; }
+.optimizer-results > .constellation-top-level { order: 4; }
+.optimizer-results > [data-testid="search-proof-disclosure"] { order: 5; }
+.optimizer-results > [data-testid="alternative-methods-disclosure"] { order: 6; }
+.optimizer-results > [data-testid="cost-usage-disclosure"] { order: 7; }
+.optimizer-results > [data-testid="research-diagnostics-disclosure"] { order: 8; }
+
 .craft-rules {
   display: grid;
   gap: 10px;
@@ -2403,14 +2531,6 @@ td a {
 .optimizer-disclosure-panel[hidden],
 .request-budget-utilization[hidden] {
   display: none !important;
-}
-
-[data-testid="strategy-visualization-disclosure"] {
-  overflow: visible;
-}
-
-[data-testid="strategy-visualization-disclosure"] > .optimizer-disclosure-panel {
-  padding: 0;
 }
 
 .compact-target-summary {
@@ -4489,6 +4609,14 @@ td a {
   .pareto-grid,
   .harvest-comparison-grid {
     grid-template-columns: minmax(0, 1fr);
+  }
+
+  .player-craft-rule {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .player-rule-evidence-link {
+    grid-column: 1;
   }
 
   .optimizer-handoff-panel {

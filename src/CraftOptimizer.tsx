@@ -37,6 +37,7 @@ import { buildVisualizationGraph } from '../crafting-engine/src/domain/Visualiza
 import { MarkovConstellation } from './components/MarkovConstellation.tsx';
 import { OnboardingModal } from './components/OnboardingModal.tsx';
 import { OptimizerDisclosure } from './components/OptimizerDisclosure.tsx';
+import { SimpleCraftInstructions } from './components/SimpleCraftInstructions.tsx';
 import {
   encodeCraftToUrl,
   decodeCraftFromUrl,
@@ -654,7 +655,7 @@ export function SearchActivityVisualizer({
   );
 }
 
-export const APP_RELEASE_VERSION = '3I.1';
+export const APP_RELEASE_VERSION = '3J.1';
 
 interface CraftOptimizerProps {
   seed?: OptimizerSeed | null;
@@ -803,7 +804,6 @@ export function CraftOptimizer({
   const [presetsOpen, setPresetsOpen] = useState(false);
   const [searchProofOpen, setSearchProofOpen] = useState<boolean>(OPTIMIZER_DISCLOSURE_DEFAULTS.searchProof);
   const [alternativeMethodsOpen, setAlternativeMethodsOpen] = useState<boolean>(OPTIMIZER_DISCLOSURE_DEFAULTS.alternativeMethods);
-  const [strategyVisualizationOpen, setStrategyVisualizationOpen] = useState<boolean>(OPTIMIZER_DISCLOSURE_DEFAULTS.strategyVisualization);
   const [costUsageOpen, setCostUsageOpen] = useState<boolean>(OPTIMIZER_DISCLOSURE_DEFAULTS.costUsage);
   const [researchDiagnosticsOpen, setResearchDiagnosticsOpen] = useState<boolean>(OPTIMIZER_DISCLOSURE_DEFAULTS.researchDiagnostics);
 
@@ -1219,7 +1219,6 @@ export function CraftOptimizer({
       setSettingsOpen(false);
       setSearchProofOpen(false);
       setAlternativeMethodsOpen(false);
-      setStrategyVisualizationOpen(false);
       setCostUsageOpen(false);
       setResearchDiagnosticsOpen(false);
     }
@@ -1305,37 +1304,56 @@ export function CraftOptimizer({
 
   const copyCraftGuide = (res: OptimizeCraftResult) => {
     const lines: string[] = ['=== CLUSTER JEWEL CRAFTING PLAYBOOK ==='];
-    lines.push(`Must have all: ${res.target.requiredMods.map((requirement) =>
+    lines.push('\nTARGETS');
+    lines.push(`Required: ${res.target.requiredMods.map((requirement) =>
       targetRequirementName(requirement, eligibleMods)
-    ).join(' + ')}`);
+    ).join(', ')}`);
     if (res.target.acceptableAnyOf?.length) {
-      lines.push(`And at least one: ${res.target.acceptableAnyOf.map((branch) =>
+      lines.push(`Acceptable: any one of ${res.target.acceptableAnyOf.map((branch) =>
         acceptableBranchName(branch, eligibleMods)
       ).join(' OR ')}`);
-    }
-    lines.push(`Selected route: ${publicSelectedRouteName ?? 'none certified'}`);
-    lines.push(`Starting Point: ${publicSelectedRouteName ?? recommendedStart}`);
-    lines.push(`Physical Start: ${recommendedStart}`);
-    lines.push(`Expected Cost: ~${chaos(res.expectedCostChaos)}`);
-    lines.push(`Expected Actions: ~${res.recommended?.metrics?.expectedPhysicalActions ? Math.round(res.recommended.metrics.expectedPhysicalActions) : 'N/A'}`);
-    lines.push('\n--- Chronological Instructions ---');
+    } else lines.push('Acceptable: none');
+    lines.push('Junk: anything else');
+    lines.push('Junk categories: Safe for this rule; Blocks a missing target; Occupies the last compatible slot; Fractured junk');
 
-    res.craftPlan.steps.forEach((step, idx) => {
-      lines.push(`\nStep ${idx + 1}: ${publicModifierText(step.title, eligibleMods, 'primary')}`);
-      lines.push(publicModifierText(step.instruction, eligibleMods, 'primary'));
-      if (step.actionIds.length > 0) {
-        lines.push(`Action: ${step.actionNames.map((action) => publicModifierText(action, eligibleMods, 'primary')).join(', ')}`);
+    if (res.craftPlan.playerRuleCertification.status !== 'CERTIFIED') {
+      lines.push('\nSimple instructions withheld');
+      lines.push('The selected policy could not be grouped into unambiguous player rules.');
+    } else {
+      res.craftPlan.playerRules.forEach((rule, index) => {
+        const condition = rule.when;
+        const when = [
+          `${condition.progressKind === 'PREPARATION' ? 'Self-fracture preparation' : 'Final craft'} ` +
+            `${condition.rarity} ${condition.prefixCount}P/${condition.suffixCount}S`,
+          condition.requiredPresentModIds.length > 0
+            ? `has required target ${condition.requiredPresentModIds.map((modId) => playerModName(modId, eligibleMods)).join(', ')}`
+            : 'has no required target',
+          condition.requiredMissingModIds.length > 0
+            ? `missing ${condition.requiredMissingModIds.map((modId) => playerModName(modId, eligibleMods)).join(', ')}`
+            : 'all required targets present',
+          ...condition.junk.map((junk) =>
+            `${junk.count} ${junk.side.toLowerCase()} junk: ${junk.kind.replace(/_/g, ' ').toLowerCase()}`
+          ),
+          condition.openCompatibleTargetSlots.length > 0
+            ? `open compatible ${condition.openCompatibleTargetSlots.map((slot) => slot.toLowerCase()).join(' or ')} slot`
+            : undefined,
+        ].filter((entry): entry is string => entry !== undefined).join('; ');
+        lines.push(`\nRULE ${index + 1}`);
+        lines.push(`WHEN: ${when}`);
+        lines.push(`USE: ${playerActionName(rule.actionId, rule.action, recommendedStart)}`);
+        lines.push(`THEN: ${rule.then.summary}`);
+        for (const branch of rule.then.branches) lines.push(`  - ${branch}`);
+      });
+      if (res.craftPlan.playerFinishRule) {
+        lines.push('\nSTOP WHEN: all required targets are present; the acceptable-target requirement is satisfied when enabled; and final rarity/state constraints are satisfied.');
       }
-      if (step.decisionDetails && step.decisionDetails.length > 0) {
-        lines.push('Decisions:');
-        step.decisionDetails.forEach((group) => {
-          lines.push(`  - When ${publicModifierText(group.summary, eligibleMods, 'primary')}:`);
-          group.options.forEach((opt) => {
-            lines.push(`      * ${publicModifierText(opt.action, eligibleMods, 'primary')} (~${opt.expectedVisits.toFixed(1)} visits)`);
-          });
-        });
-      }
-    });
+    }
+    lines.push('\nIMPORTANT CAVEATS');
+    lines.push(res.craftPlan.optimalityNote ?? 'The displayed policy is certified over the reported modeled evidence.');
+    const approximationWarnings = res.mechanicsConfidence.selectedPolicy.warnings;
+    lines.push(approximationWarnings.length > 0
+      ? `Approximate mechanics: ${approximationWarnings.join(' ')}`
+      : 'No selected-policy mechanics approximation warning was reported.');
 
     void navigator.clipboard.writeText(lines.join('\n'));
     setCopiedAction('CRAFT_GUIDE');
@@ -1571,6 +1589,9 @@ export function CraftOptimizer({
         metrics: res.recommended?.metrics,
         presentation: res.presentation,
         policyFlow: res.policyFlow,
+        craftPlan: res.craftPlan,
+        policyExplanation: res.policyExplanation,
+        policyRules: res.policyRules,
         fullRouteUsage: res.fullRouteUsage,
         requestBudget: res.search.requestBudget,
         coreRecommendationSnapshot: res.search.coreRecommendationSnapshot,
@@ -1653,7 +1674,6 @@ export function CraftOptimizer({
     activeSeed?.sourceMarketValue &&
     sourceQuoteExactForSelectedPassive
   );
-  const selectedSynthesis = selectedMethod?.executable ? selectedAcquisition?.synthesis : undefined;
   const displayedProof = result ? proofPresentation(result) : null;
   const displayedSearchEvidence = result ? searchEvidencePresentation(result) : null;
 
@@ -1667,6 +1687,98 @@ export function CraftOptimizer({
       },
     );
   }, [result, targetDescriptors]);
+
+  const showAdvancedPolicyEvidence = (ruleId: string) => {
+    setResearchDiagnosticsOpen(true);
+    window.requestAnimationFrame(() => {
+      const evidence = document.getElementById(`advanced-policy-${ruleId}`);
+      evidence?.scrollIntoView({ block: 'center' });
+      evidence?.focus({ preventScroll: true });
+    });
+  };
+
+  const resultSearchProofDisclosure = result ? (
+    <OptimizerDisclosure
+      title="Search & proof"
+      description="Complete live activity, request budget, stopping condition, and proof evidence"
+      badge={result.presentation.proofLabel}
+      open={searchProofOpen}
+      onToggle={setSearchProofOpen}
+      testId="search-proof-disclosure"
+      className="optimizer-result-disclosure"
+    >
+      <SearchActivityVisualizer
+        progress={progress}
+        running={running}
+        selectedRouteName={publicSelectedRouteName}
+        modifierDescriptors={targetDescriptors}
+        onRetryDeeper={retryDeeper}
+        retryDeeperBudget={retryDeeperBudget}
+        onCancel={cancel}
+      />
+      <section
+        className="request-budget-utilization"
+        data-testid="request-budget-utilization"
+        data-requested-preset={result.search.requestBudget.requested.preset}
+        data-requested-max-states={result.search.requestBudget.requested.maxStates}
+        data-requested-max-wall-time-ms={result.search.requestBudget.requested.maxWallTimeMs}
+        data-requested-max-rounds={result.search.requestBudget.requested.maxExpansionRounds}
+        data-used-states={result.search.requestBudget.used.statesExpanded}
+        data-retained-states={result.search.requestBudget.used.retainedStates}
+        data-new-states-expanded={displayedSearchEvidence?.newStatesExpandedThisRun}
+        data-portfolio-states-expanded={displayedSearchEvidence?.totalPortfolioStatesExpanded}
+        data-continuation-states-retained={displayedSearchEvidence?.statesRetainedForContinuation}
+        data-used-elapsed-ms={result.search.requestBudget.used.elapsedMs}
+        data-stop-reason={result.search.requestBudget.stop.primary}
+      >
+        <h3>Search budget used</h3>
+        <dl data-testid="search-evidence-summary">
+          <dt>New states expanded this run</dt>
+          <dd>{displayedSearchEvidence?.newStatesExpandedThisRun.toLocaleString()}</dd>
+          <dt>Total portfolio states expanded</dt>
+          <dd>{displayedSearchEvidence?.totalPortfolioStatesExpanded.toLocaleString()}</dd>
+          <dt>States retained for continuation</dt>
+          <dd>{displayedSearchEvidence?.statesRetainedForContinuation.toLocaleString()}</dd>
+          <dt>Requested expansion cap</dt>
+          <dd>{displayedSearchEvidence?.requestedExpansionCap.toLocaleString()}</dd>
+          <dt>Stopping condition</dt>
+          <dd>{REQUEST_STOP_COPY[result.search.requestBudget.stop.primary].label}</dd>
+        </dl>
+        <details className="request-budget-raw-summary">
+          <summary>Additional request details</summary>
+          <dl>
+            <dt>Requested</dt>
+            <dd>
+              {result.search.requestBudget.requested.preset.replace('_', ' ')} — up to{' '}
+              {compactBudgetValue(result.search.requestBudget.requested.maxStates)} states /{' '}
+              {Math.round(result.search.requestBudget.requested.maxWallTimeMs / 1000)}s /{' '}
+              {result.search.requestBudget.requested.maxExpansionRounds} rounds
+            </dd>
+            <dt>Used</dt>
+            <dd>
+              {result.search.requestBudget.used.statesExpanded.toLocaleString()} expanded ·{' '}
+              {result.search.requestBudget.used.retainedStates.toLocaleString()} retained ·{' '}
+              {(result.search.requestBudget.used.elapsedMs / 1000).toFixed(1)}s
+            </dd>
+            <dt>Stopped</dt>
+            <dd>{REQUEST_STOP_COPY[result.search.requestBudget.stop.primary].label}</dd>
+          </dl>
+        </details>
+        {result.search.requestBudget.stop.secondary.length > 0 && (
+          <p className="muted">Also observed: {result.search.requestBudget.stop.secondary
+            .map((reason) => REQUEST_STOP_COPY[reason].label)
+            .join(', ')}.</p>
+        )}
+        {result.search.requestBudget.stop.primary !== 'PROOF_CLOSED' && (
+          <p className="budget-retry-recommendation">
+            {REQUEST_STOP_COPY[result.search.requestBudget.stop.primary].retry}{' '}
+            Exact reuse available: {result.search.requestBudget.used.retainedStates.toLocaleString()} retained states.
+            A deeper run may improve the proof; it does not guarantee closure.
+          </p>
+        )}
+      </section>
+    </OptimizerDisclosure>
+  ) : null;
 
   return (
     <main className="optimizer-page">
@@ -2462,6 +2574,7 @@ export function CraftOptimizer({
                 <span>Route, policy, and material totals exceeded the 0.05c reconciliation tolerance. Diagnostic evidence remains available below.</span>
               </div>
             )}
+            {/* Phase 3J moved Search & proof to the top-level research sequence.
             <OptimizerDisclosure
               title="Search & proof"
               description="Complete live activity, request budget, stopping condition, and proof evidence"
@@ -2543,7 +2656,7 @@ export function CraftOptimizer({
                 </p>
               )}
             </section>
-            </OptimizerDisclosure>
+            </OptimizerDisclosure> */}
             {materialWarnings.length > 0 && (
               <section className="decision-warnings" aria-label="Important recommendation warnings">
                 <h3>Important for this recommendation</h3>
@@ -2894,26 +3007,6 @@ export function CraftOptimizer({
 
           </OptimizerDisclosure>
 
-          {constellationGraph && (
-            <OptimizerDisclosure
-              title="Strategy visualization"
-              description="Interactive PolicyFlow Constellation and replay"
-              badge={`${constellationGraph.nodes.length} states`}
-              open={strategyVisualizationOpen}
-              onToggle={setStrategyVisualizationOpen}
-              testId="strategy-visualization-disclosure"
-              className="optimizer-result-disclosure"
-              keepMountedAfterOpen
-            >
-            <section className="optimizer-card constellation-card" aria-label="Markov Policy Constellation">
-              <MarkovConstellation
-                graph={constellationGraph}
-                selectedRouteName={publicSelectedRouteName}
-              />
-            </section>
-            </OptimizerDisclosure>
-          )}
-
           <section className="optimizer-card craft-guide" aria-labelledby="craft-guide-title">
             <div className="craft-guide-heading-row">
               <h2 id="craft-guide-title">How to craft it</h2>
@@ -2968,13 +3061,25 @@ export function CraftOptimizer({
                   <strong>{publicSelectedRouteName}</strong>
                   <span>Physical start</span>
                   <strong>{recommendedStart}</strong>
-                  <p>This condensed playbook puts the selected policy in chronological order. Repeat its recovery loop after misses, and expand Decision details when the exact current affixes matter.</p>
+                  <p>Use one physical action at a time. After every random result, start again at the first matching WHEN condition.</p>
                 </div>
-                <ol className="craft-plan" data-plan-status={result.craftPlan.status}>
-                  {result.craftPlan.steps.map((step, stepIndex) => {
+                <SimpleCraftInstructions
+                  craftPlan={result.craftPlan}
+                  target={result.target}
+                  modifierName={(modId) => playerModName(modId, eligibleMods)}
+                  actionName={(actionId, fallback) => publicModifierText(
+                    playerActionName(actionId, fallback, recommendedStart),
+                    targetDescriptors,
+                    'primary',
+                  )}
+                  onShowEvidence={showAdvancedPolicyEvidence}
+                />
+                {/* Phase 3J removed the legacy chronological plan and repeated inline Decision details.
+                <ol className="craft-plan" data-plan-status={result!.craftPlan.status}>
+                  {result!.craftPlan.steps.map((step, stepIndex) => {
                     const recoveryIndex = step.recoveryTargetStepId === undefined
                       ? undefined
-                      : result.craftPlan.steps.findIndex((candidate) => candidate.id === step.recoveryTargetStepId);
+                      : result!.craftPlan.steps.findIndex((candidate) => candidate.id === step.recoveryTargetStepId);
                     const preferredTargets = step.preferredTargetModIds?.map((modId) =>
                       playerModName(modId, eligibleMods)
                     ) ?? [];
@@ -3050,7 +3155,7 @@ export function CraftOptimizer({
                             <summary>Decision details</summary>
                             <p>{publicModifierText(decision.summary, targetDescriptors, 'primary')}</p>
                             <ul>{decision.options.map((option) => {
-                              const exampleRule = result.policyExplanation[option.policyRuleIndices[0]];
+                              const exampleRule = result!.policyExplanation[option.policyRuleIndices[0]];
                               return <li
                                 key={option.actionId}
                                 data-action-id={option.actionId}
@@ -3071,7 +3176,7 @@ export function CraftOptimizer({
                       </div>
                     </li>;
                   })}
-                </ol>
+                </ol> */}
                 {result.craftPlan.optimalityNote && (
                   <p className="craft-plan-optimality">
                     {publicModifierText(result.craftPlan.optimalityNote, targetDescriptors, 'primary')}
@@ -3109,6 +3214,21 @@ export function CraftOptimizer({
               <p><strong>Expected full-route cost:</strong> {chaos(result.fullRouteUsage.fullRouteCostChaos)}</p>
             </section>
           )}
+
+          {constellationGraph && (
+            <section
+              className="optimizer-card constellation-card constellation-top-level"
+              aria-label="Markov Policy Constellation"
+              data-testid="constellation-top-level"
+            >
+              <MarkovConstellation
+                graph={constellationGraph}
+                selectedRouteName={publicSelectedRouteName}
+              />
+            </section>
+          )}
+
+          {resultSearchProofDisclosure}
 
           <OptimizerDisclosure
             title="Cost & usage details"
@@ -3214,6 +3334,83 @@ export function CraftOptimizer({
                   <dt>Worker round trip</dt><dd>{runtimeMs === null ? 'not recorded' : `${runtimeMs.toFixed(0)} ms`}</dd>
                 </dl>
                 {selectedMethod && <p className="muted">{selectedMethod.provenance}</p>}
+              </section>
+
+              <section
+                className="advanced-section advanced-policy-evidence"
+                id="advanced-policy-evidence"
+                aria-labelledby="advanced-policy-evidence-title"
+              >
+                <h2 id="advanced-policy-evidence-title">Advanced policy evidence</h2>
+                <p className="muted">
+                  Exact modifier identities, source states, policy-rule indices, represented counts, expected visits, grouping, and recovery evidence for the certified Simple Craft Instructions.
+                </p>
+                <dl>
+                  <dt>Player-rule certification</dt><dd>{result.craftPlan.playerRuleCertification.status}</dd>
+                  <dt>Covered source policy rules</dt><dd>{result.craftPlan.playerRuleCertification.coveredPolicyRuleIndices.length} / {result.craftPlan.playerRuleCertification.sourcePolicyRuleIndices.length}</dd>
+                  <dt>Represented states</dt><dd>{result.craftPlan.playerRuleCertification.representedStateCount}</dd>
+                  <dt>Expected visits reconciled</dt><dd>{count(result.craftPlan.playerRuleCertification.expectedVisits)}</dd>
+                  <dt>Minimal exact-name exceptions</dt><dd>{result.craftPlan.playerRuleCertification.minimalExceptionCount}</dd>
+                </dl>
+                {result.craftPlan.playerRuleCertification.reasons.length > 0 && (
+                  <ul>{result.craftPlan.playerRuleCertification.reasons.map((reason) => <li key={reason}>{reason}</li>)}</ul>
+                )}
+                <div className="advanced-player-rule-list">
+                  {result.craftPlan.playerRules.map((rule) => (
+                    <article
+                      id={`advanced-policy-${rule.id}`}
+                      className="advanced-player-rule"
+                      key={rule.id}
+                      tabIndex={-1}
+                      data-player-rule-id={rule.id}
+                      data-action-id={rule.actionId}
+                      data-policy-rule-indices={rule.policyRuleIndices.join(',')}
+                    >
+                      <h3>{rule.id}: {playerActionName(rule.actionId, rule.action, recommendedStart)}</h3>
+                      <dl>
+                        <dt>Stage / priority</dt><dd>{rule.stage} / {rule.priority}</dd>
+                        <dt>Scope / progress</dt><dd>{rule.when.policyScope} / {rule.when.progressKind}</dd>
+                        <dt>Rarity / shape</dt><dd>{rule.when.rarity} {rule.when.prefixCount}P/{rule.when.suffixCount}S</dd>
+                        <dt>Policy rule indices</dt><dd>{rule.policyRuleIndices.join(', ')}</dd>
+                        <dt>Represented states / expected visits</dt><dd>{rule.representedStateCount} / {count(rule.expectedVisits)}</dd>
+                        <dt>Recovery mapping</dt><dd>{rule.then.recoveryKind} · {rule.then.summary}</dd>
+                        <dt>Source state identities</dt><dd><code>{rule.sourceStateKeys.join('\n')}</code></dd>
+                      </dl>
+                      <details>
+                        <summary>Exact modifier-role and junk evidence ({rule.sourceEvidence.length} source rules)</summary>
+                        {rule.sourceEvidence.map((source) => (
+                          <section key={source.policyRuleIndex} data-policy-rule-index={source.policyRuleIndex}>
+                            <h4>Policy rule {source.policyRuleIndex}</h4>
+                            <p>{source.representedStateCount} represented states · {count(source.expectedVisits)} expected visits</p>
+                            <ul>{source.exactAffixes.map((affix, index) => (
+                              <li key={`${affix.side}-${affix.modId}-${index}`}>
+                                <code>{affix.modId}</code> · {affix.side} · T{affix.tier} · {affix.role}
+                                {affix.junkKind ? ` · ${affix.junkKind}` : ''}
+                                {affix.isFractured ? ' · fractured' : ''}
+                              </li>
+                            ))}</ul>
+                          </section>
+                        ))}
+                      </details>
+                    </article>
+                  ))}
+                </div>
+                <details className="advanced-decision-cohorts">
+                  <summary>Phase 3F comparable Decision cohorts ({result.craftPlan.detailedDecisionCount})</summary>
+                  {result.craftPlan.steps.flatMap((step) => step.decisionDetails).map((decision) => (
+                    <article key={decision.id} data-decision-id={decision.id}>
+                      <h3>{decision.summary}</h3>
+                      <p>{decision.cohort.policyScope} / {decision.cohort.progressKind} / {decision.cohort.rarity}</p>
+                      <ul>{decision.options.map((option) => {
+                        const exampleRule = result.policyExplanation[option.policyRuleIndices[0]];
+                        return <li key={option.actionId} data-action-id={option.actionId}>
+                          <strong>{option.action}</strong>: {option.representedStateCount} represented states · {count(option.expectedVisits)} expected visits · policy rules {option.policyRuleIndices.join(', ')}
+                          {exampleRule ? ` · Example: ${renderPolicyCondition(exampleRule, eligibleMods)}` : ''}
+                        </li>;
+                      })}</ul>
+                    </article>
+                  ))}
+                </details>
               </section>
 
               <section className="advanced-section craft-plan-action-audit" data-plan-status={result.craftPlan.status}>

@@ -32,6 +32,7 @@ import type {
 import { runPhase3GDomainSolverDiagnostics } from './phase3gDiagnostics.ts';
 import { runPhase3HHandoffDiagnostics } from './phase3hDiagnostics.ts';
 import { runPhase3IInformationArchitectureDiagnostics } from './phase3iDiagnostics.ts';
+import { runPhase3JPlayerRuleDiagnostics } from './phase3jDiagnostics.ts';
 import {
   proofPresentation,
   searchEvidencePresentation,
@@ -332,6 +333,18 @@ async function openOptimizerDisclosure(page: Page, testId: string): Promise<void
   const disclosure = page.getByTestId(testId);
   const toggle = disclosure.locator('button[aria-expanded]').first();
   if (await toggle.getAttribute('aria-expanded') !== 'true') await toggle.click();
+}
+
+async function visibleConstellation(page: Page) {
+  const container = page.getByTestId('markov-constellation-container');
+  await container.waitFor({ state: 'visible' });
+  const ancestry = await container.evaluate((element) => ({
+    disclosure: element.closest('[data-testid$="-disclosure"]')?.getAttribute('data-testid') ?? null,
+    details: element.closest('details') !== null,
+    ariaExpanded: element.closest('[aria-expanded]') !== null,
+  }));
+  assert.deepEqual(ancestry, { disclosure: null, details: false, ariaExpanded: false });
+  return container;
 }
 
 async function importFixture(page: Page, input: FixtureRecord): Promise<void> {
@@ -766,7 +779,7 @@ async function runGateOperation(ctx: GateWorkerContext): Promise<unknown> {
         const flow = selectedPolicyFlow(result, 'clean');
         const accounting = assertCanonicalAccounting(result);
         assert.equal(flow.sourceBundleId, accounting.selectedBundleId);
-        await openOptimizerDisclosure(page, 'strategy-visualization-disclosure');
+        await visibleConstellation(page);
         const container = page.getByTestId('markov-constellation-container');
         await container.waitFor();
         assert.equal(await container.getAttribute('data-source-bundle-id'), String(flow.sourceBundleId));
@@ -864,6 +877,24 @@ async function runGateOperation(ctx: GateWorkerContext): Promise<unknown> {
         assert.doesNotMatch(draftDependencyBlock, /Open|Disclosure|entryMode|presetsOpen/,
           'Presentation state entered authoritative request construction');
         return { ...direct, I16: { retainedGateCoverageRegistered: true } };
+      });
+
+    case 'phase3j-player-rule-direct':
+      return withPage(ctx, async () => {
+        const direct = runPhase3JPlayerRuleDiagnostics();
+        const optimizerSource = readFileSync(resolve(repositoryRoot, 'src', 'CraftOptimizer.tsx'), 'utf8');
+        const guideSource = readFileSync(
+          resolve(repositoryRoot, 'src', 'components', 'SimpleCraftInstructions.tsx'),
+          'utf8',
+        );
+        assert.match(guideSource, /<strong>WHEN<\/strong>/);
+        assert.match(guideSource, /<strong>USE<\/strong>/);
+        assert.match(guideSource, /<strong>THEN<\/strong>/);
+        assert.doesNotMatch(guideSource, /selected policy wants|when needed/i);
+        assert.match(optimizerSource, /Advanced policy evidence/);
+        assert.match(optimizerSource, /constellation-top-level/);
+        assert.doesNotMatch(optimizerSource, /title="Strategy visualization"/);
+        return direct;
       });
 
     case 'cancel-replace-recover':
@@ -976,7 +1007,7 @@ async function runGateOperation(ctx: GateWorkerContext): Promise<unknown> {
         );
         assert(conditionalProbability > 0 && conditionalProbability < 1,
           'Alter self-loop probability was discarded or renormalized to certainty');
-        await openOptimizerDisclosure(page, 'strategy-visualization-disclosure');
+        await visibleConstellation(page);
         const anchor = page.locator(`[data-edge-anchor="${String(selfLoop.id)}"]`);
         await anchor.focus();
         await page.keyboard.press('Enter');
@@ -1053,6 +1084,109 @@ async function runGateOperation(ctx: GateWorkerContext): Promise<unknown> {
         };
       });
 
+    case 'phase3j-player-rule-worker':
+      return withPage(ctx, async (page) => {
+        const fieldFixture = fixture('phase3c_primordial_renewal_rotten_claws');
+        const input: FixtureRecord = {
+          ...fieldFixture,
+          searchBudget: { ...fieldFixture.searchBudget, maxStates: 3_334 },
+        };
+        const result = await optimizedFixture(page, ctx.appUrl, input);
+        const craftPlan = jsonRecord(result.craftPlan, 'Phase 3J craft plan');
+        assert.equal(craftPlan.status, 'CERTIFIED');
+        const certification = jsonRecord(
+          craftPlan.playerRuleCertification,
+          'Phase 3J player-rule certification',
+        );
+        assert.equal(certification.status, 'CERTIFIED');
+        assert.deepEqual(
+          arrayValue(certification.coveredPolicyRuleIndices, 'covered policy rules'),
+          arrayValue(certification.sourcePolicyRuleIndices, 'source policy rules'),
+        );
+        const explanation = arrayValue(result.policyExplanation, 'Phase 3J policy explanation')
+          .map((entry) => jsonRecord(entry, 'Phase 3J policy explanation rule'));
+        const playerRules = arrayValue(craftPlan.playerRules, 'Phase 3J player rules')
+          .map((entry) => jsonRecord(entry, 'Phase 3J player rule'));
+        assert(playerRules.length > 0);
+        const conditionKeys = new Set<string>();
+        let representedStates = 0;
+        let expectedVisits = 0;
+        for (const playerRule of playerRules) {
+          assert.equal(playerRule.evidenceStatus, 'CERTIFIED');
+          const actionId = String(playerRule.actionId);
+          const policyRuleIndices = arrayValue(playerRule.policyRuleIndices, 'player policy indices')
+            .map(Number);
+          assert(policyRuleIndices.length > 0);
+          assert(policyRuleIndices.every((index) => explanation[index]?.actionId === actionId),
+            `Player rule ${String(playerRule.id)} merged a different action`);
+          const condition = jsonRecord(playerRule.when, 'player condition');
+          const conditionKey = JSON.stringify(condition);
+          assert(!conditionKeys.has(conditionKey), 'Published player conditions overlap exactly');
+          conditionKeys.add(conditionKey);
+          const sourceEvidence = arrayValue(playerRule.sourceEvidence, 'player source evidence')
+            .map((entry) => jsonRecord(entry, 'player source evidence row'));
+          for (const source of sourceEvidence) {
+            const affixes = arrayValue(source.exactAffixes, 'exact affix evidence')
+              .map((entry) => jsonRecord(entry, 'exact affix'));
+            assert(affixes.every((affix) =>
+              ['REQUIRED_TARGET', 'ACCEPTABLE_TARGET', 'JUNK'].includes(String(affix.role))
+            ));
+            assert(affixes.filter((affix) => affix.role === 'JUNK').every((affix) =>
+              ['SAFE_FOR_THIS_RULE', 'BLOCKS_MISSING_TARGET', 'OCCUPIES_LAST_COMPATIBLE_SLOT', 'FRACTURED']
+                .includes(String(affix.junkKind))
+            ));
+          }
+          representedStates += numberValue(playerRule.representedStateCount, 'represented states');
+          expectedVisits += numberValue(playerRule.expectedVisits, 'expected visits');
+        }
+        assert.equal(representedStates, certification.representedStateCount);
+        assertNear(expectedVisits, numberValue(certification.expectedVisits, 'certified visits'),
+          'Phase 3J player-rule visits', 1e-9);
+        const representedActions = canonicalIds([...new Set(playerRules.map((rule) => rule.actionId))]);
+        assert.deepEqual(representedActions, canonicalIds(
+          arrayValue(certification.selectedActionIds, 'selected player actions'),
+        ));
+        for (const actionId of [
+          'alteration_orb',
+          'augmentation_orb',
+          'regal_orb',
+          'exalted_orb',
+          'scouring_orb',
+          'transmutation_orb',
+          'fracturing_orb',
+          'restart_reacquire',
+        ]) assert(representedActions.includes(actionId), `Phase 3J omitted selected action ${actionId}`);
+        const recoveryKinds = playerRules.map((rule) =>
+          String(jsonRecord(rule.then, 'player outcome').recoveryKind)
+        );
+        assert(recoveryKinds.includes('SCOUR_TO_FRACTURED_MAGIC'));
+        assert(recoveryKinds.includes('REACQUIRE'));
+        assert(recoveryKinds.includes('FRACTURE_HANDOFF_OR_REACQUIRE'));
+        assert(craftPlan.playerFinishRule, 'Phase 3J omitted terminal Finish rule');
+        const actionRuleCounts = Object.fromEntries(representedActions.map((actionId) => [
+          actionId,
+          playerRules.filter((rule) => rule.actionId === actionId).length,
+        ]));
+        return {
+          J1_J6: {
+            rules: playerRules.length,
+            representedStates,
+            expectedVisits,
+            minimalExceptions: certification.minimalExceptionCount,
+          },
+          J8: { representedActions, actionRuleCounts },
+          J9: { recoveryKinds: canonicalIds(recoveryKinds) },
+          J10: { structuredRequiredAcceptableProgressRetained: true },
+          J11: { certification: certification.status },
+          J14: {
+            exactPolicyRules: explanation.length,
+            sourceRules: arrayValue(certification.sourcePolicyRuleIndices, 'source rules').length,
+          },
+          accounting: assertCanonicalAccounting(result),
+          flow: assertFlowConservation(selectedPolicyFlow(result, 'Phase 3J Worker'), 'Phase 3J Worker'),
+        };
+      });
+
     case 'craft-plan-decision-fidelity':
       return withPage(ctx, async (page) => {
         const fieldFixture = fixture('phase3c_primordial_renewal_rotten_claws');
@@ -1071,7 +1205,11 @@ async function runGateOperation(ctx: GateWorkerContext): Promise<unknown> {
         assertNear(numberValue(result.expectedCostChaos, 'Phase 3F selected U'),
           1459.7923662160777, 'Phase 3F selected U');
         const craftPlan = jsonRecord(result.craftPlan, 'Phase 3F craft plan');
-        assert.equal(craftPlan.status, 'CERTIFIED');
+        assert.equal(
+          craftPlan.status,
+          'CERTIFIED',
+          JSON.stringify(craftPlan.playerRuleCertification),
+        );
         assert.deepEqual(arrayValue(craftPlan.withheldDecisionDetails, 'withheld decisions'), []);
         const steps = arrayValue(craftPlan.steps, 'craft-plan steps')
           .map((entry) => jsonRecord(entry, 'craft-plan step'));
@@ -1141,63 +1279,30 @@ async function runGateOperation(ctx: GateWorkerContext): Promise<unknown> {
         }
 
         const craftGuide = page.locator('.craft-guide');
-        const promoteDom = craftGuide.locator('.craft-plan-step[data-phase="PROMOTE"]');
-        await promoteDom.waitFor();
-        assert.match(await promoteDom.locator('h3').innerText(), /Promote the keepable Magic states/i);
-        const promoteDetail = promoteDom.locator(
-          'details.craft-plan-decision-details[data-policy-scope="ACQUISITION"]' +
-          '[data-progress-kind="PREPARATION"][data-rarity-cohort="magic"]',
-        );
-        await promoteDetail.locator('summary').click();
-        const promoteText = await promoteDetail.innerText();
-        assert.match(promoteText, /Acquisition-preparation Magic states/);
-        assert.doesNotMatch(promoteText, /rare\s+0P\/0S/i);
-        assert.doesNotMatch(promoteText,
-          /no target modifier present;\s*all target modifiers present/i);
-        const renderedActions = canonicalIds(await promoteDetail.locator('li[data-action-id]')
+        const simpleGuide = craftGuide.locator('.simple-craft-instructions');
+        await simpleGuide.waitFor();
+        const renderedActions = canonicalIds(await simpleGuide.locator('.player-craft-rule[data-action-id]')
           .evaluateAll((items) => items.map((item) => item.getAttribute('data-action-id'))));
-        assert.deepEqual(renderedActions, ['alteration_orb', 'augmentation_orb', 'regal_orb']);
-        const renderedExamples: Record<string, string> = {};
-        for (const actionId of renderedActions) {
-          const item = promoteDetail.locator(`li[data-action-id="${actionId}"]`);
-          const text = await item.innerText();
-          renderedExamples[actionId] = text;
-          assert.match(text, /Example:\s+magic\s/i, `${actionId} example is not Magic`);
-          assert.match(text, /preparation target:/i);
-          assert.match(text, /prep progress:\s*[01]\/1/i);
-          const ruleIndex = Number(await item.getAttribute('data-example-policy-rule-index'));
-          const rule = explanation[ruleIndex];
-          assert(rule, `Rendered ${actionId} example has no source rule`);
-          assert.equal(rule.actionId, actionId);
-          const context = jsonRecord(rule.context, `${actionId} rendered context`);
-          assert.equal(context.rarity, 'magic');
-          assert.equal(context.policyScope, 'ACQUISITION');
+        for (const actionId of ['alteration_orb', 'augmentation_orb', 'regal_orb']) {
+          assert(renderedActions.includes(actionId), `Simple guide omitted real Promote action ${actionId}`);
         }
-        assert.match(await promoteDetail.locator('li[data-action-id="regal_orb"]').innerText(),
-          /exact affix state:.*prefix .+.*suffix Primordial Bond/is);
-
-        const finishDom = craftGuide.locator('.craft-plan-step[data-phase="FINISH"]');
-        await finishDom.waitFor();
-        const finishDetails = finishDom.locator(
-          'details.craft-plan-decision-details[data-policy-scope="DOWNSTREAM"]' +
-          '[data-progress-kind="FINAL"][data-rarity-cohort="rare"]',
+        const renderedExamples: Record<string, string> = Object.fromEntries(
+          [alter, augment, regal].map((option) => {
+            const sourceRule = explanation[Number(arrayValue(option.policyRuleIndices, 'rule indices')[0])];
+            return [String(option.actionId), String(sourceRule.exampleState)];
+          }),
         );
-        let finishContrastFound = false;
-        for (let index = 0; index < await finishDetails.count(); index += 1) {
-          const detail = finishDetails.nth(index);
-          const actions = canonicalIds(await detail.locator('li[data-action-id]')
-            .evaluateAll((items) => items.map((item) => item.getAttribute('data-action-id'))));
-          if (actions.includes('exalted_orb') && actions.includes('scouring_orb')) {
-            await detail.locator('summary').click();
-            assert.match(await detail.innerText(), /Final-craft Rare states.*final progress 2\/3/is);
-            finishContrastFound = true;
-            break;
-          }
-        }
-        assert(finishContrastFound, 'Rendered FINISH plan omitted Exalt-vs-Scour');
+        assert.equal(await craftGuide.locator('details.craft-plan-decision-details').count(), 0);
 
         await openOptimizerDisclosure(page, 'research-diagnostics-disclosure');
         const advancedDetails = page.locator('.advanced-optimizer-details');
+        const advancedPolicy = advancedDetails.locator('.advanced-policy-evidence');
+        assert(await advancedPolicy.isVisible());
+        const decisionCohorts = advancedPolicy.locator('details.advanced-decision-cohorts');
+        await decisionCohorts.locator(':scope > summary').click();
+        const decisionEvidenceText = await decisionCohorts.innerText();
+        assert.match(decisionEvidenceText, /Acquisition-preparation Magic states/i);
+        assert.match(decisionEvidenceText, /Final-craft Rare states/i);
         const exactBranches = advancedDetails.locator('details.exact-policy-branches');
         await exactBranches.locator(':scope > summary').click();
         const sourceIdentityCounts = await exactBranches.locator('.craft-rule')
@@ -1220,7 +1325,7 @@ async function runGateOperation(ctx: GateWorkerContext): Promise<unknown> {
           stableEvidenceDirectory,
           'phase3f-craft-plan-decision-details-1440x900.png',
         );
-        await promoteDom.scrollIntoViewIfNeeded();
+        await craftGuide.scrollIntoViewIfNeeded();
         await page.screenshot({ path: screenshotPath });
         ctx.artifacts.phase3fCraftPlanDecisionDetails = relative(repositoryRoot, screenshotPath);
         return {
@@ -1768,7 +1873,7 @@ async function runGateOperation(ctx: GateWorkerContext): Promise<unknown> {
         );
         assert(requiredOnlyNodes.length > 0, 'Selected policy omitted the required 3/3 + alternative 0/1 frontier');
 
-        await openOptimizerDisclosure(page, 'strategy-visualization-disclosure');
+        await visibleConstellation(page);
         const constellation = page.getByTestId('markov-constellation-container');
         await constellation.waitFor();
         const terminalId = String(terminalNodes[0].id);
@@ -2229,7 +2334,6 @@ async function runGateOperation(ctx: GateWorkerContext): Promise<unknown> {
         for (const testId of [
           'search-proof-disclosure',
           'alternative-methods-disclosure',
-          'strategy-visualization-disclosure',
           'cost-usage-disclosure',
           'research-diagnostics-disclosure',
         ]) {
@@ -2252,8 +2356,8 @@ async function runGateOperation(ctx: GateWorkerContext): Promise<unknown> {
           assert(await page.locator('.stale-research-estimate').isVisible());
         }
         assert.equal(await page.locator('.expected-materials').isVisible(), false);
-        assert.equal(await page.getByTestId('markov-constellation-container').count(), 0,
-          'The heavy graph must defer its first mount');
+        assert.equal(await page.getByTestId('markov-constellation-container').count(), 1,
+          'Phase 3J requires the graph to mount with every valid result');
 
         const compactShoppingButton = page.locator('.compact-shopping-list button');
         await compactShoppingButton.click();
@@ -2274,7 +2378,7 @@ async function runGateOperation(ctx: GateWorkerContext): Promise<unknown> {
           'Stopping condition',
         ]) assert(searchText.includes(label), `Missing compact search evidence label: ${label}`);
 
-        await openOptimizerDisclosure(page, 'strategy-visualization-disclosure');
+        await visibleConstellation(page);
         const container = page.getByTestId('markov-constellation-container');
         await container.waitFor({ state: 'visible' });
         const nodes = container.locator('.constellation-node-access-list button');
@@ -2282,10 +2386,7 @@ async function runGateOperation(ctx: GateWorkerContext): Promise<unknown> {
         await nodes.first().click();
         const nodeDetail = page.getByLabel('Selected constellation node details');
         await nodeDetail.waitFor({ state: 'visible' });
-        await page.getByTestId('strategy-visualization-disclosure').locator('button[aria-expanded]').first().click();
-        assert.equal(await container.count(), 1, 'Closing must preserve the mounted graph');
-        await openOptimizerDisclosure(page, 'strategy-visualization-disclosure');
-        assert(await nodeDetail.isVisible(), 'Selected node details must survive close/reopen');
+        assert(await nodeDetail.isVisible(), 'Always-visible Constellation must retain node selection');
 
         await openOptimizerDisclosure(page, 'cost-usage-disclosure');
         assert(await page.locator('.expected-materials').isVisible());
@@ -2319,13 +2420,13 @@ async function runGateOperation(ctx: GateWorkerContext): Promise<unknown> {
           I4: { malformedImportOwnsError: true, repairableImportOpensTargetOnly: true },
           I5: { compactRunningStatus: true },
           I6: { fullSearchActivityUnderDisclosure: true },
-          I7: { primaryGroupsVisible: ['Recommendation', 'How to craft it', 'Shopping list'] },
-          I8: { researchGroupsInitiallyClosed: 5 },
+          I7: { primaryGroupsVisible: ['Recommendation', 'How to craft it', 'Shopping list', 'Markov Policy Constellation'] },
+          I8: { researchGroupsInitiallyClosed: 4 },
           I9: { selectedPolicyAndPortfolioVisible: true },
           I10: { targetSummaryPreservesRequiredAndAlternatives: true },
           I11: { desktopAndMobileNoOverflow: geometry },
           I12: { ariaControlledDisclosures: true },
-          I13: { graphLazyMounted: true, statePreservedAcrossReopen: true },
+          I13: { graphAlwaysMounted: true, selectionPreserved: true },
           I14: { priorResearchSurfacesReachable: true },
           I15: { workerEventsAddedByDisclosure: 0, copyOutputStable: true, sharePayloadStable: true },
           I16: { retainedCoverageRegistered: true },
@@ -2333,11 +2434,168 @@ async function runGateOperation(ctx: GateWorkerContext): Promise<unknown> {
         };
       }, { viewport: { width: 1440, height: 900 } });
 
+    case 'phase3j-strict-guide-visible-constellation':
+      return withPage(ctx, async (page) => {
+        const fieldFixture = fixture('phase3c_primordial_renewal_rotten_claws');
+        const input: FixtureRecord = {
+          ...fieldFixture,
+          searchBudget: { ...fieldFixture.searchBudget, maxStates: 3_334 },
+        };
+        await ensureOptimizerPage(page, ctx.appUrl);
+        await importFixture(page, input);
+        await setBudget(page, input.searchBudget);
+        const offset = await workerEventCount(page);
+        await page.getByRole('button', { name: /Find cheapest craft|Optimize craft/ }).click();
+        const result = await waitForWorkerResult(page, offset, input.searchBudget.maxWallTimeMs + 8_000);
+        const craftPlan = jsonRecord(result.craftPlan, 'Phase 3J browser craft plan');
+        assert.equal(craftPlan.status, 'CERTIFIED');
+
+        const guide = page.locator('.craft-guide');
+        const simple = guide.locator('.simple-craft-instructions[data-player-rule-status="CERTIFIED"]');
+        await simple.waitFor({ state: 'visible' });
+        const guideText = await simple.innerText();
+        assert.match(guideText, /Match your current item to the first WHEN condition/i);
+        assert.match(guideText, /Required targets:/i);
+        assert.match(guideText, /Acceptable target:\s*none/i);
+        assert.match(guideText, /Junk modifier:\s*anything else/i);
+        assert.match(guideText, /Safe junk:/i);
+        assert.match(guideText, /Blocking junk:/i);
+        assert.match(guideText, /Fractured junk:/i);
+        assert.doesNotMatch(guideText, /represented states|expected visits|policy rule indices/i);
+        assert.doesNotMatch(guideText, /selected policy wants|when needed|exact current affixes matter/i);
+        assert.match(guideText, /exception junk/i);
+        const cards = simple.locator('.player-craft-rule[data-action-id]');
+        assert(await cards.count() > 0);
+        const priorities = (await cards.evaluateAll((elements) => elements.map((element) =>
+          Number(element.getAttribute('data-rule-priority'))
+        ))).filter(Number.isFinite);
+        assert.equal(new Set(priorities).size, priorities.length);
+        for (let index = 0; index < await cards.count(); index += 1) {
+          const card = cards.nth(index);
+          assert.equal(await card.locator('.player-rule-command.when > strong', { hasText: 'WHEN' }).count(), 1);
+          assert.equal(await card.locator('.player-rule-command.use > strong', { hasText: 'USE' }).count(), 1);
+          assert.equal(await card.locator('.player-rule-command.then > strong', { hasText: 'THEN' }).count(), 1);
+        }
+        const renderedActions = canonicalIds(await cards.evaluateAll((elements) =>
+          elements.map((element) => element.getAttribute('data-action-id'))
+        ));
+        for (const actionId of [
+          'alteration_orb',
+          'augmentation_orb',
+          'regal_orb',
+          'exalted_orb',
+          'scouring_orb',
+          'transmutation_orb',
+          'fracturing_orb',
+          'restart_reacquire',
+        ]) assert(renderedActions.includes(actionId), `Simple guide omitted ${actionId}`);
+        assert(await simple.locator('[data-player-rule-stage="TERMINAL"] .stop-when').isVisible());
+        assert.match(guideText, /Exalted Orb[\s\S]*not guaranteed|not guaranteed[\s\S]*Exalted Orb/i);
+
+        await page.getByRole('button', { name: /Copy Playbook/ }).click();
+        const playbook = await page.evaluate(() => navigator.clipboard.readText());
+        for (const label of ['TARGETS', 'Required:', 'Acceptable:', 'Junk:', 'WHEN:', 'USE:', 'THEN:', 'IMPORTANT CAVEATS']) {
+          assert(playbook.includes(label), `Copy Playbook omitted ${label}`);
+        }
+        assert.equal(playbook.match(/IMPORTANT CAVEATS/g)?.length, 1);
+        assert.doesNotMatch(playbook, /represented states|expected visits/i);
+        await page.getByRole('button', { name: 'Copy shopping list', exact: true }).click();
+        const shoppingBefore = await page.evaluate(() => navigator.clipboard.readText());
+
+        const constellation = await visibleConstellation(page);
+        assert(await page.getByTestId('constellation-top-level').isVisible());
+        const resultOrder = await page.evaluate(() => ({
+          guide: document.querySelector('.craft-guide')?.getBoundingClientRect().top ?? -1,
+          shopping: document.querySelector('.compact-shopping-list')?.getBoundingClientRect().top ?? -1,
+          constellation: document.querySelector('[data-testid="constellation-top-level"]')
+            ?.getBoundingClientRect().top ?? -1,
+          cost: document.querySelector('[data-testid="cost-usage-disclosure"]')
+            ?.getBoundingClientRect().top ?? -1,
+        }));
+        assert(resultOrder.guide < resultOrder.shopping);
+        assert(resultOrder.shopping < resultOrder.constellation);
+        assert(resultOrder.constellation < resultOrder.cost);
+        assert.equal(await page.getByTestId('strategy-visualization-disclosure').count(), 0);
+        for (const testId of [
+          'search-proof-disclosure',
+          'alternative-methods-disclosure',
+          'cost-usage-disclosure',
+          'research-diagnostics-disclosure',
+        ]) assert.equal(await page.getByTestId(testId).count(), 1, `${testId} must have one owner`);
+
+        const nodes = constellation.locator('.constellation-node-access-list button');
+        assert(await nodes.count() > 0);
+        await nodes.first().click();
+        const nodeDetail = page.getByLabel('Selected constellation node details');
+        await nodeDetail.waitFor({ state: 'visible' });
+        const technicalPolicy = nodeDetail.getByText('Technical policy evidence');
+        if (await technicalPolicy.count()) {
+          await technicalPolicy.click();
+          assert(await nodeDetail.isVisible());
+        }
+
+        await guide.getByRole('button', { name: 'Why this action?' }).first().click();
+        const advanced = page.locator('.advanced-policy-evidence');
+        await advanced.waitFor({ state: 'visible' });
+        assert.match(await advanced.innerText(), /Policy rule indices/i);
+        assert.match(await advanced.innerText(), /Source state identities/i);
+        assert.match(await advanced.innerText(), /Expected visits reconciled/i);
+        assert.equal(await guide.locator('details.craft-plan-decision-details').count(), 0,
+          'Large Decision details must not repeat below instructions');
+        await page.getByRole('button', { name: 'Copy shopping list', exact: true }).click();
+        assert.equal(await page.evaluate(() => navigator.clipboard.readText()), shoppingBefore);
+
+        const [download] = await Promise.all([
+          page.waitForEvent('download'),
+          guide.getByRole('button', { name: /Export Setup JSON/ }).click(),
+        ]);
+        const downloadPath = await download.path();
+        assert(downloadPath);
+        const exported = JSON.parse(readFileSync(downloadPath, 'utf8')) as JsonRecord;
+        const exportSummary = jsonRecord(exported.resultSummary, 'Phase 3J export summary');
+        assert(exportSummary.craftPlan);
+        assert(exportSummary.policyExplanation);
+        assert(exportSummary.policyRules);
+        await guide.getByRole('button', { name: /Bug Report/ }).click();
+        const bug = JSON.parse(await page.evaluate(() => navigator.clipboard.readText())) as JsonRecord;
+        const bugSummary = jsonRecord(bug.resultSummary, 'Phase 3J bug summary');
+        assert(bugSummary.craftPlan);
+        assert(bugSummary.policyExplanation);
+        assert(bugSummary.policyRules);
+
+        const geometries: Record<string, unknown> = {};
+        for (const width of [1440, 390, 420]) {
+          await page.setViewportSize({ width, height: width === 1440 ? 900 : 844 });
+          const geometry = await page.evaluate(() => ({
+            viewport: document.documentElement.clientWidth,
+            documentWidth: document.documentElement.scrollWidth,
+            bodyWidth: document.body.scrollWidth,
+          }));
+          assert(geometry.documentWidth <= geometry.viewport + 1);
+          assert(geometry.bodyWidth <= geometry.viewport + 1);
+          geometries[String(width)] = geometry;
+        }
+        const screenshotPath = join(ctx.invocation.artifactsDirectory, 'phase3j-strict-guide-visible-constellation.png');
+        await page.setViewportSize({ width: 1440, height: 900 });
+        await page.screenshot({ path: screenshotPath, fullPage: true });
+        ctx.artifacts.phase3jStrictGuide = relative(repositoryRoot, screenshotPath);
+        return {
+          J7: { strictCards: await cards.count(), renderedActions },
+          J12: { copyPlaybookBytes: playbook.length, exactExportEvidence: true, exactBugEvidence: true },
+          J14: { advancedPolicyEvidence: true, inlineDecisionDetails: 0 },
+          J15: { alwaysVisible: true, ancestryExcluded: true, resultOrder },
+          J16: { selectedNodeOverlay: true },
+          J17: geometries,
+          J18: { retainedGatesRegistered: true },
+          artifact: ctx.artifacts.phase3jStrictGuide,
+        };
+      }, { viewport: { width: 1440, height: 900 } });
+
     case 'responsive-accessibility':
       return withPage(ctx, async (page) => {
         const input = fixture('cheap_one_mod');
         await optimizedFixture(page, ctx.appUrl, input);
-        await openOptimizerDisclosure(page, 'strategy-visualization-disclosure');
+        await visibleConstellation(page);
         const container = page.getByTestId('markov-constellation-container');
         await container.waitFor();
         const nodes = container.locator('.constellation-node-access-list button');
@@ -2365,7 +2623,7 @@ async function runGateOperation(ctx: GateWorkerContext): Promise<unknown> {
       return withPage(ctx, async (page) => {
         const input = fixture('cheap_one_mod');
         await optimizedFixture(page, ctx.appUrl, input);
-        await openOptimizerDisclosure(page, 'strategy-visualization-disclosure');
+        await visibleConstellation(page);
         const container = page.getByTestId('markov-constellation-container');
         await container.waitFor();
         assert.equal(
@@ -2504,7 +2762,7 @@ async function runGateOperation(ctx: GateWorkerContext): Promise<unknown> {
       const stress = loadFrozenPolicyFlow('policy-flow-phase3c-large-v1.json');
       const fieldObservation = await withPage(ctx, async (page) => {
         await optimizedFixture(page, ctx.appUrl, fixture('cheap_one_mod'));
-        await openOptimizerDisclosure(page, 'strategy-visualization-disclosure');
+        await visibleConstellation(page);
         const container = page.getByTestId('markov-constellation-container');
         await container.waitFor();
         await container.scrollIntoViewIfNeeded();
@@ -2628,7 +2886,7 @@ async function runGateOperation(ctx: GateWorkerContext): Promise<unknown> {
 
       const stressObservation = await withPage(ctx, async (page) => {
         await optimizedFixture(page, ctx.appUrl, fixture('cheap_one_mod'));
-        await openOptimizerDisclosure(page, 'strategy-visualization-disclosure');
+        await visibleConstellation(page);
         const container = page.getByTestId('markov-constellation-container');
         await container.waitFor();
         await container.scrollIntoViewIfNeeded();
@@ -2680,7 +2938,7 @@ async function runGateOperation(ctx: GateWorkerContext): Promise<unknown> {
         );
         assert(connectedEdge, 'Overlay gate node has no connected edge');
         const connectedEdgeId = String(connectedEdge.id);
-        await openOptimizerDisclosure(page, 'strategy-visualization-disclosure');
+        await visibleConstellation(page);
         const container = page.getByTestId('markov-constellation-container');
         await container.waitFor();
         await container.scrollIntoViewIfNeeded();
@@ -2826,7 +3084,7 @@ async function runGateOperation(ctx: GateWorkerContext): Promise<unknown> {
       return withPage(ctx, async (page, context) => {
         const input = fixture('cheap_one_mod');
         await optimizedFixture(page, ctx.appUrl, input);
-        await openOptimizerDisclosure(page, 'strategy-visualization-disclosure');
+        await visibleConstellation(page);
         let container = page.getByTestId('markov-constellation-container');
         await container.waitFor();
         await container.scrollIntoViewIfNeeded();
@@ -3012,7 +3270,7 @@ async function runGateOperation(ctx: GateWorkerContext): Promise<unknown> {
         // A document reload reconstructs the graph and loads only the strict identity match.
         await page.reload({ waitUntil: 'networkidle' });
         await optimizedFixture(page, ctx.appUrl, input);
-        await openOptimizerDisclosure(page, 'strategy-visualization-disclosure');
+        await visibleConstellation(page);
         container = page.getByTestId('markov-constellation-container');
         await container.waitFor();
         await container.scrollIntoViewIfNeeded();
@@ -3220,7 +3478,7 @@ async function runGateOperation(ctx: GateWorkerContext): Promise<unknown> {
           'Real Worker flow differs from the reviewed frozen flow summary');
         assert.deepEqual(stableJson(flow), stableJson(frozen.flow));
         const topology = jsonRecord(flow.topology, 'real topology');
-        await openOptimizerDisclosure(page, 'strategy-visualization-disclosure');
+        await visibleConstellation(page);
         const container = page.getByTestId('markov-constellation-container');
         await container.waitFor();
         assert.equal(await container.getAttribute('data-topology-fingerprint'), String(topology.fingerprint));
@@ -3244,7 +3502,7 @@ async function runGateOperation(ctx: GateWorkerContext): Promise<unknown> {
           (window as Window & { __QUALITY_LAB_FROZEN_POLICY_FLOW__?: unknown }).__QUALITY_LAB_FROZEN_POLICY_FLOW__
         );
         assert(marker, 'Harness-only frozen flow Worker wrapper was not installed');
-        await openOptimizerDisclosure(page, 'strategy-visualization-disclosure');
+        await visibleConstellation(page);
         const container = page.getByTestId('markov-constellation-container');
         await container.waitFor();
         assert.equal(await container.getAttribute('data-topology-fingerprint'), frozen.metadata.topologyFingerprint);
@@ -3276,7 +3534,7 @@ async function runGateOperation(ctx: GateWorkerContext): Promise<unknown> {
         assert(branchNode);
         const branch = edges.filter((edge) => edge.sourceNodeId === branchNode.id)
           .sort((left, right) => numberValue(right.expectedFlow, 'right flow') - numberValue(left.expectedFlow, 'left flow'))[0];
-        await openOptimizerDisclosure(page, 'strategy-visualization-disclosure');
+        await visibleConstellation(page);
         const anchor = page.locator(`[data-edge-anchor="${String(branch.id)}"]`);
         await anchor.focus();
         await page.keyboard.press('Enter');
@@ -3326,7 +3584,7 @@ async function runGateOperation(ctx: GateWorkerContext): Promise<unknown> {
     case 'five-minute-replay-memory-soak':
       return withPage(ctx, async (page) => {
         await optimizedFixture(page, ctx.appUrl, fixture('cheap_one_mod'));
-        await openOptimizerDisclosure(page, 'strategy-visualization-disclosure');
+        await visibleConstellation(page);
         const container = page.getByTestId('markov-constellation-container');
         const memoryBefore = await page.evaluate(() =>
           'memory' in performance

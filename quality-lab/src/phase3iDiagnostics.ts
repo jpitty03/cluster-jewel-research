@@ -11,11 +11,11 @@ export function runPhase3IInformationArchitectureDiagnostics() {
     'Recommendation',
     'How to craft it',
     'Shopping list',
+    'Markov Policy Constellation',
   ]);
   assert.deepEqual(OPTIMIZER_RESEARCH_RESULT_GROUPS, [
     'Search & proof',
     'Alternative methods',
-    'Strategy visualization',
     'Cost & usage details',
     'Research diagnostics',
   ]);
