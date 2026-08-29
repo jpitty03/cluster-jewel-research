@@ -2280,6 +2280,238 @@ td a {
   }
 }
 
+/* Phase 3I: compact optimizer information architecture. Disclosure state is presentation-only. */
+.optimizer-entry-heading {
+  align-items: flex-start;
+  gap: 1rem;
+}
+
+.optimizer-entry-heading > div:first-child {
+  max-width: 42rem;
+}
+
+.optimizer-entry-heading .eyebrow {
+  margin: 0 0 0.2rem;
+  color: #60a5fa;
+  font-size: 0.72rem;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.optimizer-entry-heading h2,
+.optimizer-entry-heading p {
+  margin-top: 0;
+}
+
+.optimizer-entry-heading > div:last-child,
+.optimizer-secondary-entry-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.optimizer-import-primary {
+  order: -1;
+}
+
+.optimizer-secondary-entry-actions {
+  margin: 0.65rem 0;
+}
+
+.optimizer-import-error {
+  margin: 0.75rem 0;
+}
+
+.optimizer-disclosure {
+  margin: 0.7rem 0;
+  overflow: clip;
+  border: 1px solid rgba(148, 163, 184, 0.24);
+  border-radius: 12px;
+  background: rgba(15, 23, 42, 0.34);
+}
+
+.optimizer-result-disclosure {
+  margin: 0;
+  background: rgba(15, 23, 42, 0.55);
+}
+
+.optimizer-disclosure-toggle {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  box-sizing: border-box;
+  width: 100%;
+  min-height: 3.25rem;
+  padding: 0.7rem 0.85rem;
+  gap: 1rem;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  color: inherit;
+  text-align: left;
+}
+
+.optimizer-disclosure-toggle:hover {
+  background: rgba(59, 130, 246, 0.09);
+}
+
+.optimizer-disclosure-toggle:focus-visible {
+  outline: 3px solid #60a5fa;
+  outline-offset: -3px;
+}
+
+.optimizer-disclosure-copy,
+.optimizer-disclosure-meta {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+}
+
+.optimizer-disclosure-copy {
+  align-items: flex-start;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.optimizer-disclosure-copy small {
+  color: #94a3b8;
+  font-weight: 500;
+}
+
+.optimizer-disclosure-meta {
+  flex: 0 0 auto;
+  color: #93c5fd;
+  font-size: 0.78rem;
+  font-weight: 700;
+}
+
+.optimizer-disclosure-chevron {
+  font-size: 1.2rem;
+  transition: transform 160ms ease;
+}
+
+.optimizer-disclosure.is-open .optimizer-disclosure-chevron {
+  transform: rotate(180deg);
+}
+
+.optimizer-disclosure-panel {
+  padding: 0.85rem;
+  border-top: 1px solid rgba(148, 163, 184, 0.18);
+}
+
+.optimizer-disclosure-panel[hidden],
+.request-budget-utilization[hidden] {
+  display: none !important;
+}
+
+[data-testid="strategy-visualization-disclosure"] {
+  overflow: visible;
+}
+
+[data-testid="strategy-visualization-disclosure"] > .optimizer-disclosure-panel {
+  padding: 0;
+}
+
+.compact-target-summary {
+  margin: 0.8rem 0;
+  padding: 0.85rem;
+}
+
+.compact-target-summary h3,
+.compact-target-summary h4,
+.compact-target-summary p {
+  margin-top: 0.25rem;
+  margin-bottom: 0.35rem;
+}
+
+.compact-target-summary ul {
+  margin-top: 0.25rem;
+}
+
+.compact-search-status {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding-top: 0.8rem;
+  padding-bottom: 0.8rem;
+}
+
+.compact-search-status > div {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+}
+
+.compact-search-status > div span {
+  color: #94a3b8;
+  font-size: 0.85rem;
+}
+
+.compact-search-status dl {
+  display: grid;
+  grid-template-columns: auto auto;
+  margin: 0;
+  gap: 0.1rem 0.5rem;
+  font-size: 0.8rem;
+}
+
+.compact-search-status dt {
+  color: #94a3b8;
+}
+
+.compact-search-status dd {
+  margin: 0;
+  font-variant-numeric: tabular-nums;
+}
+
+.compact-shopping-list .craft-guide-heading-row {
+  align-items: flex-start;
+}
+
+.compact-currency-list {
+  display: flex;
+  flex-wrap: wrap;
+  margin: 0.7rem 0;
+  padding: 0;
+  gap: 0.45rem;
+  list-style: none;
+}
+
+.compact-currency-list li {
+  padding: 0.35rem 0.55rem;
+  border: 1px solid rgba(96, 165, 250, 0.25);
+  border-radius: 999px;
+  background: rgba(30, 64, 175, 0.12);
+}
+
+@media (max-width: 700px) {
+  .optimizer-entry-heading,
+  .compact-search-status {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .optimizer-entry-heading > div:last-child,
+  .optimizer-secondary-entry-actions {
+    width: 100%;
+  }
+
+  .optimizer-entry-heading button,
+  .optimizer-secondary-entry-actions button {
+    flex: 1 1 11rem;
+  }
+
+  .optimizer-disclosure-toggle {
+    align-items: flex-start;
+  }
+
+  .optimizer-disclosure-copy small {
+    display: none;
+  }
+}
+
 /* ==========================================================================
    Search Activity / Live Macro Markov-Bellman Visualizer
    ========================================================================== */

@@ -31,6 +31,7 @@ import type {
 } from './qualityTypes.ts';
 import { runPhase3GDomainSolverDiagnostics } from './phase3gDiagnostics.ts';
 import { runPhase3HHandoffDiagnostics } from './phase3hDiagnostics.ts';
+import { runPhase3IInformationArchitectureDiagnostics } from './phase3iDiagnostics.ts';
 import {
   proofPresentation,
   searchEvidencePresentation,
@@ -324,7 +325,13 @@ async function ensureOptimizerPage(page: Page, appUrl: string): Promise<void> {
   // network lifecycle is independent from DOM readiness, so a network-idle
   // navigation can time out even when the complete page is already interactive.
   await page.goto(`${appUrl}#optimizer`, { waitUntil: 'domcontentloaded' });
-  await page.getByRole('heading', { name: 'Craft target' }).waitFor();
+  await page.locator('#optimizer-input-title').waitFor();
+}
+
+async function openOptimizerDisclosure(page: Page, testId: string): Promise<void> {
+  const disclosure = page.getByTestId(testId);
+  const toggle = disclosure.locator('button[aria-expanded]').first();
+  if (await toggle.getAttribute('aria-expanded') !== 'true') await toggle.click();
 }
 
 async function importFixture(page: Page, input: FixtureRecord): Promise<void> {
@@ -370,6 +377,7 @@ async function importFixture(page: Page, input: FixtureRecord): Promise<void> {
 }
 
 async function setBudget(page: Page, budget: FixtureRecord['searchBudget']): Promise<void> {
+  await openOptimizerDisclosure(page, 'optimization-settings-disclosure');
   const advanced = page.locator('details.advanced-controls');
   if (!(await advanced.evaluate((element) => (element as HTMLDetailsElement).open))) {
     await advanced.getByText('Advanced search settings', { exact: true }).click();
@@ -446,6 +454,8 @@ async function launchQuotedClusterHandoff(page: Page, appUrl: string) {
   await panel.getByRole('button', { name: 'Open Craft Optimizer', exact: true }).click();
   const banner = page.locator('.optimizer-source-banner');
   await banner.waitFor();
+  await openOptimizerDisclosure(page, 'target-editor-disclosure');
+  await openOptimizerDisclosure(page, 'optimization-settings-disclosure');
   const saleInput = page.getByLabel('Expected sale value (chaos, optional)');
   const sourceQuoteChaos = Number(await saleInput.inputValue());
   assert(Number.isFinite(sourceQuoteChaos) && sourceQuoteChaos > 0);
@@ -462,6 +472,7 @@ async function compareMethodsIndependently(
   page: Page,
   maxWallTimeMs: number,
 ): Promise<JsonRecord> {
+  await openOptimizerDisclosure(page, 'alternative-methods-disclosure');
   const offset = await workerEventCount(page);
   const compare = page.getByRole('button', { name: 'Compare Methods Independently' });
   await compare.waitFor({ state: 'visible' });
@@ -755,6 +766,7 @@ async function runGateOperation(ctx: GateWorkerContext): Promise<unknown> {
         const flow = selectedPolicyFlow(result, 'clean');
         const accounting = assertCanonicalAccounting(result);
         assert.equal(flow.sourceBundleId, accounting.selectedBundleId);
+        await openOptimizerDisclosure(page, 'strategy-visualization-disclosure');
         const container = page.getByTestId('markov-constellation-container');
         await container.waitFor();
         assert.equal(await container.getAttribute('data-source-bundle-id'), String(flow.sourceBundleId));
@@ -832,6 +844,26 @@ async function runGateOperation(ctx: GateWorkerContext): Promise<unknown> {
             ordinalFourthAbsentFromSource: true,
           },
         };
+      });
+
+    case 'phase3i-information-architecture':
+      return withPage(ctx, async () => {
+        const direct = runPhase3IInformationArchitectureDiagnostics();
+        const source = readFileSync(resolve(repositoryRoot, 'src', 'CraftOptimizer.tsx'), 'utf8');
+        const disclosureSource = readFileSync(
+          resolve(repositoryRoot, 'src', 'components', 'OptimizerDisclosure.tsx'),
+          'utf8',
+        );
+        assert.match(disclosureSource, /aria-expanded=\{open\}/);
+        assert.match(disclosureSource, /aria-controls=\{panelId\}/);
+        assert.match(disclosureSource, /keepMountedAfterOpen/);
+        const draftDependencyBlock = source.slice(
+          source.indexOf('const draftInput = useMemo'),
+          source.indexOf('const validation = useMemo'),
+        );
+        assert.doesNotMatch(draftDependencyBlock, /Open|Disclosure|entryMode|presetsOpen/,
+          'Presentation state entered authoritative request construction');
+        return { ...direct, I16: { retainedGateCoverageRegistered: true } };
       });
 
     case 'cancel-replace-recover':
@@ -944,6 +976,7 @@ async function runGateOperation(ctx: GateWorkerContext): Promise<unknown> {
         );
         assert(conditionalProbability > 0 && conditionalProbability < 1,
           'Alter self-loop probability was discarded or renormalized to certainty');
+        await openOptimizerDisclosure(page, 'strategy-visualization-disclosure');
         const anchor = page.locator(`[data-edge-anchor="${String(selfLoop.id)}"]`);
         await anchor.focus();
         await page.keyboard.press('Enter');
@@ -1163,8 +1196,8 @@ async function runGateOperation(ctx: GateWorkerContext): Promise<unknown> {
         }
         assert(finishContrastFound, 'Rendered FINISH plan omitted Exalt-vs-Scour');
 
-        const advancedDetails = page.locator('details.advanced-optimizer-details');
-        await advancedDetails.locator(':scope > summary').click();
+        await openOptimizerDisclosure(page, 'research-diagnostics-disclosure');
+        const advancedDetails = page.locator('.advanced-optimizer-details');
         const exactBranches = advancedDetails.locator('details.exact-policy-branches');
         await exactBranches.locator(':scope > summary').click();
         const sourceIdentityCounts = await exactBranches.locator('.craft-rule')
@@ -1179,7 +1212,6 @@ async function runGateOperation(ctx: GateWorkerContext): Promise<unknown> {
         assert(sourceIdentityCounts.length === explanation.length);
         assert(sourceIdentityCounts.every((count) => count > 0));
         await exactBranches.locator(':scope > summary').click();
-        await advancedDetails.locator(':scope > summary').click();
         assert(!await craftGuide.innerText().then((text) =>
           /no target modifier present;\s*all target modifiers present/i.test(text)
         ));
@@ -1639,11 +1671,13 @@ async function runGateOperation(ctx: GateWorkerContext): Promise<unknown> {
         await panel.getByRole('button', { name: 'Open Craft Optimizer', exact: true }).click();
         const banner = page.locator('.optimizer-source-banner');
         await banner.waitFor();
+        await page.waitForFunction(() => document.activeElement?.classList.contains('optimizer-source-banner'));
+        assert.equal(await page.evaluate(() => document.activeElement?.classList.contains('optimizer-source-banner')), true);
+        await openOptimizerDisclosure(page, 'target-editor-disclosure');
         assert.equal(await page.getByLabel('Base type').inputValue(), 'Large Cluster Jewel');
         assert.equal(await page.getByLabel('Cluster enchantment').inputValue(), '10% increased Attack Damage');
         assert.equal(await page.locator('.optimizer-form .optimizer-grid label')
           .filter({ has: page.getByText('Passive skills', { exact: true }) }).locator('select').first().inputValue(), passiveChoice);
-        assert.equal(await page.evaluate(() => document.activeElement?.classList.contains('optimizer-source-banner')), true);
         assert.equal(await workerResponseCount(page), responsesBefore, 'Handoff started the optimizer Worker');
         return {
           passiveChoice,
@@ -1734,6 +1768,7 @@ async function runGateOperation(ctx: GateWorkerContext): Promise<unknown> {
         );
         assert(requiredOnlyNodes.length > 0, 'Selected policy omitted the required 3/3 + alternative 0/1 frontier');
 
+        await openOptimizerDisclosure(page, 'strategy-visualization-disclosure');
         const constellation = page.getByTestId('markov-constellation-container');
         await constellation.waitFor();
         const terminalId = String(terminalNodes[0].id);
@@ -1795,6 +1830,7 @@ async function runGateOperation(ctx: GateWorkerContext): Promise<unknown> {
         const initialSeedId = await initial.banner.getAttribute('data-seed-id');
 
         // H5: preferences and request depth do not own the physical handoff identity.
+        await openOptimizerDisclosure(page, 'optimization-settings-disclosure');
         await page.getByLabel('Optimization goal').selectOption('BALANCED_VALUE_OF_TIME');
         await page.getByLabel('Search depth preset').selectOption('DEEP');
         await page.locator('details.pricing-controls > summary').click();
@@ -1948,8 +1984,8 @@ async function runGateOperation(ctx: GateWorkerContext): Promise<unknown> {
         assert.equal(await page.locator('.optimizer-source-banner').count(), 0);
         assert.equal(await page.locator('.source-market-summary').count(), 0);
         assert.doesNotMatch(await page.locator('body').innerText(), /Acceptable fourth modifier/i);
-        assert.match(await page.getByTestId('acceptable-alternative-editor').innerText(),
-          /Acceptable alternative modifiers/i);
+        assert.match(await page.getByTestId('structured-target-summary').innerText(),
+          /And at least one/i);
 
         const typedFieldResult = fieldResult as unknown as OptimizeCraftResult;
         const proof = proofPresentation(typedFieldResult);
@@ -1958,6 +1994,7 @@ async function runGateOperation(ctx: GateWorkerContext): Promise<unknown> {
         assert.equal(await page.getByTestId('portfolio-optimality').innerText(), proof.portfolioOptimality);
         assert.notEqual(proof.selectedPolicySolve, proof.portfolioOptimality,
           'Selected-policy resolution and portfolio optimality collapsed to one fact');
+        await openOptimizerDisclosure(page, 'search-proof-disclosure');
         const budget = page.getByTestId('request-budget-utilization');
         assert.equal(Number(await budget.getAttribute('data-new-states-expanded')),
           searchEvidence.newStatesExpandedThisRun);
@@ -1975,7 +2012,7 @@ async function runGateOperation(ctx: GateWorkerContext): Promise<unknown> {
           'Requested expansion cap',
           'Stopping condition',
         ]) assert(counterText.includes(label), `Missing Phase 3H search label: ${label}`);
-        await page.locator('details.advanced-optimizer-details > summary').click();
+        await openOptimizerDisclosure(page, 'research-diagnostics-disclosure');
         assert((await page.getByTestId('raw-proof-evidence').textContent())?.includes(
           String(fieldResult.objectiveProofStatus)
         ));
@@ -2118,10 +2155,189 @@ async function runGateOperation(ctx: GateWorkerContext): Promise<unknown> {
         };
       }, { viewport: { width: 1440, height: 900 } });
 
+    case 'phase3i-progressive-disclosure-browser':
+      return withPage(ctx, async (page) => {
+        await ensureOptimizerPage(page, ctx.appUrl);
+        assert(await page.getByRole('heading', { name: 'Import a craft' }).isVisible());
+        assert(await page.getByRole('button', { name: 'Import Setup JSON file' }).isVisible());
+        assert.equal(
+          await page.getByTestId('target-editor-disclosure').locator('button[aria-expanded]').getAttribute('aria-expanded'),
+          'false',
+        );
+        assert.equal(
+          await page.getByTestId('optimization-settings-disclosure').locator('button[aria-expanded]').getAttribute('aria-expanded'),
+          'false',
+        );
+
+        const fileInput = page.locator('input[type="file"]');
+        await fileInput.setInputFiles({
+          name: 'invalid-phase3i.json',
+          mimeType: 'application/json',
+          buffer: Buffer.from('{not json'),
+        });
+        await page.getByRole('alert').filter({ hasText: 'not valid optimizer JSON' }).waitFor();
+        assert.equal(
+          await page.getByTestId('target-editor-disclosure').locator('button[aria-expanded]').getAttribute('aria-expanded'),
+          'false',
+          'An unreadable file must keep repair at the import surface',
+        );
+        await fileInput.setInputFiles({
+          name: 'repairable-phase3i.json',
+          mimeType: 'application/json',
+          buffer: Buffer.from(JSON.stringify({
+            baseType: 'Large Cluster Jewel',
+            clusterType: '10% increased Spell Damage',
+            itemLevel: 84,
+            passiveCount: 12,
+            targetMods: [],
+          })),
+        });
+        await page.getByRole('alert').filter({ hasText: 'did not include a required modifier' }).waitFor();
+        assert.equal(
+          await page.getByTestId('target-editor-disclosure').locator('button[aria-expanded]').getAttribute('aria-expanded'),
+          'true',
+          'A repairable target import must open only the target editor',
+        );
+        assert.equal(
+          await page.getByTestId('optimization-settings-disclosure').locator('button[aria-expanded]').getAttribute('aria-expanded'),
+          'false',
+        );
+
+        const input = fixture('phase3g_spell_damage_alternatives');
+        await importFixture(page, input);
+        assert(await page.getByRole('heading', { name: 'Target ready' }).isVisible());
+        assert(await page.getByTestId('structured-target-summary').isVisible());
+        assert.equal(
+          await page.getByTestId('target-editor-disclosure').locator('button[aria-expanded]').getAttribute('aria-expanded'),
+          'false',
+        );
+        assert.equal(
+          await page.getByTestId('optimization-settings-disclosure').locator('button[aria-expanded]').getAttribute('aria-expanded'),
+          'false',
+        );
+
+        await setBudget(page, input.searchBudget);
+        const offset = await workerEventCount(page);
+        await page.getByRole('button', { name: /Find cheapest craft|Optimize craft/ }).click();
+        await page.getByTestId('compact-search-status').waitFor({ state: 'visible' });
+        const result = await waitForWorkerResult(page, offset, input.searchBudget.maxWallTimeMs + 8_000);
+        assertTarget(result, input);
+
+        assert(await page.locator('.recommendation-hero').isVisible());
+        assert(await page.locator('.craft-guide').isVisible());
+        assert(await page.locator('.compact-shopping-list').isVisible());
+        for (const testId of [
+          'search-proof-disclosure',
+          'alternative-methods-disclosure',
+          'strategy-visualization-disclosure',
+          'cost-usage-disclosure',
+          'research-diagnostics-disclosure',
+        ]) {
+          assert.equal(
+            await page.getByTestId(testId).locator('button[aria-expanded]').first().getAttribute('aria-expanded'),
+            'false',
+            `${testId} must begin closed`,
+          );
+        }
+        assert(await page.getByTestId('selected-policy-solve').isVisible());
+        assert(await page.getByTestId('portfolio-optimality').isVisible());
+        if (result.recommendationStatus === 'PROVISIONAL_RESOLVED') {
+          assert(await page.locator('.provisional-warning').isVisible());
+        } else if (result.recommendationStatus === 'NO_RESOLVED_ROUTE' ||
+          result.recommendationStatus === 'INTERNAL_RESULT_MISMATCH') {
+          assert(await page.locator('.no-route-warning').isVisible());
+        }
+        if (jsonRecord(result.presentation, 'Phase 3I presentation').pricingLabel ===
+          'RESEARCH_ESTIMATE_STALE_PRICING') {
+          assert(await page.locator('.stale-research-estimate').isVisible());
+        }
+        assert.equal(await page.locator('.expected-materials').isVisible(), false);
+        assert.equal(await page.getByTestId('markov-constellation-container').count(), 0,
+          'The heavy graph must defer its first mount');
+
+        const compactShoppingButton = page.locator('.compact-shopping-list button');
+        await compactShoppingButton.click();
+        const shoppingBeforeDisclosures = await page.evaluate(() => navigator.clipboard.readText());
+        const shareButton = page.getByRole('button', { name: /Share Link/ });
+        await shareButton.click();
+        const shareBeforeDisclosures = await page.evaluate(() => navigator.clipboard.readText());
+        const eventCountBeforeDisclosures = await workerEventCount(page);
+        await openOptimizerDisclosure(page, 'search-proof-disclosure');
+        assert(await page.locator('.search-activity-card').isVisible());
+        assert(await page.getByTestId('request-budget-utilization').isVisible());
+        const searchText = await page.getByTestId('search-evidence-summary').innerText();
+        for (const label of [
+          'New states expanded this run',
+          'Total portfolio states expanded',
+          'States retained for continuation',
+          'Requested expansion cap',
+          'Stopping condition',
+        ]) assert(searchText.includes(label), `Missing compact search evidence label: ${label}`);
+
+        await openOptimizerDisclosure(page, 'strategy-visualization-disclosure');
+        const container = page.getByTestId('markov-constellation-container');
+        await container.waitFor({ state: 'visible' });
+        const nodes = container.locator('.constellation-node-access-list button');
+        assert(await nodes.count() > 0);
+        await nodes.first().click();
+        const nodeDetail = page.getByLabel('Selected constellation node details');
+        await nodeDetail.waitFor({ state: 'visible' });
+        await page.getByTestId('strategy-visualization-disclosure').locator('button[aria-expanded]').first().click();
+        assert.equal(await container.count(), 1, 'Closing must preserve the mounted graph');
+        await openOptimizerDisclosure(page, 'strategy-visualization-disclosure');
+        assert(await nodeDetail.isVisible(), 'Selected node details must survive close/reopen');
+
+        await openOptimizerDisclosure(page, 'cost-usage-disclosure');
+        assert(await page.locator('.expected-materials').isVisible());
+        await openOptimizerDisclosure(page, 'research-diagnostics-disclosure');
+        assert(await page.locator('.advanced-optimizer-details').isVisible());
+        assert.equal(await workerEventCount(page), eventCountBeforeDisclosures,
+          'Disclosure interaction must not create Worker traffic');
+        await compactShoppingButton.click();
+        assert.equal(await page.evaluate(() => navigator.clipboard.readText()), shoppingBeforeDisclosures,
+          'Disclosure interaction changed canonical copy output');
+        await shareButton.click();
+        assert.equal(await page.evaluate(() => navigator.clipboard.readText()), shareBeforeDisclosures,
+          'Disclosure interaction changed the share payload');
+
+        await page.setViewportSize({ width: 390, height: 844 });
+        const geometry = await page.evaluate(() => ({
+          viewport: document.documentElement.clientWidth,
+          documentWidth: document.documentElement.scrollWidth,
+          bodyWidth: document.body.scrollWidth,
+        }));
+        assert(geometry.documentWidth <= geometry.viewport + 1);
+        assert(geometry.bodyWidth <= geometry.viewport + 1);
+        const screenshotPath = join(ctx.invocation.artifactsDirectory, 'phase3i-compact-optimizer-mobile.png');
+        await page.screenshot({ path: screenshotPath, fullPage: true });
+        ctx.artifacts.phase3iCompactMobile = relative(repositoryRoot, screenshotPath);
+
+        return {
+          I1: { importFirst: true },
+          I2: { compactLoadedSummary: true, optimizeVisible: true },
+          I3: { targetAndSettingsInitiallyClosed: true },
+          I4: { malformedImportOwnsError: true, repairableImportOpensTargetOnly: true },
+          I5: { compactRunningStatus: true },
+          I6: { fullSearchActivityUnderDisclosure: true },
+          I7: { primaryGroupsVisible: ['Recommendation', 'How to craft it', 'Shopping list'] },
+          I8: { researchGroupsInitiallyClosed: 5 },
+          I9: { selectedPolicyAndPortfolioVisible: true },
+          I10: { targetSummaryPreservesRequiredAndAlternatives: true },
+          I11: { desktopAndMobileNoOverflow: geometry },
+          I12: { ariaControlledDisclosures: true },
+          I13: { graphLazyMounted: true, statePreservedAcrossReopen: true },
+          I14: { priorResearchSurfacesReachable: true },
+          I15: { workerEventsAddedByDisclosure: 0, copyOutputStable: true, sharePayloadStable: true },
+          I16: { retainedCoverageRegistered: true },
+          artifact: ctx.artifacts.phase3iCompactMobile,
+        };
+      }, { viewport: { width: 1440, height: 900 } });
+
     case 'responsive-accessibility':
       return withPage(ctx, async (page) => {
         const input = fixture('cheap_one_mod');
         await optimizedFixture(page, ctx.appUrl, input);
+        await openOptimizerDisclosure(page, 'strategy-visualization-disclosure');
         const container = page.getByTestId('markov-constellation-container');
         await container.waitFor();
         const nodes = container.locator('.constellation-node-access-list button');
@@ -2149,6 +2365,7 @@ async function runGateOperation(ctx: GateWorkerContext): Promise<unknown> {
       return withPage(ctx, async (page) => {
         const input = fixture('cheap_one_mod');
         await optimizedFixture(page, ctx.appUrl, input);
+        await openOptimizerDisclosure(page, 'strategy-visualization-disclosure');
         const container = page.getByTestId('markov-constellation-container');
         await container.waitFor();
         assert.equal(
@@ -2287,6 +2504,7 @@ async function runGateOperation(ctx: GateWorkerContext): Promise<unknown> {
       const stress = loadFrozenPolicyFlow('policy-flow-phase3c-large-v1.json');
       const fieldObservation = await withPage(ctx, async (page) => {
         await optimizedFixture(page, ctx.appUrl, fixture('cheap_one_mod'));
+        await openOptimizerDisclosure(page, 'strategy-visualization-disclosure');
         const container = page.getByTestId('markov-constellation-container');
         await container.waitFor();
         await container.scrollIntoViewIfNeeded();
@@ -2410,6 +2628,7 @@ async function runGateOperation(ctx: GateWorkerContext): Promise<unknown> {
 
       const stressObservation = await withPage(ctx, async (page) => {
         await optimizedFixture(page, ctx.appUrl, fixture('cheap_one_mod'));
+        await openOptimizerDisclosure(page, 'strategy-visualization-disclosure');
         const container = page.getByTestId('markov-constellation-container');
         await container.waitFor();
         await container.scrollIntoViewIfNeeded();
@@ -2461,6 +2680,7 @@ async function runGateOperation(ctx: GateWorkerContext): Promise<unknown> {
         );
         assert(connectedEdge, 'Overlay gate node has no connected edge');
         const connectedEdgeId = String(connectedEdge.id);
+        await openOptimizerDisclosure(page, 'strategy-visualization-disclosure');
         const container = page.getByTestId('markov-constellation-container');
         await container.waitFor();
         await container.scrollIntoViewIfNeeded();
@@ -2606,6 +2826,7 @@ async function runGateOperation(ctx: GateWorkerContext): Promise<unknown> {
       return withPage(ctx, async (page, context) => {
         const input = fixture('cheap_one_mod');
         await optimizedFixture(page, ctx.appUrl, input);
+        await openOptimizerDisclosure(page, 'strategy-visualization-disclosure');
         let container = page.getByTestId('markov-constellation-container');
         await container.waitFor();
         await container.scrollIntoViewIfNeeded();
@@ -2791,6 +3012,7 @@ async function runGateOperation(ctx: GateWorkerContext): Promise<unknown> {
         // A document reload reconstructs the graph and loads only the strict identity match.
         await page.reload({ waitUntil: 'networkidle' });
         await optimizedFixture(page, ctx.appUrl, input);
+        await openOptimizerDisclosure(page, 'strategy-visualization-disclosure');
         container = page.getByTestId('markov-constellation-container');
         await container.waitFor();
         await container.scrollIntoViewIfNeeded();
@@ -2998,6 +3220,7 @@ async function runGateOperation(ctx: GateWorkerContext): Promise<unknown> {
           'Real Worker flow differs from the reviewed frozen flow summary');
         assert.deepEqual(stableJson(flow), stableJson(frozen.flow));
         const topology = jsonRecord(flow.topology, 'real topology');
+        await openOptimizerDisclosure(page, 'strategy-visualization-disclosure');
         const container = page.getByTestId('markov-constellation-container');
         await container.waitFor();
         assert.equal(await container.getAttribute('data-topology-fingerprint'), String(topology.fingerprint));
@@ -3021,6 +3244,7 @@ async function runGateOperation(ctx: GateWorkerContext): Promise<unknown> {
           (window as Window & { __QUALITY_LAB_FROZEN_POLICY_FLOW__?: unknown }).__QUALITY_LAB_FROZEN_POLICY_FLOW__
         );
         assert(marker, 'Harness-only frozen flow Worker wrapper was not installed');
+        await openOptimizerDisclosure(page, 'strategy-visualization-disclosure');
         const container = page.getByTestId('markov-constellation-container');
         await container.waitFor();
         assert.equal(await container.getAttribute('data-topology-fingerprint'), frozen.metadata.topologyFingerprint);
@@ -3052,6 +3276,7 @@ async function runGateOperation(ctx: GateWorkerContext): Promise<unknown> {
         assert(branchNode);
         const branch = edges.filter((edge) => edge.sourceNodeId === branchNode.id)
           .sort((left, right) => numberValue(right.expectedFlow, 'right flow') - numberValue(left.expectedFlow, 'left flow'))[0];
+        await openOptimizerDisclosure(page, 'strategy-visualization-disclosure');
         const anchor = page.locator(`[data-edge-anchor="${String(branch.id)}"]`);
         await anchor.focus();
         await page.keyboard.press('Enter');
@@ -3101,6 +3326,7 @@ async function runGateOperation(ctx: GateWorkerContext): Promise<unknown> {
     case 'five-minute-replay-memory-soak':
       return withPage(ctx, async (page) => {
         await optimizedFixture(page, ctx.appUrl, fixture('cheap_one_mod'));
+        await openOptimizerDisclosure(page, 'strategy-visualization-disclosure');
         const container = page.getByTestId('markov-constellation-container');
         const memoryBefore = await page.evaluate(() =>
           'memory' in performance

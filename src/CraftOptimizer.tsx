@@ -36,6 +36,7 @@ import { SearchableModifierSelect } from './SearchableModifierSelect.tsx';
 import { buildVisualizationGraph } from '../crafting-engine/src/domain/VisualizationGraph.ts';
 import { MarkovConstellation } from './components/MarkovConstellation.tsx';
 import { OnboardingModal } from './components/OnboardingModal.tsx';
+import { OptimizerDisclosure } from './components/OptimizerDisclosure.tsx';
 import {
   encodeCraftToUrl,
   decodeCraftFromUrl,
@@ -57,6 +58,11 @@ import {
   proofPresentation,
   searchEvidencePresentation,
 } from './optimizerPresentation.ts';
+import {
+  importedEntryMode,
+  OPTIMIZER_DISCLOSURE_DEFAULTS,
+  type OptimizerEntryMode,
+} from './optimizerInformationArchitecture.ts';
 
 const DEFAULT_ITEM_LEVEL = 84;
 interface SearchDepthBudget {
@@ -399,6 +405,16 @@ const PROOF_REASON_COPY: Record<AcquisitionPortfolioProofReason, string> = {
   NO_EXECUTABLE_ROUTE: 'No executable full route has resolved for this family.',
 };
 
+const SEARCH_PHASE_LABELS: Record<OptimizerProgressSnapshot['phase'], string> = {
+  INITIALIZING: 'Initializing Search Space',
+  CLEAN_PROBE: 'Certifying Clean Base Route',
+  FRACTURE_PROBE: 'Probing Self-Fracture Portfolios',
+  FRACTURE_DEEPEN: 'Deepening Competitive Candidates',
+  DOWNSTREAM_SOLVE: 'Solving Downstream Transition Policy',
+  REFINEMENT: 'Refining Recommendation Proof',
+  COMPLETE: 'Search Complete',
+};
+
 export function SearchActivityVisualizer({
   progress,
   running,
@@ -409,16 +425,6 @@ export function SearchActivityVisualizer({
   onCancel,
 }: SearchActivityVisualizerProps) {
   if (!progress && !running) return null;
-
-  const phaseLabels: Record<OptimizerProgressSnapshot['phase'], string> = {
-    INITIALIZING: 'Initializing Search Space',
-    CLEAN_PROBE: 'Certifying Clean Base Route',
-    FRACTURE_PROBE: 'Probing Self-Fracture Portfolios',
-    FRACTURE_DEEPEN: 'Deepening Competitive Candidates',
-    DOWNSTREAM_SOLVE: 'Solving Downstream Transition Policy',
-    REFINEMENT: 'Refining Recommendation Proof',
-    COMPLETE: 'Search Complete',
-  };
 
   const currentPhase = progress?.phase ?? (running ? 'INITIALIZING' : 'COMPLETE');
   const elapsed = progress ? (progress.elapsedMs / 1000).toFixed(1) : '0.0';
@@ -438,7 +444,7 @@ export function SearchActivityVisualizer({
           <div className="search-status-pill-container">
             <span className={`search-status-badge ${currentPhase.toLowerCase()} ${running ? 'pulse' : ''}`}>
               {running && <span className="status-spinner" />}
-              {phaseLabels[currentPhase] || currentPhase}
+              {SEARCH_PHASE_LABELS[currentPhase] || currentPhase}
             </span>
             {progress?.sessionReuseStatus === 'RESUMED' && (
               <span className="session-reuse-chip resumed">
@@ -648,7 +654,7 @@ export function SearchActivityVisualizer({
   );
 }
 
-export const APP_RELEASE_VERSION = '3H.1';
+export const APP_RELEASE_VERSION = '3I.1';
 
 interface CraftOptimizerProps {
   seed?: OptimizerSeed | null;
@@ -790,6 +796,16 @@ export function CraftOptimizer({
   const [valueOfTimeChaosPerMin, setValueOfTimeChaosPerMin] = useState('50');
   const [copiedAction, setCopiedAction] = useState<string | null>(null);
   const [showHelpModal, setShowHelpModal] = useState<boolean>(false);
+  const [entryMode, setEntryMode] = useState<OptimizerEntryMode>('fresh');
+  const [importError, setImportError] = useState<string | null>(null);
+  const [targetEditorOpen, setTargetEditorOpen] = useState<boolean>(OPTIMIZER_DISCLOSURE_DEFAULTS.targetEditor);
+  const [settingsOpen, setSettingsOpen] = useState<boolean>(OPTIMIZER_DISCLOSURE_DEFAULTS.settings);
+  const [presetsOpen, setPresetsOpen] = useState(false);
+  const [searchProofOpen, setSearchProofOpen] = useState<boolean>(OPTIMIZER_DISCLOSURE_DEFAULTS.searchProof);
+  const [alternativeMethodsOpen, setAlternativeMethodsOpen] = useState<boolean>(OPTIMIZER_DISCLOSURE_DEFAULTS.alternativeMethods);
+  const [strategyVisualizationOpen, setStrategyVisualizationOpen] = useState<boolean>(OPTIMIZER_DISCLOSURE_DEFAULTS.strategyVisualization);
+  const [costUsageOpen, setCostUsageOpen] = useState<boolean>(OPTIMIZER_DISCLOSURE_DEFAULTS.costUsage);
+  const [researchDiagnosticsOpen, setResearchDiagnosticsOpen] = useState<boolean>(OPTIMIZER_DISCLOSURE_DEFAULTS.researchDiagnostics);
 
   const applyPreset = (preset: 'attack-large' | 'es-small') => {
     detachClusterHandoff('target preset changed');
@@ -826,6 +842,10 @@ export function CraftOptimizer({
       setPreserveDecodedSingleAlternative(false);
       setFinalRarity('magic');
     }
+    setEntryMode('loaded');
+    setImportError(null);
+    setTargetEditorOpen(false);
+    setSettingsOpen(false);
     setResult(null);
   };
 
@@ -939,7 +959,11 @@ export function CraftOptimizer({
     if (typeof window === 'undefined' || !window.location.hash.startsWith('#craft=')) return;
     const encoded = window.location.hash.slice(7);
     const decoded = decodeCraftFromUrl(encoded);
-    if (!decoded) return;
+    if (!decoded) {
+      setImportError('This shared craft could not be decoded. Import another optimizer JSON file or build the target manually.');
+      setEntryMode('fresh');
+      return;
+    }
     hydratingHandoffRef.current = true;
     if (decoded.baseType) setBaseType(decoded.baseType);
     if (decoded.clusterType) setClusterType(decoded.clusterType);
@@ -1016,6 +1040,10 @@ export function CraftOptimizer({
     setResult(null);
     setProgress(null);
     setError(null);
+    setEntryMode('loaded');
+    setImportError(null);
+    setTargetEditorOpen(false);
+    setSettingsOpen(false);
     hydratingHandoffRef.current = false;
   }, [pricingLeagues]);
 
@@ -1075,6 +1103,10 @@ export function CraftOptimizer({
     setError(null);
     setWallTimeExceeded(false);
     setRuntimeMs(null);
+    setEntryMode('loaded');
+    setImportError(null);
+    setTargetEditorOpen(false);
+    setSettingsOpen(false);
     setClusterHandoff(attachClusterHandoff(seed, handoffIdentitySnapshot({
       baseType: seed.baseType,
       clusterType: seed.clusterType,
@@ -1100,6 +1132,20 @@ export function CraftOptimizer({
     ...validation.errors.map((issue) => issue.message),
     alternativeSelectionError,
   ].filter((message): message is string => message !== null).join(' ') || null;
+
+  useEffect(() => {
+    if (entryMode !== 'loaded' || validationError === null) return;
+    const targetOwnsRepair = alternativeSelectionError !== null || validation.errors.some((issue) =>
+      issue.field === 'baseType' ||
+      issue.field === 'clusterType' ||
+      issue.field === 'itemLevel' ||
+      issue.field === 'passiveCount' ||
+      issue.field.startsWith('target')
+    );
+    setImportError(`The loaded setup needs repair: ${validationError}`);
+    if (targetOwnsRepair) setTargetEditorOpen(true);
+    else setSettingsOpen(true);
+  }, [alternativeSelectionError, entryMode, validation.errors, validationError]);
 
   const changeBase = (nextBase: BaseType) => {
     detachClusterHandoff('base type changed');
@@ -1166,7 +1212,17 @@ export function CraftOptimizer({
     setComparingMethods(compareMethodFamilies);
     setError(null);
     setWallTimeExceeded(false);
-    if (!compareMethodFamilies) setResult(null);
+    if (!compareMethodFamilies) {
+      setResult(null);
+      setEntryMode('loaded');
+      setTargetEditorOpen(false);
+      setSettingsOpen(false);
+      setSearchProofOpen(false);
+      setAlternativeMethodsOpen(false);
+      setStrategyVisualizationOpen(false);
+      setCostUsageOpen(false);
+      setResearchDiagnosticsOpen(false);
+    }
     setProgress(null);
     setRuntimeMs(null);
     const started = performance.now();
@@ -1470,10 +1526,32 @@ export function CraftOptimizer({
           );
         }
         setResult(null);
+        const importedEntry = importedEntryMode({
+          baseType: input.baseType,
+          clusterType: input.clusterType,
+          itemLevel: input.itemLevel,
+          passiveCount: input.passiveCount,
+          targetModCount: targetMods.length,
+        });
+        if (importedEntry.mode === 'loaded') {
+          setEntryMode(importedEntry.mode);
+          setImportError(null);
+          setTargetEditorOpen(importedEntry.openTargetEditor);
+          setSettingsOpen(false);
+        } else {
+          setEntryMode(importedEntry.mode);
+          setImportError(
+            input.baseType && input.clusterType && input.itemLevel && input.passiveCount
+              ? 'The import did not include a required modifier. Complete the highlighted target editor.'
+              : 'The import is missing craft identity fields. Complete the highlighted target editor.'
+          );
+          setTargetEditorOpen(importedEntry.openTargetEditor);
+        }
         hydratingHandoffRef.current = false;
-      } catch (err) {
+      } catch {
         hydratingHandoffRef.current = false;
-        console.error('Failed to import craft JSON', err);
+        setImportError('This file is not valid optimizer JSON. Choose another file or build the target manually.');
+        setEntryMode('fresh');
       }
     };
     reader.readAsText(file);
@@ -1638,29 +1716,36 @@ export function CraftOptimizer({
         </section>
       )}
       <p className="subtitle">
-        Find the cheapest modeled way to acquire and craft your target cluster jewel. The guide
-        follows the optimizer's actual branching policy and keeps technical proof details available.
+        Import a target, then optimize it. Manual construction and complete research evidence remain available when needed.
       </p>
 
       <section className="optimizer-card optimizer-form" aria-labelledby="optimizer-input-title">
-        <div className="craft-guide-heading-row">
-          <h2 id="optimizer-input-title">Craft target</h2>
+        <div className="craft-guide-heading-row optimizer-entry-heading">
+          <div>
+            <p className="eyebrow">Craft Optimizer</p>
+            <h2 id="optimizer-input-title">{entryMode === 'fresh' ? 'Import a craft' : 'Target ready'}</h2>
+            <p>
+              {entryMode === 'fresh'
+                ? 'Optimizer JSON is the fastest way to load a complete, reproducible target.'
+                : 'Review the compact target below or optimize with the loaded settings.'}
+            </p>
+          </div>
           <div style={{ display: 'flex', gap: '8px' }}>
+            <button
+              type="button"
+              className="export-btn optimizer-import-primary"
+              onClick={() => fileInputRef.current?.click()}
+              aria-label="Import Setup JSON file"
+            >
+              Import optimizer JSON
+            </button>
             <button
               type="button"
               className="secondary export-btn"
               onClick={() => setShowHelpModal(true)}
               aria-label="Open Optimizer Guide and FAQ"
             >
-              ❓ Guide & Engine FAQ
-            </button>
-            <button
-              type="button"
-              className="secondary export-btn"
-              onClick={() => fileInputRef.current?.click()}
-              aria-label="Import Setup JSON file"
-            >
-              📂 Import JSON
+              Guide &amp; Engine FAQ
             </button>
             <input
               ref={fileInputRef}
@@ -1671,12 +1756,35 @@ export function CraftOptimizer({
               onChange={(e) => {
                 const file = e.target.files?.[0];
                 if (file) importSetupJson(file);
+                e.target.value = '';
               }}
             />
           </div>
         </div>
 
-        <div className="target-presets-row" aria-label="Popular Craft Target Presets">
+        {importError && <div className="optimizer-validation optimizer-import-error" role="alert">{importError}</div>}
+        <div className="optimizer-secondary-entry-actions">
+          <button
+            type="button"
+            className="secondary"
+            aria-expanded={presetsOpen}
+            onClick={() => setPresetsOpen((current) => !current)}
+          >
+            Use a preset
+          </button>
+          <button
+            type="button"
+            className="secondary"
+            onClick={() => {
+              setEntryMode('manual');
+              setImportError(null);
+              setTargetEditorOpen(true);
+            }}
+          >
+            Build manually
+          </button>
+        </div>
+        {presetsOpen && <div className="target-presets-row" aria-label="Popular Craft Target Presets">
           <span style={{ fontSize: '12px', color: '#94a3b8' }}>⚡ Quick Presets:</span>
           <button type="button" className="preset-chip" onClick={() => applyPreset('attack-large')}>
             Large Attack (8p / 2-Notable)
@@ -1684,7 +1792,15 @@ export function CraftOptimizer({
           <button type="button" className="preset-chip" onClick={() => applyPreset('es-small')}>
             Small Energy Shield (2p / Magic)
           </button>
-        </div>
+        </div>}
+        <OptimizerDisclosure
+          title="Edit target"
+          description="Base, enchantment, item level, passives, rarity, and modifier requirements"
+          badge={entryMode === 'fresh' ? 'Manual' : `${selectedTargetIds.length} required`}
+          open={targetEditorOpen}
+          onToggle={setTargetEditorOpen}
+          testId="target-editor-disclosure"
+        >
         <div className="optimizer-grid">
           <label>
             <span>Base type</span>
@@ -1751,59 +1867,6 @@ export function CraftOptimizer({
             </select>
           </label>
         </div>
-
-        <p className="muted">
-          {marketPricing?.marketContext.cleanBaseQuote.provenance ?? 'No league price snapshot is available.'}
-        </p>
-        {importedPriceContext && (
-          <p className="muted imported-price-context" role="status">
-            Imported pricing context is active for this reproducible setup and overrides matching snapshot rates.
-          </p>
-        )}
-        <details className="pricing-controls">
-          <summary>Pricing &amp; optional economics</summary>
-          <div className="optimizer-grid">
-            <label>
-              <span>Clean base manual override (chaos)</span>
-              <input
-                type="number"
-                min="0"
-                step="0.1"
-                value={cleanBaseCost}
-                placeholder={marketPricing?.marketContext.cleanBaseQuote.status === 'AVAILABLE'
-                  ? String(marketPricing.marketContext.cleanBaseQuote.costChaos)
-                  : 'Market quote unavailable'}
-                onChange={(event) => setCleanBaseCost(event.target.value)}
-              />
-            </label>
-            <label>
-              <span>Expected sale value (chaos, optional)</span>
-              <input
-                type="number"
-                min="0"
-                step="1"
-                value={saleValue}
-                data-sale-value-provenance={saleValueProvenance}
-                onChange={(event) => updateSaleValue(event.target.value)}
-              />
-            </label>
-          </div>
-          {marketPricing && (
-            <details className="market-evidence">
-              <summary>Market evidence</summary>
-              <dl>
-                <dt>Sampled low</dt><dd>{chaos(marketPricing.marketContext.cleanBaseQuote.lowChaos)}</dd>
-                <dt>Sample midpoint</dt><dd>{chaos(marketPricing.marketContext.cleanBaseQuote.midChaos)}</dd>
-                <dt>Listings/sample</dt>
-                <dd>{marketPricing.marketContext.cleanBaseQuote.listed ?? 0} / {marketPricing.marketContext.cleanBaseQuote.sampled ?? 0}</dd>
-                <dt>Quote timestamp</dt><dd>{marketPricing.marketContext.cleanBaseQuote.at ?? 'unavailable'}</dd>
-                <dt>Quote age</dt><dd>{age(marketPricing.marketContext.cleanBaseQuote.ageMs)}{marketPricing.marketContext.cleanBaseQuote.stale ? ' (stale)' : ''}</dd>
-                <dt>Currency-rate age</dt><dd>{age(marketPricing.marketContext.currencyRatesAgeMs)}{marketPricing.marketContext.currencyRatesStale ? ' (stale)' : ''}</dd>
-                <dt>Snapshot age</dt><dd>{age(marketPricing.marketContext.snapshotAgeMs)}{marketPricing.marketContext.snapshotStale ? ' (stale)' : ''}</dd>
-              </dl>
-            </details>
-          )}
-        </details>
 
         <div className="target-list required-target-list" data-testid="required-modifier-editor">
           <h3>Required modifiers ({selectedTargetIds.length}/4)</h3>
@@ -1923,7 +1986,9 @@ export function CraftOptimizer({
           )}
         </div>
 
-        <section className="target-summary" data-testid="structured-target-summary">
+        </OptimizerDisclosure>
+
+        {entryMode !== 'fresh' && <section className="target-summary compact-target-summary" data-testid="structured-target-summary">
           <h3>Target summary</h3>
           <p>{baseType} · {clusterType} · ilvl {itemLevel} · {passiveCount} passives</p>
           <p>Final rarity: {validation.normalizedInput.target.requiredRarity ?? 'Any'}</p>
@@ -1977,7 +2042,68 @@ export function CraftOptimizer({
             </>
           )}
           {validation.notices.map((notice) => <p className="muted" key={notice.code}>{notice.message}</p>)}
-        </section>
+        </section>}
+
+        <OptimizerDisclosure
+          title="Optimization settings"
+          description="Objective, search depth, budgets, and fallback pricing"
+          badge={searchDepthPreset === 'CUSTOM' ? 'Custom' : SEARCH_DEPTH_PRESETS[searchDepthPreset].label}
+          open={settingsOpen}
+          onToggle={setSettingsOpen}
+          testId="optimization-settings-disclosure"
+        >
+        <p className="muted">
+          {marketPricing?.marketContext.cleanBaseQuote.provenance ?? 'No league price snapshot is available.'}
+        </p>
+        {importedPriceContext && (
+          <p className="muted imported-price-context" role="status">
+            Imported pricing context is active for this reproducible setup and overrides matching snapshot rates.
+          </p>
+        )}
+        <details className="pricing-controls">
+          <summary>Pricing &amp; optional economics</summary>
+          <div className="optimizer-grid">
+            <label>
+              <span>Clean base manual override (chaos)</span>
+              <input
+                type="number"
+                min="0"
+                step="0.1"
+                value={cleanBaseCost}
+                placeholder={marketPricing?.marketContext.cleanBaseQuote.status === 'AVAILABLE'
+                  ? String(marketPricing.marketContext.cleanBaseQuote.costChaos)
+                  : 'Market quote unavailable'}
+                onChange={(event) => setCleanBaseCost(event.target.value)}
+              />
+            </label>
+            <label>
+              <span>Expected sale value (chaos, optional)</span>
+              <input
+                type="number"
+                min="0"
+                step="1"
+                value={saleValue}
+                data-sale-value-provenance={saleValueProvenance}
+                onChange={(event) => updateSaleValue(event.target.value)}
+              />
+            </label>
+          </div>
+          {marketPricing && (
+            <details className="market-evidence">
+              <summary>Market evidence</summary>
+              <dl>
+                <dt>Sampled low</dt><dd>{chaos(marketPricing.marketContext.cleanBaseQuote.lowChaos)}</dd>
+                <dt>Sample midpoint</dt><dd>{chaos(marketPricing.marketContext.cleanBaseQuote.midChaos)}</dd>
+                <dt>Listings/sample</dt>
+                <dd>{marketPricing.marketContext.cleanBaseQuote.listed ?? 0} / {marketPricing.marketContext.cleanBaseQuote.sampled ?? 0}</dd>
+                <dt>Quote timestamp</dt><dd>{marketPricing.marketContext.cleanBaseQuote.at ?? 'unavailable'}</dd>
+                <dt>Quote age</dt><dd>{age(marketPricing.marketContext.cleanBaseQuote.ageMs)}{marketPricing.marketContext.cleanBaseQuote.stale ? ' (stale)' : ''}</dd>
+                <dt>Currency-rate age</dt><dd>{age(marketPricing.marketContext.currencyRatesAgeMs)}{marketPricing.marketContext.currencyRatesStale ? ' (stale)' : ''}</dd>
+                <dt>Snapshot age</dt><dd>{age(marketPricing.marketContext.snapshotAgeMs)}{marketPricing.marketContext.snapshotStale ? ' (stale)' : ''}</dd>
+              </dl>
+            </details>
+          )}
+        </details>
 
         <section className="optimizer-section objective-section">
           <h3>Optimization Objective</h3>
@@ -2111,6 +2237,7 @@ export function CraftOptimizer({
             Allow research-fallback currency and acquisition prices
           </label>
         </details>
+        </OptimizerDisclosure>
 
         {validationError && <div className="optimizer-validation">{validationError}</div>}
         <div className="optimizer-actions">
@@ -2130,48 +2257,46 @@ export function CraftOptimizer({
         </div>
       )}
 
-      <SearchActivityVisualizer
-        progress={progress}
-        running={running}
-        selectedRouteName={publicSelectedRouteName}
-        modifierDescriptors={targetDescriptors}
-        onRetryDeeper={retryDeeper}
-        retryDeeperBudget={retryDeeperBudget}
-        onCancel={cancel}
-      />
+      {(progress || running) && (
+        <section className="optimizer-card compact-search-status" role="status" aria-live="polite" data-testid="compact-search-status">
+          <div>
+            <strong>{SEARCH_PHASE_LABELS[progress?.phase ?? 'INITIALIZING']}</strong>
+            <span>{progress?.currentFocus
+              ? publicModifierText(progress.currentFocus, targetDescriptors)
+              : running ? 'Preparing the modeled search space…' : 'Search complete.'}</span>
+          </div>
+          <dl>
+            <dt>Expanded</dt><dd>{(progress?.totalStatesExpanded ?? 0).toLocaleString()}</dd>
+            <dt>Elapsed</dt><dd>{((progress?.elapsedMs ?? 0) / 1000).toFixed(1)}s</dd>
+          </dl>
+          {running && <button type="button" className="secondary" onClick={cancel}>Cancel</button>}
+        </section>
+      )}
+
+      {(progress || running) && !result && (
+        <OptimizerDisclosure
+          title="Search & proof"
+          description="Complete live activity, request budget, stopping condition, and proof evidence"
+          badge={running ? 'Searching' : 'Available'}
+          open={searchProofOpen}
+          onToggle={setSearchProofOpen}
+          testId="search-proof-disclosure"
+          className="optimizer-result-disclosure"
+        >
+          <SearchActivityVisualizer
+            progress={progress}
+            running={running}
+            selectedRouteName={publicSelectedRouteName}
+            modifierDescriptors={targetDescriptors}
+            onRetryDeeper={retryDeeper}
+            retryDeeperBudget={retryDeeperBudget}
+            onCancel={cancel}
+          />
+        </OptimizerDisclosure>
+      )}
 
       {result && (
         <div className="optimizer-results">
-          {activeSeed?.sourceMarketValue && (
-            <section className="optimizer-card source-market-summary" aria-labelledby="source-market-summary-title">
-              <h2 id="source-market-summary-title">Market vs craft</h2>
-              {sourceEconomicsReady ? (
-                <dl>
-                  <dt>Market sampled {activeSeed.sourceMarketValue.kind.toLowerCase()}</dt>
-                  <dd>{chaos(activeSeed.sourceMarketValue.chaos)}</dd>
-                  <dt>Selected executable route EV</dt>
-                  <dd>{chaos(result.expectedCostChaos)}</dd>
-                  <dt>Spread using this executable route</dt>
-                  <dd>{result.expectedCostChaos === null
-                    ? '—'
-                    : `${activeSeed.sourceMarketValue.chaos - result.expectedCostChaos >= 0 ? '+' : ''}${(activeSeed.sourceMarketValue.chaos - result.expectedCostChaos).toFixed(1)}c`}</dd>
-                </dl>
-              ) : (
-                <p className="warning-note">
-                  No spread is calculated because the source quote and executable result do not describe the same exact passive-count craft identity.
-                </p>
-              )}
-              {sourceEconomicsReady && (
-                result.recommendationStatus === 'PROVISIONAL_RESOLVED' ||
-                result.acquisition.portfolioProof.unresolvedCompetitiveCandidates > 0
-              ) && (
-                <p className="market-proof-caveat">
-                  A cheaper crafting route may exist; resolving it would increase the modeled spread, not invalidate this executable route&apos;s EV.
-                </p>
-              )}
-              <p className="muted">Expected value, not guaranteed profit. {activeSeed.sourceMarketValue.provenance}</p>
-            </section>
-          )}
           <section
             className="optimizer-card optimizer-summary recommendation-hero"
             data-selected-route={publicSelectedRouteName}
@@ -2196,6 +2321,36 @@ export function CraftOptimizer({
                         : 'No resolved route'}
               </span>
             </div>
+            {activeSeed?.sourceMarketValue && (
+              <div className="source-market-summary" aria-label="Market vs craft">
+                <h3>Market vs craft</h3>
+                {sourceEconomicsReady ? (
+                  <dl>
+                    <dt>Market sampled {activeSeed.sourceMarketValue.kind.toLowerCase()}</dt>
+                    <dd>{chaos(activeSeed.sourceMarketValue.chaos)}</dd>
+                    <dt>Selected executable route EV</dt>
+                    <dd>{chaos(result.expectedCostChaos)}</dd>
+                    <dt>Spread using this executable route</dt>
+                    <dd>{result.expectedCostChaos === null
+                      ? '—'
+                      : `${activeSeed.sourceMarketValue.chaos - result.expectedCostChaos >= 0 ? '+' : ''}${(activeSeed.sourceMarketValue.chaos - result.expectedCostChaos).toFixed(1)}c`}</dd>
+                  </dl>
+                ) : (
+                  <p className="warning-note">
+                    No spread is calculated because the source quote and executable result do not describe the same exact passive-count craft identity.
+                  </p>
+                )}
+                {sourceEconomicsReady && (
+                  result.recommendationStatus === 'PROVISIONAL_RESOLVED' ||
+                  result.acquisition.portfolioProof.unresolvedCompetitiveCandidates > 0
+                ) && (
+                  <p className="market-proof-caveat">
+                    A cheaper crafting route may exist; resolving it would increase the modeled spread, not invalidate this executable route&apos;s EV.
+                  </p>
+                )}
+                <p className="muted">Expected value, not guaranteed profit. {activeSeed.sourceMarketValue.provenance}</p>
+              </div>
+            )}
             {result.presentation.pricingLabel === 'RESEARCH_ESTIMATE_STALE_PRICING' && (
               <div className="stale-research-estimate" role="alert">
                 <strong>Research estimate using stale bundled pricing</strong>
@@ -2307,6 +2462,24 @@ export function CraftOptimizer({
                 <span>Route, policy, and material totals exceeded the 0.05c reconciliation tolerance. Diagnostic evidence remains available below.</span>
               </div>
             )}
+            <OptimizerDisclosure
+              title="Search & proof"
+              description="Complete live activity, request budget, stopping condition, and proof evidence"
+              badge={result.presentation.proofLabel}
+              open={searchProofOpen}
+              onToggle={setSearchProofOpen}
+              testId="search-proof-disclosure"
+              className="optimizer-result-disclosure recommendation-research-disclosure"
+            >
+            <SearchActivityVisualizer
+              progress={progress}
+              running={running}
+              selectedRouteName={publicSelectedRouteName}
+              modifierDescriptors={targetDescriptors}
+              onRetryDeeper={retryDeeper}
+              retryDeeperBudget={retryDeeperBudget}
+              onCancel={cancel}
+            />
             <section
               className="request-budget-utilization"
               data-testid="request-budget-utilization"
@@ -2370,6 +2543,7 @@ export function CraftOptimizer({
                 </p>
               )}
             </section>
+            </OptimizerDisclosure>
             {materialWarnings.length > 0 && (
               <section className="decision-warnings" aria-label="Important recommendation warnings">
                 <h3>Important for this recommendation</h3>
@@ -2387,6 +2561,15 @@ export function CraftOptimizer({
             )}
           </section>
 
+          <OptimizerDisclosure
+            title="Alternative methods"
+            description="Pareto tradeoffs, Harvest comparisons, and independently evaluated method families"
+            badge={result.methodPortfolio ? `${result.methodPortfolio.length} families` : 'Research'}
+            open={alternativeMethodsOpen}
+            onToggle={setAlternativeMethodsOpen}
+            testId="alternative-methods-disclosure"
+            className="optimizer-result-disclosure"
+          >
           {result.paretoAlternatives && result.paretoAlternatives.length > 0 && (
             <section className="optimizer-card pareto-comparison-card" aria-labelledby="pareto-card-title">
               <h2 id="pareto-card-title">Multi-Objective Tradeoffs &amp; Alternatives</h2>
@@ -2709,13 +2892,26 @@ export function CraftOptimizer({
             </section>
           )}
 
+          </OptimizerDisclosure>
+
           {constellationGraph && (
+            <OptimizerDisclosure
+              title="Strategy visualization"
+              description="Interactive PolicyFlow Constellation and replay"
+              badge={`${constellationGraph.nodes.length} states`}
+              open={strategyVisualizationOpen}
+              onToggle={setStrategyVisualizationOpen}
+              testId="strategy-visualization-disclosure"
+              className="optimizer-result-disclosure"
+              keepMountedAfterOpen
+            >
             <section className="optimizer-card constellation-card" aria-label="Markov Policy Constellation">
               <MarkovConstellation
                 graph={constellationGraph}
                 selectedRouteName={publicSelectedRouteName}
               />
             </section>
+            </OptimizerDisclosure>
           )}
 
           <section className="optimizer-card craft-guide" aria-labelledby="craft-guide-title">
@@ -2892,6 +3088,37 @@ export function CraftOptimizer({
             ) : <p>No certified acquisition route is available under this search budget.</p>}
           </section>
 
+          {result.recommended !== null && (
+            <section className="optimizer-card compact-shopping-list" aria-labelledby="shopping-list-title">
+              <div className="craft-guide-heading-row">
+                <div>
+                  <h2 id="shopping-list-title">Shopping list</h2>
+                  <p className="muted">Expected full-route currency totals from the selected executable policy.</p>
+                </div>
+                <button type="button" className="secondary" onClick={() => copyShoppingList(result)}>
+                  {copiedAction === 'SHOPPING_LIST' ? 'Copied' : 'Copy shopping list'}
+                </button>
+              </div>
+              {Object.keys(result.expectedCurrencies).length > 0 ? (
+                <ul className="compact-currency-list">
+                  {Object.entries(result.expectedCurrencies).map(([currency, amount]) => (
+                    <li key={currency}><strong>{amount === null ? '—' : count(amount)}</strong> {currency}</li>
+                  ))}
+                </ul>
+              ) : <p>No currency purchase is certified for this result.</p>}
+              <p><strong>Expected full-route cost:</strong> {chaos(result.fullRouteUsage.fullRouteCostChaos)}</p>
+            </section>
+          )}
+
+          <OptimizerDisclosure
+            title="Cost & usage details"
+            description="Acquisition, downstream, merged action, currency, and reconciliation tables"
+            badge={chaos(result.fullRouteUsage.fullRouteCostChaos)}
+            open={costUsageOpen}
+            onToggle={setCostUsageOpen}
+            testId="cost-usage-disclosure"
+            className="optimizer-result-disclosure"
+          >
           {result.recommended !== null && <section className="optimizer-card expected-materials" aria-labelledby="expected-materials-title">
             <h2 id="expected-materials-title">Expected materials</h2>
             <p className="muted">Acquisition preparation and downstream crafting are additive, non-overlapping scopes. Full-route totals merge matching action and currency IDs exactly once.</p>
@@ -2951,12 +3178,18 @@ export function CraftOptimizer({
               </details>
             )}
           </section>}
+          </OptimizerDisclosure>
 
-          <details className="optimizer-card advanced-optimizer-details">
-            <summary>
-              <strong>Advanced optimizer details</strong>
-              <span>Proof bounds, policy health, search performance, and acquisition research</span>
-            </summary>
+          <OptimizerDisclosure
+            title="Research diagnostics"
+            description="Raw proof, policy audits, synthesis portfolios, exact rules, confidence, and warnings"
+            badge={result.warningDetails.length > 0 ? `${result.warningDetails.length} warnings` : 'Available'}
+            open={researchDiagnosticsOpen}
+            onToggle={setResearchDiagnosticsOpen}
+            testId="research-diagnostics-disclosure"
+            className="optimizer-result-disclosure"
+          >
+          <div className="optimizer-card advanced-optimizer-details">
             <div className="advanced-details-content">
               <section className="advanced-section raw-proof-details">
                 <h2>Recommendation proof</h2>
@@ -3378,7 +3611,8 @@ export function CraftOptimizer({
                 </section>
               )}
             </div>
-          </details>
+          </div>
+          </OptimizerDisclosure>
         </div>
       )}
 
