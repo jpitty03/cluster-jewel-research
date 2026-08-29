@@ -8,7 +8,7 @@ Source-of-truth plan: `POST_PHASE3H_FIELD_REVIEW_AND_PHASE3I_COMPACT_OPTIMIZER_I
 
 Baseline pulled from `origin/main`: `b8ad453402b7f1b08ac252c42f5a3b80c2daad15`.
 
-Implementation commit, closeout commit, final Pages source SHA, and deployment identifiers are recorded in section 14 after push and live verification.
+Implemented and live-verified product SHA: `c544e17866bd471eb57f218fedc5a09acaff0e54`.
 
 ## 1. Outcome
 
@@ -209,4 +209,16 @@ Self-review confirmed every old top-level surface has one owner, authoritative r
 
 ## 14. Commit, push, workflow, and deployment
 
-Pending implementation commit, push, GitHub Pages workflow/job/deployment/status IDs, and final uncached live HTML/bundle verification. This section will be completed in the documentation-only closeout after the implementation commit is live.
+- Implementation/evidence/report commit: `c544e17866bd471eb57f218fedc5a09acaff0e54` (`feat: compact craft optimizer information architecture`).
+- Push: `b8ad453402b7f1b08ac252c42f5a3b80c2daad15..c544e17866bd471eb57f218fedc5a09acaff0e54` to `origin/main`.
+- GitHub Pages workflow: `33258317062`, `Deploy to GitHub Pages`, successful.
+- Validate/build job: `99115788208`, successful in 18s.
+- Deploy job: `99115828161`, successful in 8s.
+- GitHub Pages deployment: `6156817470`, environment `github-pages`.
+- Successful deployment status: `17501077100`.
+- Live URL: `https://jpitty03.github.io/cluster-jewel-research/`.
+- Verified deployed product SHA: `c544e17866bd471eb57f218fedc5a09acaff0e54`.
+
+Uncached live HTML returned HTTP 200 with 479 bytes and referenced `assets/index-jW2lrfhP.js`. The uncached bundle returned HTTP 200 with 6,216,029 bytes. It contains release `3I.1`, `Import optimizer JSON`, all five compact research labels, `Selected policy solve`, `Portfolio optimality`, `Raw search counters`, and retained share version `3H.1`.
+
+This documentation-only closeout records the already deployed product commit and changes no application behavior or acceptance evidence. Its exact commit/workflow/deployment IDs and final Pages source SHA are verified in the final handoff.
