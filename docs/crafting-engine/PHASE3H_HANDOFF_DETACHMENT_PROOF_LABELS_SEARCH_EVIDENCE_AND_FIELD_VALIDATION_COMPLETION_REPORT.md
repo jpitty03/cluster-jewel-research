@@ -8,6 +8,8 @@ Source-of-truth plan: `POST_PHASE3G_FIELD_REVIEW_AND_PHASE3H_HANDOFF_DETACHMENT_
 
 Baseline pulled from `origin/main`: `7ce00675d4d179d0544697ff5398a97c42be62b8`.
 
+Implemented and live-verified product SHA: `3a3a1d178a1f6603208364cc3c4ad2f31d820331`.
+
 ## 1. Outcome
 
 Phase 3H replaces equality-derived Cluster Jewels source presentation with an explicit one-way handoff lifecycle. A newly imported Cluster Jewels seed is attached. The first player-authored edit to craft identity or source market identity atomically changes the handoff to `none`, clears source-owned sale value, invalidates the old result, removes the parent seed, and removes all source presentation and serialization. Reverting fields or optimizing again cannot reattach it. A newly initiated `Optimize this combo` action creates a distinct seed and is the only reattachment path.
@@ -248,5 +250,15 @@ Self-review also verified that every identity-changing handler enters the centra
 
 ## 14. Commit, push, and deployment
 
-Implementation commit, push range, GitHub Actions workflow/job IDs, Pages deployment ID, and uncached live verification are recorded in the deployment closeout below after the implementation commit is published.
+- Implementation/evidence/report commit: `3a3a1d178a1f6603208364cc3c4ad2f31d820331` (`feat: enforce one-way optimizer handoff detachment`).
+- Push: `7ce00675d4d179d0544697ff5398a97c42be62b8..3a3a1d178a1f6603208364cc3c4ad2f31d820331` to `origin/main`.
+- GitHub Pages workflow: `33235914612`, `Deploy to GitHub Pages`, successful.
+- Validate/build job: `99056755429`, successful in 13s.
+- Deploy job: `99056781918`, successful in 8s.
+- GitHub Pages deployment: `6152633890`, environment `github-pages`, successful status record `17490562328`.
+- Live URL: `https://jpitty03.github.io/cluster-jewel-research/`.
+- Verified deployed product SHA: `3a3a1d178a1f6603208364cc3c4ad2f31d820331`.
 
+After the successful deployment, uncached live HTML returned HTTP 200 and referenced `assets/index-CjBaoPXO.js`. The uncached bundle returned HTTP 200 with 6,208,627 bytes; it contains release `3H.1`, `Acceptable alternative modifiers`, `Selected policy solve`, and `Portfolio optimality`, and does not contain `Acceptable fourth modifier`.
+
+This documentation-only closeout records the already deployed product commit and changes no application behavior or acceptance evidence. Its own commit/workflow/deployment IDs and final Pages source SHA are verified in the final handoff.
