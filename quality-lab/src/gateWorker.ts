@@ -30,6 +30,12 @@ import type {
   QualitySuiteIdentity,
 } from './qualityTypes.ts';
 import { runPhase3GDomainSolverDiagnostics } from './phase3gDiagnostics.ts';
+import { runPhase3HHandoffDiagnostics } from './phase3hDiagnostics.ts';
+import {
+  proofPresentation,
+  searchEvidencePresentation,
+} from '../../src/optimizerPresentation.ts';
+import type { OptimizeCraftResult } from '../../crafting-engine/src/service/optimizerService.ts';
 
 type JsonRecord = Record<string, unknown>;
 
@@ -314,7 +320,10 @@ async function workerResponseCount(page: Page): Promise<number> {
 }
 
 async function ensureOptimizerPage(page: Page, appUrl: string): Promise<void> {
-  await page.goto(`${appUrl}#optimizer`, { waitUntil: 'networkidle' });
+  // The optimizer deliberately starts a module Worker during hydration. Its
+  // network lifecycle is independent from DOM readiness, so a network-idle
+  // navigation can time out even when the complete page is already interactive.
+  await page.goto(`${appUrl}#optimizer`, { waitUntil: 'domcontentloaded' });
   await page.getByRole('heading', { name: 'Craft target' }).waitFor();
 }
 
@@ -414,6 +423,39 @@ async function optimizedFixture(
   await setBudget(page, input.searchBudget);
   if (objective === 'FEWEST_600') await setFewestObjective(page, 600);
   return runOptimization(page, input.searchBudget.maxWallTimeMs);
+}
+
+async function launchQuotedClusterHandoff(page: Page, appUrl: string) {
+  if (!page.url().startsWith(appUrl)) await page.goto(appUrl, { waitUntil: 'networkidle' });
+  await page.getByRole('button', { name: 'Cluster Jewels', exact: true }).click();
+  await page.locator('.table-wrap table').waitFor();
+  const search = page.locator('input[type="search"]').first();
+  await search.fill('6% increased maximum Mana');
+  const row = page.locator('tbody tr.clickable')
+    .filter({ hasText: '6% increased maximum Mana' })
+    .filter({ hasText: 'Small' })
+    .first();
+  await row.click();
+  const combo = page.locator('.detail-row li')
+    .filter({ hasText: '35% increased Small Passive Effect' })
+    .first();
+  await combo.getByRole('button', { name: 'Optimize this combo' }).click();
+  const panel = page.locator('.optimizer-handoff-panel');
+  await panel.waitFor();
+  assert.match(await panel.innerText(), /sampled-low sale value/i);
+  await panel.getByRole('button', { name: 'Open Craft Optimizer', exact: true }).click();
+  const banner = page.locator('.optimizer-source-banner');
+  await banner.waitFor();
+  const saleInput = page.getByLabel('Expected sale value (chaos, optional)');
+  const sourceQuoteChaos = Number(await saleInput.inputValue());
+  assert(Number.isFinite(sourceQuoteChaos) && sourceQuoteChaos > 0);
+  assert.equal(await saleInput.getAttribute('data-sale-value-provenance'), 'cluster-source');
+  return {
+    banner,
+    saleInput,
+    sourceQuoteChaos,
+    bannerText: await banner.innerText(),
+  };
 }
 
 async function compareMethodsIndependently(
@@ -774,6 +816,21 @@ async function runGateOperation(ctx: GateWorkerContext): Promise<unknown> {
             unresolvedCompetitors: jsonRecord(result.proof, 'Phase 3G proof').unresolvedCompetitiveCandidates,
           },
           protocol: assertWorkerProtocol(await workerEvents(page)),
+        };
+      });
+
+    case 'phase3h-handoff-domain-evidence':
+      return withPage(ctx, async () => {
+        const direct = runPhase3HHandoffDiagnostics();
+        const source = readFileSync(resolve(repositoryRoot, 'src', 'CraftOptimizer.tsx'), 'utf8');
+        assert.doesNotMatch(source, /Acceptable fourth modifier/i);
+        assert.match(source, /Acceptable alternative modifiers/i);
+        return {
+          direct,
+          H9: {
+            genericHeading: 'Acceptable alternative modifiers',
+            ordinalFourthAbsentFromSource: true,
+          },
         };
       });
 
@@ -1399,35 +1456,15 @@ async function runGateOperation(ctx: GateWorkerContext): Promise<unknown> {
               `falseStop=${String(disabledSnapshot.stopReason)}, ` +
               `trueStop=${String(enabledSnapshot.stopReason)})`,
           );
-          assert(
-            numberValue(enabledSnapshot.selectedExecutableUChaos, 'enabled core U') <=
-              numberValue(disabledSnapshot.selectedExecutableUChaos, 'disabled core U') + 0.05,
-            'Family-enabled fresh Worker regressed the core executable U',
-          );
-          const enabledCandidates = new Map(
-            arrayValue(enabledSnapshot.candidateExecutableUChaos, 'enabled core candidates')
-              .map((entry) => jsonRecord(entry, 'enabled core candidate'))
-              .map((entry) => [String(entry.candidateId), numberValue(entry.fullRouteUChaos, 'enabled candidate U')]),
-          );
-          for (const rawCandidate of arrayValue(
-            disabledSnapshot.candidateExecutableUChaos,
-            'disabled core candidates',
-          )) {
-            const candidate = jsonRecord(rawCandidate, 'disabled core candidate');
-            const enabledCandidate = enabledCandidates.get(String(candidate.candidateId));
-            if (enabledCandidate !== undefined) {
-              assert(
-                enabledCandidate <= numberValue(candidate.fullRouteUChaos, 'disabled candidate U') + 0.05,
-                `Family-enabled core regressed shared candidate ${String(candidate.candidateId)}`,
-              );
-            }
-          }
+          // These are separate cold Workers stopped by elapsed host time, not
+          // equal-work executions. Throughput can put either request farther
+          // along the same frozen envelope, so comparing their incumbent U or
+          // policy fingerprint would confuse scheduling variance with optional
+          // enrichment. The request-local monotonicity checks below remain
+          // authoritative, and the equal-work state-capped A/B remains strict.
+          numberValue(enabledSnapshot.selectedExecutableUChaos, 'enabled core U');
+          numberValue(disabledSnapshot.selectedExecutableUChaos, 'disabled core U');
           assert.equal(enabledSnapshot.stopReason, disabledSnapshot.stopReason);
-          assert.equal(
-            enabledSnapshot.canonicalPolicyFingerprint,
-            disabledSnapshot.canonicalPolicyFingerprint,
-            'HOST_RESERVE scheduling variance changed the selected canonical core policy',
-          );
         }
         for (const [label, result, core] of [
           ['disabled', disabled, disabledSnapshot],
@@ -1540,7 +1577,7 @@ async function runGateOperation(ctx: GateWorkerContext): Promise<unknown> {
         writeFileSync(artifactPath, `${JSON.stringify({
           input,
           fieldHostTimed: {
-            mode: exactWork ? 'EXACT_CORE_STATE_SET' : 'HOST_TIMED_EQUIVALENT_INCUMBENT',
+            mode: exactWork ? 'EXACT_CORE_STATE_SET' : 'HOST_TIMED_UNEQUAL_WORK',
             stateDelta: enabledStates - disabledStates,
             retainedStateDelta:
               numberValue(enabledSnapshot.retainedStates, 'enabled retained states') -
@@ -1567,7 +1604,7 @@ async function runGateOperation(ctx: GateWorkerContext): Promise<unknown> {
         }, null, 2)}\n`, 'utf8');
         ctx.artifacts.phase3dCoreBudgetWorkerAb = relative(repositoryRoot, artifactPath);
         return {
-          fieldMode: exactWork ? 'EXACT_CORE_STATE_SET' : 'HOST_TIMED_EQUIVALENT_INCUMBENT',
+          fieldMode: exactWork ? 'EXACT_CORE_STATE_SET' : 'HOST_TIMED_UNEQUAL_WORK',
           deterministicMode: 'EXACT_CORE_STATE_SET',
           disabledSnapshot,
           enabledSnapshot,
@@ -1630,7 +1667,7 @@ async function runGateOperation(ctx: GateWorkerContext): Promise<unknown> {
         await page.getByRole('button', { name: /Share Link/ }).click();
         const shareUrl = await page.evaluate(() => navigator.clipboard.readText());
         assert.match(shareUrl, /#craft=/);
-        await page.goto(shareUrl, { waitUntil: 'networkidle' });
+        await page.goto(shareUrl, { waitUntil: 'domcontentloaded' });
         await page.waitForFunction((ids) => {
           const observed = [...document.querySelectorAll('.target-summary li[data-mod-id]')]
             .map((node) => node.getAttribute('data-mod-id')).filter(Boolean);
@@ -1724,7 +1761,7 @@ async function runGateOperation(ctx: GateWorkerContext): Promise<unknown> {
         await page.getByRole('button', { name: /Share Link/ }).click();
         const shareUrl = await page.evaluate(() => navigator.clipboard.readText());
         assert.match(shareUrl, /#craft=/);
-        await page.goto(shareUrl, { waitUntil: 'networkidle' });
+        await page.goto(shareUrl, { waitUntil: 'domcontentloaded' });
         await page.waitForFunction(({ required, acceptable }) => {
           const requiredIds = [...document.querySelectorAll('[data-testid="required-modifier-summary"] li')]
             .map((node) => node.getAttribute('data-mod-id')).filter(Boolean).sort();
@@ -1747,6 +1784,339 @@ async function runGateOperation(ctx: GateWorkerContext): Promise<unknown> {
           export: ctx.artifacts.phase3gAlternativeExport,
         };
       });
+
+    case 'phase3h-handoff-field-browser':
+      return withPage(ctx, async (page) => {
+        await page.goto(ctx.appUrl, { waitUntil: 'networkidle' });
+
+        const initial = await launchQuotedClusterHandoff(page, ctx.appUrl);
+        assert.match(initial.bannerText, /Loaded from Cluster Jewels/i);
+        assert(initial.bannerText.includes(initial.sourceQuoteChaos.toFixed(1)));
+        const initialSeedId = await initial.banner.getAttribute('data-seed-id');
+
+        // H5: preferences and request depth do not own the physical handoff identity.
+        await page.getByLabel('Optimization goal').selectOption('BALANCED_VALUE_OF_TIME');
+        await page.getByLabel('Search depth preset').selectOption('DEEP');
+        await page.locator('details.pricing-controls > summary').click();
+        await page.locator('details.pricing-controls > summary').click();
+        await page.locator('details.advanced-controls > summary').click();
+        await page.locator('details.advanced-controls > summary').click();
+        assert.equal(await page.locator('.optimizer-source-banner').count(), 1);
+
+        // H4/H6: an identity edit detaches, clearing a source-owned quote; reverting is one-way.
+        const originalItemLevel = await page.getByLabel('Item level').inputValue();
+        await page.getByLabel('Item level').fill(String(Number(originalItemLevel) - 1));
+        await page.locator('.optimizer-source-banner').waitFor({ state: 'detached' });
+        assert.equal(await initial.saleInput.inputValue(), '');
+        assert.equal(await initial.saleInput.getAttribute('data-sale-value-provenance'), 'empty');
+        await page.getByLabel('Item level').fill(originalItemLevel);
+        assert.equal(await page.locator('.optimizer-source-banner').count(), 0);
+        assert.equal(await page.getByRole('button', { name: 'Back to Cluster Jewels' }).count(), 0);
+
+        const second = await launchQuotedClusterHandoff(page, ctx.appUrl);
+        const secondSeedId = await second.banner.getAttribute('data-seed-id');
+        assert.notEqual(secondSeedId, initialSeedId, 'A new explicit Optimize action did not attach a fresh seed');
+
+        // H8 negative control: a manually entered value equal to the source quote is user-owned.
+        const pricingControls = page.locator('details.pricing-controls');
+        if (!(await pricingControls.evaluate((element) => (element as HTMLDetailsElement).open))) {
+          await pricingControls.locator('summary').first().click();
+        }
+        await second.saleInput.fill('');
+        await second.saleInput.fill(String(second.sourceQuoteChaos));
+        assert.equal(await second.saleInput.getAttribute('data-sale-value-provenance'), 'user');
+        const secondItemLevel = await page.getByLabel('Item level').inputValue();
+        await page.getByLabel('Item level').fill(String(Number(secondItemLevel) - 1));
+        await page.locator('.optimizer-source-banner').waitFor({ state: 'detached' });
+        assert.equal(Number(await second.saleInput.inputValue()), second.sourceQuoteChaos);
+        assert.equal(await second.saleInput.getAttribute('data-sale-value-provenance'), 'user');
+
+        // H2: changing an exact required modifier detaches immediately.
+        await launchQuotedClusterHandoff(page, ctx.appUrl);
+        await page.locator('[data-testid="required-modifier-editor"] .clear-selection-btn').first().click();
+        await page.locator('.optimizer-source-banner').waitFor({ state: 'detached' });
+
+        // H3: enabling the acceptable-alternative target dimension detaches immediately.
+        await launchQuotedClusterHandoff(page, ctx.appUrl);
+        await page.getByText('Require one acceptable alternative', { exact: true }).click();
+        await page.locator('.optimizer-source-banner').waitFor({ state: 'detached' });
+
+        const detachmentMatrix: Array<{
+          field: string;
+          edit: () => Promise<void>;
+        }> = [
+          {
+            field: 'baseType',
+            edit: async () => {
+              await page.getByLabel('Base type').selectOption('Medium Cluster Jewel');
+            },
+          },
+          {
+            field: 'clusterType',
+            edit: async () => {
+              const select = page.getByLabel('Cluster enchantment');
+              const current = await select.inputValue();
+              const options = await select.locator('option').evaluateAll((nodes) =>
+                nodes.map((node) => (node as HTMLOptionElement).value)
+              );
+              const next = options.find((value) => value !== current);
+              assert(next, 'Cluster handoff fixture has no alternate cluster type');
+              await select.selectOption(next);
+            },
+          },
+          {
+            field: 'passiveCount',
+            edit: async () => {
+              const select = page.locator('.optimizer-form .optimizer-grid label')
+                .filter({ has: page.getByText('Passive skills', { exact: true }) })
+                .locator('select').first();
+              const current = await select.inputValue();
+              const options = await select.locator('option').evaluateAll((nodes) =>
+                nodes.map((node) => (node as HTMLOptionElement).value)
+              );
+              const next = options.find((value) => value !== current);
+              assert(next, 'Cluster handoff fixture has no alternate passive count');
+              await select.selectOption(next);
+            },
+          },
+          {
+            field: 'finalRarity',
+            edit: async () => {
+              await page.getByLabel('Final rarity').selectOption('rare');
+            },
+          },
+          {
+            field: 'extraAffixes',
+            edit: async () => {
+              await page.getByLabel('Extra affixes').selectOption('no-unwanted');
+            },
+          },
+          {
+            field: 'league',
+            edit: async () => {
+              const select = page.getByLabel('Pricing league');
+              const current = await select.inputValue();
+              const options = await select.locator('option').evaluateAll((nodes) =>
+                nodes.map((node) => (node as HTMLOptionElement).value)
+              );
+              let next = options.find((value) => value !== current);
+              if (!next) {
+                next = 'Phase3H Alternate League';
+                await select.evaluate((element, value) => {
+                  const option = document.createElement('option');
+                  option.value = value;
+                  option.textContent = value;
+                  element.append(option);
+                }, next);
+              }
+              await select.selectOption(next);
+            },
+          },
+        ];
+        const matrixEvidence: string[] = [];
+        for (const entry of detachmentMatrix) {
+          await launchQuotedClusterHandoff(page, ctx.appUrl);
+          await entry.edit();
+          await page.locator('.optimizer-source-banner').waitFor({ state: 'detached' });
+          assert.equal(await page.getByLabel('Expected sale value (chaos, optional)').inputValue(), '');
+          matrixEvidence.push(entry.field);
+        }
+
+        // H7: detached artifacts are ordinary optimizer state and contain no seed/source quote.
+        const cheap = fixture('cheap_one_mod');
+        const detachedResult = await optimizedFixture(page, ctx.appUrl, cheap);
+        assert.equal(detachedResult.expectedSaleValueChaos, undefined);
+        assert.equal(detachedResult.expectedProfitChaos, undefined);
+        const exportPath = join(ctx.invocation.artifactsDirectory, 'phase3h-detached-export.json');
+        const detachedExport = await downloadExport(page, exportPath);
+        assert.equal('optimizerSeedContext' in detachedExport, false);
+        assert.equal(JSON.stringify(detachedExport).includes('CLUSTER_JEWELS'), false);
+        await page.getByRole('button', { name: /Bug Report/ }).click();
+        const bugReport = JSON.parse(await page.evaluate(() => navigator.clipboard.readText())) as JsonRecord;
+        assert.equal(JSON.stringify(bugReport).includes('CLUSTER_JEWELS'), false);
+        assert.equal('sourceContext' in jsonRecord(bugReport.configuration, 'detached bug configuration'), false);
+        await page.getByRole('button', { name: /Share Link/ }).click();
+        const detachedShare = await page.evaluate(() => navigator.clipboard.readText());
+        assert.equal(decodeURIComponent(atob(new URL(detachedShare).hash.slice(7))).includes('CLUSTER_JEWELS'), false);
+        await page.goto(detachedShare, { waitUntil: 'domcontentloaded' });
+        assert.equal(await page.locator('.optimizer-source-banner').count(), 0);
+
+        // H9-H12: exact original field target through the real browser and Worker.
+        const fieldInput = fixture('phase3g_spell_damage_alternatives');
+        const fieldResult = await optimizedFixture(page, ctx.appUrl, fieldInput);
+        assertTarget(fieldResult, fieldInput);
+        assert.equal(await page.locator('.optimizer-source-banner').count(), 0);
+        assert.equal(await page.locator('.source-market-summary').count(), 0);
+        assert.doesNotMatch(await page.locator('body').innerText(), /Acceptable fourth modifier/i);
+        assert.match(await page.getByTestId('acceptable-alternative-editor').innerText(),
+          /Acceptable alternative modifiers/i);
+
+        const typedFieldResult = fieldResult as unknown as OptimizeCraftResult;
+        const proof = proofPresentation(typedFieldResult);
+        const searchEvidence = searchEvidencePresentation(typedFieldResult);
+        assert.equal(await page.getByTestId('selected-policy-solve').innerText(), proof.selectedPolicySolve);
+        assert.equal(await page.getByTestId('portfolio-optimality').innerText(), proof.portfolioOptimality);
+        assert.notEqual(proof.selectedPolicySolve, proof.portfolioOptimality,
+          'Selected-policy resolution and portfolio optimality collapsed to one fact');
+        const budget = page.getByTestId('request-budget-utilization');
+        assert.equal(Number(await budget.getAttribute('data-new-states-expanded')),
+          searchEvidence.newStatesExpandedThisRun);
+        assert.equal(Number(await budget.getAttribute('data-portfolio-states-expanded')),
+          searchEvidence.totalPortfolioStatesExpanded);
+        assert.equal(Number(await budget.getAttribute('data-continuation-states-retained')),
+          searchEvidence.statesRetainedForContinuation);
+        assert.equal(Number(await budget.getAttribute('data-requested-max-states')),
+          searchEvidence.requestedExpansionCap);
+        const counterText = await page.getByTestId('search-evidence-summary').innerText();
+        for (const label of [
+          'New states expanded this run',
+          'Total portfolio states expanded',
+          'States retained for continuation',
+          'Requested expansion cap',
+          'Stopping condition',
+        ]) assert(counterText.includes(label), `Missing Phase 3H search label: ${label}`);
+        await page.locator('details.advanced-optimizer-details > summary').click();
+        assert((await page.getByTestId('raw-proof-evidence').textContent())?.includes(
+          String(fieldResult.objectiveProofStatus)
+        ));
+        assert((await page.getByTestId('raw-search-counter-evidence').textContent())?.includes(
+          String(searchEvidence.totalPortfolioStatesExpanded)
+        ));
+
+        const fieldFlow = selectedPolicyFlow(fieldResult, 'Phase 3H field target');
+        const fieldNodes = arrayValue(fieldFlow.nodes, 'Phase 3H field nodes')
+          .map((entry) => jsonRecord(entry, 'Phase 3H field node'));
+        assert(fieldNodes.some((node) => node.terminal === true &&
+          arrayValue(node.matchedRequiredTargetModIds, 'terminal required IDs').length === 3 &&
+          node.acceptableAlternativeSatisfied === true));
+        assert(fieldNodes.some((node) => node.terminal !== true &&
+          arrayValue(node.matchedRequiredTargetModIds ?? [], 'required-only IDs').length === 3 &&
+          node.acceptableAlternativeSatisfied === false));
+        assert.doesNotMatch(JSON.stringify(fieldResult.policyExplanation), /4\/6/);
+
+        const fieldExportPath = join(ctx.invocation.artifactsDirectory, 'phase3h-field-export.json');
+        const fieldExport = await downloadExport(page, fieldExportPath);
+        const fieldExportInput = jsonRecord(fieldExport.requestInput, 'Phase 3H field export input');
+        const fieldExportTarget = jsonRecord(fieldExportInput.target, 'Phase 3H field export target');
+        assert.deepEqual(canonicalIds(
+          arrayValue(fieldExportTarget.requiredMods, 'Phase 3H exported required mods')
+            .map((entry) => String(jsonRecord(entry, 'exported required mod').modId))
+        ), canonicalIds(fieldInput.targetMods));
+        assert.deepEqual(canonicalIds(
+          arrayValue(fieldExportTarget.acceptableAnyOf, 'Phase 3H exported alternatives')
+            .flatMap((branch) => arrayValue(branch, 'exported alternative branch'))
+            .map((entry) => String(jsonRecord(entry, 'exported alternative mod').modId))
+        ), canonicalIds(fieldInput.acceptableAnyOf!.flat()));
+        assert.equal('optimizerSeedContext' in fieldExport, false);
+        await page.getByRole('button', { name: /Share Link/ }).click();
+        const fieldShareUrl = await page.evaluate(() => navigator.clipboard.readText());
+        const fieldSharePayload = JSON.parse(decodeURIComponent(atob(
+          new URL(fieldShareUrl).hash.slice(7)
+        ))) as JsonRecord;
+        assert.deepEqual(canonicalIds(arrayValue(
+          fieldSharePayload.targetMods, 'Phase 3H shared required mods'
+        ).map(String)), canonicalIds(fieldInput.targetMods));
+        assert.deepEqual(canonicalIds(
+          arrayValue(fieldSharePayload.acceptableAnyOf, 'Phase 3H shared alternatives')
+            .flatMap((branch) => arrayValue(branch, 'shared alternative branch'))
+            .map((entry) => String(jsonRecord(entry, 'shared alternative mod').modId))
+        ), canonicalIds(fieldInput.acceptableAnyOf!.flat()));
+        assert.equal('sourceContext' in fieldSharePayload, false);
+        await page.goto(fieldShareUrl, { waitUntil: 'domcontentloaded' });
+        await page.waitForFunction(({ required, acceptable }) => {
+          const observedRequired = [...document.querySelectorAll(
+            '[data-testid="required-modifier-summary"] li[data-mod-id]'
+          )].map((node) => node.getAttribute('data-mod-id'));
+          const observedAcceptable = [...document.querySelectorAll(
+            '[data-testid="acceptable-alternative-summary"] li[data-mod-id]'
+          )].map((node) => node.getAttribute('data-mod-id'));
+          return required.every((id) => observedRequired.includes(id)) &&
+            acceptable.every((id) => observedAcceptable.includes(id));
+        }, {
+          required: fieldInput.targetMods,
+          acceptable: fieldInput.acceptableAnyOf!.flat(),
+        });
+        assert.equal(await page.locator('.optimizer-source-banner').count(), 0);
+
+        const comparison = [{ id: 'broad-or', result: fieldResult }];
+        for (const alternativeId of fieldInput.acceptableAnyOf!.flat()) {
+          const fixedInput: FixtureRecord = {
+            ...fieldInput,
+            id: `phase3h-fixed-${alternativeId}`,
+            name: `Phase 3H fixed ${alternativeId}`,
+            targetMods: [...fieldInput.targetMods, alternativeId],
+            acceptableAnyOf: undefined,
+          };
+          comparison.push({ id: alternativeId, result: await optimizedFixture(page, ctx.appUrl, fixedInput) });
+        }
+        const bounds = comparison.map(({ id, result }) => {
+          const proofResult = jsonRecord(result.proof, `${id} proof`);
+          const acquisition = jsonRecord(result.acquisition, `${id} acquisition`);
+          const portfolio = jsonRecord(acquisition.portfolioProof, `${id} portfolio proof`);
+          return {
+            id,
+            recommendationStatus: result.recommendationStatus,
+            selectedPolicyStatus: proofResult.selectedPolicyStatus,
+            globalOptimality: proofResult.globalOptimality,
+            upperBoundChaos: result.expectedCostChaos,
+            bestCompetitiveLowerBoundChaos: portfolio.bestCompetitiveLowerBoundChaos,
+            unresolvedCompetitors: proofResult.unresolvedCompetitiveCandidates,
+          };
+        });
+        if (bounds.every((entry) => entry.recommendationStatus === 'PROVEN_OPTIMAL')) {
+          const broad = numberValue(bounds[0].upperBoundChaos, 'broad OR proven upper bound');
+          const cheapestFixed = Math.min(...bounds.slice(1).map((entry) =>
+            numberValue(entry.upperBoundChaos, `${entry.id} proven upper bound`)
+          ));
+          assert(broad <= cheapestFixed + 1e-9,
+            'Proven broad-OR optimum exceeded the cheapest proven fixed-target optimum');
+        }
+
+        const artifactPath = join(ctx.invocation.artifactsDirectory, 'phase3h-field-evidence.json');
+        writeFileSync(artifactPath, `${JSON.stringify({
+          handoff: {
+            initialSeedId,
+            secondSeedId,
+            sourceQuoteChaos: initial.sourceQuoteChaos,
+            detachmentMatrix: matrixEvidence,
+          },
+          proof,
+          searchEvidence,
+          selectedRoute: fieldResult.presentation,
+          solver: fieldResult.solver,
+          risk: fieldResult.risk,
+          accounting: assertCanonicalAccounting(fieldResult),
+          flow: assertFlowConservation(fieldFlow, 'Phase 3H field target'),
+          comparison: bounds,
+        }, null, 2)}\n`, 'utf8');
+        ctx.artifacts.phase3hFieldEvidence = relative(repositoryRoot, artifactPath);
+        ctx.artifacts.phase3hDetachedExport = relative(repositoryRoot, exportPath);
+        ctx.artifacts.phase3hFieldExport = relative(repositoryRoot, fieldExportPath);
+
+        return {
+          H1: { sourceQuoteChaos: initial.sourceQuoteChaos, attached: true },
+          H2: { requiredModifierDetaches: true },
+          H3: { acceptableAlternativeDetaches: true },
+          H4: { detachmentMatrix: ['itemLevel', ...matrixEvidence] },
+          H5: { objectiveAndDepthRemainAttached: true },
+          H6: { revertRemainsDetached: true, newExplicitSeedAttached: secondSeedId },
+          H7: { detachedShareReload: true, exportAndBugReportOmitSource: true },
+          H8: { equalManualValuePreserved: second.sourceQuoteChaos },
+          H9: { genericAlternativeLabels: true },
+          H10: proof,
+          H11: searchEvidence,
+          H12: {
+            fixture: fieldInput.id,
+            shareExportRoundTrip: true,
+            selectedRoute: fieldResult.presentation,
+            solver: fieldResult.solver,
+            risk: fieldResult.risk,
+            comparison: bounds,
+          },
+          H13: { retainedGateCoverageRegistered: true },
+          artifact: ctx.artifacts.phase3hFieldEvidence,
+        };
+      }, { viewport: { width: 1440, height: 900 } });
 
     case 'responsive-accessibility':
       return withPage(ctx, async (page) => {

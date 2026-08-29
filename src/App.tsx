@@ -69,7 +69,12 @@ function App() {
 
   const backToClusterJewels = () => {
     window.history.replaceState(null, '', `${window.location.pathname}${window.location.search}`);
+    setOptimizerSeed(null);
     setTab('jewels');
+  };
+
+  const detachOptimizerSeed = () => {
+    setOptimizerSeed(null);
   };
 
   useEffect(() => {
@@ -177,6 +182,7 @@ function App() {
         <CraftOptimizer
           seed={optimizerSeed}
           onBackToClusterJewels={backToClusterJewels}
+          onHandoffDetached={detachOptimizerSeed}
         />
       )}
 

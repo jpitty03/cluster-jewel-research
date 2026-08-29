@@ -1,9 +1,9 @@
 {
-  "version": "Phase3G-Frozen-Browser-Corpus-1",
+  "version": "Phase3H-Frozen-Browser-Corpus-1",
   "fixtures": [
     {
       "id": "phase3g_spell_damage_alternatives",
-      "name": "Phase 3G Spell Damage required-three plus any-one acceptable alternative",
+      "name": "Phase 3H field validation: Spell Damage required-three plus any-one acceptable alternative",
       "baseType": "Large Cluster Jewel",
       "clusterType": "10% increased Spell Damage",
       "itemLevel": 84,

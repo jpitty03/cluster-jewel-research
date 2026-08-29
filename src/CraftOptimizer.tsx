@@ -43,6 +43,20 @@ import {
   type CraftSharePayload,
 } from '../crafting-engine/src/service/shareBundle.ts';
 import type { OptimizerSeed } from './optimizerSeed.ts';
+import {
+  attachClusterHandoff,
+  detachedSaleValue,
+  detachClusterHandoff as detachedHandoffState,
+  handoffIdentitySnapshot,
+  hydratedSaleValue,
+  userSaleValue,
+  type ClusterHandoffState,
+  type SaleValueProvenance,
+} from './optimizerHandoff.ts';
+import {
+  proofPresentation,
+  searchEvidencePresentation,
+} from './optimizerPresentation.ts';
 
 const DEFAULT_ITEM_LEVEL = 84;
 interface SearchDepthBudget {
@@ -634,14 +648,19 @@ export function SearchActivityVisualizer({
   );
 }
 
-export const APP_RELEASE_VERSION = '3G.1';
+export const APP_RELEASE_VERSION = '3H.1';
 
 interface CraftOptimizerProps {
   seed?: OptimizerSeed | null;
   onBackToClusterJewels?: () => void;
+  onHandoffDetached?: () => void;
 }
 
-export function CraftOptimizer({ seed = null, onBackToClusterJewels }: CraftOptimizerProps) {
+export function CraftOptimizer({
+  seed = null,
+  onBackToClusterJewels,
+  onHandoffDetached,
+}: CraftOptimizerProps) {
   const baseTypes = useMemo(() => browserCraftingCatalog.getBaseTypes(), []);
   const initialBase = baseTypes[0] ?? 'Large Cluster Jewel';
   const [baseType, setBaseType] = useState<BaseType>(initialBase);
@@ -664,12 +683,16 @@ export function CraftOptimizer({ seed = null, onBackToClusterJewels }: CraftOpti
   const [finishCondition, setFinishCondition] = useState<'any-match' | 'no-unwanted'>('any-match');
   const [cleanBaseCost, setCleanBaseCost] = useState('');
   const [saleValue, setSaleValue] = useState('');
+  const [saleValueProvenance, setSaleValueProvenance] =
+    useState<SaleValueProvenance>('empty');
   const [importedPriceContext, setImportedPriceContext] =
     useState<OptimizeCraftInput['prices'] | null>(null);
   const [importedMarketContext, setImportedMarketContext] =
     useState<OptimizeCraftInput['marketContext'] | null>(null);
   const pricingLeagues = useMemo(() => getOptimizerPricingLeagues(), []);
   const [league, setLeague] = useState(pricingLeagues[0] ?? '');
+  const leagueRef = useRef(league);
+  leagueRef.current = league;
   const [allowFallback, setAllowFallback] = useState(true);
   const eligibleMods = useMemo(
     () => browserCraftingCatalog.getEligibleMods(baseType, clusterType, itemLevel),
@@ -691,8 +714,26 @@ export function CraftOptimizer({ seed = null, onBackToClusterJewels }: CraftOpti
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const sourceBannerRef = useRef<HTMLElement | null>(null);
   const appliedSeedIdRef = useRef<string | null>(null);
-  const [activeSeed, setActiveSeed] = useState<OptimizerSeed | null>(null);
+  const [clusterHandoff, setClusterHandoff] = useState<ClusterHandoffState>({ status: 'none' });
   const [seedWarning, setSeedWarning] = useState<string | null>(null);
+  const hydratingHandoffRef = useRef(false);
+  const onHandoffDetachedRef = useRef(onHandoffDetached);
+  onHandoffDetachedRef.current = onHandoffDetached;
+  const activeSeed = clusterHandoff.status === 'attached' ? clusterHandoff.seed : null;
+
+  const detachClusterHandoff = useCallback((reason: string) => {
+    if (hydratingHandoffRef.current || clusterHandoff.status !== 'attached') return;
+    const detachedSale = detachedSaleValue(saleValue, saleValueProvenance);
+    setSaleValue(detachedSale.value);
+    setSaleValueProvenance(detachedSale.provenance);
+    setClusterHandoff(detachedHandoffState());
+    setSeedWarning(null);
+    setResult(null);
+    setProgress(null);
+    setError(null);
+    onHandoffDetachedRef.current?.();
+    if (import.meta.env.DEV) console.debug(`Cluster handoff detached: ${reason}`);
+  }, [clusterHandoff.status, saleValue, saleValueProvenance]);
 
   const currentSearchBudget = useMemo<SearchDepthBudget>(() => ({
     maxStates,
@@ -751,6 +792,7 @@ export function CraftOptimizer({ seed = null, onBackToClusterJewels }: CraftOpti
   const [showHelpModal, setShowHelpModal] = useState<boolean>(false);
 
   const applyPreset = (preset: 'attack-large' | 'es-small') => {
+    detachClusterHandoff('target preset changed');
     if (preset === 'attack-large') {
       const base: BaseType = 'Large Cluster Jewel';
       const cluster = '10% increased Attack Damage';
@@ -898,6 +940,7 @@ export function CraftOptimizer({ seed = null, onBackToClusterJewels }: CraftOpti
     const encoded = window.location.hash.slice(7);
     const decoded = decodeCraftFromUrl(encoded);
     if (!decoded) return;
+    hydratingHandoffRef.current = true;
     if (decoded.baseType) setBaseType(decoded.baseType);
     if (decoded.clusterType) setClusterType(decoded.clusterType);
     if (decoded.itemLevel) setItemLevel(decoded.itemLevel);
@@ -918,6 +961,11 @@ export function CraftOptimizer({ seed = null, onBackToClusterJewels }: CraftOpti
     if (decoded.maxUnmatchedAffixes === 0) setFinishCondition('no-unwanted');
     else setFinishCondition('any-match');
     setSaleValue(decoded.expectedSaleValueChaos === undefined ? '' : String(decoded.expectedSaleValueChaos));
+    setSaleValueProvenance(hydratedSaleValue(
+      decoded.expectedSaleValueChaos,
+      decoded.sourceContext !== undefined,
+      decoded.saleValueProvenance,
+    ));
     setImportedPriceContext(decoded.prices ?? null);
     setImportedMarketContext(decoded.marketContext ?? null);
     if (decoded.sourceContext) {
@@ -929,7 +977,7 @@ export function CraftOptimizer({ seed = null, onBackToClusterJewels }: CraftOpti
           `${decoded.sourceContext.league} is not available in optimizer pricing. The existing pricing league was preserved.`
         );
       }
-      setActiveSeed({
+      const importedSeed: OptimizerSeed = {
         id: `shared-cluster-jewels:${encoded.slice(0, 16)}`,
         source: 'CLUSTER_JEWELS',
         league: decoded.sourceContext.league,
@@ -942,13 +990,33 @@ export function CraftOptimizer({ seed = null, onBackToClusterJewels }: CraftOpti
         targetModIds: [...decoded.targetMods],
         sourceComboLabel: decoded.sourceContext.sourceComboLabel,
         sourceMarketValue: decoded.sourceContext.sourceMarketValue,
-      });
+      };
+      setClusterHandoff(attachClusterHandoff(importedSeed, handoffIdentitySnapshot({
+        baseType: decoded.baseType,
+        clusterType: decoded.clusterType,
+        itemLevel: decoded.itemLevel,
+        passiveCount: decoded.passiveCount ?? 1,
+        league: pricingLeagues.includes(decoded.sourceContext.league)
+          ? decoded.sourceContext.league
+          : leagueRef.current,
+        target: {
+          requiredMods: decoded.targetMods.map((modId) => ({ modId })),
+          ...(decoded.acceptableAnyOf ? { acceptableAnyOf: decoded.acceptableAnyOf } : {}),
+          requiredRarity: decoded.finalRarity === 'any' ? undefined : decoded.finalRarity,
+          finalStateConstraints: decoded.maxUnmatchedAffixes === 0
+            ? { maxUnmatchedAffixes: 0 }
+            : undefined,
+        },
+      })));
     } else {
-      setActiveSeed(null);
+      setClusterHandoff(detachedHandoffState());
+      setSeedWarning(null);
+      onHandoffDetachedRef.current?.();
     }
     setResult(null);
     setProgress(null);
     setError(null);
+    hydratingHandoffRef.current = false;
   }, [pricingLeagues]);
 
   useEffect(() => {
@@ -975,9 +1043,9 @@ export function CraftOptimizer({ seed = null, onBackToClusterJewels }: CraftOpti
   }, [applySharedCraftHash]);
 
   useEffect(() => {
-    if (!seed || appliedSeedIdRef.current === seed.id) return;
+    if (!seed || appliedSeedIdRef.current === seed.id || window.location.hash.startsWith('#craft=')) return;
     appliedSeedIdRef.current = seed.id;
-    setActiveSeed(seed);
+    hydratingHandoffRef.current = true;
     setBaseType(seed.baseType);
     setClusterType(seed.clusterType);
     setPassiveCount(seed.passiveCount ?? seed.passiveRange?.min ?? 1);
@@ -992,6 +1060,8 @@ export function CraftOptimizer({ seed = null, onBackToClusterJewels }: CraftOpti
     setImportedPriceContext(null);
     setImportedMarketContext(null);
     setSaleValue(seed.sourceMarketValue ? String(seed.sourceMarketValue.chaos) : '');
+    setSaleValueProvenance(seed.sourceMarketValue ? 'cluster-source' : 'empty');
+    const normalizedLeague = pricingLeagues.includes(seed.league) ? seed.league : leagueRef.current;
     if (pricingLeagues.includes(seed.league)) {
       setLeague(seed.league);
       setSeedWarning(null);
@@ -1005,6 +1075,15 @@ export function CraftOptimizer({ seed = null, onBackToClusterJewels }: CraftOpti
     setError(null);
     setWallTimeExceeded(false);
     setRuntimeMs(null);
+    setClusterHandoff(attachClusterHandoff(seed, handoffIdentitySnapshot({
+      baseType: seed.baseType,
+      clusterType: seed.clusterType,
+      passiveCount: seed.passiveCount ?? seed.passiveRange?.min ?? 1,
+      itemLevel: seed.itemLevel,
+      league: normalizedLeague,
+      target: { requiredMods: seed.targetModIds.map((modId) => ({ modId })) },
+    })));
+    hydratingHandoffRef.current = false;
   }, [pricingLeagues, seed]);
 
   useEffect(() => {
@@ -1023,6 +1102,7 @@ export function CraftOptimizer({ seed = null, onBackToClusterJewels }: CraftOpti
   ].filter((message): message is string => message !== null).join(' ') || null;
 
   const changeBase = (nextBase: BaseType) => {
+    detachClusterHandoff('base type changed');
     const nextClusterTypes = browserCraftingCatalog.getClusterTypes(nextBase);
     const nextPassiveCounts = browserCraftingCatalog.getPassiveCounts(nextBase);
     setBaseType(nextBase);
@@ -1036,6 +1116,7 @@ export function CraftOptimizer({ seed = null, onBackToClusterJewels }: CraftOpti
   };
 
   const changeCluster = (nextCluster: string) => {
+    detachClusterHandoff('cluster enchantment changed');
     setClusterType(nextCluster);
     setTargetModIds(['']);
     setAcceptableAlternativesEnabled(false);
@@ -1045,14 +1126,23 @@ export function CraftOptimizer({ seed = null, onBackToClusterJewels }: CraftOpti
   };
 
   const updateTarget = (index: number, modId: string) => {
+    if (targetModIds[index] !== modId) detachClusterHandoff('required modifier changed');
     setTargetModIds((current) => current.map((value, i) => (i === index ? modId : value)));
   };
 
   const updateAcceptableAlternative = (index: number, modId: string) => {
+    if (acceptableAlternativeModIds[index] !== modId) {
+      detachClusterHandoff('acceptable alternative changed');
+    }
     setPreserveDecodedSingleAlternative(false);
     setAcceptableAlternativeModIds((current) =>
       current.map((value, i) => (i === index ? modId : value))
     );
+  };
+
+  const updateSaleValue = (value: string) => {
+    setSaleValue(value);
+    setSaleValueProvenance(userSaleValue(value));
   };
 
   const optimize = async (
@@ -1198,7 +1288,7 @@ export function CraftOptimizer({ seed = null, onBackToClusterJewels }: CraftOpti
 
   const copyShareUrl = () => {
     const payload: CraftSharePayload = {
-      version: '3G.1',
+      version: '3H.1',
       baseType,
       clusterType,
       itemLevel,
@@ -1218,6 +1308,7 @@ export function CraftOptimizer({ seed = null, onBackToClusterJewels }: CraftOpti
       cleanBaseCostChaos: cleanBaseCost ? Number(cleanBaseCost) : undefined,
       maxUnmatchedAffixes: finishCondition === 'no-unwanted' ? 0 : undefined,
       expectedSaleValueChaos: draftInput.expectedSaleValueChaos,
+      saleValueProvenance,
       prices: draftInput.prices,
       marketContext: draftInput.marketContext,
       sourceContext: activeSeed ? {
@@ -1238,7 +1329,7 @@ export function CraftOptimizer({ seed = null, onBackToClusterJewels }: CraftOpti
 
   const copyBugReport = (res?: OptimizeCraftResult) => {
     const payload: CraftSharePayload = {
-      version: '3G.1',
+      version: '3H.1',
       baseType,
       clusterType,
       itemLevel,
@@ -1258,6 +1349,7 @@ export function CraftOptimizer({ seed = null, onBackToClusterJewels }: CraftOpti
       cleanBaseCostChaos: cleanBaseCost ? Number(cleanBaseCost) : undefined,
       maxUnmatchedAffixes: finishCondition === 'no-unwanted' ? 0 : undefined,
       expectedSaleValueChaos: draftInput.expectedSaleValueChaos,
+      saleValueProvenance,
       prices: draftInput.prices,
       marketContext: draftInput.marketContext,
       sourceContext: activeSeed ? {
@@ -1279,6 +1371,7 @@ export function CraftOptimizer({ seed = null, onBackToClusterJewels }: CraftOpti
     const reader = new FileReader();
     reader.onload = (e) => {
       try {
+        hydratingHandoffRef.current = true;
         const text = e.target?.result as string;
         const parsed = JSON.parse(text);
         const input = parsed.requestInput || parsed;
@@ -1330,7 +1423,11 @@ export function CraftOptimizer({ seed = null, onBackToClusterJewels }: CraftOpti
         else setImportedMarketContext(null);
         if (parsed.optimizerSeedContext?.source === 'CLUSTER_JEWELS') {
           const importedSeed = parsed.optimizerSeedContext as OptimizerSeed;
-          setActiveSeed(importedSeed);
+          setSaleValueProvenance(hydratedSaleValue(
+            input.expectedSaleValueChaos,
+            true,
+            parsed.saleValueProvenance,
+          ));
           if (pricingLeagues.includes(importedSeed.league)) {
             setLeague(importedSeed.league);
             setSeedWarning(null);
@@ -1339,9 +1436,26 @@ export function CraftOptimizer({ seed = null, onBackToClusterJewels }: CraftOpti
               `${importedSeed.league} is not available in optimizer pricing. The existing pricing league was preserved.`
             );
           }
+          setClusterHandoff(attachClusterHandoff(importedSeed, handoffIdentitySnapshot({
+            baseType: input.baseType,
+            clusterType: input.clusterType,
+            itemLevel: input.itemLevel,
+            passiveCount: input.passiveCount,
+            league: pricingLeagues.includes(importedSeed.league) ? importedSeed.league : league,
+            target: input.target ?? {
+              requiredMods: targetMods.map((modId) => ({ modId })),
+              ...(importedAlternatives ? { acceptableAnyOf: importedAlternatives } : {}),
+            },
+          })));
         } else {
-          setActiveSeed(null);
+          setSaleValueProvenance(hydratedSaleValue(
+            input.expectedSaleValueChaos,
+            false,
+            parsed.saleValueProvenance,
+          ));
+          setClusterHandoff(detachedHandoffState());
           setSeedWarning(null);
+          onHandoffDetachedRef.current?.();
         }
         if (input.target?.finalStateConstraints?.maxUnmatchedAffixes === 0 || input.maxUnmatchedAffixes === 0) {
           setFinishCondition('no-unwanted');
@@ -1356,7 +1470,9 @@ export function CraftOptimizer({ seed = null, onBackToClusterJewels }: CraftOpti
           );
         }
         setResult(null);
+        hydratingHandoffRef.current = false;
       } catch (err) {
+        hydratingHandoffRef.current = false;
         console.error('Failed to import craft JSON', err);
       }
     };
@@ -1368,7 +1484,8 @@ export function CraftOptimizer({ seed = null, onBackToClusterJewels }: CraftOpti
       appVersion: APP_RELEASE_VERSION,
       exportedAt: new Date().toISOString(),
       requestInput: validation.normalizedInput,
-      optimizerSeedContext: activeSeed,
+      ...(activeSeed ? { optimizerSeedContext: activeSeed } : {}),
+      saleValueProvenance,
       resultSummary: {
         expectedCostChaos: res.expectedCostChaos,
         recommendationStatus: res.recommendationStatus,
@@ -1449,17 +1566,6 @@ export function CraftOptimizer({ seed = null, onBackToClusterJewels }: CraftOpti
       result.recommendationStatus === 'NO_RESOLVED_ROUTE'
     ))
   ) ?? [];
-  const seedTargetIdentityMatches = activeSeed !== null &&
-    !acceptableAlternativesEnabled &&
-    activeSeed.targetModIds.length === selectedTargetIds.length &&
-    activeSeed.targetModIds.every((modId, index) => selectedTargetIds[index] === modId);
-  const seedIdentityMatches = activeSeed !== null &&
-    activeSeed.baseType === baseType &&
-    activeSeed.clusterType === clusterType &&
-    activeSeed.passiveCount === passiveCount &&
-    activeSeed.itemLevel === itemLevel &&
-    seedTargetIdentityMatches &&
-    (!pricingLeagues.includes(activeSeed.league) || activeSeed.league === league);
   const sourceQuoteExactForSelectedPassive = activeSeed?.sourceMarketValue !== undefined &&
     activeSeed.sourceMarketValue.passiveRange.min === activeSeed.sourceMarketValue.passiveRange.max &&
     activeSeed.sourceMarketValue.passiveRange.min === passiveCount;
@@ -1467,10 +1573,11 @@ export function CraftOptimizer({ seed = null, onBackToClusterJewels }: CraftOpti
     result?.recommended &&
     result.internalConsistency.status === 'OK' &&
     activeSeed?.sourceMarketValue &&
-    seedIdentityMatches &&
     sourceQuoteExactForSelectedPassive
   );
   const selectedSynthesis = selectedMethod?.executable ? selectedAcquisition?.synthesis : undefined;
+  const displayedProof = result ? proofPresentation(result) : null;
+  const displayedSearchEvidence = result ? searchEvidencePresentation(result) : null;
 
   const constellationGraph = useMemo(() => {
     if (!result?.policyFlow) return null;
@@ -1519,11 +1626,6 @@ export function CraftOptimizer({ seed = null, onBackToClusterJewels }: CraftOpti
             <p className="warning-note" role="status">
               This quote spans {activeSeed.sourceMarketValue.passiveRange.min}–{activeSeed.sourceMarketValue.passiveRange.max} passives.
               It is shown with provenance, but no single-passive profit comparison will be claimed.
-            </p>
-          )}
-          {!seedIdentityMatches && (
-            <p className="warning-note" role="status">
-              The craft identity has changed since handoff; source pricing is retained as context only.
             </p>
           )}
           {seedWarning && <p className="warning-note" role="status">{seedWarning}</p>}
@@ -1598,11 +1700,18 @@ export function CraftOptimizer({ seed = null, onBackToClusterJewels }: CraftOpti
           </label>
           <label>
             <span>Item level</span>
-            <input type="number" min="1" max="100" value={itemLevel} onChange={(event) => setItemLevel(event.target.valueAsNumber)} />
+            <input type="number" min="1" max="100" value={itemLevel} onChange={(event) => {
+              if (event.target.valueAsNumber !== itemLevel) detachClusterHandoff('item level changed');
+              setItemLevel(event.target.valueAsNumber);
+            }} />
           </label>
           <label>
             <span>Passive skills</span>
-            <select value={passiveCount} onChange={(event) => setPassiveCount(Number(event.target.value))}>
+            <select value={passiveCount} onChange={(event) => {
+              const next = Number(event.target.value);
+              if (next !== passiveCount) detachClusterHandoff('passive count changed');
+              setPassiveCount(next);
+            }}>
               {passiveCounts.map((passives) => <option key={passives}>{passives}</option>)}
             </select>
           </label>
@@ -1610,7 +1719,11 @@ export function CraftOptimizer({ seed = null, onBackToClusterJewels }: CraftOpti
             <span>Final rarity</span>
             <select
               value={finalRarity}
-              onChange={(event) => setFinalRarity(event.target.value as typeof finalRarity)}
+              onChange={(event) => {
+                const next = event.target.value as typeof finalRarity;
+                if (next !== finalRarity) detachClusterHandoff('final rarity changed');
+                setFinalRarity(next);
+              }}
             >
               <option value="any">Any</option>
               <option value="magic">Magic</option>
@@ -1619,13 +1732,20 @@ export function CraftOptimizer({ seed = null, onBackToClusterJewels }: CraftOpti
           </label>
           <label>
             <span>Pricing league</span>
-            <select value={league} onChange={(event) => setLeague(event.target.value)}>
+            <select value={league} onChange={(event) => {
+              if (event.target.value !== league) detachClusterHandoff('pricing league changed');
+              setLeague(event.target.value);
+            }}>
               {pricingLeagues.map((value) => <option key={value}>{value}</option>)}
             </select>
           </label>
           <label>
             <span>Extra affixes</span>
-            <select value={finishCondition} onChange={(event) => setFinishCondition(event.target.value as typeof finishCondition)}>
+            <select value={finishCondition} onChange={(event) => {
+              const next = event.target.value as typeof finishCondition;
+              if (next !== finishCondition) detachClusterHandoff('extra-affix constraint changed');
+              setFinishCondition(next);
+            }}>
               <option value="any-match">Allow extra affixes</option>
               <option value="no-unwanted">No unwanted affixes</option>
             </select>
@@ -1658,7 +1778,14 @@ export function CraftOptimizer({ seed = null, onBackToClusterJewels }: CraftOpti
             </label>
             <label>
               <span>Expected sale value (chaos, optional)</span>
-              <input type="number" min="0" step="1" value={saleValue} onChange={(event) => setSaleValue(event.target.value)} />
+              <input
+                type="number"
+                min="0"
+                step="1"
+                value={saleValue}
+                data-sale-value-provenance={saleValueProvenance}
+                onChange={(event) => updateSaleValue(event.target.value)}
+              />
             </label>
           </div>
           {marketPricing && (
@@ -1698,7 +1825,10 @@ export function CraftOptimizer({ seed = null, onBackToClusterJewels }: CraftOpti
                 <button
                   type="button"
                   className="secondary remove-target-btn"
-                  onClick={() => setTargetModIds((current) => current.filter((_, i) => i !== index))}
+                  onClick={() => {
+                    detachClusterHandoff('required modifier removed');
+                    setTargetModIds((current) => current.filter((_, i) => i !== index));
+                  }}
                   title="Remove modifier slot"
                 >
                   Remove
@@ -1710,7 +1840,10 @@ export function CraftOptimizer({ seed = null, onBackToClusterJewels }: CraftOpti
             <button
               type="button"
               className="secondary add-target-btn"
-              onClick={() => setTargetModIds((current) => [...current, ''])}
+              onClick={() => {
+                detachClusterHandoff('required modifier slot added');
+                setTargetModIds((current) => [...current, '']);
+              }}
             >
               + Add modifier
             </button>
@@ -1722,12 +1855,15 @@ export function CraftOptimizer({ seed = null, onBackToClusterJewels }: CraftOpti
         </div>
 
         <div className="target-list acceptable-target-list" data-testid="acceptable-alternative-editor">
-          <h3>Acceptable fourth modifier</h3>
+          <h3>Acceptable alternative modifiers</h3>
           <label className="acceptable-target-toggle">
             <input
               type="checkbox"
               checked={acceptableAlternativesEnabled}
               onChange={(event) => {
+                if (event.target.checked !== acceptableAlternativesEnabled) {
+                  detachClusterHandoff('acceptable alternatives toggled');
+                }
                 setPreserveDecodedSingleAlternative(false);
                 setAcceptableAlternativesEnabled(event.target.checked);
                 if (event.target.checked && acceptableAlternativeModIds.length < 2) {
@@ -1758,6 +1894,7 @@ export function CraftOptimizer({ seed = null, onBackToClusterJewels }: CraftOpti
                       type="button"
                       className="secondary remove-target-btn"
                       onClick={() => {
+                        detachClusterHandoff('acceptable alternative removed');
                         setPreserveDecodedSingleAlternative(false);
                         setAcceptableAlternativeModIds((current) => current.filter((_, i) => i !== index));
                       }}
@@ -1773,6 +1910,7 @@ export function CraftOptimizer({ seed = null, onBackToClusterJewels }: CraftOpti
                   type="button"
                   className="secondary add-target-btn"
                   onClick={() => {
+                    detachClusterHandoff('acceptable alternative slot added');
                     setPreserveDecodedSingleAlternative(false);
                     setAcceptableAlternativeModIds((current) => [...current, '']);
                   }}
@@ -2108,10 +2246,12 @@ export function CraftOptimizer({ seed = null, onBackToClusterJewels }: CraftOpti
                   </dd>
                 </>
               )}
-              {result.objectiveProofStatus && (
+              {displayedProof && (
                 <>
-                  <dt>Objective proof status</dt>
-                  <dd>{result.objectiveProofStatus}</dd>
+                  <dt>Selected policy solve</dt>
+                  <dd data-testid="selected-policy-solve">{displayedProof.selectedPolicySolve}</dd>
+                  <dt>Portfolio optimality</dt>
+                  <dd data-testid="portfolio-optimality">{displayedProof.portfolioOptimality}</dd>
                 </>
               )}
               {result.expectedSaleValueChaos !== undefined && <><dt>Expected sale value</dt><dd>{chaos(result.expectedSaleValueChaos)}</dd></>}
@@ -2176,10 +2316,27 @@ export function CraftOptimizer({ seed = null, onBackToClusterJewels }: CraftOpti
               data-requested-max-rounds={result.search.requestBudget.requested.maxExpansionRounds}
               data-used-states={result.search.requestBudget.used.statesExpanded}
               data-retained-states={result.search.requestBudget.used.retainedStates}
+              data-new-states-expanded={displayedSearchEvidence?.newStatesExpandedThisRun}
+              data-portfolio-states-expanded={displayedSearchEvidence?.totalPortfolioStatesExpanded}
+              data-continuation-states-retained={displayedSearchEvidence?.statesRetainedForContinuation}
               data-used-elapsed-ms={result.search.requestBudget.used.elapsedMs}
               data-stop-reason={result.search.requestBudget.stop.primary}
             >
               <h3>Search budget used</h3>
+              <dl data-testid="search-evidence-summary">
+                <dt>New states expanded this run</dt>
+                <dd>{displayedSearchEvidence?.newStatesExpandedThisRun.toLocaleString()}</dd>
+                <dt>Total portfolio states expanded</dt>
+                <dd>{displayedSearchEvidence?.totalPortfolioStatesExpanded.toLocaleString()}</dd>
+                <dt>States retained for continuation</dt>
+                <dd>{displayedSearchEvidence?.statesRetainedForContinuation.toLocaleString()}</dd>
+                <dt>Requested expansion cap</dt>
+                <dd>{displayedSearchEvidence?.requestedExpansionCap.toLocaleString()}</dd>
+                <dt>Stopping condition</dt>
+                <dd>{REQUEST_STOP_COPY[result.search.requestBudget.stop.primary].label}</dd>
+              </dl>
+              <details className="request-budget-raw-summary">
+                <summary>Additional request details</summary>
               <dl>
                 <dt>Requested</dt>
                 <dd>
@@ -2197,6 +2354,7 @@ export function CraftOptimizer({ seed = null, onBackToClusterJewels }: CraftOpti
                 <dt>Stopped</dt>
                 <dd>{REQUEST_STOP_COPY[result.search.requestBudget.stop.primary].label}</dd>
               </dl>
+              </details>
               {result.search.requestBudget.stop.secondary.length > 0 && (
                 <p className="muted">
                   Also observed: {result.search.requestBudget.stop.secondary
@@ -3176,6 +3334,24 @@ export function CraftOptimizer({ seed = null, onBackToClusterJewels }: CraftOpti
                 </section>
                 <section className="advanced-section confidence-details">
                   <h2>Confidence</h2>
+                  {displayedProof && (
+                    <details data-testid="raw-proof-evidence">
+                      <summary>Raw proof evidence</summary>
+                      <dl>
+                        <dt>Selected-policy status enum</dt><dd>{displayedProof.rawSelectedPolicyStatus}</dd>
+                        <dt>Global-optimality enum</dt><dd>{displayedProof.rawGlobalOptimality}</dd>
+                        <dt>Objective proof enum</dt><dd>{displayedProof.rawObjectiveProofStatus ?? 'unavailable'}</dd>
+                      </dl>
+                    </details>
+                  )}
+                  <details data-testid="raw-search-counter-evidence">
+                    <summary>Raw search counters</summary>
+                    <code>{JSON.stringify({
+                      cumulativeExpansionWork: result.search.cumulativeExpansionWork,
+                      workScopes: result.search.workScopes,
+                      requestBudget: result.search.requestBudget,
+                    }, null, 2)}</code>
+                  </details>
                   <p><strong>Game mechanics fidelity:</strong> {result.mechanicsConfidence.gameMechanicsFidelity}</p>
                   <p><strong>Selected policy prices:</strong> {result.priceConfidence.selectedPolicy.complete ? 'complete' : 'incomplete'} ({result.priceConfidence.selectedPolicy.warnings.length} warnings)</p>
                   <p><strong>Broader search prices:</strong> {result.priceConfidence.consideredSearchSpace.complete ? 'complete' : 'incomplete'} ({result.priceConfidence.consideredSearchSpace.warnings.length} warnings)</p>

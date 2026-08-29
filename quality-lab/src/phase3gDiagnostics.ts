@@ -228,8 +228,8 @@ export function runPhase3GDomainSolverDiagnostics(
   const decodedShare = decodeCraftFromUrl(encodeCraftToUrl(sharePayload));
   assert(decodedShare);
   assert.deepEqual(decodedShare.acceptableAnyOf, normalized.acceptableAnyOf);
-  const bugReport = generateBugReportBundle(decodedShare, undefined, '3G.1');
-  assert.equal(bugReport.reportVersion, '3G.1');
+  const bugReport = generateBugReportBundle(decodedShare, undefined, '3H.1');
+  assert.equal(bugReport.reportVersion, '3H.1');
   assert.deepEqual(bugReport.configuration.acceptableAnyOf, normalized.acceptableAnyOf);
 
   return {

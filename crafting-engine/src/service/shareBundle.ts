@@ -17,7 +17,7 @@ const VALID_BASE_TYPES = new Set<string>([
 ]);
 
 export interface CraftSharePayload {
-  version: '2R.1' | '2W.1' | '2X.1' | '2Y.1' | '3G.1';
+  version: '2R.1' | '2W.1' | '2X.1' | '2Y.1' | '3G.1' | '3H.1';
   baseType: BaseType;
   clusterType: string;
   itemLevel: number;
@@ -36,6 +36,8 @@ export interface CraftSharePayload {
   costConstraintValue?: string;
   valueOfTimeChaosPerMin?: string;
   expectedSaleValueChaos?: number;
+  /** Explicit input ownership; never inferred from numeric equality. */
+  saleValueProvenance?: 'empty' | 'cluster-source' | 'user';
   prices?: OptimizeCraftPriceContext;
   marketContext?: OptimizerMarketContext;
   sourceContext?: {
@@ -55,7 +57,7 @@ export interface CraftSharePayload {
 }
 
 export interface BugReportBundle {
-  reportVersion: '3G.1';
+  reportVersion: '3H.1';
   createdAt: string;
   appVersion: string;
   userAgent: string;
@@ -117,7 +119,7 @@ export function decodeCraftFromUrl(encoded: string): CraftSharePayload | null {
     const parsed = JSON.parse(json) as Partial<CraftSharePayload>;
 
     // Strict schema & enum validation
-    if (parsed.version !== '2R.1' && parsed.version !== '2W.1' && parsed.version !== '2X.1' && parsed.version !== '2Y.1' && parsed.version !== '3G.1') return null;
+    if (parsed.version !== '2R.1' && parsed.version !== '2W.1' && parsed.version !== '2X.1' && parsed.version !== '2Y.1' && parsed.version !== '3G.1' && parsed.version !== '3H.1') return null;
     if (!parsed.baseType || !VALID_BASE_TYPES.has(parsed.baseType)) return null;
     if (typeof parsed.clusterType !== 'string' || parsed.clusterType.trim().length === 0) return null;
     if (typeof parsed.itemLevel !== 'number' || parsed.itemLevel < 1 || parsed.itemLevel > 100 || !Number.isFinite(parsed.itemLevel)) return null;
@@ -146,6 +148,13 @@ export function decodeCraftFromUrl(encoded: string): CraftSharePayload | null {
       (!Number.isFinite(parsed.expectedSaleValueChaos) || parsed.expectedSaleValueChaos < 0)) {
       return null;
     }
+    if (parsed.saleValueProvenance !== undefined &&
+      !['empty', 'cluster-source', 'user'].includes(parsed.saleValueProvenance)) {
+      return null;
+    }
+    if (parsed.saleValueProvenance === 'cluster-source' && parsed.sourceContext === undefined) {
+      return null;
+    }
 
     return {
       ...parsed,
@@ -162,10 +171,10 @@ export function decodeCraftFromUrl(encoded: string): CraftSharePayload | null {
 export function generateBugReportBundle(
   input: CraftSharePayload,
   result?: OptimizeCraftResult,
-  appVersion = '3G.1'
+  appVersion = '3H.1'
 ): BugReportBundle {
   return {
-    reportVersion: '3G.1',
+    reportVersion: '3H.1',
     createdAt: new Date().toISOString(),
     appVersion,
     userAgent: typeof navigator !== 'undefined' ? navigator.userAgent : 'Node-Diagnostic-Environment',
