@@ -52,6 +52,10 @@ export function recommendForPaths(paths: readonly string[]): Recommendation {
     ['constellation', 'responsive', 'accessibility', 'visual'].forEach((tag) => tags.add(tag));
     reasons.add('Constellation presentation changes require renderer, interaction, and responsive coverage.');
   }
+  if (matches(/(SearchableModifierSelect\.tsx|CraftOptimizer\.tsx|GuidedCraftConstellation\.tsx|App\.css)$/)) {
+    tags.add('phase3l');
+    reasons.add('Phase 3L surfaces require portal/validation lifecycle, compact constellation, copy, and print/PDF coverage.');
+  }
   if (matches(/(ClusterJewels\.tsx|optimizerSeed\.ts|shareBundle\.ts)$/)) {
     ['handoff', 'share-export', 'responsive'].forEach((tag) => tags.add(tag));
     reasons.add('Handoff/share changes require exact round-trip and responsive controls.');

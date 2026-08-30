@@ -16,6 +16,31 @@ function nextTitle(
   return summary.nodes.find((node) => node.id === nodeId)?.title ?? nodeId;
 }
 
+function playerStageLabels(summary: GuidedCraftConstellationSummary): Map<string, string> {
+  const labels = new Map<string, string>();
+  let primaryStep = 0;
+  let recoveryStep = 0;
+  for (const node of summary.nodes) {
+    if (node.kind === 'COMPLETE') {
+      labels.set(node.id, 'Finish');
+    } else if (node.lane === 'RECOVERY') {
+      recoveryStep += 1;
+      labels.set(node.id, `R${recoveryStep}`);
+    } else {
+      primaryStep += 1;
+      labels.set(node.id, `Step ${primaryStep}`);
+    }
+  }
+  return labels;
+}
+
+function connectorActionName(node: GuidedConstellationNode, actionId: string): string {
+  const names = [...new Set(node.conditionRows
+    .filter((row) => row.actionId === actionId)
+    .map((row) => row.actionName))];
+  return names.length === 1 ? names[0] : actionId;
+}
+
 export function GuidedCraftConstellation({
   summary,
   onShowAdvancedEvidence,
@@ -55,6 +80,7 @@ export function GuidedCraftConstellation({
     node.id,
     summary.edges.filter((edge) => edge.sourceNodeId === node.id),
   ]));
+  const stageLabels = playerStageLabels(summary);
 
   const selectNode = (node: GuidedConstellationNode) => {
     setSelectedNodeId(node.id);
@@ -100,6 +126,7 @@ export function GuidedCraftConstellation({
           {summary.nodes.map((node) => {
             const selected = node.id === selectedNode?.id;
             const outgoing = outgoingByNode.get(node.id) ?? [];
+            const stageLabel = stageLabels.get(node.id) ?? node.id;
             return (
               <div
                 className={`guided-stage-wrap lane-${node.lane.toLowerCase()}`}
@@ -110,6 +137,7 @@ export function GuidedCraftConstellation({
                 data-policy-rule-indices={node.policyRuleIndices.join(',')}
                 data-source-state-count={node.sourceStateKeys.length}
                 data-policy-edge-ids={node.sourcePolicyEdgeIds.join(',')}
+                data-player-stage-label={stageLabel}
               >
                 <article className={`guided-stage guided-kind-${node.kind.toLowerCase()} ${selected ? 'is-selected' : ''}`}>
                   <button
@@ -118,15 +146,24 @@ export function GuidedCraftConstellation({
                     aria-pressed={selected}
                     onClick={() => selectNode(node)}
                   >
-                    <span className="guided-stage-number" aria-hidden="true">
-                      {node.kind === 'COMPLETE' ? '✓' : node.displayOrder + 1}
+                    <span className="guided-stage-number">
+                      {node.kind === 'COMPLETE' ? '✓' : stageLabel.replace('Step ', '')}
                     </span>
                     <span>
-                      <strong>{node.title}</strong>
+                      <strong>
+                        {node.kind === 'COMPLETE'
+                          ? node.title
+                          : <><span className="guided-stage-label">{stageLabel}</span> {node.title}</>}
+                      </strong>
                       <small>{node.summary}</small>
+                      {!selected && node.actionChoices.length > 0 && (
+                        <small className="guided-stage-compact-summary">
+                          {node.conditionRows.length} certified {node.conditionRows.length === 1 ? 'condition' : 'conditions'} · select to explore
+                        </small>
+                      )}
                     </span>
                   </button>
-                  {node.actionChoices.length > 0 && (
+                  {selected && node.actionChoices.length > 0 && (
                     <div className="guided-action-choices" aria-label={`${node.title} result choices`}>
                       {node.actionChoices.filter((choice) => choice.preview).map((choice) => {
                         const row = node.conditionRows.find((candidate) =>
@@ -172,7 +209,7 @@ export function GuidedCraftConstellation({
                         data-policy-edge-ids={edge.sourcePolicyEdgeIds.join(',')}
                       >
                         <span aria-hidden="true">{edge.kind === 'LOOP' ? '↻' : edge.kind === 'RECOVERY' || edge.kind === 'REACQUIRE' ? '↩' : '↓'}</span>
-                        <span>{edge.label}</span>
+                        <span>After {connectorActionName(node, edge.actionId)}: {edge.label}</span>
                         <small>{nextTitle(summary, edge.targetNodeId)}</small>
                       </li>
                     ))}
@@ -190,7 +227,9 @@ export function GuidedCraftConstellation({
             data-selected-guided-node-id={selectedNode.id}
             data-selected-guided-condition-id={selectedCondition?.id}
           >
-            <p className="guided-detail-owner">Exploring: <strong>{selectedNode.title}</strong></p>
+            <p className="guided-detail-owner">
+              Selected stage: <strong>{stageLabels.get(selectedNode.id) ?? selectedNode.id} · {selectedNode.title}</strong>
+            </p>
             {selectedNode.kind === 'COMPLETE' && summary.finishCondition ? (
               <>
                 <section><h3>WHEN</h3><ul>

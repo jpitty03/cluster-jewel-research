@@ -1303,27 +1303,185 @@ td a {
     border-top-color: #242c3d;
     border-bottom-color: var(--accent);
   }
+}
 
+@media print {
+  @page {
+    margin: 12mm;
+    background: #fff;
+  }
+
+  html,
+  body,
+  #root,
+  .optimizer-page,
+  .optimizer-results,
+  .optimizer-card,
+  .guided-craft-constellation {
+    max-width: 100% !important;
+    overflow: visible !important;
+  }
+
+  body {
+    background: #fff !important;
+    color: #111827 !important;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+
+  html,
+  #root {
+    background: #fff !important;
+  }
+
+  .optimizer-input,
+  .optimizer-form,
+  .compact-search-status,
+  .optimizer-actions,
+  .optimizer-export-actions,
+  .craft-export-toolbar,
+  .craft-guide-heading-row > button,
+  .guided-why-toggle,
+  .retry-deeper-button,
+  .optimizer-result-disclosure,
+  .technical-policy-graph-disclosure,
   .searchable-dropdown-popup {
-    top: auto;
-    bottom: 100%;
-    border: 1px solid var(--accent);
-    border-bottom: none;
-    border-radius: 10px 10px 0 0;
-    box-shadow: 0 -16px 36px rgba(0, 0, 0, 0.9), 0 0 0 1px rgba(224, 179, 84, 0.25);
-    animation-name: dropdownSlideUp;
+    display: none !important;
+  }
+
+  .guided-constellation-layout,
+  .guided-constellation-header {
+    grid-template-columns: minmax(0, 1fr) !important;
+  }
+
+  .guided-constellation-header,
+  .recommendation-hero,
+  .recommendation-hero .recommendation-target,
+  .recommendation-hero .optimizer-proof,
+  .recommendation-hero .decision-warnings,
+  .crafting-constellation-top-level,
+  .guided-craft-constellation,
+  .guided-flow,
+  .guided-stage-wrap,
+  .guided-stage,
+  .guided-action-choice,
+  .guided-instruction-detail,
+  .compact-shopping-list,
+  .provisional-warning,
+  .stale-research-estimate {
+    background: #fff !important;
+    box-shadow: none !important;
+    color: #111827 !important;
+  }
+
+  .crafting-constellation-top-level *,
+  .recommendation-hero *,
+  .compact-shopping-list *,
+  .provisional-warning *,
+  .stale-research-estimate * {
+    color: #111827 !important;
+    text-shadow: none !important;
+  }
+
+  .guided-target-legend {
+    padding: 8px 0 0;
+    border-top: 1px solid #64748b;
+    border-left: 0;
+  }
+
+  .guided-instruction-detail {
+    position: static !important;
+    top: auto !important;
+    margin-top: 10px;
+  }
+
+  .guided-condition-picker select {
+    appearance: none;
+    background: #fff !important;
+    color: #111827 !important;
+    border: 1px solid #64748b;
+  }
+
+  .guided-stage-wrap,
+  .guided-stage,
+  .guided-action-choices,
+  .guided-action-choice,
+  .guided-connectors,
+  .guided-connector,
+  .guided-instruction-detail,
+  .compact-shopping-list,
+  .provisional-warning,
+  .stale-research-estimate {
+    break-inside: avoid-page;
+    page-break-inside: avoid;
+  }
+
+  .guided-stage-select {
+    break-after: avoid-page;
+    page-break-after: avoid;
+    color: #111827 !important;
+  }
+
+  .guided-stage-select small,
+  .guided-action-choice,
+  .guided-connector small,
+  .guided-explore-copy,
+  .guided-physical-start,
+  .compact-shopping-list .muted {
+    color: #334155 !important;
+  }
+
+  .guided-connector {
+    color: #1e3a8a !important;
+  }
+
+  .guided-connector.edge-recovery,
+  .guided-connector.edge-reacquire,
+  .guided-connector.edge-loop {
+    color: #78350f !important;
+  }
+
+  .provisional-warning strong,
+  .provisional-warning span,
+  .stale-research-estimate strong,
+  .stale-research-estimate span {
+    color: #111827 !important;
+  }
+
+  .guided-stage-number,
+  .guided-stage-label,
+  .guided-instruction-detail h3 {
+    color: #1e3a8a !important;
+  }
+
+  .guided-stage-wrap.lane-recovery {
+    border-left-color: #92400e;
+  }
+
+  .guided-flow,
+  .guided-stage-wrap,
+  .guided-action-choices,
+  .guided-connectors,
+  .guided-instruction-detail {
+    gap: 6px;
+  }
+
+  .optimizer-card table,
+  .optimizer-card pre,
+  .optimizer-card code {
+    max-width: 100% !important;
+    overflow: visible !important;
+    white-space: normal;
+    overflow-wrap: anywhere;
   }
 }
 
 .searchable-dropdown-popup {
-  position: absolute;
-  top: 100%;
-  left: 0;
-  right: 0;
-  width: 100%;
-  max-width: 100%;
+  position: fixed;
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr);
   box-sizing: border-box;
-  z-index: 350;
+  z-index: 10000;
   background: #0d1017;
   border: 1px solid var(--accent);
   border-top: none;
@@ -1354,6 +1512,14 @@ td a {
   }
 }
 
+.searchable-dropdown-popup.open-upward {
+  border: 1px solid var(--accent);
+  border-bottom: none;
+  border-radius: 10px 10px 0 0;
+  box-shadow: 0 -16px 36px rgba(0, 0, 0, 0.9), 0 0 0 1px rgba(224, 179, 84, 0.25);
+  animation-name: dropdownSlideUp;
+}
+
 @keyframes dropdownSlideDown {
   from {
     opacity: 0;
@@ -1377,6 +1543,7 @@ td a {
 }
 
 .dropdown-options-list {
+  min-height: 0;
   max-height: 220px;
   overflow-y: auto;
   overscroll-behavior: contain;
@@ -2365,6 +2532,17 @@ td a {
   margin-top: 2px;
   color: var(--text-dim);
   font-weight: 500;
+}
+
+.guided-stage-label {
+  color: #93c5fd;
+  font-size: 0.72rem;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.guided-stage-compact-summary {
+  font-size: 0.72rem;
 }
 
 .guided-action-choices {

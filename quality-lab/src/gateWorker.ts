@@ -12,6 +12,7 @@ import {
   chromium,
   type Browser,
   type BrowserContext,
+  type Locator,
   type Page,
 } from 'playwright';
 import { launchProductionApp } from './appLauncher.ts';
@@ -395,6 +396,18 @@ async function importFixture(page: Page, input: FixtureRecord): Promise<void> {
     return JSON.stringify(observedRequired) === JSON.stringify([...required].sort()) &&
       JSON.stringify(observedAcceptable) === JSON.stringify([...acceptable].sort());
   }, { required: input.targetMods, acceptable: input.acceptableAnyOf?.flat() ?? [] });
+}
+
+async function importRawSetup(page: Page, name: string, contents: string): Promise<void> {
+  const [chooser] = await Promise.all([
+    page.waitForEvent('filechooser'),
+    page.getByRole('button', { name: 'Import Setup JSON file' }).click(),
+  ]);
+  await chooser.setFiles({
+    name,
+    mimeType: 'application/json',
+    buffer: Buffer.from(contents),
+  });
 }
 
 async function setBudget(page: Page, budget: FixtureRecord['searchBudget']): Promise<void> {
@@ -969,6 +982,68 @@ async function runGateOperation(ctx: GateWorkerContext): Promise<unknown> {
         };
       });
 
+    case 'phase3l-ui-reliability-direct':
+      return withPage(ctx, async () => {
+        const phase3LBaseline = '25c139f87bf983150a1f31283ecd0e5e3ddae18f';
+        execFileSync('git', ['merge-base', '--is-ancestor', phase3LBaseline, 'HEAD'], {
+          cwd: repositoryRoot,
+        });
+        const changed = execFileSync('git', ['diff', '--name-only', phase3LBaseline], {
+          cwd: repositoryRoot,
+          encoding: 'utf8',
+        }).split(/\r?\n/).filter(Boolean).map((path) => path.replaceAll('\\', '/'));
+        assert.equal(changed.filter((path) => path.startsWith('crafting-engine/src/')).length, 0,
+          'Phase 3L changed frozen crafting-engine implementation files');
+        assert.equal(changed.filter((path) =>
+          /(current.?item|paste.?item|manual.?item|live.?tracker|route.?start.?reset)/i.test(path)
+        ).length, 0, 'Phase 3L restored excluded current-item/tracker behavior');
+
+        const selectorSource = readFileSync(resolve(repositoryRoot, 'src', 'SearchableModifierSelect.tsx'), 'utf8');
+        const optimizerSource = readFileSync(resolve(repositoryRoot, 'src', 'CraftOptimizer.tsx'), 'utf8');
+        const guidedSource = readFileSync(resolve(
+          repositoryRoot,
+          'src',
+          'components',
+          'GuidedCraftConstellation.tsx',
+        ), 'utf8');
+        const cssSource = readFileSync(resolve(repositoryRoot, 'src', 'App.css'), 'utf8');
+        assert.match(selectorSource, /createPortal\s*\(/);
+        assert.match(selectorSource, /document\.body/);
+        assert.match(selectorSource, /popupRef\.current\?\.contains/);
+        assert.match(selectorSource, /useLayoutEffect/);
+        assert.match(selectorSource, /new ResizeObserver/);
+        assert.match(selectorSource, /addEventListener\('scroll', measurePopup, true\)/);
+        assert.match(cssSource, /\.searchable-dropdown-popup\s*\{[\s\S]*?position:\s*fixed/);
+        assert.match(cssSource, /@media print[\s\S]*?\.guided-constellation-layout[\s\S]*?grid-template-columns:\s*minmax\(0, 1fr\)/);
+        assert.match(cssSource, /@page\s*\{[\s\S]*?background:\s*#fff/);
+        assert.match(cssSource, /@media print[\s\S]*?\.guided-instruction-detail[\s\S]*?position:\s*static\s*!important/);
+        assert.match(optimizerSource, /const setupRepairMessage =/);
+        assert.match(optimizerSource, /setupRepairSource === 'external-invalid' && validationError !== null/);
+        assert.doesNotMatch(optimizerSource, /setImportError\(`The loaded setup needs repair:/,
+          'Current-draft repair guidance is still stored as an import error');
+        assert.match(optimizerSource, /export const APP_RELEASE_VERSION = '3L\.1'/);
+        assert.match(guidedSource, /playerStageLabels/);
+        assert.match(guidedSource, /selected && node\.actionChoices\.length > 0/);
+        assert.match(guidedSource, /After \{connectorActionName\(node, edge\.actionId\)\}/);
+        assert.doesNotMatch(guidedSource, /node\.displayOrder \+ 1/);
+        return {
+          L1: {
+            immutableBaseline: phase3LBaseline,
+            changedPathsReviewed: changed,
+            frozenEngineFilesChanged: 0,
+            excludedFeaturesRestored: 0,
+          },
+          sourceContracts: {
+            bodyPortal: true,
+            fixedGeometry: true,
+            derivedRepairMessage: true,
+            compactPlayerLabels: true,
+            printMedia: true,
+            releaseMarker: '3L.1',
+          },
+        };
+      });
+
     case 'cancel-replace-recover':
       return withPage(ctx, async (page) => {
         await ensureOptimizerPage(page, ctx.appUrl);
@@ -1399,8 +1474,16 @@ async function runGateOperation(ctx: GateWorkerContext): Promise<unknown> {
         const craftGuide = page.locator('.craft-guide');
         const guidedGuide = craftGuide.getByTestId('guided-craft-constellation');
         await guidedGuide.waitFor();
-        const renderedActions = canonicalIds(await guidedGuide.locator('.guided-action-choice[data-action-id]')
-          .evaluateAll((items) => items.map((item) => item.getAttribute('data-action-id'))));
+        const renderedActionSet = new Set<string>();
+        const guidedStageButtons = guidedGuide.locator('.guided-stage-select');
+        for (let index = 0; index < await guidedStageButtons.count(); index += 1) {
+          await guidedStageButtons.nth(index).click();
+          for (const actionId of await guidedGuide.locator('.guided-action-choice[data-action-id]')
+            .evaluateAll((items) => items
+              .map((item) => item.getAttribute('data-action-id'))
+              .filter(Boolean) as string[])) renderedActionSet.add(actionId);
+        }
+        const renderedActions = canonicalIds([...renderedActionSet]);
         for (const actionId of ['alteration_orb', 'augmentation_orb', 'regal_orb']) {
           assert(renderedActions.includes(actionId), `Guided route omitted real Promote action ${actionId}`);
         }
@@ -2415,7 +2498,10 @@ async function runGateOperation(ctx: GateWorkerContext): Promise<unknown> {
             targetMods: [],
           })),
         });
-        await page.getByRole('alert').filter({ hasText: 'did not include a required modifier' }).waitFor();
+        await page.getByTestId('optimizer-setup-repair')
+          .filter({ hasText: 'loaded setup needs repair' }).waitFor();
+        assert.equal(await page.getByTestId('optimizer-import-error').count(), 0,
+          'A repairable parsed setup must not be reported as an import/decode failure');
         assert.equal(
           await page.getByTestId('target-editor-disclosure').locator('button[aria-expanded]').getAttribute('aria-expanded'),
           'true',
@@ -2610,9 +2696,17 @@ async function runGateOperation(ctx: GateWorkerContext): Promise<unknown> {
           }
         }
         const actionChoices = guided.locator('.guided-action-choice[data-action-id]');
-        const renderedActions = canonicalIds(await actionChoices.evaluateAll((elements) =>
-          elements.map((element) => element.getAttribute('data-action-id'))
-        ));
+        const stageButtons = guided.locator('.guided-stage-select');
+        const renderedActionSet = new Set<string>();
+        let exploredGuideText = guideText;
+        for (let index = 0; index < await stageButtons.count(); index += 1) {
+          await stageButtons.nth(index).click();
+          for (const actionId of await actionChoices.evaluateAll((elements) =>
+            elements.map((element) => element.getAttribute('data-action-id')).filter(Boolean) as string[]
+          )) renderedActionSet.add(actionId);
+          exploredGuideText += `\n${await guided.innerText()}`;
+        }
+        const renderedActions = canonicalIds([...renderedActionSet]);
         for (const actionId of [
           'alteration_orb',
           'augmentation_orb',
@@ -2623,10 +2717,10 @@ async function runGateOperation(ctx: GateWorkerContext): Promise<unknown> {
           'fracturing_orb',
           'restart_reacquire',
         ]) assert(renderedActions.includes(actionId), `Guided route omitted ${actionId}`);
-        assert.match(guideText, /safe open prefix/i);
-        assert.match(guideText, /blocked prefix or exception junk/i);
-        assert.match(guideText, /Preparation target fractured/i);
-        assert.match(guideText, /Junk fractured/i);
+        assert.match(exploredGuideText, /safe open prefix/i);
+        assert.match(exploredGuideText, /blocked prefix or exception junk/i);
+        assert.match(exploredGuideText, /Preparation target fractured/i);
+        assert.match(exploredGuideText, /Junk fractured/i);
 
         const resultOrder = await page.evaluate(() => ({
           recommendation: document.querySelector('.recommendation-hero')?.getBoundingClientRect().top ?? -1,
@@ -2645,7 +2739,6 @@ async function runGateOperation(ctx: GateWorkerContext): Promise<unknown> {
         await page.getByRole('button', { name: /Share Link/ }).click();
         const shareBefore = await page.evaluate(() => navigator.clipboard.readText());
         const interactionOffset = await workerEventCount(page);
-        const stageButtons = guided.locator('.guided-stage-select');
         await stageButtons.nth(Math.min(2, (await stageButtons.count()) - 1)).focus();
         await page.keyboard.press('Enter');
         if (await actionChoices.count()) await actionChoices.last().click();
@@ -2788,6 +2881,550 @@ async function runGateOperation(ctx: GateWorkerContext): Promise<unknown> {
           K17: { geometries, keyboardSelection: true, reducedMotion: true },
           measurements,
           screenshots,
+        };
+      }, { viewport: { width: 1440, height: 900 } });
+
+    case 'phase3l-editor-reliability-browser':
+      return withPage(ctx, async (page) => {
+        await ensureOptimizerPage(page, ctx.appUrl);
+        await page.getByRole('button', { name: 'Use a preset' }).click();
+        await page.getByRole('button', { name: 'Large Attack (8p / 2-Notable)' }).click();
+        await openOptimizerDisclosure(page, 'target-editor-disclosure');
+        const editor = page.getByTestId('acceptable-alternative-editor');
+        const toggle = editor.getByRole('checkbox');
+        await toggle.check();
+        assert.match(await editor.innerText(), /Choose at least two acceptable alternatives/i);
+        assert.equal(await page.getByTestId('optimizer-setup-repair').count(), 0,
+          'Manual preset editing was described as damaged imported data');
+        assert.equal(await page.getByRole('button', { name: /Find cheapest craft|Optimize craft/ }).isEnabled(), false);
+
+        const positionAt = async (locator: Locator, targetTop: number) => {
+          await locator.evaluate((element, top) => {
+            const rect = element.getBoundingClientRect();
+            window.scrollBy(0, rect.top - top);
+          }, targetTop);
+          await page.waitForTimeout(40);
+        };
+        const popupGeometry = async () => page.evaluate(() => {
+          const popup = document.querySelector<HTMLElement>('.searchable-dropdown-popup');
+          const input = document.querySelector<HTMLElement>('.searchable-modifier-select.open');
+          const trigger = input?.querySelector<HTMLElement>('.searchable-select-trigger');
+          if (!popup || !trigger) return null;
+          const popupRect = popup.getBoundingClientRect();
+          const triggerRect = trigger.getBoundingClientRect();
+          return {
+            popup: {
+              left: popupRect.left,
+              top: popupRect.top,
+              right: popupRect.right,
+              bottom: popupRect.bottom,
+              width: popupRect.width,
+              height: popupRect.height,
+            },
+            trigger: {
+              left: triggerRect.left,
+              top: triggerRect.top,
+              right: triggerRect.right,
+              bottom: triggerRect.bottom,
+              width: triggerRect.width,
+            },
+            viewport: {
+              left: window.visualViewport?.offsetLeft ?? 0,
+              top: window.visualViewport?.offsetTop ?? 0,
+              width: window.visualViewport?.width ?? document.documentElement.clientWidth,
+              height: window.visualViewport?.height ?? document.documentElement.clientHeight,
+            },
+            placement: popup.dataset.popupPlacement,
+          };
+        });
+        const assertViewportSafe = (
+          geometry: Awaited<ReturnType<typeof popupGeometry>>,
+          label = 'popup',
+        ) => {
+          assert(geometry);
+          const evidence = `${label}: ${JSON.stringify(geometry)}`;
+          assert(geometry.popup.left >= geometry.viewport.left + 7, evidence);
+          assert(geometry.popup.top >= geometry.viewport.top + 7, evidence);
+          assert(geometry.popup.right <= geometry.viewport.left + geometry.viewport.width - 7, evidence);
+          assert(geometry.popup.bottom <= geometry.viewport.top + geometry.viewport.height - 7, evidence);
+          assert(Math.abs(geometry.popup.left - geometry.trigger.left) <= 2, evidence);
+          assert(Math.abs(geometry.popup.width - geometry.trigger.width) <= 2, evidence);
+        };
+
+        let selectors = editor.locator('.searchable-modifier-select');
+        const firstTrigger = selectors.nth(0).locator('.searchable-select-trigger');
+        await positionAt(firstTrigger, 90);
+        await firstTrigger.click();
+        const popup = page.locator('body > .searchable-dropdown-popup');
+        await popup.waitFor({ state: 'visible' });
+        assert.equal(await popup.evaluate((element) => element.parentElement === document.body), true);
+        assert.equal(await popup.evaluate((element) => element.closest('.optimizer-disclosure') === null), true);
+        assert.equal(await firstTrigger.getAttribute('aria-controls'), await popup.getAttribute('id'));
+        assert.equal(await page.locator('.optimizer-disclosure .searchable-dropdown-popup').count(), 0);
+        assert.equal(await popup.getAttribute('data-popup-placement'), 'downward');
+        assertViewportSafe(await popupGeometry(), 'downward desktop');
+        const search = editor.getByRole('combobox', { name: /Acceptable alternative 1 search/ });
+        assert.equal(await search.evaluate((element) => element === document.activeElement), true);
+        await page.keyboard.press('End');
+        await page.keyboard.press('Home');
+        await page.keyboard.press('ArrowDown');
+        await search.fill('no-phase3l-match');
+        await popup.getByText(/No modifiers match/).waitFor({ state: 'visible' });
+        assertViewportSafe(await popupGeometry(), 'filtered-height desktop');
+        await search.fill('Martial Prowess');
+        await popup.locator('.dropdown-option-item:not(.disabled)').first().waitFor({ state: 'visible' });
+        await page.keyboard.press('Home');
+        await page.keyboard.press('Enter');
+        await popup.waitFor({ state: 'detached' });
+        await page.waitForTimeout(40);
+        assert.equal(await firstTrigger.evaluate((element) => element === document.activeElement), true);
+        assert.match(await editor.innerText(), /Choose at least two acceptable alternatives/i);
+
+        selectors = editor.locator('.searchable-modifier-select');
+        const secondTrigger = selectors.nth(1).locator('.searchable-select-trigger');
+        await positionAt(secondTrigger, 820);
+        await secondTrigger.click();
+        await popup.waitFor({ state: 'visible' });
+        assert.equal(await popup.getAttribute('data-popup-placement'), 'upward');
+        await page.waitForTimeout(150);
+        const beforeScroll = await popupGeometry();
+        assertViewportSafe(beforeScroll, 'upward before scroll');
+        await page.evaluate(() => window.scrollBy(0, -36));
+        await page.waitForTimeout(150);
+        const afterScroll = await popupGeometry();
+        assertViewportSafe(afterScroll, 'upward after scroll');
+        assert(beforeScroll && afterScroll);
+        assert(Math.abs(
+          (afterScroll.trigger.top - afterScroll.popup.bottom) -
+          (beforeScroll.trigger.top - beforeScroll.popup.bottom)
+        ) <= 2, 'Upward popup detached after capture-phase scroll');
+        await editor.getByRole('combobox', { name: /Acceptable alternative 2 search/ }).fill('Heavy Hitter');
+        await popup.locator('.dropdown-option-item:not(.disabled)').first().click();
+        await popup.waitFor({ state: 'detached' });
+        assert.equal(await editor.locator('.optimizer-validation').count(), 0,
+          'The second selected alternative did not clear inline validation immediately');
+        assert.equal(await page.getByTestId('optimizer-setup-repair').count(), 0);
+
+        await editor.getByRole('button', { name: '+ Add acceptable alternative' }).click();
+        assert.equal(await editor.locator('.optimizer-validation').count(), 0,
+          'A blank third draft row invalidated two selected alternatives');
+        assert.equal(await page.getByRole('button', { name: /Find cheapest craft|Optimize craft/ }).isEnabled(), true);
+        selectors = editor.locator('.searchable-modifier-select');
+        const thirdTrigger = selectors.nth(2).locator('.searchable-select-trigger');
+        await positionAt(thirdTrigger, 130);
+        await thirdTrigger.click();
+        await popup.waitFor({ state: 'visible' });
+        assert.equal(await popup.getAttribute('data-popup-placement'), 'downward');
+        const overlap = await page.evaluate(() => {
+          const popupElement = document.querySelector<HTMLElement>('.searchable-dropdown-popup');
+          const summary = document.querySelector<HTMLElement>('[data-testid="structured-target-summary"]');
+          if (!popupElement || !summary) return { intersects: false, hitOwnedByPopup: false };
+          const popupRect = popupElement.getBoundingClientRect();
+          const summaryRect = summary.getBoundingClientRect();
+          const left = Math.max(popupRect.left, summaryRect.left);
+          const right = Math.min(popupRect.right, summaryRect.right);
+          const top = Math.max(popupRect.top, summaryRect.top);
+          const bottom = Math.min(popupRect.bottom, summaryRect.bottom);
+          if (right <= left || bottom <= top) return { intersects: false, hitOwnedByPopup: false };
+          const hit = document.elementFromPoint((left + right) / 2, (top + bottom) / 2);
+          return { intersects: true, hitOwnedByPopup: hit !== null && popupElement.contains(hit) };
+        });
+        assert.equal(overlap.intersects, true, 'The field popup did not overlap the following Target summary witness');
+        assert.equal(overlap.hitOwnedByPopup, true, 'The Target summary painted over the portaled popup');
+        const desktopArtifact = join(ctx.invocation.artifactsDirectory, 'phase3l-dropdown-overlap-1440.png');
+        await page.screenshot({ path: desktopArtifact });
+        ctx.artifacts.phase3lDropdownDesktop = relative(repositoryRoot, desktopArtifact);
+
+        await editor.getByRole('combobox', { name: /Acceptable alternative 3 search/ }).fill('Martial Prowess');
+        const duplicateOption = popup.locator('.dropdown-option-item').first();
+        assert.equal(await duplicateOption.getAttribute('aria-disabled'), 'true');
+        await duplicateOption.dispatchEvent('click');
+        assert.equal(await popup.isVisible(), true, 'Clicking a disabled duplicate closed or selected it');
+        await page.setViewportSize({ width: 390, height: 844 });
+        await page.waitForTimeout(200);
+        if (!(await popup.isVisible())) {
+          await positionAt(thirdTrigger, 130);
+          await thirdTrigger.click();
+          await popup.waitFor({ state: 'visible' });
+          await page.waitForTimeout(150);
+        }
+        assertViewportSafe(await popupGeometry(), 'narrow resize');
+        const cdp = await page.context().newCDPSession(page);
+        await cdp.send('Emulation.setPageScaleFactor', { pageScaleFactor: 1.15 });
+        await page.waitForTimeout(60);
+        assertViewportSafe(await popupGeometry(), 'non-default zoom');
+        await cdp.send('Emulation.setPageScaleFactor', { pageScaleFactor: 1 });
+        await cdp.detach();
+        await page.locator('#optimizer-input-title').click();
+        await popup.waitFor({ state: 'detached' });
+        await page.setViewportSize({ width: 1440, height: 900 });
+        await positionAt(thirdTrigger, 130);
+        await thirdTrigger.click();
+        await popup.locator('.dropdown-option-item:not(.disabled)', {
+          has: page.locator('.type-tag', { hasText: 'Suffix' }),
+        }).first().click();
+        await popup.waitFor({ state: 'detached' });
+
+        const optimizeButton = page.getByRole('button', { name: /Find cheapest craft|Optimize craft/ });
+        let requestOffset = await workerEventCount(page);
+        await optimizeButton.click();
+        await page.waitForFunction((start) => {
+          const events = (window as Window & { __QUALITY_LAB_EVENTS__?: CapturedWorkerEvent[] }).__QUALITY_LAB_EVENTS__ ?? [];
+          return events.slice(start).some((event) =>
+            event.kind === 'POST_MESSAGE_TO_WORKER' && event.payload?.type === 'OPTIMIZE'
+          );
+        }, requestOffset);
+        const withAlternatives = (await workerEventsSince(page, requestOffset)).find((event) =>
+          event.kind === 'POST_MESSAGE_TO_WORKER' && event.payload?.type === 'OPTIMIZE'
+        );
+        const withInput = jsonRecord(withAlternatives?.payload?.input, 'Phase 3L request with alternatives');
+        const withTarget = jsonRecord(withInput.target, 'Phase 3L request target with alternatives');
+        assert.equal(arrayValue(withTarget.acceptableAnyOf, 'serialized acceptable branches').length, 3);
+        const cancelButton = page.getByRole('button', { name: 'Cancel' }).first();
+        if (await cancelButton.isVisible()) await cancelButton.click();
+        await openOptimizerDisclosure(page, 'target-editor-disclosure');
+
+        await editor.getByTitle('Remove acceptable alternative').last().click();
+        await editor.getByTitle('Remove acceptable alternative').last().click();
+        assert.match(await editor.innerText(), /Choose at least two acceptable alternatives/i);
+        await toggle.uncheck();
+        assert.equal(await editor.locator('.optimizer-validation').count(), 0);
+        assert.equal(await page.getByTestId('optimizer-setup-repair').count(), 0);
+        assert.equal(await optimizeButton.isEnabled(), true);
+        requestOffset = await workerEventCount(page);
+        await optimizeButton.click();
+        await page.waitForFunction((start) => {
+          const events = (window as Window & { __QUALITY_LAB_EVENTS__?: CapturedWorkerEvent[] }).__QUALITY_LAB_EVENTS__ ?? [];
+          return events.slice(start).some((event) =>
+            event.kind === 'POST_MESSAGE_TO_WORKER' && event.payload?.type === 'OPTIMIZE'
+          );
+        }, requestOffset);
+        const withoutAlternatives = (await workerEventsSince(page, requestOffset)).find((event) =>
+          event.kind === 'POST_MESSAGE_TO_WORKER' && event.payload?.type === 'OPTIMIZE'
+        );
+        const withoutInput = jsonRecord(withoutAlternatives?.payload?.input, 'Phase 3L request without alternatives');
+        const withoutTarget = jsonRecord(withoutInput.target, 'Phase 3L request target without alternatives');
+        assert.equal(Object.hasOwn(withoutTarget, 'acceptableAnyOf'), false);
+        if (await cancelButton.isVisible()) await cancelButton.click();
+
+        await importRawSetup(page, 'invalid-loaded-setup.json', JSON.stringify({
+          baseType: 'Large Cluster Jewel',
+          clusterType: '10% increased Attack Damage',
+          itemLevel: 84,
+          passiveCount: 8,
+          targetMods: [],
+        }));
+        await page.getByTestId('optimizer-setup-repair').waitFor({ state: 'visible' });
+        assert.match(await page.getByTestId('optimizer-setup-repair').innerText(), /loaded setup needs repair/i);
+        assert.equal(await page.getByTestId('optimizer-import-error').count(), 0);
+        await importRawSetup(page, 'decode-failure.json', '{ not valid optimizer json');
+        await page.getByTestId('optimizer-import-error').waitFor({ state: 'visible' });
+        assert.match(await page.getByTestId('optimizer-import-error').innerText(), /not valid optimizer JSON/i);
+        assert.equal(await page.getByTestId('optimizer-setup-repair').count(), 0);
+
+        return {
+          L2_L4: {
+            portalHost: 'document.body',
+            disclosureDescendant: false,
+            downwardAndUpward: true,
+            targetSummaryOcclusion: overlap,
+            captureScrollAttached: true,
+            resizeAndNarrowViewport: true,
+            nonDefaultZoom: true,
+            keyboardSelectionAndFocusReturn: true,
+            portalPointerSelection: true,
+            outsideClick: true,
+            disabledDuplicate: true,
+          },
+          L5: {
+            zeroThenOneInvalid: true,
+            twoAndBlankThirdValid: true,
+            threeBranchesSerialized: 3,
+            removalRestoresError: true,
+            disabledOmitsAcceptableAnyOf: true,
+            importedRepairDistinctFromDecodeFailure: true,
+          },
+          screenshot: ctx.artifacts.phase3lDropdownDesktop,
+        };
+      }, { viewport: { width: 1440, height: 900 } });
+
+    case 'phase3l-constellation-print-browser':
+      return withPage(ctx, async (page) => {
+        const frozenFixture = fixture('phase3c_primordial_renewal_rotten_claws');
+        const fieldFixture: FixtureRecord = {
+          ...frozenFixture,
+          searchBudget: { ...frozenFixture.searchBudget, maxStates: 3_334 },
+        };
+        await ensureOptimizerPage(page, ctx.appUrl);
+        await importFixture(page, fieldFixture);
+        await setBudget(page, fieldFixture.searchBudget);
+        const solveOffset = await workerEventCount(page);
+        await page.getByRole('button', { name: /Find cheapest craft|Optimize craft/ }).click();
+        const result = await waitForWorkerResult(
+          page,
+          solveOffset,
+          fieldFixture.searchBudget.maxWallTimeMs + 8_000,
+        );
+        const guidedResult = jsonRecord(result.guidedConstellation, 'Phase 3L guided result');
+        assert.equal(guidedResult.status, 'CERTIFIED', JSON.stringify(guidedResult.reasons));
+        const modelNodes = arrayValue(guidedResult.nodes, 'Phase 3L guided nodes').map((node) =>
+          jsonRecord(node, 'Phase 3L guided node')
+        );
+        const modelEdges = arrayValue(guidedResult.edges, 'Phase 3L guided edges').map((edge) =>
+          jsonRecord(edge, 'Phase 3L guided edge')
+        );
+        const guided = page.getByTestId('guided-craft-constellation');
+        await guided.waitFor({ state: 'visible' });
+        const nodeElements = guided.locator('[data-guided-node-id]');
+        const stageButtons = guided.locator('.guided-stage-select');
+        assert.equal(await nodeElements.count(), modelNodes.length);
+        assert.equal(await stageButtons.count(), modelNodes.length);
+        for (let index = 0; index < await stageButtons.count(); index += 1) {
+          assert(await stageButtons.nth(index).isVisible(), `Guided header ${index} is not visible`);
+        }
+
+        const labelEvidence = await nodeElements.evaluateAll((elements) => elements.map((element) => ({
+          id: element.getAttribute('data-guided-node-id'),
+          kind: element.getAttribute('data-guided-node-kind'),
+          lane: element.getAttribute('data-guided-lane'),
+          label: element.getAttribute('data-player-stage-label'),
+        })));
+        const primaryLabels = labelEvidence
+          .filter((entry) => entry.lane === 'MAIN' && entry.kind !== 'COMPLETE')
+          .map((entry) => entry.label);
+        assert.deepEqual(primaryLabels, primaryLabels.map((_, index) => `Step ${index + 1}`));
+        assert.equal(new Set(primaryLabels).size, primaryLabels.length);
+        const recoveryLabels = labelEvidence
+          .filter((entry) => entry.lane === 'RECOVERY')
+          .map((entry) => entry.label);
+        assert.deepEqual(recoveryLabels, recoveryLabels.map((_, index) => `R${index + 1}`));
+        assert(labelEvidence.some((entry) => entry.kind === 'COMPLETE' && entry.label === 'Finish'));
+
+        const connectorEvidence = await guided.locator('[data-guided-edge-id]').evaluateAll((elements) =>
+          elements.map((element) => ({
+            id: element.getAttribute('data-guided-edge-id') ?? '',
+            actionId: element.getAttribute('data-action-id') ?? '',
+            text: element.textContent?.replace(/\s+/g, ' ').trim() ?? '',
+            policyEdgeIds: element.getAttribute('data-policy-edge-ids') ?? '',
+            sourceNodeId: element.closest('[data-guided-node-id]')?.getAttribute('data-guided-node-id') ?? '',
+          }))
+        );
+        assert.equal(connectorEvidence.length, modelEdges.length);
+        const edgeById = new Map(modelEdges.map((edge) => [String(edge.id), edge]));
+        for (const connector of connectorEvidence) {
+          assert.match(connector.text, /^.+After .+:/, `${connector.id} omitted action context`);
+          const model = edgeById.get(connector.id);
+          assert(model, `Rendered unknown connector ${connector.id}`);
+          assert.equal(connector.policyEdgeIds,
+            arrayValue(model.sourcePolicyEdgeIds, `${connector.id} PolicyFlow edges`).join(','));
+        }
+        for (const sourceNodeId of new Set(connectorEvidence.map((edge) => edge.sourceNodeId))) {
+          const outgoing = connectorEvidence.filter((edge) => edge.sourceNodeId === sourceNodeId);
+          for (let left = 0; left < outgoing.length; left += 1) {
+            for (let right = left + 1; right < outgoing.length; right += 1) {
+              if (outgoing[left].actionId !== outgoing[right].actionId) {
+                assert.notEqual(outgoing[left].text, outgoing[right].text,
+                  `${sourceNodeId} has visually duplicate action-distinct connectors`);
+              }
+            }
+          }
+        }
+        const terminalNodeId = String(guidedResult.terminalNodeId);
+        const terminalIncoming = modelEdges.filter((edge) => edge.targetNodeId === terminalNodeId);
+        assert.equal(terminalIncoming.length, 2);
+        assert(terminalIncoming.every((edge) => edge.kind === 'SUCCESS'));
+
+        const interactionOffset = await workerEventCount(page);
+        for (let index = 0; index < modelNodes.length; index += 1) {
+          const node = modelNodes[index];
+          await stageButtons.nth(index).click();
+          const selectedNodeId = String(node.id);
+          const detail = page.getByLabel('Guided constellation instruction details');
+          assert.equal(await detail.getAttribute('data-selected-guided-node-id'), selectedNodeId);
+          assert.match(await detail.innerText(), /Selected stage:/i);
+          assert((await detail.innerText()).includes(String(node.title)));
+          const selectedActionGroups = guided.locator('.guided-action-choices');
+          const previewCount = arrayValue(node.actionChoices, `${selectedNodeId} action choices`)
+            .filter((choice) => jsonRecord(choice, 'guided action choice').preview === true).length;
+          assert.equal(await selectedActionGroups.count(), previewCount > 0 ? 1 : 0);
+          assert.equal(await guided.locator('.guided-stage:not(.is-selected) .guided-action-choices').count(), 0);
+          if (node.kind !== 'COMPLETE') {
+            for (const label of ['WHEN', 'USE', 'THEN']) {
+              assert((await detail.innerText()).includes(label), `${selectedNodeId} detail omitted ${label}`);
+            }
+            const conditionCount = arrayValue(node.conditionRows, `${selectedNodeId} conditions`).length;
+            assert.equal(await detail.locator('.guided-condition-picker').count(), conditionCount > 1 ? 1 : 0);
+          }
+        }
+        assert.equal(await workerEventCount(page), interactionOffset,
+          'Compact constellation exploration created Worker traffic');
+        assert.equal(Number(await guided.getAttribute('data-guided-player-rule-count')), 24);
+        assert.equal(Number(await guided.getAttribute('data-guided-state-count')),
+          numberValue(guidedResult.representedStateCount, 'browser represented state count'));
+        assert.equal(numberValue(guidedResult.representedStateCount, 'frozen browser represented state count'), 572);
+        assert.equal(Number(await guided.getAttribute('data-guided-policy-edge-count')), 49);
+
+        const reviewedStageIndex = modelNodes.reduce((bestIndex, node, index, nodes) => {
+          const previewCount = arrayValue(node.actionChoices, 'reviewed action choices')
+            .filter((choice) => jsonRecord(choice, 'reviewed action choice').preview === true).length;
+          const bestPreviewCount = arrayValue(nodes[bestIndex].actionChoices, 'best reviewed action choices')
+            .filter((choice) => jsonRecord(choice, 'best reviewed action choice').preview === true).length;
+          return previewCount > bestPreviewCount ? index : bestIndex;
+        }, 0);
+        await stageButtons.nth(reviewedStageIndex).click();
+        assert.equal(await guided.locator('.guided-action-choices').count(), 1);
+
+        const screenArtifact = join(ctx.invocation.artifactsDirectory, 'phase3l-compact-constellation-1440.png');
+        await page.getByTestId('crafting-constellation-top-level').screenshot({ path: screenArtifact });
+        ctx.artifacts.phase3lCompactConstellation = relative(repositoryRoot, screenArtifact);
+
+        const shopping = page.locator('.compact-shopping-list');
+        assert.match(await shopping.innerText(), /Expected consumption \(model averages\), not literal exact purchase quantities/i);
+        await shopping.getByRole('button', { name: 'Copy shopping list', exact: true }).click();
+        const copiedShopping = await page.evaluate(() => navigator.clipboard.readText());
+        assert.match(copiedShopping, /Expected Total Cost:/);
+        assert.match(copiedShopping, /rounded-up purchase guidance from .* expected consumption/i);
+        const provisional = result.recommendationStatus === 'PROVISIONAL_RESOLVED' ||
+          numberValue(jsonRecord(
+            jsonRecord(result.acquisition, 'Phase 3L acquisition').portfolioProof,
+            'Phase 3L portfolio proof',
+          ).unresolvedCompetitiveCandidates, 'unresolved competitive candidates') > 0;
+        if (provisional) {
+          assert.match(copiedShopping, /STATUS: PROVISIONAL/i);
+          assert.match(copiedShopping, /not proven acquisition-safe/i);
+          assert(await page.locator('.retry-deeper-button').evaluateAll((elements) =>
+            elements.some((element) => (element as HTMLElement).offsetParent !== null)
+          ));
+        }
+        await page.getByRole('button', { name: /Copy Playbook/ }).click();
+        const copiedPlaybook = await page.evaluate(() => navigator.clipboard.readText());
+        assert.match(copiedPlaybook, provisional
+          ? /STATUS: PROVISIONAL.*not proven acquisition-safe/i
+          : /STATUS: Acquisition-safe/i);
+
+        await page.setViewportSize({ width: 794, height: 1123 });
+        await page.emulateMedia({ media: 'print', reducedMotion: 'reduce' });
+        const printContract = await page.evaluate(() => {
+          const layout = document.querySelector<HTMLElement>('.guided-constellation-layout');
+          const detail = document.querySelector<HTMLElement>('.guided-instruction-detail');
+          const stageWraps = [...document.querySelectorAll<HTMLElement>('.guided-stage-wrap')];
+          const connectorLists = [...document.querySelectorAll<HTMLElement>('.guided-connectors')];
+          const actionGroups = [...document.querySelectorAll<HTMLElement>('.guided-action-choices')];
+          const criticalText = [...document.querySelectorAll<HTMLElement>([
+            '.guided-constellation-header strong',
+            '.guided-stage-select strong',
+            '.guided-action-choice span',
+            '.guided-action-choice strong',
+            '.guided-instruction-detail p',
+            '.guided-instruction-detail li',
+            '.guided-condition-picker select',
+          ].join(','))].filter((element) => element.innerText.trim().length > 0);
+          const rects = stageWraps.map((element) => {
+            const rect = element.getBoundingClientRect();
+            return { top: rect.top, bottom: rect.bottom, height: rect.height };
+          });
+          return {
+            layoutColumns: layout ? getComputedStyle(layout).gridTemplateColumns : '',
+            detailPosition: detail ? getComputedStyle(detail).position : '',
+            stageBreaks: stageWraps.map((element) => getComputedStyle(element).breakInside),
+            connectorBreaks: connectorLists.map((element) => getComputedStyle(element).breakInside),
+            actionBreaks: actionGroups.map((element) => getComputedStyle(element).breakInside),
+            sequential: rects.every((rect, index) => index === 0 || rect.top >= rects[index - 1].bottom - 1),
+            maxStageHeight: Math.max(0, ...rects.map((rect) => rect.height)),
+            documentWidth: document.documentElement.scrollWidth,
+            viewportWidth: document.documentElement.clientWidth,
+            finishVisible: [...document.querySelectorAll<HTMLElement>('[data-player-stage-label="Finish"]')]
+              .some((element) => element.offsetParent !== null),
+            expectedCostVisible: [...document.querySelectorAll<HTMLElement>('.compact-shopping-list')]
+              .some((element) => /Expected full-route cost/i.test(element.innerText) && element.offsetParent !== null),
+            warningVisible: [...document.querySelectorAll<HTMLElement>('.provisional-warning')]
+              .some((element) => element.offsetParent !== null),
+            setupFormVisible: [...document.querySelectorAll<HTMLElement>('.optimizer-form')]
+              .some((element) => element.offsetParent !== null),
+            htmlBackground: getComputedStyle(document.documentElement).backgroundColor,
+            rootBackground: getComputedStyle(document.querySelector<HTMLElement>('#root')!).backgroundColor,
+            conditionPickerBackgrounds: [...document.querySelectorAll<HTMLElement>('.guided-condition-picker select')]
+              .map((element) => getComputedStyle(element).backgroundColor),
+            criticalTextColors: criticalText.map((element) => getComputedStyle(element).color),
+          };
+        });
+        assert.equal(printContract.detailPosition, 'static');
+        assert.equal(printContract.layoutColumns.trim().split(/\s+/).length, 1);
+        assert(printContract.stageBreaks.every((value) => value.includes('avoid')));
+        assert(printContract.connectorBreaks.every((value) => value.includes('avoid')));
+        assert(printContract.actionBreaks.every((value) => value.includes('avoid')));
+        assert.equal(printContract.sequential, true, 'Printed guided stages overlap');
+        assert(printContract.maxStageHeight < 1_032,
+          'A stage cannot fit within a fresh A4 content page');
+        assert(printContract.documentWidth <= printContract.viewportWidth + 1,
+          'Print layout has horizontal overflow');
+        assert.equal(printContract.finishVisible, true);
+        assert.equal(printContract.expectedCostVisible, true);
+        assert.equal(printContract.setupFormVisible, false);
+        assert.equal(printContract.htmlBackground, 'rgb(255, 255, 255)');
+        assert.equal(printContract.rootBackground, 'rgb(255, 255, 255)');
+        assert(printContract.conditionPickerBackgrounds.every((color) => color === 'rgb(255, 255, 255)'));
+        if (provisional) assert.equal(printContract.warningVisible, true);
+        assert(printContract.criticalTextColors.length > modelNodes.length);
+        assert(printContract.criticalTextColors.every((color) => {
+          const channels = color.match(/[\d.]+/g)?.slice(0, 3).map(Number) ?? [];
+          return channels.length === 3 && channels.reduce((sum, channel) => sum + channel, 0) < 690;
+        }), `Print contains white or near-white critical text: ${printContract.criticalTextColors.join(', ')}`);
+
+        const printScreenshot = join(ctx.invocation.artifactsDirectory, 'phase3l-print-render.png');
+        await page.getByTestId('crafting-constellation-top-level').screenshot({ path: printScreenshot });
+        const pdfPath = join(ctx.invocation.artifactsDirectory, 'phase3l-representative-route.pdf');
+        const pdf = await page.pdf({
+          path: pdfPath,
+          format: 'A4',
+          printBackground: true,
+          preferCSSPageSize: true,
+        });
+        const pdfSource = pdf.toString('latin1');
+        const pdfPages = pdfSource.match(/\/Type\s*\/Page\b/g)?.length ?? 0;
+        assert(pdf.subarray(0, 5).toString('ascii') === '%PDF-');
+        assert(pdf.length > 25_000, 'Rendered Phase 3L PDF is unexpectedly empty');
+        assert(pdfPages > 0, 'Rendered Phase 3L PDF has no page objects');
+        ctx.artifacts.phase3lPrintRender = relative(repositoryRoot, printScreenshot);
+        ctx.artifacts.phase3lPdf = relative(repositoryRoot, pdfPath);
+
+        return {
+          L6: {
+            primaryLabels,
+            recoveryLabels,
+            connectorCount: connectorEvidence.length,
+            actionDistinctConnectors: true,
+            exactEdgeEvidenceRetained: true,
+            authoritativeTerminalEdges: terminalIncoming.length,
+          },
+          L7: {
+            visibleStageHeaders: modelNodes.length,
+            unselectedActionGrids: 0,
+            everyStageExplored: true,
+            workerEventsAdded: 0,
+            representedPlayerRules: 24,
+            representedStates: numberValue(
+              guidedResult.representedStateCount,
+              'browser represented state count',
+            ),
+            representedPolicyEdges: 49,
+          },
+          L8: {
+            ...printContract,
+            pdfBytes: pdf.length,
+            pdfPages,
+            pdfSha256: sha256(pdf),
+          },
+          expectedAndProvisionalCopy: {
+            provisional,
+            shoppingLabelsExpectedAndRounded: true,
+            playbookStatusRetained: true,
+          },
+          screenshots: {
+            screen: ctx.artifacts.phase3lCompactConstellation,
+            print: ctx.artifacts.phase3lPrintRender,
+            pdf: ctx.artifacts.phase3lPdf,
+          },
         };
       }, { viewport: { width: 1440, height: 900 } });
 

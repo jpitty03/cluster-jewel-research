@@ -1,4 +1,13 @@
-import { useEffect, useId, useMemo, useRef, useState, useCallback } from 'react';
+import {
+  useCallback,
+  useEffect,
+  useId,
+  useLayoutEffect,
+  useMemo,
+  useRef,
+  useState,
+} from 'react';
+import { createPortal } from 'react-dom';
 import type { CraftingCatalogMod } from '../crafting-engine/src/service/craftingCatalog.ts';
 
 export interface SearchableModifierSelectProps {
@@ -16,6 +25,17 @@ interface CategoryBucket {
   label: string;
   mods: CraftingCatalogMod[];
 }
+
+interface PopupGeometry {
+  left: number;
+  top: number;
+  width: number;
+  maxHeight: number;
+  opensUpward: boolean;
+}
+
+const POPUP_VIEWPORT_MARGIN = 8;
+const PREFERRED_POPUP_HEIGHT = 252;
 
 const CATEGORY_CONFIGS = [
   { id: 'prefix', label: 'Prefix', match: (mod: CraftingCatalogMod) => mod.genType === 'Prefix' && !mod.isNotable },
@@ -86,13 +106,14 @@ export function SearchableModifierSelect({
   className = '',
 }: SearchableModifierSelectProps) {
   const [isOpen, setIsOpen] = useState(false);
-  const [opensUpward, setOpensUpward] = useState(false);
+  const [popupGeometry, setPopupGeometry] = useState<PopupGeometry | null>(null);
   const [query, setQuery] = useState('');
   const [highlightedIndex, setHighlightedIndex] = useState<number>(-1);
 
   const containerRef = useRef<HTMLDivElement | null>(null);
   const triggerRef = useRef<HTMLDivElement | null>(null);
   const searchInputRef = useRef<HTMLInputElement | null>(null);
+  const popupRef = useRef<HTMLDivElement | null>(null);
   const listRef = useRef<HTMLDivElement | null>(null);
   const generatedId = useId();
   const listboxId = `modifier-listbox-${generatedId.replace(/:/g, '')}`;
@@ -160,13 +181,68 @@ export function SearchableModifierSelect({
     ? `${listboxId}-option-${highlightedIndex}`
     : undefined;
 
+  const measurePopup = useCallback(() => {
+    const trigger = triggerRef.current;
+    if (!trigger) return;
+
+    const triggerRect = trigger.getBoundingClientRect();
+    const visualViewport = window.visualViewport;
+    const viewportLeft = visualViewport?.offsetLeft ?? 0;
+    const viewportTop = visualViewport?.offsetTop ?? 0;
+    const viewportWidth = visualViewport?.width ?? document.documentElement.clientWidth;
+    const viewportHeight = visualViewport?.height ?? document.documentElement.clientHeight;
+    const viewportRight = viewportLeft + viewportWidth;
+    const viewportBottom = viewportTop + viewportHeight;
+    const triggerOutsideViewport =
+      triggerRect.bottom <= viewportTop + POPUP_VIEWPORT_MARGIN ||
+      triggerRect.top >= viewportBottom - POPUP_VIEWPORT_MARGIN ||
+      triggerRect.right <= viewportLeft + POPUP_VIEWPORT_MARGIN ||
+      triggerRect.left >= viewportRight - POPUP_VIEWPORT_MARGIN;
+    if (triggerOutsideViewport) {
+      setIsOpen(false);
+      setPopupGeometry(null);
+      setQuery('');
+      setHighlightedIndex(-1);
+      return;
+    }
+    const maximumWidth = Math.max(0, viewportWidth - POPUP_VIEWPORT_MARGIN * 2);
+    const width = Math.min(triggerRect.width, maximumWidth);
+    const left = Math.min(
+      Math.max(triggerRect.left, viewportLeft + POPUP_VIEWPORT_MARGIN),
+      Math.max(viewportLeft + POPUP_VIEWPORT_MARGIN, viewportRight - POPUP_VIEWPORT_MARGIN - width),
+    );
+    const measuredHeight = popupRef.current?.getBoundingClientRect().height ?? 0;
+    const desiredHeight = Math.min(
+      PREFERRED_POPUP_HEIGHT,
+      measuredHeight > 0 ? measuredHeight : PREFERRED_POPUP_HEIGHT,
+    );
+    const spaceBelow = Math.max(0, viewportBottom - POPUP_VIEWPORT_MARGIN - triggerRect.bottom);
+    const spaceAbove = Math.max(0, triggerRect.top - viewportTop - POPUP_VIEWPORT_MARGIN);
+    const opensUpward = spaceBelow < desiredHeight && spaceAbove > spaceBelow;
+    const availableHeight = opensUpward ? spaceAbove : spaceBelow;
+    const maxHeight = Math.max(0, Math.min(PREFERRED_POPUP_HEIGHT, availableHeight));
+    const renderedHeight = Math.min(desiredHeight, maxHeight);
+    const top = opensUpward
+      ? Math.max(viewportTop + POPUP_VIEWPORT_MARGIN, triggerRect.top - renderedHeight)
+      : Math.min(triggerRect.bottom, viewportBottom - POPUP_VIEWPORT_MARGIN - renderedHeight);
+
+    setPopupGeometry((current) => {
+      const next = { left, top, width, maxHeight, opensUpward };
+      return current && Object.keys(next).every((key) =>
+        current[key as keyof PopupGeometry] === next[key as keyof PopupGeometry]
+      ) ? current : next;
+    });
+  }, []);
+
   const handleOpen = useCallback(() => {
+    measurePopup();
     setIsOpen(true);
     setHighlightedIndex(enabledIndices[0] ?? -1);
-  }, [enabledIndices]);
+  }, [enabledIndices, measurePopup]);
 
   const handleClose = useCallback((returnFocus = false) => {
     setIsOpen(false);
+    setPopupGeometry(null);
     setQuery('');
     setHighlightedIndex(-1);
     if (returnFocus) {
@@ -191,36 +267,48 @@ export function SearchableModifierSelect({
     [onChange]
   );
 
-  // Focus search input when dropdown opens
-  useEffect(() => {
+  // Focus and position before the open surface can paint in a stale location.
+  useLayoutEffect(() => {
     if (isOpen) {
-      // Small tick to ensure element is rendered
-      const timer = setTimeout(() => {
-        searchInputRef.current?.focus();
-      }, 30);
-      return () => clearTimeout(timer);
+      measurePopup();
+      searchInputRef.current?.focus();
     }
-  }, [isOpen]);
+  }, [isOpen, measurePopup]);
 
-  // Keep the connected popup inside the viewport when the selector sits near the bottom.
-  useEffect(() => {
+  // Keep the portaled surface attached during viewport, ancestor-scroll, and content-size changes.
+  useLayoutEffect(() => {
     if (!isOpen) return;
-    const updateDirection = () => {
-      const rect = containerRef.current?.getBoundingClientRect();
-      if (!rect) return;
-      const spaceBelow = window.innerHeight - rect.bottom;
-      const spaceAbove = rect.top;
-      setOpensUpward(spaceBelow < 280 && spaceAbove > spaceBelow);
+    const frame = requestAnimationFrame(measurePopup);
+    let resizeFrame = 0;
+    let settledLayoutFrame = 0;
+    const measureAfterResponsiveLayout = () => {
+      cancelAnimationFrame(resizeFrame);
+      cancelAnimationFrame(settledLayoutFrame);
+      resizeFrame = requestAnimationFrame(() => {
+        measurePopup();
+        settledLayoutFrame = requestAnimationFrame(measurePopup);
+      });
     };
-    const frame = requestAnimationFrame(updateDirection);
-    window.addEventListener('resize', updateDirection);
-    window.addEventListener('scroll', updateDirection, true);
+    window.addEventListener('resize', measureAfterResponsiveLayout);
+    window.addEventListener('scroll', measurePopup, true);
+    window.visualViewport?.addEventListener('resize', measureAfterResponsiveLayout);
+    window.visualViewport?.addEventListener('scroll', measurePopup);
+    const resizeObserver = typeof ResizeObserver === 'undefined'
+      ? undefined
+      : new ResizeObserver(measureAfterResponsiveLayout);
+    if (triggerRef.current) resizeObserver?.observe(triggerRef.current);
+    if (popupRef.current) resizeObserver?.observe(popupRef.current);
     return () => {
       cancelAnimationFrame(frame);
-      window.removeEventListener('resize', updateDirection);
-      window.removeEventListener('scroll', updateDirection, true);
+      cancelAnimationFrame(resizeFrame);
+      cancelAnimationFrame(settledLayoutFrame);
+      window.removeEventListener('resize', measureAfterResponsiveLayout);
+      window.removeEventListener('scroll', measurePopup, true);
+      window.visualViewport?.removeEventListener('resize', measureAfterResponsiveLayout);
+      window.visualViewport?.removeEventListener('scroll', measurePopup);
+      resizeObserver?.disconnect();
     };
-  }, [isOpen]);
+  }, [isOpen, measurePopup]);
 
   useEffect(() => {
     if (!isOpen) return;
@@ -235,8 +323,8 @@ export function SearchableModifierSelect({
 
     const handleClickOutside = (event: MouseEvent) => {
       if (
-        containerRef.current &&
-        !containerRef.current.contains(event.target as Node)
+        !containerRef.current?.contains(event.target as Node) &&
+        !popupRef.current?.contains(event.target as Node)
       ) {
         handleClose();
       }
@@ -329,9 +417,9 @@ export function SearchableModifierSelect({
 
   let globalIndexCounter = 0;
 
-  return (
+  return (<>
     <div
-      className={`searchable-modifier-select ${isOpen ? 'open' : ''} ${opensUpward ? 'open-upward' : ''} ${className}`}
+      className={`searchable-modifier-select ${isOpen ? 'open' : ''} ${popupGeometry?.opensUpward ? 'open-upward' : ''} ${className}`}
       ref={containerRef}
       onKeyDown={handleKeyDown}
     >
@@ -348,7 +436,7 @@ export function SearchableModifierSelect({
         }}
         aria-haspopup={isOpen ? undefined : 'listbox'}
         aria-expanded={isOpen ? undefined : false}
-        aria-controls={isOpen ? undefined : listboxId}
+        aria-controls={listboxId}
         aria-label={isOpen ? undefined : ariaLabel}
       >
         {isOpen ? (
@@ -447,13 +535,22 @@ export function SearchableModifierSelect({
           : ''}
       </span>
 
-      {/* Connected Dropdown Popup */}
-      {isOpen && (
+      {/* Portaled dropdown popup */}
+      {isOpen && popupGeometry && createPortal((
         <div
+          ref={popupRef}
           id={listboxId}
-          className="searchable-dropdown-popup"
+          className={`searchable-dropdown-popup ${popupGeometry.opensUpward ? 'open-upward' : 'open-downward'}`}
           role="listbox"
           aria-label={ariaLabel}
+          data-searchable-modifier-portal="body"
+          data-popup-placement={popupGeometry.opensUpward ? 'upward' : 'downward'}
+          style={{
+            left: popupGeometry.left,
+            top: popupGeometry.top,
+            width: popupGeometry.width,
+            maxHeight: popupGeometry.maxHeight,
+          }}
         >
           <div className="search-stats-bar">
             <span className="match-count">
@@ -536,7 +633,7 @@ export function SearchableModifierSelect({
             )}
           </div>
         </div>
-      )}
+      ), document.body)}
     </div>
-  );
+  </>);
 }

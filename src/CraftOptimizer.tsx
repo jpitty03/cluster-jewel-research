@@ -655,7 +655,7 @@ export function SearchActivityVisualizer({
   );
 }
 
-export const APP_RELEASE_VERSION = '3K.1';
+export const APP_RELEASE_VERSION = '3L.1';
 
 interface CraftOptimizerProps {
   seed?: OptimizerSeed | null;
@@ -799,6 +799,9 @@ export function CraftOptimizer({
   const [showHelpModal, setShowHelpModal] = useState<boolean>(false);
   const [entryMode, setEntryMode] = useState<OptimizerEntryMode>('fresh');
   const [importError, setImportError] = useState<string | null>(null);
+  const [setupRepairSource, setSetupRepairSource] = useState<
+    'none' | 'external-pending' | 'external-invalid'
+  >('none');
   const [targetEditorOpen, setTargetEditorOpen] = useState<boolean>(OPTIMIZER_DISCLOSURE_DEFAULTS.targetEditor);
   const [settingsOpen, setSettingsOpen] = useState<boolean>(OPTIMIZER_DISCLOSURE_DEFAULTS.settings);
   const [presetsOpen, setPresetsOpen] = useState(false);
@@ -845,6 +848,7 @@ export function CraftOptimizer({
     }
     setEntryMode('loaded');
     setImportError(null);
+    setSetupRepairSource('none');
     setTargetEditorOpen(false);
     setSettingsOpen(false);
     setResult(null);
@@ -962,6 +966,7 @@ export function CraftOptimizer({
     const decoded = decodeCraftFromUrl(encoded);
     if (!decoded) {
       setImportError('This shared craft could not be decoded. Import another optimizer JSON file or build the target manually.');
+      setSetupRepairSource('none');
       setEntryMode('fresh');
       return;
     }
@@ -1043,6 +1048,7 @@ export function CraftOptimizer({
     setError(null);
     setEntryMode('loaded');
     setImportError(null);
+    setSetupRepairSource('external-pending');
     setTargetEditorOpen(false);
     setSettingsOpen(false);
     hydratingHandoffRef.current = false;
@@ -1106,6 +1112,7 @@ export function CraftOptimizer({
     setRuntimeMs(null);
     setEntryMode('loaded');
     setImportError(null);
+    setSetupRepairSource('external-pending');
     setTargetEditorOpen(false);
     setSettingsOpen(false);
     setClusterHandoff(attachClusterHandoff(seed, handoffIdentitySnapshot({
@@ -1133,9 +1140,21 @@ export function CraftOptimizer({
     ...validation.errors.map((issue) => issue.message),
     alternativeSelectionError,
   ].filter((message): message is string => message !== null).join(' ') || null;
+  const setupRepairMessage = setupRepairSource === 'external-invalid' && validationError !== null
+    ? `The loaded setup needs repair: ${validationError}`
+    : null;
 
   useEffect(() => {
-    if (entryMode !== 'loaded' || validationError === null) return;
+    if (setupRepairSource === 'external-invalid' && validationError === null) {
+      setSetupRepairSource('none');
+      return;
+    }
+    if (setupRepairSource !== 'external-pending') return;
+    if (validationError === null) {
+      setSetupRepairSource('none');
+      return;
+    }
+    setSetupRepairSource('external-invalid');
     const targetOwnsRepair = alternativeSelectionError !== null || validation.errors.some((issue) =>
       issue.field === 'baseType' ||
       issue.field === 'clusterType' ||
@@ -1143,10 +1162,9 @@ export function CraftOptimizer({
       issue.field === 'passiveCount' ||
       issue.field.startsWith('target')
     );
-    setImportError(`The loaded setup needs repair: ${validationError}`);
     if (targetOwnsRepair) setTargetEditorOpen(true);
     else setSettingsOpen(true);
-  }, [alternativeSelectionError, entryMode, validation.errors, validationError]);
+  }, [alternativeSelectionError, setupRepairSource, validation.errors, validationError]);
 
   const changeBase = (nextBase: BaseType) => {
     detachClusterHandoff('base type changed');
@@ -1273,6 +1291,13 @@ export function CraftOptimizer({
 
   const copyShoppingList = (res: OptimizeCraftResult) => {
     const lines: string[] = ['=== CLUSTER JEWEL CRAFTING SHOPPING LIST ==='];
+    const acquisitionProvisional = res.recommendationStatus === 'PROVISIONAL_RESOLVED' ||
+      res.acquisition.portfolioProof.unresolvedCompetitiveCandidates > 0;
+    if (acquisitionProvisional) {
+      lines.push('STATUS: PROVISIONAL — this executable route is not proven acquisition-safe; a cheaper unresolved route may exist. Retry deeper to improve acquisition confidence.');
+    } else {
+      lines.push('STATUS: Acquisition-safe for the reported modeled search evidence.');
+    }
     lines.push(`Must have all: ${res.target.requiredMods.map((requirement) =>
       targetRequirementName(requirement, eligibleMods)
     ).join(' + ')}`);
@@ -1283,19 +1308,19 @@ export function CraftOptimizer({
     }
     lines.push(`Selected Route: ${publicSelectedRouteName ?? 'none certified'}`);
     lines.push(`Expected Total Cost: ~${chaos(res.expectedCostChaos)}`);
-    lines.push('\nEstimated Materials & Bases:');
+    lines.push('\nRounded purchase guidance (expected model consumption is shown explicitly):');
 
     const cleanMethod = res.acquisition.candidates
       .flatMap((c) => c.methods)
       .find((m) => m.id.startsWith('clean-base'));
     if (cleanMethod?.costChaos !== undefined) {
-      lines.push(`- 1x ${baseType} (ilvl ${itemLevel}, ${passiveCount} passives) (~${cleanMethod.costChaos.toFixed(1)}c)`);
+      lines.push(`- 1x ${baseType} (rounded purchase guidance; ilvl ${itemLevel}, ${passiveCount} passives; expected acquisition cost ~${cleanMethod.costChaos.toFixed(1)}c)`);
     }
 
     const currencies = res.expectedCurrencies ?? {};
-    for (const [curr, count] of Object.entries(currencies)) {
-      if (count && count > 0) {
-        lines.push(`- ~${Math.ceil(count).toLocaleString()}x ${curr}`);
+    for (const [curr, expectedCount] of Object.entries(currencies)) {
+      if (expectedCount && expectedCount > 0) {
+        lines.push(`- ${Math.ceil(expectedCount).toLocaleString()}x ${curr} (rounded-up purchase guidance from ${expectedCount} expected consumption)`);
       }
     }
 
@@ -1306,6 +1331,11 @@ export function CraftOptimizer({
 
   const copyCraftGuide = (res: OptimizeCraftResult) => {
     const lines: string[] = ['=== CLUSTER JEWEL CRAFTING PLAYBOOK ==='];
+    const acquisitionProvisional = res.recommendationStatus === 'PROVISIONAL_RESOLVED' ||
+      res.acquisition.portfolioProof.unresolvedCompetitiveCandidates > 0;
+    lines.push(acquisitionProvisional
+      ? 'STATUS: PROVISIONAL — this executable route is not proven acquisition-safe; a cheaper unresolved route may exist. Retry deeper to improve acquisition confidence.'
+      : 'STATUS: Acquisition-safe for the reported modeled search evidence.');
     lines.push('\nTARGETS');
     lines.push(`Required: ${res.target.requiredMods.map((requirement) =>
       targetRequirementName(requirement, eligibleMods)
@@ -1560,21 +1590,20 @@ export function CraftOptimizer({
         if (importedEntry.mode === 'loaded') {
           setEntryMode(importedEntry.mode);
           setImportError(null);
+          setSetupRepairSource('external-pending');
           setTargetEditorOpen(importedEntry.openTargetEditor);
           setSettingsOpen(false);
         } else {
           setEntryMode(importedEntry.mode);
-          setImportError(
-            input.baseType && input.clusterType && input.itemLevel && input.passiveCount
-              ? 'The import did not include a required modifier. Complete the highlighted target editor.'
-              : 'The import is missing craft identity fields. Complete the highlighted target editor.'
-          );
+          setImportError(null);
+          setSetupRepairSource('external-pending');
           setTargetEditorOpen(importedEntry.openTargetEditor);
         }
         hydratingHandoffRef.current = false;
       } catch {
         hydratingHandoffRef.current = false;
         setImportError('This file is not valid optimizer JSON. Choose another file or build the target manually.');
+        setSetupRepairSource('none');
         setEntryMode('fresh');
       }
     };
@@ -1881,7 +1910,12 @@ export function CraftOptimizer({
           </div>
         </div>
 
-        {importError && <div className="optimizer-validation optimizer-import-error" role="alert">{importError}</div>}
+        {importError && <div className="optimizer-validation optimizer-import-error" role="alert" data-testid="optimizer-import-error">{importError}</div>}
+        {setupRepairMessage && (
+          <div className="optimizer-validation optimizer-setup-repair" role="alert" data-testid="optimizer-setup-repair">
+            {setupRepairMessage}
+          </div>
+        )}
         <div className="optimizer-secondary-entry-actions">
           <button
             type="button"
@@ -1897,6 +1931,7 @@ export function CraftOptimizer({
             onClick={() => {
               setEntryMode('manual');
               setImportError(null);
+              setSetupRepairSource('none');
               setTargetEditorOpen(true);
             }}
           >
@@ -3185,7 +3220,7 @@ export function CraftOptimizer({
               <div className="craft-guide-heading-row">
                 <div>
                   <h2 id="shopping-list-title">Shopping list</h2>
-                  <p className="muted">Expected full-route currency totals from the selected executable policy.</p>
+                  <p className="muted">Expected consumption (model averages), not literal exact purchase quantities.</p>
                 </div>
                 <button type="button" className="secondary" onClick={() => copyShoppingList(result)}>
                   {copiedAction === 'SHOPPING_LIST' ? 'Copied' : 'Copy shopping list'}
@@ -3194,10 +3229,13 @@ export function CraftOptimizer({
               {Object.keys(result.expectedCurrencies).length > 0 ? (
                 <ul className="compact-currency-list">
                   {Object.entries(result.expectedCurrencies).map(([currency, amount]) => (
-                    <li key={currency}><strong>{amount === null ? '—' : count(amount)}</strong> {currency}</li>
+                    <li key={currency}>
+                      <strong>{amount === null ? '—' : count(amount)}</strong>{' '}
+                      <span>{currency} — expected consumption</span>
+                    </li>
                   ))}
                 </ul>
-              ) : <p>No currency purchase is certified for this result.</p>}
+              ) : <p>No expected currency consumption is certified for this result.</p>}
               <p><strong>Expected full-route cost:</strong> {chaos(result.fullRouteUsage.fullRouteCostChaos)}</p>
             </section>
           )}
