@@ -1,8 +1,7 @@
 export const OPTIMIZER_PRIMARY_RESULT_GROUPS = [
   'Recommendation',
-  'How to craft it',
+  'Crafting Constellation',
   'Shopping list',
-  'Markov Policy Constellation',
 ] as const;
 
 export const OPTIMIZER_RESEARCH_RESULT_GROUPS = [
@@ -19,6 +18,7 @@ export const OPTIMIZER_DISCLOSURE_DEFAULTS = Object.freeze({
   alternativeMethods: false,
   costUsage: false,
   researchDiagnostics: false,
+  technicalPolicyGraph: false,
 });
 
 export type OptimizerEntryMode = 'fresh' | 'loaded' | 'manual';

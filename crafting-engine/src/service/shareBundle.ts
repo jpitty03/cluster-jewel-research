@@ -68,6 +68,7 @@ export interface BugReportBundle {
     recommendedRouteName?: string;
     presentation?: OptimizeCraftResult['presentation'];
     policyFlow?: OptimizeCraftResult['policyFlow'];
+    guidedConstellation?: OptimizeCraftResult['guidedConstellation'];
     craftPlan?: OptimizeCraftResult['craftPlan'];
     policyExplanation?: OptimizeCraftResult['policyExplanation'];
     policyRules?: OptimizeCraftResult['policyRules'];
@@ -188,6 +189,7 @@ export function generateBugReportBundle(
       recommendedRouteName: result.recommended?.name,
       presentation: result.presentation,
       policyFlow: result.policyFlow,
+      guidedConstellation: result.guidedConstellation,
       craftPlan: result.craftPlan,
       policyExplanation: result.policyExplanation,
       policyRules: result.policyRules,

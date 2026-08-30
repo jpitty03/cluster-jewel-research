@@ -9,9 +9,8 @@ import {
 export function runPhase3IInformationArchitectureDiagnostics() {
   assert.deepEqual(OPTIMIZER_PRIMARY_RESULT_GROUPS, [
     'Recommendation',
-    'How to craft it',
+    'Crafting Constellation',
     'Shopping list',
-    'Markov Policy Constellation',
   ]);
   assert.deepEqual(OPTIMIZER_RESEARCH_RESULT_GROUPS, [
     'Search & proof',

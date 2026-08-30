@@ -185,6 +185,23 @@ export {
   compilePlayerCraftRules,
   craftPlanPhaseForAction,
 } from './service/craftPlan.ts';
+export {
+  compileGuidedCraftConstellation,
+  GUIDED_CRAFT_CONSTELLATION_VERSION,
+} from './service/guidedCraftConstellation.ts';
+export type {
+  CompileGuidedCraftConstellationOptions,
+  GuidedConstellationActionChoice,
+  GuidedConstellationConditionRow,
+  GuidedConstellationEdge,
+  GuidedConstellationEdgeKind,
+  GuidedConstellationEvidence,
+  GuidedConstellationEvidenceMap,
+  GuidedConstellationFinishCondition,
+  GuidedConstellationNode,
+  GuidedConstellationNodeKind,
+  GuidedCraftConstellationSummary,
+} from './service/guidedCraftConstellation.ts';
 export type {
   CraftPlanModifierMetadata,
   CraftPlanDecisionGroup,

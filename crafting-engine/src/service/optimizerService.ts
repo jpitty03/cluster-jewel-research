@@ -70,6 +70,10 @@ import {
 } from '../solver/relaxedTargetProgressLowerBound.ts';
 import { buildCraftPlan, type CraftPlanSummary } from './craftPlan.ts';
 import {
+  compileGuidedCraftConstellation,
+  type GuidedCraftConstellationSummary,
+} from './guidedCraftConstellation.ts';
+import {
   OptimizerInputValidationError,
   validateOptimizeCraftInput,
   type OptimizerValidationIssue,
@@ -922,6 +926,8 @@ export interface OptimizeCraftResult {
   fullRouteUsage: FullRouteUsageSummary;
   policyExplanation: PolicyExplanationRule[];
   craftPlan: CraftPlanSummary;
+  /** Certified player-facing compression of player rules and exact PolicyFlow transitions. */
+  guidedConstellation: GuidedCraftConstellationSummary;
   /** Exact selected-policy occupancy/transition projection for presentation only. */
   policyFlow?: PolicyFlowSummary;
   policyRules: PolicyRule[];
@@ -6631,7 +6637,8 @@ export class OptimizerService {
     };
     const outputWithoutCraftPlan: Omit<
       OptimizeCraftResult,
-      'craftPlan' | 'methodPortfolio' | 'presentation' | 'fullRouteUsage' | 'harvestComparison'
+      'craftPlan' | 'guidedConstellation' | 'methodPortfolio' | 'presentation' |
+      'fullRouteUsage' | 'harvestComparison'
     > = {
       target: input.target,
       validationNotices: validation.notices,
@@ -7693,6 +7700,24 @@ export class OptimizerService {
           acquisition: selectedAcquisitionFlow,
         })
       : undefined;
+    const selectedAcquisitionCandidate = finalAcquisition.candidates.find((candidate) =>
+      candidate.id === finalAcquisition.selectedCandidateId
+    );
+    const selectedPhysicalStart = selectedAcquisitionEvidence?.kind === 'self-fracture'
+      ? selectedAcquisitionCandidate
+        ? `clean Normal ${input.baseType} for self-fracture of ${selectedAcquisitionCandidate.label}`
+        : ''
+      : selectedAcquisitionEvidence?.kind === 'clean'
+        ? `clean Normal ${input.baseType}`
+        : selectedAcquisitionCandidate?.label ?? finalCraftPlan.startingPoint;
+    const finalGuidedConstellation = compileGuidedCraftConstellation({
+      craftPlan: finalCraftPlan,
+      policyFlow: finalPolicyFlow,
+      target: input.target,
+      modifierMetadata: pool.getAllMods(),
+      selectedRouteName: canonicalRecommended?.name ?? 'No selected route',
+      physicalStart: selectedPhysicalStart,
+    });
     const finalWarningDetails: OptimizationWarning[] = [
       ...uniqueWarningDetails,
       ...(consistencyFailed ? [{
@@ -7721,6 +7746,7 @@ export class OptimizerService {
       fullRouteUsage: selectedUsage,
       policyExplanation: consistencyFailed ? [] : finalPolicyExplanation,
       policyFlow: finalPolicyFlow,
+      guidedConstellation: finalGuidedConstellation,
       policyRules: consistencyFailed ? [] : finalPolicyRules,
       acquisition: finalAcquisition,
       alternatives: selectedRoutes.filter((route) =>

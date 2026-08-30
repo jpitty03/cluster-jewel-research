@@ -1,5 +1,6 @@
 import assert from 'node:assert/strict';
 import { createHash } from 'node:crypto';
+import { execFileSync } from 'node:child_process';
 import {
   mkdirSync,
   readFileSync,
@@ -33,6 +34,7 @@ import { runPhase3GDomainSolverDiagnostics } from './phase3gDiagnostics.ts';
 import { runPhase3HHandoffDiagnostics } from './phase3hDiagnostics.ts';
 import { runPhase3IInformationArchitectureDiagnostics } from './phase3iDiagnostics.ts';
 import { runPhase3JPlayerRuleDiagnostics } from './phase3jDiagnostics.ts';
+import { auditPhase3KGuidedResult } from './phase3kDiagnostics.ts';
 import {
   proofPresentation,
   searchEvidencePresentation,
@@ -336,6 +338,8 @@ async function openOptimizerDisclosure(page: Page, testId: string): Promise<void
 }
 
 async function visibleConstellation(page: Page) {
+  await openOptimizerDisclosure(page, 'research-diagnostics-disclosure');
+  await openOptimizerDisclosure(page, 'technical-policy-graph-disclosure');
   const container = page.getByTestId('markov-constellation-container');
   await container.waitFor({ state: 'visible' });
   const ancestry = await container.evaluate((element) => ({
@@ -343,7 +347,11 @@ async function visibleConstellation(page: Page) {
     details: element.closest('details') !== null,
     ariaExpanded: element.closest('[aria-expanded]') !== null,
   }));
-  assert.deepEqual(ancestry, { disclosure: null, details: false, ariaExpanded: false });
+  assert.deepEqual(ancestry, {
+    disclosure: 'technical-policy-graph-disclosure',
+    details: false,
+    ariaExpanded: false,
+  });
   return container;
 }
 
@@ -897,6 +905,70 @@ async function runGateOperation(ctx: GateWorkerContext): Promise<unknown> {
         return direct;
       });
 
+    case 'phase3k-guided-constellation-direct':
+      return withPage(ctx, async () => {
+        const phase3JCloseout = 'd289068a7a6cf92a5b6a247edf60341c0f9659cc';
+        execFileSync('git', ['merge-base', '--is-ancestor', phase3JCloseout, 'HEAD'], {
+          cwd: repositoryRoot,
+        });
+        const changed = execFileSync('git', ['diff', '--name-only', phase3JCloseout], {
+          cwd: repositoryRoot,
+          encoding: 'utf8',
+        }).split(/\r?\n/).filter(Boolean);
+        const sourceChanges = changed.filter((path) =>
+          /^(crafting-engine\/src|src|quality-lab\/src)\//.test(path.replaceAll('\\', '/'))
+        );
+        assert(sourceChanges.every((path) =>
+          !/(current.?item|paste.?item|manual.?item|live.?tracker|route.?start.?reset)/i.test(path)
+        ), 'A discarded post-3J current-item source path was restored');
+        assert.equal(changed.filter((path) => /\.(test|spec)\.[cm]?[jt]sx?$/i.test(path)).length, 0,
+          'Phase 3K added a unit-test file');
+
+        const compilerSource = readFileSync(resolve(
+          repositoryRoot,
+          'crafting-engine',
+          'src',
+          'service',
+          'guidedCraftConstellation.ts',
+        ), 'utf8');
+        const optimizerSource = readFileSync(resolve(repositoryRoot, 'src', 'CraftOptimizer.tsx'), 'utf8');
+        const rendererSource = readFileSync(resolve(
+          repositoryRoot,
+          'src',
+          'components',
+          'GuidedCraftConstellation.tsx',
+        ), 'utf8');
+        const packageSource = readFileSync(resolve(repositoryRoot, 'package.json'), 'utf8');
+        assert.match(compilerSource, /compileGuidedCraftConstellation/);
+        assert.match(compilerSource, /PolicyFlow edge/);
+        assert.match(compilerSource, /evidenceMap/);
+        assert.match(compilerSource, /return withheld\(options, reasons\)/);
+        assert.doesNotMatch(optimizerSource, /compileGuidedCraftConstellation/,
+          'CraftOptimizer constructed the guided graph');
+        assert.doesNotMatch(rendererSource, /thenSummary\.(split|match)|whenLines\.(join\([^)]*\)\.)?(split|match)/,
+          'React parsed player prose to construct graph semantics');
+        assert.doesNotMatch(compilerSource, /Martial Prowess|Feed the Fury|Fuel the Fight|Heavy Hitter|Smite the Weak/,
+          'The engine compiler hardcoded the field witness');
+        assert.doesNotMatch(`${packageSource}\n${optimizerSource}\n${rendererSource}`,
+          /archify|<iframe|diagram-runtime/i);
+        assert.match(rendererSource, /does not track an item or advance the craft/);
+        assert.doesNotMatch(rendererSource, /current step|your item is here|postMessage|optimize\(/i);
+        return {
+          K1: {
+            phase3JCloseoutAncestor: true,
+            actualBaseline: 'd240be2608d0cbe89415bf97a2957c670399be8a',
+            changedPathsReviewed: changed.length,
+            discardedSourcePathsRestored: 0,
+          },
+          K2: { compilerOwner: 'crafting-engine/src/service/guidedCraftConstellation.ts' },
+          K19: {
+            forbiddenRuntimeDependencies: 0,
+            unitTestFilesAdded: 0,
+            currentItemSourcesRestored: 0,
+          },
+        };
+      });
+
     case 'cancel-replace-recover':
       return withPage(ctx, async (page) => {
         await ensureOptimizerPage(page, ctx.appUrl);
@@ -1094,6 +1166,8 @@ async function runGateOperation(ctx: GateWorkerContext): Promise<unknown> {
         const result = await optimizedFixture(page, ctx.appUrl, input);
         const craftPlan = jsonRecord(result.craftPlan, 'Phase 3J craft plan');
         assert.equal(craftPlan.status, 'CERTIFIED');
+        const guided = jsonRecord(result.guidedConstellation, 'Phase 3K guided constellation');
+        assert.equal(guided.status, 'CERTIFIED', JSON.stringify(guided.reasons));
         const certification = jsonRecord(
           craftPlan.playerRuleCertification,
           'Phase 3J player-rule certification',
@@ -1174,6 +1248,14 @@ async function runGateOperation(ctx: GateWorkerContext): Promise<unknown> {
             expectedVisits,
             minimalExceptions: certification.minimalExceptionCount,
           },
+          guided: {
+            status: guided.status,
+            nodes: arrayValue(guided.nodes, 'guided nodes').length,
+            edges: arrayValue(guided.edges, 'guided edges').length,
+            playerRules: arrayValue(guided.representedPlayerRuleIds, 'guided player rules').length,
+            sourceStates: arrayValue(guided.representedSourceStateKeys, 'guided source states').length,
+            policyEdges: arrayValue(guided.representedPolicyEdgeIds, 'guided policy edges').length,
+          },
           J8: { representedActions, actionRuleCounts },
           J9: { recoveryKinds: canonicalIds(recoveryKinds) },
           J10: { structuredRequiredAcceptableProgressRetained: true },
@@ -1184,6 +1266,42 @@ async function runGateOperation(ctx: GateWorkerContext): Promise<unknown> {
           },
           accounting: assertCanonicalAccounting(result),
           flow: assertFlowConservation(selectedPolicyFlow(result, 'Phase 3J Worker'), 'Phase 3J Worker'),
+        };
+      });
+
+    case 'phase3k-guided-constellation-worker':
+      return withPage(ctx, async (page) => {
+        const fieldFixture = fixture('phase3c_primordial_renewal_rotten_claws');
+        const input: FixtureRecord = {
+          ...fieldFixture,
+          searchBudget: { ...fieldFixture.searchBudget, maxStates: 3_334 },
+        };
+        const result = await optimizedFixture(page, ctx.appUrl, input);
+        const typedResult = result as unknown as OptimizeCraftResult;
+        const flow = typedResult.policyFlow;
+        assert(flow, 'Phase 3K field result omitted PolicyFlow');
+        const flowBeforeAudit = JSON.stringify(flow);
+        const audit = auditPhase3KGuidedResult(typedResult);
+        assert.equal(JSON.stringify(typedResult.policyFlow), flowBeforeAudit,
+          'Guided audit mutated selected policy topology/evidence');
+        assert.equal(flow.topology.nodeCount, 23);
+        assert.equal(flow.topology.edgeCount, 49);
+        assert.equal(typedResult.craftPlan.playerRuleCertification.sourcePolicyRuleIndices.length, 267);
+        return {
+          ...audit,
+          K14: {
+            requestPolicyRegistryVersion: typedResult.requestPolicyRegistry?.version,
+            selectedPolicyFingerprint: flow.sourcePolicyFingerprint,
+            selectedBundleId: typedResult.internalConsistency.selectedBundleId,
+          },
+          K20: {
+            positivePolicyRows: 267,
+            playerRules: 24,
+            exactStates: 572,
+            expectedVisits: 740.8471930308734,
+            policyNodes: flow.topology.nodeCount,
+            policyEdges: flow.topology.edgeCount,
+          },
         };
       });
 
@@ -1279,12 +1397,12 @@ async function runGateOperation(ctx: GateWorkerContext): Promise<unknown> {
         }
 
         const craftGuide = page.locator('.craft-guide');
-        const simpleGuide = craftGuide.locator('.simple-craft-instructions');
-        await simpleGuide.waitFor();
-        const renderedActions = canonicalIds(await simpleGuide.locator('.player-craft-rule[data-action-id]')
+        const guidedGuide = craftGuide.getByTestId('guided-craft-constellation');
+        await guidedGuide.waitFor();
+        const renderedActions = canonicalIds(await guidedGuide.locator('.guided-action-choice[data-action-id]')
           .evaluateAll((items) => items.map((item) => item.getAttribute('data-action-id'))));
         for (const actionId of ['alteration_orb', 'augmentation_orb', 'regal_orb']) {
-          assert(renderedActions.includes(actionId), `Simple guide omitted real Promote action ${actionId}`);
+          assert(renderedActions.includes(actionId), `Guided route omitted real Promote action ${actionId}`);
         }
         const renderedExamples: Record<string, string> = Object.fromEntries(
           [alter, augment, regal].map((option) => {
@@ -2356,8 +2474,8 @@ async function runGateOperation(ctx: GateWorkerContext): Promise<unknown> {
           assert(await page.locator('.stale-research-estimate').isVisible());
         }
         assert.equal(await page.locator('.expected-materials').isVisible(), false);
-        assert.equal(await page.getByTestId('markov-constellation-container').count(), 1,
-          'Phase 3J requires the graph to mount with every valid result');
+        assert.equal(await page.getByTestId('markov-constellation-container').count(), 0,
+          'Phase 3K defers the Technical policy graph until first open');
 
         const compactShoppingButton = page.locator('.compact-shopping-list button');
         await compactShoppingButton.click();
@@ -2386,7 +2504,12 @@ async function runGateOperation(ctx: GateWorkerContext): Promise<unknown> {
         await nodes.first().click();
         const nodeDetail = page.getByLabel('Selected constellation node details');
         await nodeDetail.waitFor({ state: 'visible' });
-        assert(await nodeDetail.isVisible(), 'Always-visible Constellation must retain node selection');
+        assert(await nodeDetail.isVisible(), 'Technical policy graph must retain node selection');
+        const technicalDisclosure = page.getByTestId('technical-policy-graph-disclosure');
+        await technicalDisclosure.locator('button[aria-expanded]').first().click();
+        assert.equal(await page.getByTestId('markov-constellation-container').count(), 1);
+        await technicalDisclosure.locator('button[aria-expanded]').first().click();
+        await nodeDetail.waitFor({ state: 'visible' });
 
         await openOptimizerDisclosure(page, 'cost-usage-disclosure');
         assert(await page.locator('.expected-materials').isVisible());
@@ -2420,17 +2543,251 @@ async function runGateOperation(ctx: GateWorkerContext): Promise<unknown> {
           I4: { malformedImportOwnsError: true, repairableImportOpensTargetOnly: true },
           I5: { compactRunningStatus: true },
           I6: { fullSearchActivityUnderDisclosure: true },
-          I7: { primaryGroupsVisible: ['Recommendation', 'How to craft it', 'Shopping list', 'Markov Policy Constellation'] },
+          I7: { primaryGroupsVisible: ['Recommendation', 'Crafting Constellation', 'Shopping list'] },
           I8: { researchGroupsInitiallyClosed: 4 },
           I9: { selectedPolicyAndPortfolioVisible: true },
           I10: { targetSummaryPreservesRequiredAndAlternatives: true },
           I11: { desktopAndMobileNoOverflow: geometry },
           I12: { ariaControlledDisclosures: true },
-          I13: { graphAlwaysMounted: true, selectionPreserved: true },
+          I13: { graphDeferredUntilOpen: true, retainedAfterOpen: true, selectionPreserved: true },
           I14: { priorResearchSurfacesReachable: true },
           I15: { workerEventsAddedByDisclosure: 0, copyOutputStable: true, sharePayloadStable: true },
           I16: { retainedCoverageRegistered: true },
           artifact: ctx.artifacts.phase3iCompactMobile,
+        };
+      }, { viewport: { width: 1440, height: 900 } });
+
+    case 'phase3k-guided-constellation-browser':
+      return withPage(ctx, async (page) => {
+        const fieldFixture = fixture('three_notable');
+        await ensureOptimizerPage(page, ctx.appUrl);
+        await importFixture(page, fieldFixture);
+        await setBudget(page, fieldFixture.searchBudget);
+        const offset = await workerEventCount(page);
+        await page.getByRole('button', { name: /Find cheapest craft|Optimize craft/ }).click();
+        const result = await waitForWorkerResult(
+          page,
+          offset,
+          fieldFixture.searchBudget.maxWallTimeMs + 8_000,
+        );
+        const craftPlan = jsonRecord(result.craftPlan, 'Phase 3K browser craft plan');
+        const guidedResult = jsonRecord(result.guidedConstellation, 'Phase 3K browser guided result');
+        assert.equal(craftPlan.status, 'CERTIFIED');
+        assert.equal(guidedResult.status, 'CERTIFIED', JSON.stringify(guidedResult.reasons));
+
+        const topLevel = page.getByTestId('crafting-constellation-top-level');
+        const guided = page.getByTestId('guided-craft-constellation');
+        await guided.waitFor({ state: 'visible' });
+        assert.equal(await topLevel.count(), 1);
+        assert.deepEqual(await topLevel.evaluate((element) => ({
+          details: element.closest('details') !== null,
+          disclosure: element.closest('.optimizer-disclosure') !== null,
+          hidden: element.closest('[hidden]') !== null,
+        })), { details: false, disclosure: false, hidden: false });
+        assert.equal(await page.locator('.simple-craft-instructions').count(), 0,
+          'The default 24-card stack remains rendered');
+        assert.equal(await page.getByTestId('markov-constellation-container').count(), 0,
+          'The Technical policy graph mounted before first open');
+        assert.equal(await page.getByTestId('constellation-top-level').count(), 0,
+          'The raw graph remains a top-level Constellation');
+
+        const guideText = await guided.innerText();
+        assert.match(guideText, /Physical start:/i);
+        assert.match(guideText, /Explore a stage/i);
+        assert.match(guideText, /Required:/i);
+        assert.match(guideText, /Finish/i);
+        assert.doesNotMatch(guideText, /current step|your item is here|matches your item/i);
+        const guidedNodes = guided.locator('[data-guided-node-id]');
+        const guidedEdges = guided.locator('[data-guided-edge-id]');
+        assert.equal(await guidedNodes.count(), arrayValue(guidedResult.nodes, 'guided model nodes').length);
+        assert.equal(await guidedEdges.count(), arrayValue(guidedResult.edges, 'guided model edges').length);
+        for (const locator of [guidedNodes, guidedEdges]) {
+          for (let index = 0; index < await locator.count(); index += 1) {
+            const element = locator.nth(index);
+            assert((await element.getAttribute('data-policy-rule-indices'))?.length);
+            assert(Number(await element.getAttribute('data-source-state-count')) > 0);
+            assert((await element.getAttribute('data-policy-edge-ids'))?.length);
+          }
+        }
+        const actionChoices = guided.locator('.guided-action-choice[data-action-id]');
+        const renderedActions = canonicalIds(await actionChoices.evaluateAll((elements) =>
+          elements.map((element) => element.getAttribute('data-action-id'))
+        ));
+        for (const actionId of [
+          'alteration_orb',
+          'augmentation_orb',
+          'regal_orb',
+          'exalted_orb',
+          'scouring_orb',
+          'transmutation_orb',
+          'fracturing_orb',
+          'restart_reacquire',
+        ]) assert(renderedActions.includes(actionId), `Guided route omitted ${actionId}`);
+        assert.match(guideText, /safe open prefix/i);
+        assert.match(guideText, /blocked prefix or exception junk/i);
+        assert.match(guideText, /Preparation target fractured/i);
+        assert.match(guideText, /Junk fractured/i);
+
+        const resultOrder = await page.evaluate(() => ({
+          recommendation: document.querySelector('.recommendation-hero')?.getBoundingClientRect().top ?? -1,
+          guided: document.querySelector('[data-testid="crafting-constellation-top-level"]')
+            ?.getBoundingClientRect().top ?? -1,
+          shopping: document.querySelector('.compact-shopping-list')?.getBoundingClientRect().top ?? -1,
+          disclosures: document.querySelector('[data-testid="search-proof-disclosure"]')
+            ?.getBoundingClientRect().top ?? -1,
+        }));
+        assert(resultOrder.recommendation < resultOrder.guided);
+        assert(resultOrder.guided < resultOrder.shopping);
+        assert(resultOrder.shopping < resultOrder.disclosures);
+
+        await page.getByRole('button', { name: 'Copy shopping list', exact: true }).click();
+        const shoppingBefore = await page.evaluate(() => navigator.clipboard.readText());
+        await page.getByRole('button', { name: /Share Link/ }).click();
+        const shareBefore = await page.evaluate(() => navigator.clipboard.readText());
+        const interactionOffset = await workerEventCount(page);
+        const stageButtons = guided.locator('.guided-stage-select');
+        await stageButtons.nth(Math.min(2, (await stageButtons.count()) - 1)).focus();
+        await page.keyboard.press('Enter');
+        if (await actionChoices.count()) await actionChoices.last().click();
+        const detail = page.getByLabel('Guided constellation instruction details');
+        assert.equal(await detail.count(), 1);
+        const detailText = await detail.innerText();
+        for (const label of ['WHEN', 'USE', 'THEN', 'Why this action?']) {
+          assert(detailText.includes(label), `Guided detail omitted ${label}`);
+        }
+        assert.equal(await workerEventCount(page), interactionOffset,
+          'Guided selection created Worker traffic');
+        await page.getByRole('button', { name: 'Copy shopping list', exact: true }).click();
+        assert.equal(await page.evaluate(() => navigator.clipboard.readText()), shoppingBefore);
+        await page.getByRole('button', { name: /Share Link/ }).click();
+        assert.equal(await page.evaluate(() => navigator.clipboard.readText()), shareBefore);
+
+        await page.getByRole('button', { name: /Copy Playbook/ }).click();
+        const playbook = await page.evaluate(() => navigator.clipboard.readText());
+        for (const label of [
+          'TARGETS',
+          'Selected route:',
+          'Physical start:',
+          'STAGE:',
+          'WHEN:',
+          'USE:',
+          'THEN:',
+          'FINISH WHEN',
+          'IMPORTANT CAVEATS',
+        ]) assert(playbook.includes(label), `Copy Playbook omitted ${label}`);
+        assert.equal(playbook.match(/^RULE \d+ \[/gm)?.length,
+          arrayValue(craftPlan.playerRules, 'browser player rules').length);
+        assert.equal(playbook.match(/IMPORTANT CAVEATS/g)?.length, 1);
+        assert.doesNotMatch(playbook, /represented states|expected visits/i);
+
+        const [download] = await Promise.all([
+          page.waitForEvent('download'),
+          topLevel.getByRole('button', { name: /Export Setup JSON/ }).click(),
+        ]);
+        const downloadPath = await download.path();
+        assert(downloadPath);
+        const exported = JSON.parse(readFileSync(downloadPath, 'utf8')) as JsonRecord;
+        const exportSummary = jsonRecord(exported.resultSummary, 'Phase 3K export summary');
+        for (const retained of ['craftPlan', 'policyExplanation', 'policyRules', 'policyFlow']) {
+          assert(exportSummary[retained], `Export omitted retained ${retained}`);
+        }
+        const exportGuided = jsonRecord(exportSummary.guidedConstellation, 'export guided model');
+        assert(exportGuided.evidenceMap);
+        assert.equal(exportGuided.fingerprint, guidedResult.fingerprint);
+        await topLevel.getByRole('button', { name: /Bug Report/ }).click();
+        const bug = JSON.parse(await page.evaluate(() => navigator.clipboard.readText())) as JsonRecord;
+        const bugSummary = jsonRecord(bug.resultSummary, 'Phase 3K bug summary');
+        for (const retained of ['craftPlan', 'policyExplanation', 'policyRules', 'policyFlow']) {
+          assert(bugSummary[retained], `Bug report omitted retained ${retained}`);
+        }
+        const bugGuided = jsonRecord(bugSummary.guidedConstellation, 'bug guided model');
+        assert(bugGuided.evidenceMap);
+        assert.equal(bugGuided.fingerprint, guidedResult.fingerprint);
+
+        await guided.getByRole('button', { name: 'Why this action?' }).click();
+        const why = guided.locator('.guided-why-evidence');
+        await why.waitFor({ state: 'visible' });
+        const advancedButton = why.getByRole('button', { name: /Open Advanced policy evidence/ });
+        if (await advancedButton.count()) await advancedButton.click();
+        const advanced = page.locator('.advanced-policy-evidence');
+        await advanced.waitFor({ state: 'visible' });
+        assert.match(await advanced.innerText(), /Guided fingerprint/i);
+        assert.equal(await workerEventCount(page), interactionOffset,
+          'Evidence navigation created Worker traffic');
+
+        const technical = await visibleConstellation(page);
+        assert.match(await technical.locator('.constellation-title').innerText(), /Technical policy graph/);
+        for (const control of [
+          'Route Focus',
+          'Fit All',
+          'Reset View',
+          'Reset Layout',
+          'Toggle Reduced Motion',
+          'Toggle Fullscreen',
+        ]) assert.equal(await technical.getByRole('button', { name: control }).count(), 1);
+        const technicalNodes = technical.locator('.constellation-node-access-list button');
+        await technicalNodes.first().click();
+        const technicalDetail = page.getByLabel('Selected constellation node details');
+        await technicalDetail.waitFor({ state: 'visible' });
+        const technicalDisclosure = page.getByTestId('technical-policy-graph-disclosure');
+        await technicalDisclosure.locator('button[aria-expanded]').first().click();
+        assert.equal(await technical.isVisible(), false);
+        assert.equal(await page.getByTestId('markov-constellation-container').count(), 1,
+          'Technical graph unmounted after first close');
+        await technicalDisclosure.locator('button[aria-expanded]').first().click();
+        await technical.waitFor({ state: 'visible' });
+        assert(await technicalDetail.isVisible(), 'Technical node selection was not retained');
+        await page.emulateMedia({ reducedMotion: 'reduce' });
+        await page.waitForTimeout(50);
+        assert.match(await technical.getByRole('button', { name: 'Toggle Reduced Motion' }).innerText(), /Static/i);
+        assert.equal(await workerEventCount(page), interactionOffset,
+          'Technical graph presentation created Worker traffic');
+
+        await technicalDisclosure.locator('button[aria-expanded]').first().click();
+        const geometries: Record<string, unknown> = {};
+        const screenshots: Record<string, string> = {};
+        for (const width of [1440, 420, 390]) {
+          await page.setViewportSize({ width, height: width === 1440 ? 900 : 844 });
+          await topLevel.scrollIntoViewIfNeeded();
+          const geometry = await page.evaluate(() => ({
+            viewport: document.documentElement.clientWidth,
+            documentWidth: document.documentElement.scrollWidth,
+            bodyWidth: document.body.scrollWidth,
+            guideHeight: Math.round(document.querySelector(
+              '[data-testid="crafting-constellation-top-level"]',
+            )?.getBoundingClientRect().height ?? 0),
+          }));
+          assert(geometry.documentWidth <= geometry.viewport + 1);
+          assert(geometry.bodyWidth <= geometry.viewport + 1);
+          geometries[String(width)] = geometry;
+          const screenshotPath = join(
+            ctx.invocation.artifactsDirectory,
+            `phase3k-guided-constellation-${width}.png`,
+          );
+          await topLevel.screenshot({ path: screenshotPath });
+          screenshots[String(width)] = relative(repositoryRoot, screenshotPath);
+        }
+        Object.assign(ctx.artifacts, Object.fromEntries(Object.entries(screenshots)
+          .map(([width, path]) => [`phase3kGuided${width}`, path])));
+        const measurements = await topLevel.evaluate((element) => ({
+          height: Math.round(element.getBoundingClientRect().height),
+          visibleNodes: element.querySelectorAll('[data-guided-node-id]').length,
+          visibleEdges: element.querySelectorAll('[data-guided-edge-id]').length,
+        }));
+        return {
+          K12: { topLevelGuides: 1, defaultRuleCards: 0, defaultTechnicalGraphs: 0, resultOrder },
+          K13: { detailOwners: 1, workerEventsAdded: 0 },
+          K14: {
+            copyPlaybookBytes: playbook.length,
+            shoppingListBytes: shoppingBefore.length,
+            shoppingListByteEquivalent: true,
+            shareByteEquivalent: true,
+          },
+          K15: { exactPhase3JEvidenceRetained: true, guidedEvidenceMapAdded: true },
+          K16: { deferredMount: true, retainedMount: true, retainedSelection: true },
+          K17: { geometries, keyboardSelection: true, reducedMotion: true },
+          measurements,
+          screenshots,
         };
       }, { viewport: { width: 1440, height: 900 } });
 

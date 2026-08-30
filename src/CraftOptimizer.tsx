@@ -35,9 +35,9 @@ import {
 import { SearchableModifierSelect } from './SearchableModifierSelect.tsx';
 import { buildVisualizationGraph } from '../crafting-engine/src/domain/VisualizationGraph.ts';
 import { MarkovConstellation } from './components/MarkovConstellation.tsx';
+import { GuidedCraftConstellation } from './components/GuidedCraftConstellation.tsx';
 import { OnboardingModal } from './components/OnboardingModal.tsx';
 import { OptimizerDisclosure } from './components/OptimizerDisclosure.tsx';
-import { SimpleCraftInstructions } from './components/SimpleCraftInstructions.tsx';
 import {
   encodeCraftToUrl,
   decodeCraftFromUrl,
@@ -655,7 +655,7 @@ export function SearchActivityVisualizer({
   );
 }
 
-export const APP_RELEASE_VERSION = '3J.1';
+export const APP_RELEASE_VERSION = '3K.1';
 
 interface CraftOptimizerProps {
   seed?: OptimizerSeed | null;
@@ -806,6 +806,7 @@ export function CraftOptimizer({
   const [alternativeMethodsOpen, setAlternativeMethodsOpen] = useState<boolean>(OPTIMIZER_DISCLOSURE_DEFAULTS.alternativeMethods);
   const [costUsageOpen, setCostUsageOpen] = useState<boolean>(OPTIMIZER_DISCLOSURE_DEFAULTS.costUsage);
   const [researchDiagnosticsOpen, setResearchDiagnosticsOpen] = useState<boolean>(OPTIMIZER_DISCLOSURE_DEFAULTS.researchDiagnostics);
+  const [technicalPolicyGraphOpen, setTechnicalPolicyGraphOpen] = useState<boolean>(OPTIMIZER_DISCLOSURE_DEFAULTS.technicalPolicyGraph);
 
   const applyPreset = (preset: 'attack-large' | 'es-small') => {
     detachClusterHandoff('target preset changed');
@@ -1221,6 +1222,7 @@ export function CraftOptimizer({
       setAlternativeMethodsOpen(false);
       setCostUsageOpen(false);
       setResearchDiagnosticsOpen(false);
+      setTechnicalPolicyGraphOpen(false);
     }
     setProgress(null);
     setRuntimeMs(null);
@@ -1316,36 +1318,40 @@ export function CraftOptimizer({
     lines.push('Junk: anything else');
     lines.push('Junk categories: Safe for this rule; Blocks a missing target; Occupies the last compatible slot; Fractured junk');
 
-    if (res.craftPlan.playerRuleCertification.status !== 'CERTIFIED') {
-      lines.push('\nSimple instructions withheld');
-      lines.push('The selected policy could not be grouped into unambiguous player rules.');
+    lines.push(`Selected route: ${res.guidedConstellation.selectedRouteName}`);
+    lines.push(`Physical start: ${res.guidedConstellation.physicalStart}`);
+
+    if (res.guidedConstellation.status !== 'CERTIFIED') {
+      lines.push('\nCrafting Constellation withheld');
+      lines.push('The selected policy could not be compressed into an unambiguous player flow.');
+      for (const reason of res.guidedConstellation.reasons) lines.push(`- ${reason}`);
     } else {
-      res.craftPlan.playerRules.forEach((rule, index) => {
-        const condition = rule.when;
-        const when = [
-          `${condition.progressKind === 'PREPARATION' ? 'Self-fracture preparation' : 'Final craft'} ` +
-            `${condition.rarity} ${condition.prefixCount}P/${condition.suffixCount}S`,
-          condition.requiredPresentModIds.length > 0
-            ? `has required target ${condition.requiredPresentModIds.map((modId) => playerModName(modId, eligibleMods)).join(', ')}`
-            : 'has no required target',
-          condition.requiredMissingModIds.length > 0
-            ? `missing ${condition.requiredMissingModIds.map((modId) => playerModName(modId, eligibleMods)).join(', ')}`
-            : 'all required targets present',
-          ...condition.junk.map((junk) =>
-            `${junk.count} ${junk.side.toLowerCase()} junk: ${junk.kind.replace(/_/g, ' ').toLowerCase()}`
-          ),
-          condition.openCompatibleTargetSlots.length > 0
-            ? `open compatible ${condition.openCompatibleTargetSlots.map((slot) => slot.toLowerCase()).join(' or ')} slot`
-            : undefined,
-        ].filter((entry): entry is string => entry !== undefined).join('; ');
-        lines.push(`\nRULE ${index + 1}`);
-        lines.push(`WHEN: ${when}`);
-        lines.push(`USE: ${playerActionName(rule.actionId, rule.action, recommendedStart)}`);
-        lines.push(`THEN: ${rule.then.summary}`);
-        for (const branch of rule.then.branches) lines.push(`  - ${branch}`);
-      });
-      if (res.craftPlan.playerFinishRule) {
-        lines.push('\nSTOP WHEN: all required targets are present; the acceptable-target requirement is satisfied when enabled; and final rarity/state constraints are satisfied.');
+      let ruleNumber = 0;
+      for (const node of res.guidedConstellation.nodes) {
+        lines.push(`\nSTAGE: ${node.title}`);
+        for (const row of node.conditionRows) {
+          ruleNumber += 1;
+          lines.push(`RULE ${ruleNumber} [${row.playerRuleIds.join(', ')}]`);
+          lines.push(`WHEN: ${row.whenLines.join('; ')}`);
+          lines.push(`USE: ${row.actionName}`);
+          lines.push(`THEN: ${row.thenSummary}`);
+          for (const branch of row.thenBranches) lines.push(`  - ${branch}`);
+        }
+        for (const edge of res.guidedConstellation.edges.filter((candidate) =>
+          candidate.sourceNodeId === node.id
+        )) lines.push(`  ${edge.kind}: ${edge.label}`);
+      }
+      const finish = res.guidedConstellation.finishCondition;
+      if (finish) {
+        lines.push('\nFINISH WHEN');
+        lines.push(`- all required targets are present: ${finish.requiredTargetNames.join(', ')}`);
+        if (finish.acceptableTargetBranchNames.length > 0) {
+          lines.push(`- at least one acceptable branch is present: ${finish.acceptableTargetBranchNames.map((branch) => branch.join(' + ')).join(' OR ')}`);
+        }
+        if (finish.requiredRarity) lines.push(`- final rarity is ${finish.requiredRarity}`);
+        lines.push(finish.extraAffixesAllowed
+          ? '- extra affixes are allowed'
+          : '- the requested extra-affix limit is satisfied');
       }
     }
     lines.push('\nIMPORTANT CAVEATS');
@@ -1589,6 +1595,7 @@ export function CraftOptimizer({
         metrics: res.recommended?.metrics,
         presentation: res.presentation,
         policyFlow: res.policyFlow,
+        guidedConstellation: res.guidedConstellation,
         craftPlan: res.craftPlan,
         policyExplanation: res.policyExplanation,
         policyRules: res.policyRules,
@@ -1677,7 +1684,7 @@ export function CraftOptimizer({
   const displayedProof = result ? proofPresentation(result) : null;
   const displayedSearchEvidence = result ? searchEvidencePresentation(result) : null;
 
-  const constellationGraph = useMemo(() => {
+  const technicalPolicyGraph = useMemo(() => {
     if (!result?.policyFlow) return null;
     return buildVisualizationGraph(
       result.policyFlow,
@@ -3007,9 +3014,16 @@ export function CraftOptimizer({
 
           </OptimizerDisclosure>
 
-          <section className="optimizer-card craft-guide" aria-labelledby="craft-guide-title">
+          <section
+            className="optimizer-card craft-guide crafting-constellation-top-level"
+            aria-labelledby="crafting-constellation-title"
+            data-testid="crafting-constellation-top-level"
+          >
             <div className="craft-guide-heading-row">
-              <h2 id="craft-guide-title">How to craft it</h2>
+              <div>
+                <h2 id="crafting-constellation-title">Crafting Constellation</h2>
+                <p className="muted">A certified player route from physical start through result decisions, recovery, and Finish.</p>
+              </div>
               {result.recommended && (
                 <div className="craft-export-toolbar">
                   <button
@@ -3052,28 +3066,10 @@ export function CraftOptimizer({
                 </div>
               )}
             </div>
-            {result.recommended && result.craftPlan.status === 'CERTIFIED' ? (
-              <>
-                <div className="craft-start">
-                  <span>Selected route</span>
-                  <strong data-selected-route={publicSelectedRouteName}>{publicSelectedRouteName}</strong>
-                  <span>Starting point</span>
-                  <strong>{publicSelectedRouteName}</strong>
-                  <span>Physical start</span>
-                  <strong>{recommendedStart}</strong>
-                  <p>Use one physical action at a time. After every random result, start again at the first matching WHEN condition.</p>
-                </div>
-                <SimpleCraftInstructions
-                  craftPlan={result.craftPlan}
-                  target={result.target}
-                  modifierName={(modId) => playerModName(modId, eligibleMods)}
-                  actionName={(actionId, fallback) => publicModifierText(
-                    playerActionName(actionId, fallback, recommendedStart),
-                    targetDescriptors,
-                    'primary',
-                  )}
-                  onShowEvidence={showAdvancedPolicyEvidence}
-                />
+            <GuidedCraftConstellation
+              summary={result.guidedConstellation}
+              onShowAdvancedEvidence={showAdvancedPolicyEvidence}
+            />
                 {/* Phase 3J removed the legacy chronological plan and repeated inline Decision details.
                 <ol className="craft-plan" data-plan-status={result!.craftPlan.status}>
                   {result!.craftPlan.steps.map((step, stepIndex) => {
@@ -3177,20 +3173,11 @@ export function CraftOptimizer({
                     </li>;
                   })}
                 </ol> */}
-                {result.craftPlan.optimalityNote && (
-                  <p className="craft-plan-optimality">
-                    {publicModifierText(result.craftPlan.optimalityNote, targetDescriptors, 'primary')}
-                  </p>
-                )}
-              </>
-            ) : result.recommended && result.craftPlan.status === 'UNCERTIFIED' ? (
-              <div className="plan-withheld-warning" role="alert" data-plan-status="UNCERTIFIED">
-                <strong>Player instruction plan withheld</strong>
-                <p>{result.craftPlan.withheldReason ??
-                  'The optimizer found an executable policy, but its selected mechanic evidence did not reconcile with a safe player plan.'}</p>
-                <p className="muted">Exact action IDs remain available in Advanced optimizer details and exports.</p>
-              </div>
-            ) : <p>No certified acquisition route is available under this search budget.</p>}
+            {result.craftPlan.optimalityNote && (
+              <p className="craft-plan-optimality">
+                {publicModifierText(result.craftPlan.optimalityNote, targetDescriptors, 'primary')}
+              </p>
+            )}
           </section>
 
           {result.recommended !== null && (
@@ -3212,19 +3199,6 @@ export function CraftOptimizer({
                 </ul>
               ) : <p>No currency purchase is certified for this result.</p>}
               <p><strong>Expected full-route cost:</strong> {chaos(result.fullRouteUsage.fullRouteCostChaos)}</p>
-            </section>
-          )}
-
-          {constellationGraph && (
-            <section
-              className="optimizer-card constellation-card constellation-top-level"
-              aria-label="Markov Policy Constellation"
-              data-testid="constellation-top-level"
-            >
-              <MarkovConstellation
-                graph={constellationGraph}
-                selectedRouteName={publicSelectedRouteName}
-              />
             </section>
           )}
 
@@ -3309,6 +3283,31 @@ export function CraftOptimizer({
             testId="research-diagnostics-disclosure"
             className="optimizer-result-disclosure"
           >
+          <OptimizerDisclosure
+            key={`${result.policyFlow?.sourcePolicyFingerprint ?? 'no-policy'}|${result.guidedConstellation.fingerprint}|${result.internalConsistency.selectedBundleId ?? 'no-bundle'}`}
+            title="Technical policy graph"
+            description="Exact aggregated selected-policy states, transitions, probabilities, occupancy, and layout tools."
+            badge={technicalPolicyGraph ? `${technicalPolicyGraph.nodes.length} nodes` : 'Unavailable'}
+            open={technicalPolicyGraphOpen}
+            onToggle={setTechnicalPolicyGraphOpen}
+            testId="technical-policy-graph-disclosure"
+            className="technical-policy-graph-disclosure"
+            keepMountedAfterOpen
+          >
+            {technicalPolicyGraph && (
+              <section
+                className="optimizer-card constellation-card technical-policy-graph"
+                aria-label="Technical policy graph"
+                data-testid="technical-policy-graph"
+              >
+                <MarkovConstellation
+                  title="Technical policy graph"
+                  graph={technicalPolicyGraph}
+                  selectedRouteName={publicSelectedRouteName}
+                />
+              </section>
+            )}
+          </OptimizerDisclosure>
           <div className="optimizer-card advanced-optimizer-details">
             <div className="advanced-details-content">
               <section className="advanced-section raw-proof-details">
@@ -3343,9 +3342,15 @@ export function CraftOptimizer({
               >
                 <h2 id="advanced-policy-evidence-title">Advanced policy evidence</h2>
                 <p className="muted">
-                  Exact modifier identities, source states, policy-rule indices, represented counts, expected visits, grouping, and recovery evidence for the certified Simple Craft Instructions.
+                  Guided Constellation evidence plus the retained exact modifier identities, source states, policy-rule indices, represented counts, expected visits, grouping, and recovery evidence for every certified Phase 3J player rule.
                 </p>
                 <dl>
+                  <dt>Guided Constellation</dt><dd>{result.guidedConstellation.status}</dd>
+                  <dt>Guided fingerprint</dt><dd><code>{result.guidedConstellation.fingerprint}</code></dd>
+                  <dt>Guided nodes / exact edges</dt><dd>{result.guidedConstellation.nodes.length} / {result.guidedConstellation.edges.length}</dd>
+                  <dt>Guided player-rule coverage</dt><dd>{result.guidedConstellation.representedPlayerRuleIds.length} / {result.craftPlan.playerRules.length}</dd>
+                  <dt>Guided source-state coverage</dt><dd>{result.guidedConstellation.representedSourceStateKeys.length}</dd>
+                  <dt>Guided PolicyFlow edge coverage</dt><dd>{result.guidedConstellation.representedPolicyEdgeIds.length} / {result.policyFlow?.edges.length ?? 0}</dd>
                   <dt>Player-rule certification</dt><dd>{result.craftPlan.playerRuleCertification.status}</dd>
                   <dt>Covered source policy rules</dt><dd>{result.craftPlan.playerRuleCertification.coveredPolicyRuleIndices.length} / {result.craftPlan.playerRuleCertification.sourcePolicyRuleIndices.length}</dd>
                   <dt>Represented states</dt><dd>{result.craftPlan.playerRuleCertification.representedStateCount}</dd>

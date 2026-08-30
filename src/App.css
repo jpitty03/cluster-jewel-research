@@ -2215,7 +2215,7 @@ td a {
   outline-offset: 3px;
 }
 
-.constellation-top-level {
+.crafting-constellation-top-level {
   overflow: visible;
 }
 
@@ -2227,11 +2227,302 @@ td a {
 .optimizer-results > .recommendation-hero { order: 1; }
 .optimizer-results > .craft-guide { order: 2; }
 .optimizer-results > .compact-shopping-list { order: 3; }
-.optimizer-results > .constellation-top-level { order: 4; }
-.optimizer-results > [data-testid="search-proof-disclosure"] { order: 5; }
-.optimizer-results > [data-testid="alternative-methods-disclosure"] { order: 6; }
-.optimizer-results > [data-testid="cost-usage-disclosure"] { order: 7; }
-.optimizer-results > [data-testid="research-diagnostics-disclosure"] { order: 8; }
+.optimizer-results > [data-testid="search-proof-disclosure"] { order: 4; }
+.optimizer-results > [data-testid="alternative-methods-disclosure"] { order: 5; }
+.optimizer-results > [data-testid="cost-usage-disclosure"] { order: 6; }
+.optimizer-results > [data-testid="research-diagnostics-disclosure"] { order: 7; }
+
+/* Phase 3K: compact, evidence-backed player route. */
+.guided-craft-constellation {
+  min-width: 0;
+}
+
+.guided-constellation-header {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(260px, 0.8fr);
+  gap: 12px;
+  padding: 14px;
+  border: 1px solid rgba(96, 165, 250, 0.3);
+  border-radius: 10px;
+  background: linear-gradient(135deg, rgba(30, 64, 175, 0.16), rgba(15, 23, 42, 0.7));
+}
+
+.guided-constellation-header p,
+.guided-constellation-header strong,
+.guided-target-legend p,
+.guided-explore-copy {
+  overflow-wrap: anywhere;
+}
+
+.guided-constellation-header p,
+.guided-target-legend p {
+  margin: 0.2rem 0;
+}
+
+.guided-eyebrow {
+  color: #93c5fd;
+  font-size: 0.72rem;
+  font-weight: 800;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+.guided-physical-start {
+  color: var(--text-dim);
+  font-size: 0.86rem;
+}
+
+.guided-target-legend {
+  padding-left: 14px;
+  border-left: 1px solid rgba(148, 163, 184, 0.25);
+}
+
+.guided-explore-copy {
+  margin: 12px 0;
+  color: var(--text-dim);
+}
+
+.guided-constellation-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1.25fr) minmax(300px, 0.75fr);
+  align-items: start;
+  gap: 14px;
+}
+
+.guided-flow,
+.guided-stage-wrap,
+.guided-action-choices,
+.guided-connectors,
+.guided-instruction-detail {
+  display: grid;
+  min-width: 0;
+  gap: 8px;
+}
+
+.guided-stage-wrap.lane-recovery {
+  margin-left: clamp(14px, 4vw, 42px);
+  padding-left: 10px;
+  border-left: 2px dashed rgba(251, 191, 36, 0.42);
+}
+
+.guided-stage {
+  overflow: hidden;
+  border: 1px solid rgba(148, 163, 184, 0.28);
+  border-radius: 10px;
+  background: rgba(15, 23, 42, 0.72);
+}
+
+.guided-stage.is-selected {
+  border-color: #60a5fa;
+  box-shadow: 0 0 0 2px rgba(96, 165, 250, 0.16);
+}
+
+.guided-stage.guided-kind-complete {
+  border-color: rgba(52, 211, 153, 0.52);
+}
+
+.guided-stage-select {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  width: 100%;
+  padding: 10px 12px;
+  gap: 10px;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  color: inherit;
+  text-align: left;
+}
+
+.guided-stage-select:hover,
+.guided-stage-select:focus-visible {
+  background: rgba(96, 165, 250, 0.09);
+}
+
+.guided-stage-number {
+  display: grid;
+  place-items: center;
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  background: rgba(96, 165, 250, 0.16);
+  color: #bfdbfe;
+  font-variant-numeric: tabular-nums;
+  font-weight: 800;
+}
+
+.guided-stage-select strong,
+.guided-stage-select small,
+.guided-action-choice span,
+.guided-action-choice strong,
+.guided-connector span,
+.guided-connector small {
+  display: block;
+  overflow-wrap: anywhere;
+}
+
+.guided-stage-select small {
+  margin-top: 2px;
+  color: var(--text-dim);
+  font-weight: 500;
+}
+
+.guided-action-choices {
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  padding: 0 10px 10px 46px;
+}
+
+.guided-action-choice {
+  padding: 7px 9px;
+  border: 1px solid rgba(148, 163, 184, 0.2);
+  background: rgba(30, 41, 59, 0.62);
+  color: var(--text-dim);
+  text-align: left;
+}
+
+.guided-action-choice strong {
+  margin-top: 3px;
+  color: #bfdbfe;
+}
+
+.guided-action-choice small {
+  display: block;
+  margin-top: 3px;
+}
+
+.guided-connectors {
+  margin: 0 0 0 18px;
+  padding: 0;
+  list-style: none;
+}
+
+.guided-connector {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) minmax(90px, auto);
+  gap: 7px;
+  align-items: center;
+  padding: 3px 6px;
+  color: #93c5fd;
+  font-size: 0.78rem;
+}
+
+.guided-connector small {
+  color: var(--text-dim);
+  text-align: right;
+}
+
+.guided-connector.edge-recovery,
+.guided-connector.edge-reacquire,
+.guided-connector.edge-loop {
+  color: #fbbf24;
+}
+
+.guided-instruction-detail {
+  position: sticky;
+  top: 12px;
+  padding: 14px;
+  border: 1px solid rgba(96, 165, 250, 0.35);
+  border-radius: 10px;
+  background: rgba(7, 11, 20, 0.96);
+}
+
+.guided-instruction-detail section,
+.guided-instruction-detail p,
+.guided-instruction-detail ul {
+  margin: 0;
+}
+
+.guided-instruction-detail h3 {
+  margin: 0 0 4px;
+  color: #93c5fd;
+  font-size: 0.72rem;
+  letter-spacing: 0.12em;
+}
+
+.guided-instruction-detail ul {
+  padding-left: 18px;
+}
+
+.guided-detail-owner {
+  padding-bottom: 8px;
+  border-bottom: 1px solid rgba(148, 163, 184, 0.2);
+}
+
+.guided-condition-picker {
+  display: grid;
+  gap: 4px;
+  color: var(--text-dim);
+  font-size: 0.8rem;
+}
+
+.guided-condition-picker select {
+  min-width: 0;
+  max-width: 100%;
+}
+
+.guided-why-toggle {
+  justify-self: start;
+}
+
+.guided-why-evidence {
+  min-width: 0;
+  padding-top: 8px;
+  border-top: 1px solid rgba(148, 163, 184, 0.2);
+  overflow-wrap: anywhere;
+}
+
+.guided-constellation-withheld {
+  padding: 14px;
+  border: 1px solid rgba(251, 191, 36, 0.46);
+  border-radius: 10px;
+  background: rgba(120, 53, 15, 0.13);
+}
+
+.technical-policy-graph-disclosure {
+  margin: 0 0 12px;
+}
+
+.technical-policy-graph {
+  margin: 0;
+  padding: 0;
+}
+
+@media (max-width: 800px) {
+  .guided-constellation-header,
+  .guided-constellation-layout {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .guided-target-legend {
+    padding: 10px 0 0;
+    border-top: 1px solid rgba(148, 163, 184, 0.25);
+    border-left: 0;
+  }
+
+  .guided-instruction-detail {
+    position: static;
+  }
+}
+
+@media (max-width: 420px) {
+  .guided-action-choices {
+    grid-template-columns: minmax(0, 1fr);
+    padding-left: 10px;
+  }
+
+  .guided-stage-wrap.lane-recovery {
+    margin-left: 8px;
+  }
+
+  .guided-connector {
+    grid-template-columns: auto minmax(0, 1fr);
+  }
+
+  .guided-connector small {
+    grid-column: 2;
+    text-align: left;
+  }
+}
 
 .craft-rules {
   display: grid;

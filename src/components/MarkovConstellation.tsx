@@ -27,6 +27,7 @@ import {
 
 export interface MarkovConstellationProps {
   graph: VisualizationGraph;
+  title?: string;
   selectedRouteName?: string;
   width?: number;
   height?: number;
@@ -288,6 +289,7 @@ function browserLayoutStorage(): Storage | undefined {
 
 export const MarkovConstellation: React.FC<MarkovConstellationProps> = ({
   graph,
+  title = 'Markov Constellation',
   selectedRouteName,
   width = 900,
   height = 760,
@@ -1201,7 +1203,7 @@ export const MarkovConstellation: React.FC<MarkovConstellationProps> = ({
     >
       <div className={`constellation-toolbar ${controlsVisible ? '' : 'is-hidden'}`} aria-hidden={!controlsVisible}>
         <div className="toolbar-left">
-          <span className="constellation-title">✨ Markov Constellation</span>
+          <span className="constellation-title">{title}</span>
           <div className="mode-toggle-group" aria-label="Constellation mode">
             <button className={`mode-btn ${mode === 'REPLAY' ? 'active' : ''}`} onClick={() => changeMode('REPLAY')}>▶ Replay</button>
             <button className={`mode-btn ${mode === 'EXPLORER' ? 'active' : ''}`} onClick={() => changeMode('EXPLORER')}>Explore</button>
@@ -1251,8 +1253,8 @@ export const MarkovConstellation: React.FC<MarkovConstellationProps> = ({
         tabIndex={0}
         role="region"
         aria-label={isLayoutEditing
-          ? 'Interactive Markov Constellation camera, layout arrangement unlocked'
-          : 'Interactive Markov Constellation camera, layout locked'}
+          ? `Interactive ${title} camera, layout arrangement unlocked`
+          : `Interactive ${title} camera, layout locked`}
         aria-describedby="constellation-camera-instructions"
         onKeyDown={handleKeyDown}
         onKeyUp={handleKeyUp}
@@ -1271,7 +1273,7 @@ export const MarkovConstellation: React.FC<MarkovConstellationProps> = ({
           width={width}
           height={height}
           role="img"
-          aria-label="Markov Constellation state transition diagram"
+          aria-label={`${title} state transition diagram`}
         />
 
         <div className="constellation-label-layer" aria-label="Constellation policy states and branches">

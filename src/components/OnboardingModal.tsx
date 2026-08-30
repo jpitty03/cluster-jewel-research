@@ -106,12 +106,12 @@ export const OnboardingModal: React.FC<OnboardingModalProps> = ({ isOpen, onClos
           </section>
 
           <section className="onboarding-section">
-            <h3>🗺️ 4. Exploring the Markov Constellation</h3>
+            <h3>🗺️ 4. Exploring the Crafting Constellation</h3>
             <p>
-              Drag the Constellation with a mouse, pen, or one finger. Wheel or use plus and minus to zoom;
-              arrow keys pan, <strong>0</strong> resets, <strong>F</strong> focuses the selected route,
-              <strong>A</strong> fits every family, and <strong>Escape</strong> closes node details. Public labels use
-              player stat text; exact modifier IDs remain available under Technical details.
+              Select a stage or result condition to read one certified <strong>WHEN → USE → THEN</strong>
+              instruction. Selection explains the route and does not track an item. The pan, zoom, replay,
+              layout, and exact-state tools remain available in the <strong>Technical policy graph</strong>
+              under Research diagnostics.
             </p>
           </section>
 

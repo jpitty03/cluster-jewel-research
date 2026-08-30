@@ -44,7 +44,11 @@ export function recommendForPaths(paths: readonly string[]): Recommendation {
     ['proof', 'objectives', 'worker'].forEach((tag) => tags.add(tag));
     reasons.add('Optimizer/search changes affect canonical proof and objective selection.');
   }
-  if (matches(/(MarkovConstellation\.tsx|VisualizationGraph\.ts|PolicyFlow\.ts|App\.css)$/)) {
+  if (matches(/guidedCraftConstellation\.ts$/)) {
+    ['guided-constellation', 'craft-plan', 'policy-flow', 'proof'].forEach((tag) => tags.add(tag));
+    reasons.add('Guided model changes require direct evidence, real Worker reconciliation, and browser presentation coverage.');
+  }
+  if (matches(/(GuidedCraftConstellation\.tsx|MarkovConstellation\.tsx|VisualizationGraph\.ts|PolicyFlow\.ts|App\.css)$/)) {
     ['constellation', 'responsive', 'accessibility', 'visual'].forEach((tag) => tags.add(tag));
     reasons.add('Constellation presentation changes require renderer, interaction, and responsive coverage.');
   }
