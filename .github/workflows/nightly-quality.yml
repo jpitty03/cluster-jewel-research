@@ -28,7 +28,7 @@ jobs:
         run: npm run lab:extended
       - name: Upload extended traces, video, screenshots, frames, and reports
         if: always()
-        uses: actions/upload-artifact@v6
+        uses: actions/upload-artifact@v7
         with:
           name: extended-quality-lab
           path: |
