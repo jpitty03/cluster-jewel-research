@@ -3479,7 +3479,13 @@ export function CraftOptimizer({
                         <dt>Policy rule indices</dt><dd>{rule.policyRuleIndices.join(', ')}</dd>
                         <dt>Represented states / expected visits</dt><dd>{rule.representedStateCount} / {count(rule.expectedVisits)}</dd>
                         <dt>Recovery mapping</dt><dd>{rule.then.recoveryKind} · {rule.then.summary}</dd>
-                        <dt>Source state identities</dt><dd><code>{rule.sourceStateKeys.join('\n')}</code></dd>
+                        <dt>Source state identities</dt>
+                        <dd>
+                          <details className="state-identities">
+                            <summary>{rule.sourceStateKeys.length} state{rule.sourceStateKeys.length === 1 ? '' : 's'}</summary>
+                            <code>{rule.sourceStateKeys.join('\n')}</code>
+                          </details>
+                        </dd>
                       </dl>
                       <details>
                         <summary>Exact modifier-role and junk evidence ({rule.sourceEvidence.length} source rules)</summary>

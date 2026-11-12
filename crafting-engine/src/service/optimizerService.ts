@@ -79,7 +79,7 @@ import {
   validateOptimizeCraftInput,
   type OptimizerValidationIssue,
 } from './optimizerValidation.ts';
-import { getSearchRuntimeBudget, type SearchIntent } from './searchRuntime.ts';
+import { DEFAULT_SEARCH_WALL_TIME_MS, getSearchRuntimeBudget, type SearchIntent } from './searchRuntime.ts';
 import type {
   FullRouteActionEvidence,
   MethodFamilyKind,
@@ -3278,12 +3278,18 @@ function describePolicyState(state: ItemState): string {
 
 function describePolicyCondition(state: ItemState, target: TargetDefinition): string {
   if (state.flags?.acquisitionMenu) return 'Start: choose an acquisition route';
-  const requirements = getAllTargetModRequirements(target);
-  const matchedTargets = requirements.filter((requirement) =>
-    getAllAffixes(state).some((mod) => matchesModRequirement(mod, requirement))
-  ).length;
+  // Required modifiers and "any one of" alternatives are different kinds of progress:
+  // counting them in one pool reads as "4/6" on a target that needs three plus one.
+  const progress = evaluateTargetProgress(state, target);
+  const required = `${progress.required.matchedRequirementIds.length}/` +
+    `${progress.required.requirementIds.length} target modifier(s)`;
+  const alternatives = progress.acceptable.branchRequirementIds.length === 0
+    ? ''
+    : progress.acceptable.satisfied
+      ? ', plus an acceptable alternative'
+      : ', no acceptable alternative yet';
   return `${state.rarity} item with ${state.prefixes.length} prefix(es), ` +
-    `${state.suffixes.length} suffix(es), and ${matchedTargets}/${requirements.length} target modifier(s)`;
+    `${state.suffixes.length} suffix(es), and ${required}${alternatives}`;
 }
 
 function genericSearchStartLowerBound(
@@ -3978,7 +3984,90 @@ export class OptimizerService {
     this.proofEfficiencyMode = options.proofEfficiencyMode ?? 'PHASE2Y';
   }
 
+  /**
+   * "Fewest actions / fastest within cost" is defined against the cheapest route, but a
+   * search run under an effort objective never looks for that route: its cheapest result is
+   * only the cheapest of the fast ones. Measured on the armour+evasion fixture, "fastest
+   * within 20%" returned 333c / 414s while the cheapest route was 98c / 245s.
+   *
+   * So the cheapest route is solved first, the premium is turned into an absolute ceiling
+   * from its cost, and the effort-objective result is kept only if it respects that ceiling
+   * and actually beats the cheapest route on the requested measure. Otherwise the cheapest
+   * route is the answer.
+   */
   optimize(
+    input: OptimizeCraftInput,
+    onProgress?: (snapshot: OptimizerProgressSnapshot) => void
+  ): OptimizeCraftResult {
+    const objective = input.objective;
+    if (
+      objective?.kind !== 'FEWEST_ACTIONS_WITHIN_COST' &&
+      objective?.kind !== 'FASTEST_WITHIN_COST'
+    ) {
+      return this.optimizeForObjective(input, onProgress);
+    }
+    const started = Date.now();
+    const totalWallTimeMs = input.searchBudget?.maxWallTimeMs ?? DEFAULT_SEARCH_WALL_TIME_MS;
+    const cheapest = this.optimizeForObjective({
+      ...input,
+      objective: { kind: 'CHEAPEST_CHAOS' },
+      searchBudget: { ...input.searchBudget, maxWallTimeMs: Math.max(1, Math.floor(totalWallTimeMs * 0.4)) },
+    }, onProgress);
+    const cheapestCostChaos = cheapest.expectedCostChaos;
+    const remainingWallTimeMs = Math.max(1, totalWallTimeMs - (Date.now() - started));
+    if (cheapestCostChaos === null || !Number.isFinite(cheapestCostChaos)) {
+      return this.optimizeForObjective({
+        ...input,
+        searchBudget: { ...input.searchBudget, maxWallTimeMs: remainingWallTimeMs },
+      }, onProgress);
+    }
+    const costCeilingChaos = objective.maxExpectedCostChaos ??
+      (objective.maxPremiumChaos !== undefined
+        ? cheapestCostChaos + objective.maxPremiumChaos
+        : objective.maxPremiumFraction !== undefined
+          ? cheapestCostChaos * (1 + objective.maxPremiumFraction)
+          : undefined);
+    const constrained = this.optimizeForObjective({
+      ...input,
+      objective: costCeilingChaos === undefined
+        ? objective
+        : { ...objective, maxExpectedCostChaos: costCeilingChaos },
+      searchBudget: { ...input.searchBudget, maxWallTimeMs: remainingWallTimeMs },
+    }, onProgress);
+    const effort = (result: OptimizeCraftResult): number => {
+      const metrics = result.recommended?.metrics;
+      const value = objective.kind === 'FEWEST_ACTIONS_WITHIN_COST'
+        ? metrics?.expectedPhysicalActions
+        : metrics?.estimatedManualTimeMs;
+      return value !== undefined && Number.isFinite(value) ? value : Infinity;
+    };
+    const constrainedCostChaos = constrained.expectedCostChaos;
+    const withinCeiling = constrainedCostChaos !== null && Number.isFinite(constrainedCostChaos) &&
+      (costCeilingChaos === undefined || constrainedCostChaos <= costCeilingChaos + 1e-9);
+    if (withinCeiling && effort(constrained) < effort(cheapest) - 1e-9) {
+      return { ...constrained, objective, costCeilingChaos };
+    }
+    const measure = objective.kind === 'FEWEST_ACTIONS_WITHIN_COST' ? 'fewer actions' : 'less time';
+    return {
+      ...cheapest,
+      objective,
+      costCeilingChaos,
+      objectiveProofStatus: 'NO_RESOLVED_ROUTE_WITHIN_COST',
+      // The faster routes that missed the ceiling stay visible as trade-off alternatives.
+      paretoAlternatives: [
+        ...(cheapest.paretoAlternatives ?? []),
+        ...(constrained.paretoAlternatives ?? []),
+      ],
+      warnings: [
+        `No route with ${measure} than the cheapest one was found within the cost ceiling` +
+          (costCeilingChaos === undefined ? '' : ` (${costCeilingChaos.toFixed(1)}c)`) +
+          '; showing the cheapest route.',
+        ...cheapest.warnings,
+      ],
+    };
+  }
+
+  private optimizeForObjective(
     input: OptimizeCraftInput,
     onProgress?: (snapshot: OptimizerProgressSnapshot) => void
   ): OptimizeCraftResult {
