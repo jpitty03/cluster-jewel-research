@@ -609,7 +609,24 @@ export const CRAFT_MECHANICS: CraftMechanic[] = [
       const allMods = pool.getAllMods();
       const outcomes: TransitionOutcome[] = [];
 
-      if (canAcceptPrefix(state)) {
+      if (canAcceptPrefix(state) && canAcceptSuffix(state)) {
+        // No affixes at all (a magic item annulled down to nothing): the new mod is
+        // drawn from the whole pool, not forced to be a prefix.
+        const eligible = getEligibleMods(state, allMods);
+        const totWeight = calculateTotalWeight(eligible);
+        if (totWeight > 0) {
+          for (const m of eligible) {
+            checkTransitionDeadline(control);
+            const nextState = cloneItemState(state);
+            (m.genType === 'Prefix' ? nextState.prefixes : nextState.suffixes).push(toRolledMod(m));
+            outcomes.push({
+              state: nextState,
+              probability: m.weight / totWeight,
+              label: `Augment added ${m.genType}: ${m.name}`,
+            });
+          }
+        }
+      } else if (canAcceptPrefix(state)) {
         const eligible = getEligibleMods(state, allMods, { requiredGenType: 'Prefix' });
         const totWeight = calculateTotalWeight(eligible);
         if (totWeight > 0) {
@@ -649,7 +666,12 @@ export const CRAFT_MECHANICS: CraftMechanic[] = [
       const allMods = pool.getAllMods();
       const nextState = cloneItemState(state);
 
-      if (canAcceptPrefix(nextState)) {
+      if (canAcceptPrefix(nextState) && canAcceptSuffix(nextState)) {
+        const chosen = selectWeightedMod(getEligibleMods(nextState, allMods), rng);
+        if (chosen) {
+          (chosen.genType === 'Prefix' ? nextState.prefixes : nextState.suffixes).push(toRolledMod(chosen));
+        }
+      } else if (canAcceptPrefix(nextState)) {
         const eligible = getEligibleMods(nextState, allMods, { requiredGenType: 'Prefix' });
         const chosen = selectWeightedMod(eligible, rng);
         if (chosen) nextState.prefixes.push(toRolledMod(chosen));
@@ -823,7 +845,8 @@ export const CRAFT_MECHANICS: CraftMechanic[] = [
     category: 'cleanup',
     physicalActionCount: 1,
     estimatedManualTimeMs: 400,
-    isLegal: (state) => state.rarity === 'rare' && getRemovableAffixes(state).length > 0,
+    // Annulment works on magic items too (rare-only was a modelling gap).
+    isLegal: (state) => state.rarity !== 'normal' && getRemovableAffixes(state).length > 0,
     getCost: (ctx) => {
       const cost = ctx.priceBook.toChaos(1, 'annul');
       return {
@@ -1016,7 +1039,12 @@ export function createHarvestReforgeMechanics(
         mechanicsConfidence: 'APPROXIMATE / EXTERNALLY CLOSE',
         mechanicsProvenance: 'Current engine approximation: preserve fractures, guarantee one tagged mod, then roll to 3 or 4 total explicit affixes with 50% probability each',
         repeatableFullReroll: HARVEST_REPEATABLE_FULL_REROLL,
-        parameters: { harvestTag: tag, lifeforceType: def.lifeforceType, lifeforceAmount: def.lifeforceAmount },
+        parameters: {
+          harvestTag: tag,
+          lifeforceType: def.lifeforceType,
+          lifeforceAmount: def.lifeforceAmount,
+          rancourAmount: def.rancourAmount ?? 0,
+        },
         getTransitions: (state, target, ctx, control) => {
           const cost = getHarvestCraftCost(tag, ctx.priceBook);
           return generateHarvestTransitions(state, tag, target, ctx, cost.costChaos, control);

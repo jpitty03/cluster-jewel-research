@@ -75,9 +75,11 @@ export class DivineAction implements CraftAction {
 
       const statIndex = rollReq.statIndex ?? 0;
       const range = match.statValues[statIndex];
-      if (!range || range.min >= range.max || range.max < rollReq.minValue) {
-        continue;
-      }
+      if (!range) continue;
+      // A bound above the mod's ceiling can never be met by rerolling values: that
+      // is an unreachable target, not a free one.
+      if (range.max < rollReq.minValue) return Infinity;
+      if (range.min >= range.max) continue; // fixed value that already meets the bound
 
       const currentVal = match.currentRoll?.[statIndex];
       const totalPossibleValues = range.max - range.min + 1;

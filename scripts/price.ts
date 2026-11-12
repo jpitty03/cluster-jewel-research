@@ -240,3 +240,12 @@ console.log(
     `${Object.keys(cache.bases).length} base prices cached` +
     (failed ? ` (${failed} failed)` : ''),
 )
+
+// The cache is saved either way (successful queries are worth keeping), but a run
+// where most searches failed — the league isn't on the trade site, a block, an
+// expired session — must stop `npm run publish` from committing it as fresh.
+const attempted = Math.min(pending.length, max)
+if (attempted > 0 && failed / attempted > 0.25) {
+  console.error(`[price] ${failed}/${attempted} searches failed — exiting non-zero so nothing is published.`)
+  process.exit(1)
+}

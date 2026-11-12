@@ -55,7 +55,11 @@ export function chaosValue(
   rates: Record<string, number> | undefined,
   money: Money | null | undefined,
 ): number | null {
-  if (!rates || !money) return null
+  if (!money) return null
+  // Chaos is the unit: worth 1 with or without a rate table, so a file whose rates
+  // never arrived still compares its chaos listings.
+  if (money.currency === 'chaos') return money.amount
+  if (!rates) return null
   const rate = rates[money.currency] ?? rates[CURRENCY_ALIAS[money.currency]]
   return rate ? money.amount * rate : null
 }

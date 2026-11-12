@@ -26,6 +26,7 @@ import {
 } from './crafting/browserEngine.ts';
 import {
   getBrowserOptimizerPricing,
+  getDefaultOptimizerPricingLeague,
   getOptimizerPricingLeagues,
 } from './crafting/optimizerPricing.ts';
 import {
@@ -697,7 +698,7 @@ export function CraftOptimizer({
   const [importedMarketContext, setImportedMarketContext] =
     useState<OptimizeCraftInput['marketContext'] | null>(null);
   const pricingLeagues = useMemo(() => getOptimizerPricingLeagues(), []);
-  const [league, setLeague] = useState(pricingLeagues[0] ?? '');
+  const [league, setLeague] = useState(() => getDefaultOptimizerPricingLeague());
   const leagueRef = useRef(league);
   leagueRef.current = league;
   const [allowFallback, setAllowFallback] = useState(true);
@@ -959,6 +960,14 @@ export function CraftOptimizer({
   ]);
   const validation = useMemo(() => validateBrowserOptimizeInput(draftInput), [draftInput]);
   const previousDraftInputRef = useRef(draftInput);
+  // What the craft *is*, without how hard to search for it: a deeper retry of the
+  // same craft keeps its identity, an edited target or price does not.
+  const craftIdentity = useMemo(
+    () => JSON.stringify({ ...draftInput, searchBudget: undefined, searchIntent: undefined }),
+    [draftInput]
+  );
+  const craftIdentityRef = useRef(craftIdentity);
+  craftIdentityRef.current = craftIdentity;
 
   const applySharedCraftHash = useCallback(() => {
     if (typeof window === 'undefined' || !window.location.hash.startsWith('#craft=')) return;
@@ -1245,10 +1254,17 @@ export function CraftOptimizer({
     setProgress(null);
     setRuntimeMs(null);
     const started = performance.now();
+    const identityAtStart = craftIdentityRef.current;
     try {
       const nextResult = await workerRef.current.optimize(input, (snapshot) => {
         setProgress(snapshot);
       });
+      // Inputs stay editable while a search runs. A result for the craft as it was
+      // must not be shown against the craft as it now is.
+      if (craftIdentityRef.current !== identityAtStart) {
+        setError('The craft was edited while this search was running, so its result was discarded. Run it again.');
+        return;
+      }
       setResult(nextResult);
       setRuntimeMs(performance.now() - started);
     } catch (caught) {
@@ -1289,6 +1305,18 @@ export function CraftOptimizer({
     );
   };
 
+  // "Copied" is only shown once the clipboard write has actually succeeded; it can
+  // be refused (permissions, an unfocused document, an insecure origin).
+  const copyText = (text: string, action: NonNullable<typeof copiedAction>) => {
+    navigator.clipboard.writeText(text).then(
+      () => {
+        setCopiedAction(action);
+        setTimeout(() => setCopiedAction(null), 2500);
+      },
+      () => setError('Could not copy to the clipboard — the browser refused the request.')
+    );
+  };
+
   const copyShoppingList = (res: OptimizeCraftResult) => {
     const lines: string[] = ['=== CLUSTER JEWEL CRAFTING SHOPPING LIST ==='];
     const acquisitionProvisional = res.recommendationStatus === 'PROVISIONAL_RESOLVED' ||
@@ -1324,9 +1352,7 @@ export function CraftOptimizer({
       }
     }
 
-    void navigator.clipboard.writeText(lines.join('\n'));
-    setCopiedAction('SHOPPING_LIST');
-    setTimeout(() => setCopiedAction(null), 2500);
+    copyText(lines.join('\n'), 'SHOPPING_LIST');
   };
 
   const copyCraftGuide = (res: OptimizeCraftResult) => {
@@ -1391,9 +1417,7 @@ export function CraftOptimizer({
       ? `Approximate mechanics: ${approximationWarnings.join(' ')}`
       : 'No selected-policy mechanics approximation warning was reported.');
 
-    void navigator.clipboard.writeText(lines.join('\n'));
-    setCopiedAction('CRAFT_GUIDE');
-    setTimeout(() => setCopiedAction(null), 2500);
+    copyText(lines.join('\n'), 'CRAFT_GUIDE');
   };
 
   const copyShareUrl = () => {
@@ -1432,9 +1456,7 @@ export function CraftOptimizer({
     };
     const encoded = encodeCraftToUrl(payload);
     const fullUrl = `${window.location.origin}${window.location.pathname}#craft=${encoded}`;
-    void navigator.clipboard.writeText(fullUrl);
-    setCopiedAction('SHARE_URL');
-    setTimeout(() => setCopiedAction(null), 2500);
+    copyText(fullUrl, 'SHARE_URL');
   };
 
   const copyBugReport = (res?: OptimizeCraftResult) => {
@@ -1472,9 +1494,7 @@ export function CraftOptimizer({
       } : undefined,
     };
     const bundle = generateBugReportBundle(payload, res, APP_RELEASE_VERSION);
-    void navigator.clipboard.writeText(JSON.stringify(bundle, null, 2));
-    setCopiedAction('BUG_REPORT');
-    setTimeout(() => setCopiedAction(null), 2500);
+    copyText(JSON.stringify(bundle, null, 2), 'BUG_REPORT');
   };
 
   const importSetupJson = (file: File) => {

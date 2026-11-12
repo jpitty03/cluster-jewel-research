@@ -4,7 +4,7 @@
 
 import { existsSync, mkdirSync, readdirSync, readFileSync, writeFileSync } from 'node:fs'
 import { join } from 'node:path'
-import { UA, fetchSnapshotVersion, getStreamerBuilds, searchClusterHolders } from './poeninja'
+import { UA, fetchSnapshotVersion, getStreamerBuilds, resolveLeagueUrl, searchClusterHolders } from './poeninja'
 
 // All crawl state is organized per league: data/<slug>/{characters.csv,
 // cluster-characters.csv, cluster-jewels.json, character-jewels.json}.
@@ -282,11 +282,11 @@ function loadStore(league: string): CharStore {
 interface CrawlVersions {
   streamers: string
   exp: string // '' when the league has no exp overview
+  leagueUrl: string // poe.ninja's url for the league (not derivable from its name)
 }
 
 async function fetchCharacter(
   versions: CrawlVersions,
-  league: string,
   c: CharacterRef,
 ): Promise<Response> {
   // Streamer builds live in the global "streamers" overview (type 2); public
@@ -296,7 +296,7 @@ async function fetchCharacter(
   const qs = new URLSearchParams({
     account: c.account,
     name: c.name,
-    overview: isStreamer ? 'streamers' : slugify(league),
+    overview: isStreamer ? 'streamers' : versions.leagueUrl,
     type: isStreamer ? '2' : '0',
     timeMachine: '',
   })
@@ -315,8 +315,9 @@ async function runCrawl(league: string, force: boolean): Promise<void> {
   const version = await fetchSnapshotVersion()
   // Public (non-streamer) holders are fetched through the league's exp overview,
   // which has its own snapshot version. Missing exp overview -> streamers only.
-  const expVersion = await fetchSnapshotVersion(slugify(league), 'exp').catch(() => '')
-  const versions: CrawlVersions = { streamers: version, exp: expVersion }
+  const leagueUrl = await resolveLeagueUrl(league)
+  const expVersion = await fetchSnapshotVersion(leagueUrl, 'exp').catch(() => '')
+  const versions: CrawlVersions = { streamers: version, exp: expVersion, leagueUrl }
 
   const store: CharStore = force ? {} : loadStore(league)
   // Drop characters that have fallen off the current holder list. The public slice
@@ -364,7 +365,7 @@ async function runCrawl(league: string, force: boolean): Promise<void> {
     for (;;) {
       let res: Response
       try {
-        res = await fetchCharacter(versions, league, c)
+        res = await fetchCharacter(versions, c)
       } catch {
         errors++
         break

@@ -1,5 +1,6 @@
 import type { BaseType } from '../../crafting-engine/src/domain/ItemState.ts';
 import type { PriceFile } from '../priceModel.ts';
+import { DEFAULT_LEAGUE } from '../../league.ts';
 import {
   getOptimizerPricingFromSnapshot,
   type BrowserOptimizerPricing,
@@ -17,6 +18,20 @@ const byLeague = new Map(Object.values(snapshots).map((snapshot) => [snapshot.le
 
 export function getOptimizerPricingLeagues(): string[] {
   return [...byLeague.keys()].sort((left, right) => left.localeCompare(right));
+}
+
+/**
+ * The league the calculator prices against on load: the configured current league
+ * when it has a snapshot, otherwise the most recently fetched one. Never
+ * alphabetical — an ended league must not win because its name sorts first.
+ */
+export function getDefaultOptimizerPricingLeague(): string {
+  if (byLeague.has(DEFAULT_LEAGUE)) return DEFAULT_LEAGUE;
+  let newest: PriceFile | undefined;
+  for (const snapshot of byLeague.values()) {
+    if (!newest || Date.parse(snapshot.fetchedAt) > Date.parse(newest.fetchedAt)) newest = snapshot;
+  }
+  return newest?.league ?? '';
 }
 
 export function getBrowserOptimizerPricing(

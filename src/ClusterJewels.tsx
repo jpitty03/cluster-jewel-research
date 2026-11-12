@@ -177,7 +177,7 @@ function groupPrices(file: PriceFile | undefined, g: Group): GroupPrice {
     if (low != null && entry.low) lows.push({ cc, entry, money: entry.low, chaos: low })
     const mid = chaosValue(rates, entry.mid)
     if (mid != null && entry.mid)
-      mids.push({ cc, entry, money: entry.mid, chaos: mid, weight: cc.count })
+      mids.push({ cc, entry, money: entry.mid, chaos: mid, weight: cc.characters })
   }
 
   const pick = groupBasePassives(file, g)
@@ -471,7 +471,7 @@ function GroupPriceCell({
           clusterType={g.clusterType}
           passives={pinnedPassives(g.base, cc.notables, cc.passivesMin, cc.passivesMax)}
           comboLabel={cc.combo}
-          note={`${label} of the group's priced combos · ${cc.count} characters`}
+          note={`${label} of the group's priced combos · ${cc.characters} characters`}
           entry={quote.entry}
         />
       }
@@ -582,7 +582,7 @@ const sortValue = (r: Row, key: SortKey): string | number | null => {
     case 'clusterType':
       return r.g.clusterType
     case 'count':
-      return r.g.jewels.length
+      return r.g.characters
     case 'fractured':
       return r.g.fracturedCount
     case 'basePrice':
@@ -735,7 +735,8 @@ function ClusterJewels({ onOptimize }: { onOptimize: (seed: OptimizerSeed) => vo
     const dir = sortDesc ? -1 : 1
     // Count descending is the tiebreak everywhere, so equal prices keep the
     // popularity order the table is really about.
-    const popularity = (a: Row, b: Row) => b.g.jewels.length - a.g.jewels.length
+    const popularity = (a: Row, b: Row) =>
+      b.g.characters - a.g.characters || b.g.jewels.length - a.g.jewels.length
 
     return [...rows].sort((a, b) => {
       const av = sortValue(a, sortKey)
@@ -843,7 +844,8 @@ function ClusterJewels({ onOptimize }: { onOptimize: (seed: OptimizerSeed) => vo
   return (
     <>
       <p className="subtitle">
-        Cluster jewels used by <strong>{league}</strong> streamer characters (level 80+),
+        Cluster jewels used by <strong>{league}</strong> streamer and top public-ladder
+        characters (level 80+),
         grouped by base and cluster type · fetched heaviest-first, so early results are the
         most-used jewels
         {data && (
@@ -1051,7 +1053,8 @@ function ClusterJewels({ onOptimize }: { onOptimize: (seed: OptimizerSeed) => vo
       {data && (
         <>
           <p className="summary">
-            {groups.length} distinct base + type combinations · {totalShown} jewels shown
+            {groups.length} distinct base + type combinations · {totalShown} jewels shown · counts
+            are characters running each (hover for jewel totals)
           </p>
           <div className="table-wrap">
             <table>
@@ -1060,7 +1063,7 @@ function ClusterJewels({ onOptimize }: { onOptimize: (seed: OptimizerSeed) => vo
                   <th onClick={() => setSort('base')}>Base{arrow('base')}</th>
                   <th onClick={() => setSort('clusterType')}>Cluster Type{arrow('clusterType')}</th>
                   <th onClick={() => setSort('count')} className="num">
-                    Count{arrow('count')}
+                    Characters{arrow('count')}
                   </th>
                   <th onClick={() => setSort('fractured')} className="num">
                     Fractured{arrow('fractured')}
@@ -1094,7 +1097,9 @@ function ClusterJewels({ onOptimize }: { onOptimize: (seed: OptimizerSeed) => vo
                     >
                       <td>{g.base.replace(' Cluster Jewel', '')}</td>
                       <td className="char">{g.clusterType}</td>
-                      <td className="num">{g.jewels.length}</td>
+                      <td className="num" title={`${g.characters} characters · ${g.jewels.length} jewels`}>
+                        {g.characters}
+                      </td>
                       <td className="num">{g.fracturedCount || '—'}</td>
                       <td className="base-price-col">
                         <GroupBasePrice league={league} g={g} />
@@ -1118,7 +1123,12 @@ function ClusterJewels({ onOptimize }: { onOptimize: (seed: OptimizerSeed) => vo
                                   return (
                                     <li key={cc.combo} className="combo-item">
                                       <div className="combo-info">
-                                        <span className="count">{cc.count}×</span>
+                                        <span
+                                          className="count"
+                                          title={`${cc.characters} characters · ${cc.count} jewels`}
+                                        >
+                                          {cc.characters}×
+                                        </span>
                                         <span className="combo-name" title={cc.combo}>
                                           {url ? (
                                             <a

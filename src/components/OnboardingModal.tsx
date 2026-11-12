@@ -10,6 +10,12 @@ export const OnboardingModal: React.FC<OnboardingModalProps> = ({ isOpen, onClos
   const closeButtonRef = useRef<HTMLButtonElement | null>(null);
   const previousActiveElement = useRef<HTMLElement | null>(null);
 
+  // The parent passes a fresh onClose every render. Read it through a ref so the
+  // effect below runs once per open — otherwise each parent re-render (ten a second
+  // during a search) re-ran it and yanked focus back to the close button.
+  const onCloseRef = useRef(onClose);
+  onCloseRef.current = onClose;
+
   // Focus trapping and Escape key listener
   useEffect(() => {
     if (!isOpen) return;
@@ -20,7 +26,7 @@ export const OnboardingModal: React.FC<OnboardingModalProps> = ({ isOpen, onClos
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === 'Escape') {
         e.preventDefault();
-        onClose();
+        onCloseRef.current();
         return;
       }
 
@@ -48,7 +54,7 @@ export const OnboardingModal: React.FC<OnboardingModalProps> = ({ isOpen, onClos
       document.removeEventListener('keydown', handleKeyDown);
       previousActiveElement.current?.focus();
     };
-  }, [isOpen, onClose]);
+  }, [isOpen]);
 
   if (!isOpen) return null;
 

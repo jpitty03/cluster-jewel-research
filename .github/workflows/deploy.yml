@@ -29,6 +29,7 @@ jobs:
       - run: npm ci
       - run: npm run build
       - run: npm run lint
+      - run: npx vitest run
       - run: git diff --check
       - uses: actions/upload-pages-artifact@v5
         with:

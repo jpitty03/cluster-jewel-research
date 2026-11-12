@@ -28,7 +28,10 @@ const explicitIdByNotable: Record<string, string> = tradeStats.notableExplicits
 export interface ComboCount {
   combo: string
   notables: string[]
+  /** Jewels with this combo. One character can hold several copies. */
   count: number
+  /** Distinct characters running it — the popularity measure; `count` over-weights stackers. */
+  characters: number
   passivesMin: number | null
   passivesMax: number | null
 }
@@ -143,13 +146,16 @@ export function buildComboQuery(
 // need the top tier. Anything lower isn't worth crafting on.
 export const BASE_ILVLS = [83, 84] as const
 
+// The item level at which the last cluster mod tier unlocks; nothing above it rolls differently.
+const TOP_MOD_ILVL = 84
+
 // How many combos per group get priced, most-used first. scripts/price.ts defaults to
 // this and the UI only looks prices up for this many, so the two stay in step.
 export const PRICED_TOP = 5
 
 // Trade query for the uncrafted base a combo is built on: same cluster type enchant
-// and passive count, no notables, restricted to normal (white) rarity at one exact
-// item level. Pricing this alongside the combo shows how much of the combo's price is
+// and passive count, no notables, restricted to normal (white) rarity at one item
+// level (exact below 84; 84 and above together). Pricing this alongside the combo shows how much of the combo's price is
 // the craft.
 export function buildBaseQuery(
   base: string,
@@ -166,7 +172,13 @@ export function buildBaseQuery(
       filters: {
         type_filters: { filters: { rarity: { option: 'normal' } } },
         misc_filters: {
-          filters: { corrupted: { option: 'false' }, ilvl: { min: ilvl, max: ilvl } },
+          // 84 unlocks the last mod tier, so an ilvl 85 or 86 base is the same
+          // crafting base and belongs in the "i84" price. Lower levels stay exact:
+          // an i83 base is a different, cheaper product.
+          filters: {
+            corrupted: { option: 'false' },
+            ilvl: ilvl >= TOP_MOD_ILVL ? { min: ilvl } : { min: ilvl, max: ilvl },
+          },
         },
       },
       stats: [{ type: 'and', filters: statFilter(option, passives), disabled: false }],

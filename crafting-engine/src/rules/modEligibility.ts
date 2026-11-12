@@ -22,7 +22,7 @@ export function getEligibleMods(
     return [];
   }
 
-  const { occupiedGroups, occupiedNames } = getOccupiedModState(state);
+  const { occupiedGroups } = getOccupiedModState(state);
 
   return pool.filter((mod) => {
     // 1. Check ilvl requirement
@@ -54,10 +54,9 @@ export function getEligibleMods(
       return false;
     }
 
-    // 6. Check duplicate name exclusion
-    if (occupiedNames.has(mod.name)) {
-      return false;
-    }
+    // Display names are deliberately not an exclusion: only mod groups exclude
+    // in-game. "of the Cloud" names both +all Attributes and a Lightning
+    // Resistance tier, which can and do roll together.
 
     return true;
   });

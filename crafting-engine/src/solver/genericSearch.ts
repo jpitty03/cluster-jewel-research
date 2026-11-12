@@ -3717,6 +3717,11 @@ export class GenericSearchEngine {
         const lifeforceType = String(actData.action.mechanic.parameters?.lifeforceType ?? 'lifeforce');
         const amount = Number(actData.action.mechanic.parameters?.lifeforceAmount ?? 0);
         expectedCurrencies[lifeforceType] = (expectedCurrencies[lifeforceType] ?? 0) + visits * amount;
+        const rancour = Number(actData.action.mechanic.parameters?.rancourAmount ?? 0);
+        if (rancour > 0) {
+          expectedCurrencies.crystallisedRancour =
+            (expectedCurrencies.crystallisedRancour ?? 0) + visits * rancour;
+        }
       } else {
         const currency = actData.action.mechanic.actionType === 'RESTART_REACQUIRE'
           ? 'reacquisition'

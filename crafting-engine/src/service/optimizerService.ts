@@ -1065,6 +1065,10 @@ function currencyVectorFromActions(
     if (harvest) {
       totals[harvest.lifeforceType] = (totals[harvest.lifeforceType] ?? 0) +
         usage.expectedCount * harvest.lifeforceAmount;
+      if (harvest.rancourAmount) {
+        totals.crystallisedRancour = (totals.crystallisedRancour ?? 0) +
+          usage.expectedCount * harvest.rancourAmount;
+      }
       continue;
     }
     const currency = CURRENCY_BY_ACTION_ID[usage.actionId];

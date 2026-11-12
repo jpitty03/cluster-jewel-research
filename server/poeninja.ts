@@ -85,7 +85,59 @@ async function fetchBytes(path: string): Promise<Uint8Array> {
 interface IndexStateSnapshot {
   url: string;
   type: string;
+  name?: string;
   version: string;
+}
+
+interface IndexStateLeague {
+  name: string;
+  url: string;
+  displayName?: string;
+}
+
+interface IndexState {
+  snapshotVersions?: IndexStateSnapshot[];
+  buildLeagues?: IndexStateLeague[];
+  oldBuildLeagues?: IndexStateLeague[];
+}
+
+// One scrape asks for versions and league urls half a dozen times; the answer is
+// ~90KB and only changes when a snapshot rotates. A short TTL keeps a long crawl
+// from pinning a rotated version while sparing the repeat downloads.
+const INDEX_STATE_TTL_MS = 60_000;
+let indexStateCache: { at: number; state: IndexState } | null = null;
+
+async function fetchIndexState(): Promise<IndexState> {
+  if (indexStateCache && Date.now() - indexStateCache.at < INDEX_STATE_TTL_MS)
+    return indexStateCache.state;
+  const res = await fetch(`${BASE}/poe1/api/data/index-state`, {
+    headers: { 'user-agent': UA, accept: 'application/json', referer: `${BASE}/poe1/builds/streamers` },
+  });
+  if (!res.ok) throw new Error(`index-state -> ${res.status}`);
+  const state = (await res.json()) as IndexState;
+  indexStateCache = { at: Date.now(), state };
+  return state;
+}
+
+// poe.ninja's url for a league is not derivable from its name: "Allflame" is
+// "allflame" but "Hardcore Allflame" is "allflamehc". Look the name up in the
+// league lists (current, then ended) and only guess a slug when poe.ninja doesn't
+// know the league at all — in which case the exp lookup fails loudly downstream.
+export async function resolveLeagueUrl(league: string): Promise<string> {
+  const wanted = league.trim().toLowerCase();
+  try {
+    const state = await fetchIndexState();
+    const named = (l: { name?: string; displayName?: string }) =>
+      l.name?.toLowerCase() === wanted || l.displayName?.toLowerCase() === wanted;
+    const hit =
+      state.buildLeagues?.find(named) ??
+      state.oldBuildLeagues?.find(named) ??
+      state.snapshotVersions?.find((s) => s.type === 'exp' && s.name?.toLowerCase() === wanted);
+    if (hit?.url) return hit.url;
+  } catch {
+    // fall through to the guessed slug
+  }
+  return leagueUrl(league);
 }
 
 // Snapshot versions for every build overview (streamers, each league's exp /
@@ -94,11 +146,7 @@ interface IndexStateSnapshot {
 // page now ships only {league,type} and the client looks the version up here.
 export async function fetchSnapshotVersion(url = 'streamers', type = 'streamers'): Promise<string> {
   try {
-    const res = await fetch(`${BASE}/poe1/api/data/index-state`, {
-      headers: { 'user-agent': UA, accept: 'application/json', referer: `${BASE}/poe1/builds/${url}` },
-    });
-    if (!res.ok) throw new Error(`index-state -> ${res.status}`);
-    const state = (await res.json()) as { snapshotVersions?: IndexStateSnapshot[] };
+    const state = await fetchIndexState();
     const hit = state.snapshotVersions?.find((s) => s.url === url && s.type === type);
     if (hit?.version) return hit.version;
     throw new Error(`no ${url}/${type} entry in index-state snapshotVersions`);
@@ -317,7 +365,7 @@ async function searchStreamers(version: string, extra: Record<string, string> = 
 async function publicClusterBuilds(
   league: string,
 ): Promise<{ rows: StreamerBuild[]; total: number }> {
-  const leagueSlug = leagueUrl(league);
+  const leagueSlug = await resolveLeagueUrl(league);
   let expVersion = '';
   try {
     expVersion = await fetchSnapshotVersion(leagueSlug, 'exp');
@@ -463,7 +511,14 @@ export async function fetchCurrencyRates(league: string): Promise<Record<string,
     if (line.id && typeof line.primaryValue === 'number' && line.primaryValue > 0)
       rates[line.id] = line.primaryValue;
   }
-  if (!rates.chaos) rates.chaos = 1; // present in practice, but the unit is true by definition
+  // poe.ninja answers 200 with no lines for a league it has no economy for yet (a
+  // brand-new league's first hours, an ended league, a typo). Returning that as a
+  // rate table would overwrite good rates with {chaos:1} and silently drop every
+  // divine listing from the price columns — so it's an error, and callers keep
+  // whatever rates they already had.
+  if (!rates.divine)
+    throw new Error(`currency overview for "${league}" has no divine rate (${Object.keys(rates).length} lines)`);
+  rates.chaos = 1; // the unit, true by definition
   return rates;
 }
 
@@ -546,7 +601,7 @@ export async function searchClusterHolders(league: string): Promise<{
   // ---- public (non-streamer) ladder builds from the league's "exp" overview ----
   // The exp overview is the general ladder snapshot for the league; it is much
   // larger than the streamers overview, so we only keep a small top slice.
-  const leagueSlug = leagueUrl(league);
+  const leagueSlug = await resolveLeagueUrl(league);
   let expVersion = '';
   try {
     expVersion = await fetchSnapshotVersion(leagueSlug, 'exp');

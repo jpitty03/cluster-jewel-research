@@ -132,6 +132,6 @@ src/data/<league-slug>/   Committed snapshots bundled into the production build:
 ## How it works
 
 - All poe.ninja requests go through the dev server (or the headless script) — never the browser — to avoid CORS and keep parsing server-side. A real browser User-Agent is used and requests are throttled/rate-limit-aware (backs off on 429s).
-- poe.ninja's API requires a **snapshot version** per league/endpoint; it's discovered by probing the site's build pages and cached (~5 min), refreshing automatically when a new snapshot invalidates it.
+- poe.ninja's API requires a **snapshot version** per league/endpoint; it's read from poe.ninja's `/poe1/api/data/index-state` JSON (cached for a minute), which also supplies each league's URL slug.
 - Character fetches are the expensive part (~1s each), so results are stored permanently with raw mod text retained — changing the parsing logic doesn't require re-crawling.
 - The production site is fully static: GitHub Actions builds from the committed `src/data` snapshots, so nothing scrapes at runtime.

@@ -249,7 +249,10 @@ export function evaluateRollRequirement(
   const statIndex = req.statIndex ?? 0;
   const actualValue = mod.currentRoll?.[statIndex];
   if (actualValue === undefined) {
-    return { matchesMod: true, passes: true };
+    // Fail closed: a value that hasn't been rolled can't be shown to meet a bound.
+    // Passing here would make every numeric requirement free.
+    const bounded = req.minValue !== undefined || req.maxValue !== undefined;
+    return { matchesMod: true, passes: !bounded };
   }
 
   let passes = true;

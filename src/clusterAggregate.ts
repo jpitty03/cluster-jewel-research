@@ -39,6 +39,9 @@ export interface Group {
   base: string
   clusterType: string
   jewels: ClusterJewel[]
+  /** Distinct characters holding at least one jewel of this group. */
+  characters: number
+  /** Notable -> distinct characters running it. */
   notableCounts: [string, number][]
   comboCounts: ComboCount[]
   fracturedCount: number
@@ -89,21 +92,34 @@ export function groupJewels(
   const out: Group[] = []
   for (const [key, js] of map) {
     const [base, clusterType] = key.split('||')
-    const notables = new Map<string, number>()
+    // Popularity is counted in characters, not jewels: a build socketing six copies
+    // of one medium is one data point about what people run, not six. Jewel counts
+    // are kept alongside (`count`, `jewels.length`) for display.
+    const groupCharacters = new Set<string>()
+    const notables = new Map<string, Set<string>>()
+    const comboCharacters = new Map<string, Set<string>>()
     const combos = new Map<string, ComboCount>()
     const fractured = new Map<string, number>()
     const smallGrants = new Map<string, number>()
     let fracturedCount = 0
     for (const j of js) {
-      for (const n of j.notables) notables.set(n, (notables.get(n) ?? 0) + 1)
+      const who = `${j.account}/${j.character}`
+      groupCharacters.add(who)
+      for (const n of j.notables) {
+        const set = notables.get(n)
+        if (set) set.add(who)
+        else notables.set(n, new Set([who]))
+      }
       const comboNotables = [...j.notables].sort()
       const combo = comboNotables.join(' + ') || '(no notables)'
       let cc = combos.get(combo)
       if (!cc) {
-        cc = { combo, notables: comboNotables, count: 0, passivesMin: null, passivesMax: null }
+        cc = { combo, notables: comboNotables, count: 0, characters: 0, passivesMin: null, passivesMax: null }
         combos.set(combo, cc)
+        comboCharacters.set(combo, new Set())
       }
       cc.count++
+      comboCharacters.get(combo)!.add(who)
       if (j.passives != null) {
         cc.passivesMin = cc.passivesMin == null ? j.passives : Math.min(cc.passivesMin, j.passives)
         cc.passivesMax = cc.passivesMax == null ? j.passives : Math.max(cc.passivesMax, j.passives)
@@ -115,17 +131,23 @@ export function groupJewels(
         smallGrants.set(grantKey, (smallGrants.get(grantKey) ?? 0) + 1)
       }
     }
+    for (const cc of combos.values()) cc.characters = comboCharacters.get(cc.combo)!.size
     out.push({
       key,
       base,
       clusterType,
       jewels: js,
-      notableCounts: [...notables].sort((a, b) => b[1] - a[1]),
-      comboCounts: [...combos.values()].sort((a, b) => b.count - a.count),
+      characters: groupCharacters.size,
+      notableCounts: [...notables]
+        .map(([n, set]): [string, number] => [n, set.size])
+        .sort((a, b) => b[1] - a[1]),
+      comboCounts: [...combos.values()].sort(
+        (a, b) => b.characters - a.characters || b.count - a.count,
+      ),
       fracturedCount,
       fracturedCounts: [...fractured].sort((a, b) => b[1] - a[1]),
       smallGrantCounts: [...smallGrants].sort((a, b) => b[1] - a[1]),
     })
   }
-  return out.sort((a, b) => b.jewels.length - a.jewels.length)
+  return out.sort((a, b) => b.characters - a.characters || b.jewels.length - a.jewels.length)
 }

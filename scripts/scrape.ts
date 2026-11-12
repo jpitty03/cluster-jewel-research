@@ -40,7 +40,6 @@ if (streamers.total > 0 && streamers.builds.length === 0) {
   )
   process.exit(1)
 }
-writeFileSync(join(outDir, 'streamers.json'), JSON.stringify(streamers))
 console.log(`[scrape] ${league}: ${streamers.builds.length} builds`)
 
 // 2. Cluster jewels — the rate-limited per-character crawl (resume by default).
@@ -48,6 +47,27 @@ console.log(
   `[scrape] ${league}: cluster jewels (${full ? 'full' : 'resume'})… this can take a while`,
 )
 const clusters = await crawlToCompletion(league, full)
+
+// Gate before anything reaches src/data (which `npm run publish` commits): an
+// outage or a block on the character endpoint only bumps an error counter, and
+// would otherwise replace a good snapshot with a sliver of one.
+const MIN_FETCHED_SHARE = 0.9
+const fetchedShare = clusters.charactersTotal
+  ? clusters.charactersFetched / clusters.charactersTotal
+  : 0
+if (clusters.jewels.length === 0 || fetchedShare < MIN_FETCHED_SHARE) {
+  console.error(
+    `[scrape] ${league}: only ${clusters.charactersFetched}/${clusters.charactersTotal} ` +
+      `cluster-holders fetched (${clusters.jewels.length} jewels) — below the ` +
+      `${MIN_FETCHED_SHARE * 100}% gate, so src/data was left untouched. ` +
+      'Re-run `npm run scrape` to resume; fetched characters are kept in data/.',
+  )
+  process.exit(1)
+}
+
+// Both snapshots are written together, after the crawl, so a league never ends up
+// with a Characters tab but no Cluster Jewels data.
+writeFileSync(join(outDir, 'streamers.json'), JSON.stringify(streamers))
 copyFileSync(
   join(ROOT, 'data', slugify(league), 'cluster-jewels.json'),
   join(outDir, 'cluster-jewels.json'),
