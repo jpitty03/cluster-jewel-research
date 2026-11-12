@@ -514,6 +514,28 @@ function finishCondition(
 }
 
 /**
+ * An acquisition-menu policy starts at a virtual "choose how to acquire the base" node whose
+ * single action buys the base. Player rules describe physical crafting decisions only, so
+ * that node has no rule; the purchase is already shown as the route's physical start. The
+ * guided graph therefore begins at the state the purchase leads to.
+ */
+function withoutAcquisitionMenuStart(flow: PolicyFlowSummary | undefined): PolicyFlowSummary | undefined {
+  if (!flow || flow.startNodeIds.length !== 1) return flow;
+  const menu = flow.nodes.find((node) => node.id === flow.startNodeIds[0]);
+  if (!menu || menu.terminal || !menu.selectedActionId?.startsWith('acquire_')) return flow;
+  const outgoing = flow.edges.filter((edge) => edge.sourceNodeId === menu.id);
+  const targets = [...new Set(outgoing.map((edge) => edge.targetNodeId))];
+  if (targets.length !== 1 || targets[0] === menu.id ||
+      flow.edges.some((edge) => edge.targetNodeId === menu.id)) return flow;
+  return {
+    ...flow,
+    nodes: flow.nodes.filter((node) => node.id !== menu.id),
+    edges: flow.edges.filter((edge) => edge.sourceNodeId !== menu.id),
+    startNodeIds: targets,
+  };
+}
+
+/**
  * Deterministic presentation compression over certified Phase 3J player rules and exact
  * PolicyFlow transitions. It never chooses an action or parses rendered prose.
  */
@@ -521,7 +543,7 @@ export function compileGuidedCraftConstellation(
   options: CompileGuidedCraftConstellationOptions,
 ): GuidedCraftConstellationSummary {
   const reasons: string[] = [];
-  const flow = options.policyFlow;
+  const flow = withoutAcquisitionMenuStart(options.policyFlow);
   const finish = options.craftPlan.playerFinishRule;
   if (options.selectedRouteName.trim().length === 0) reasons.push('Selected route identity is absent.');
   if (options.physicalStart.trim().length === 0) reasons.push('Selected physical start evidence is absent.');

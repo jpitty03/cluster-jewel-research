@@ -505,7 +505,19 @@ export const MarkovConstellation: React.FC<MarkovConstellationProps> = ({
     let animationFrame = 0;
     let lastTime = performance.now();
 
+    let idleTimer = 0;
     const render = (now: number) => {
+      // Nothing to paint while the canvas has no layout box (inactive tab of the
+      // app, collapsed disclosure) or the browser tab is in the background, so
+      // poll slowly instead of redrawing every frame.
+      if (!deterministicMode && isPlaying && !reducedMotion &&
+        (document.hidden || canvas.offsetParent === null)) {
+        idleTimer = window.setTimeout(() => {
+          lastTime = performance.now();
+          animationFrame = requestAnimationFrame(render);
+        }, 400);
+        return;
+      }
       const deltaMs = deterministicMode ? 16.667 : Math.min(64, now - lastTime);
       lastTime = now;
       if (isPlaying && !reducedMotion) {
@@ -662,7 +674,10 @@ export const MarkovConstellation: React.FC<MarkovConstellationProps> = ({
 
     if (deterministicMode || !isPlaying || reducedMotion) render(performance.now());
     else animationFrame = requestAnimationFrame(render);
-    return () => cancelAnimationFrame(animationFrame);
+    return () => {
+      cancelAnimationFrame(animationFrame);
+      window.clearTimeout(idleTimer);
+    };
   }, [
     activeReplayNodeId,
     deterministicMode,

@@ -146,6 +146,26 @@ const fresh = (job: Job): boolean => {
 }
 
 const pending = jobs.filter((j) => !fresh(j))
+
+// Entries no current query asks for (combos that dropped out of the top list,
+// retired key formats) are kept for two weeks in case they come back, then removed
+// so the published file does not carry dead prices forever.
+const PRUNE_AFTER_MS = 14 * 24 * 3600_000
+const wanted = {
+  prices: new Set(jobs.filter((j) => j.kind === 'combo').map((j) => j.key)),
+  bases: new Set(jobs.filter((j) => j.kind === 'base').map((j) => j.key)),
+}
+let pruned = 0
+for (const kind of ['prices', 'bases'] as const) {
+  const entries = cache[kind] as Record<string, { at?: string }>
+  for (const [key, entry] of Object.entries(entries)) {
+    if (wanted[kind].has(key)) continue
+    if (entry.at && Date.now() - Date.parse(entry.at) < PRUNE_AFTER_MS) continue
+    delete entries[key]
+    pruned++
+  }
+}
+if (pruned) console.log(`[price] pruned ${pruned} entries no longer queried`)
 const save = () => {
   mkdirSync(outDir, { recursive: true })
   cache.version = CACHE_VERSION

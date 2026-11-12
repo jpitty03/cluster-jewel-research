@@ -3202,6 +3202,50 @@ function virtualAcquisitionState(input: OptimizeCraftInput): ItemState {
   });
 }
 
+/**
+ * An acquisition-menu policy that starts from a clean base and later abandons an attempt
+ * re-buys with the same `acquire_*` action it started with. That is physically the shared
+ * `restart_reacquire` step, and the plan, flow and guided compilers only know it by that
+ * name, so the mid-route uses are presented under it. The menu state itself keeps the
+ * acquisition action; costs, visits and transitions are untouched. Policies that re-buy
+ * through any other acquisition method are left as they are.
+ */
+function renameMenuRestartActions(result: GenericSearchResult): GenericSearchResult {
+  if (result.startingState.flags?.acquisitionMenu !== true) return result;
+  const startAction = result.onPolicyRules
+    .find((rule) => rule.state.flags?.acquisitionMenu === true)?.selectedActionId;
+  if (!startAction || !/^acquire_candidate_\d+_clean-base_\d+$/.test(startAction)) return result;
+  const isMidRouteRebuy = (rule: { state: ItemState; selectedActionId: string }): boolean =>
+    rule.state.flags?.acquisitionMenu !== true && rule.selectedActionId === startAction;
+  const rebuyKeys = new Set(result.onPolicyRules.filter(isMidRouteRebuy).map((rule) => rule.stateKey));
+  if (rebuyKeys.size === 0) return result;
+  if (result.onPolicyRules.some((rule) => rule.selectedActionId === 'restart_reacquire')) return result;
+  const actionName = 'Abandon attempt and reacquire a clean base';
+  const nodes = new Map(result.graphBuild.nodes);
+  const policyMap = new Map(result.policyMap);
+  for (const key of rebuyKeys) {
+    const node = nodes.get(key);
+    const action = node?.actions.get(startAction);
+    if (!node || !action) return result;
+    nodes.set(key, {
+      ...node,
+      actions: new Map([...node.actions, ['restart_reacquire', action]]),
+    });
+    const decision = policyMap.get(key);
+    if (decision) {
+      policyMap.set(key, { ...decision, bestActionId: 'restart_reacquire', bestActionName: actionName });
+    }
+  }
+  return {
+    ...result,
+    graphBuild: { ...result.graphBuild, nodes },
+    policyMap,
+    onPolicyRules: result.onPolicyRules.map((rule) => isMidRouteRebuy(rule)
+      ? { ...rule, selectedActionId: 'restart_reacquire', selectedActionName: actionName }
+      : rule),
+  };
+}
+
 function portfolioActionParts(actionId: string): { candidateId?: string; methodId?: string } {
   const match = /^acquire_(candidate_\d+)_(.+)$/.exec(actionId);
   return match ? { candidateId: match[1], methodId: match[2] } : {};
@@ -5614,7 +5658,7 @@ export class OptimizerService {
       const downstreamCertified = downstreamResult.optimalityProof.selectedPolicyStatus ===
         'FULLY RESOLVED / PROPER / ABSORBING / COST-RECONCILED';
       if (downstreamCertified) {
-        result = downstreamResult;
+        result = renameMenuRestartActions(downstreamResult);
       } else if (bestFractureDownstreamResult) {
         stageMode = 'EXECUTABLE_SYNTHESIS';
         result = bestFractureDownstreamResult;

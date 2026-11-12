@@ -382,6 +382,8 @@ export interface ExpectedCostReconciliation {
   visitConverged: boolean;
 }
 
+const VALUE_ITERATION_WARM_START_SWEEPS = 40;
+
 export interface GenericSearchResult {
   startingState: ItemState;
   target: TargetDefinition;
@@ -2607,6 +2609,11 @@ export class GenericSearchEngine {
     const normalizedStartState = normalizeItemState(startState);
     const effectiveOptions = { ...this.defaultOptions, ...options };
     const maxIterations = effectiveOptions.maxIterations ?? 1000;
+    // Value iteration is only a warm start: the linear policy iteration below computes the
+    // exact values, and builds its own proper starting policy when the warm start is not one.
+    // Sweeps past the first few dozen bought nothing on any fixture (same costs and proofs)
+    // while taking most of each round's time.
+    const warmStartSweeps = Math.min(maxIterations, VALUE_ITERATION_WARM_START_SWEEPS);
     const epsilon = effectiveOptions.convergenceEpsilon ?? 1e-5;
     const assertWithinDeadline = (): void => {
       if (deadlineMs !== undefined && Date.now() >= deadlineMs) {
@@ -2805,7 +2812,7 @@ export class GenericSearchEngine {
     let valueIterationSweeps = 0;
     for (
       ;
-      iteration < maxIterations && (deadlineMs === undefined || Date.now() < deadlineMs);
+      iteration < warmStartSweeps && (deadlineMs === undefined || Date.now() < deadlineMs);
       iteration++
     ) {
       valueIterationSweepExecuted = true;
@@ -3394,7 +3401,9 @@ export class GenericSearchEngine {
     for (const [key, node] of nodes) optimisticValues.set(key, node.isTerminal ? 0 : 0);
     let optimisticLowerBoundIterations = 0;
     let optimisticLowerBoundResidual = Infinity;
-    const maxLowerBoundIterations = Math.min(maxIterations, 500);
+    // Same sweep allowance as the warm start: any iterate is a valid bound (see above), and
+    // the long tail of sweeps tightened it too little to change a proof on any fixture.
+    const maxLowerBoundIterations = warmStartSweeps;
     for (let iteration = 0; iteration < maxLowerBoundIterations; iteration++) {
       if (deadlineMs !== undefined && Date.now() >= deadlineMs) break;
       optimisticLowerBoundIterations++;

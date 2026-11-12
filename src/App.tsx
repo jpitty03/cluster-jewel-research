@@ -42,6 +42,14 @@ const snapshotLeagues = Object.values(streamersByLeague)
   .sort((a, b) => (a.fetchedAt < b.fetchedAt ? 1 : -1))
   .map((d) => d.league)
 
+/** poe.ninja reports last-seen as "< 1h", "< 3d", ...; rank by duration, unknown last. */
+function seenHours(seen: string | null | undefined): number {
+  const match = /(\d+)\s*([mhdw])/.exec(seen ?? '')
+  if (!match) return Number.MAX_SAFE_INTEGER
+  const unit = { m: 1 / 60, h: 1, d: 24, w: 168 }[match[2] as 'm' | 'h' | 'd' | 'w']
+  return Number(match[1]) * unit
+}
+
 function App() {
   const getInitialTab = (): 'jewels' | 'characters' | 'optimizer' => {
     if (typeof window !== 'undefined' && (window.location.hash.startsWith('#craft=') || window.location.hash.startsWith('#optimizer'))) {
@@ -60,6 +68,8 @@ function App() {
   const [sortKey, setSortKey] = useState<SortKey>('level');
   const [sortDesc, setSortDesc] = useState(true);
   const [optimizerSeed, setOptimizerSeed] = useState<OptimizerSeed | null>(null);
+  const [optimizerOpened, setOptimizerOpened] = useState(() => getInitialTab() === 'optimizer');
+  if (tab === 'optimizer' && !optimizerOpened) setOptimizerOpened(true);
 
   const openOptimizerSeed = (seed: OptimizerSeed) => {
     window.history.replaceState(null, '', `${window.location.pathname}${window.location.search}#optimizer`);
@@ -137,6 +147,7 @@ function App() {
     const dir = sortDesc ? -1 : 1
     return [...out].sort((a, b) => {
       if (sortKey === 'level') return dir * ((a.level ?? 0) - (b.level ?? 0))
+      if (sortKey === 'seen') return dir * (seenHours(a.seen) - seenHours(b.seen))
       const av = (a[sortKey] ?? '').toString().toLowerCase()
       const bv = (b[sortKey] ?? '').toString().toLowerCase()
       return dir * av.localeCompare(bv)
@@ -178,12 +189,16 @@ function App() {
 
       {tab === 'jewels' && <ClusterJewels onOptimize={openOptimizerSeed} />}
 
-      {tab === 'optimizer' && (
-        <CraftOptimizer
-          seed={optimizerSeed}
-          onBackToClusterJewels={backToClusterJewels}
-          onHandoffDetached={detachOptimizerSeed}
-        />
+      {/* Stays mounted once opened so switching tabs keeps the setup, the
+          result and any running search. */}
+      {optimizerOpened && (
+        <div hidden={tab !== 'optimizer'}>
+          <CraftOptimizer
+            seed={optimizerSeed}
+            onBackToClusterJewels={backToClusterJewels}
+            onHandoffDetached={detachOptimizerSeed}
+          />
+        </div>
       )}
 
       {tab === 'characters' && (
@@ -194,7 +209,8 @@ function App() {
             {data && (
               <>
                 {' · '}
-                {data.builds.length} of {data.total} builds
+                {data.builds.length.toLocaleString()} characters shown, from{' '}
+                {data.total.toLocaleString()} on the poe.ninja ladder
                 {' · '}
                 updated {new Date(data.fetchedAt).toLocaleDateString()}
               </>
@@ -255,7 +271,9 @@ function App() {
                         target="_blank"
                         rel="noreferrer"
                       >
-                        {b.live && <span className="live-dot" title="Live" />}
+                        {/* Only meaningful against the live server; a published snapshot would
+                            show who was streaming when it was scraped. */}
+                        {LIVE && b.live && <span className="live-dot" title="Live" />}
                         {b.streamerName}
                       </a>
                     ) : (

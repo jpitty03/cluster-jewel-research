@@ -199,7 +199,7 @@ const REQUEST_STOP_COPY: Record<OptimizationRequestStopReason, { label: string; 
   },
   CANCELLED: {
     label: 'Cancelled',
-    retry: 'The request was cancelled; compatible retained work remains available.',
+    retry: 'The request was cancelled and its in-progress search was discarded; the next run starts from scratch.',
   },
   ERROR: {
     label: 'Stopped after an error',
@@ -725,6 +725,7 @@ export function CraftOptimizer({
   const [clusterHandoff, setClusterHandoff] = useState<ClusterHandoffState>({ status: 'none' });
   const [seedWarning, setSeedWarning] = useState<string | null>(null);
   const hydratingHandoffRef = useRef(false);
+  const sharedHashHydrationPendingRef = useRef(false);
   const onHandoffDetachedRef = useRef(onHandoffDetached);
   onHandoffDetachedRef.current = onHandoffDetached;
   const activeSeed = clusterHandoff.status === 'attached' ? clusterHandoff.seed : null;
@@ -980,6 +981,7 @@ export function CraftOptimizer({
       return;
     }
     hydratingHandoffRef.current = true;
+    sharedHashHydrationPendingRef.current = true;
     if (decoded.baseType) setBaseType(decoded.baseType);
     if (decoded.clusterType) setClusterType(decoded.clusterType);
     if (decoded.itemLevel) setItemLevel(decoded.itemLevel);
@@ -1067,6 +1069,17 @@ export function CraftOptimizer({
     if (previousDraftInputRef.current === draftInput) return;
     previousDraftInputRef.current = draftInput;
     setResult(null);
+    // A share link stays in the address bar (so a reload restores it) until the
+    // setup is edited; after that it would describe a different craft.
+    if (sharedHashHydrationPendingRef.current) {
+      sharedHashHydrationPendingRef.current = false;
+    } else if (window.location.hash.startsWith('#craft=')) {
+      window.history.replaceState(
+        null,
+        '',
+        `${window.location.pathname}${window.location.search}#optimizer`,
+      );
+    }
   }, [draftInput]);
 
   useEffect(() => {
@@ -1272,10 +1285,11 @@ export function CraftOptimizer({
         setWallTimeExceeded(true);
         setError(
           `Search stopped at the configured ${caught.budgetMs.toLocaleString()} ms runtime budget. ` +
-          'The worker was replaced and is ready for another run.'
+          'The worker was replaced and is ready for another run. Nothing from this search was kept, ' +
+          'so the next run starts from scratch; raise the time budget if it stops here again.'
         );
       } else if (caught instanceof Error && caught.name === 'AbortError') {
-        setError('Optimization cancelled. The worker was replaced and is ready for another run.');
+        setError('Optimization cancelled. The worker was replaced and is ready for another run; the cancelled search was not kept.');
       } else {
         setError(caught instanceof Error ? caught.message : String(caught));
       }
@@ -2231,7 +2245,18 @@ export function CraftOptimizer({
         </p>
         {importedPriceContext && (
           <p className="muted imported-price-context" role="status">
-            Imported pricing context is active for this reproducible setup and overrides matching snapshot rates.
+            This setup was loaded from a share link or file and is using the prices saved with it, not
+            this site&apos;s latest snapshot.{' '}
+            <button
+              type="button"
+              className="link-button"
+              onClick={() => {
+                setImportedPriceContext(null);
+                setImportedMarketContext(null);
+              }}
+            >
+              Use current prices
+            </button>
           </p>
         )}
         <details className="pricing-controls">

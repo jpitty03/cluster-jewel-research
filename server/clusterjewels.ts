@@ -329,11 +329,22 @@ async function runCrawl(league: string, force: boolean): Promise<void> {
     for (const key of stale) delete store[key]
     if (stale.length) console.log(`[crawl] dropped ${stale.length} stale characters from the store`)
   }
-  const pending = chars.filter((c) => !store[`${c.account}/${c.name}`])
+  // Re-fetch stored characters once they are older than the TTL, after the ones
+  // never fetched. Players re-gear, so a resume that only ever fills gaps slowly
+  // turns into a snapshot of what people wore at league start. A failed re-fetch
+  // keeps the old entry.
+  const ttlMs = (Number(process.env.CHARACTER_TTL_HOURS) || 72) * 3600_000
+  const isOutdated = (key: string) => Date.now() - Date.parse(store[key].fetchedAt) > ttlMs
+  const missing = chars.filter((c) => !store[`${c.account}/${c.name}`])
+  const outdated = chars.filter((c) => {
+    const key = `${c.account}/${c.name}`
+    return store[key] !== undefined && isOutdated(key)
+  })
+  const pending = [...missing, ...outdated]
   let errors = 0
 
   console.log(
-    `[crawl] ${pending.length} new/missing characters to fetch ` +
+    `[crawl] ${missing.length} new/missing + ${outdated.length} outdated characters to fetch ` +
       `(${chars.length - pending.length}/${chars.length} already in local store, ~${Math.round(START_INTERVAL_MS / 1000)}s per request)`,
   )
 
