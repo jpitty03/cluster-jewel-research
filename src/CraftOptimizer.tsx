@@ -207,6 +207,13 @@ const REQUEST_STOP_COPY: Record<OptimizationRequestStopReason, { label: string; 
   },
 };
 
+/** True when a typed number field holds something the optimizer will silently drop. */
+function ignoredNumber(text: string): boolean {
+  if (text.trim() === '') return false;
+  const value = Number(text);
+  return !Number.isFinite(value) || value < 0;
+}
+
 function chaos(value: number | null | undefined): string {
   return value === null || value === undefined ? '—' : `${value.toFixed(3)}c`;
 }
@@ -2274,6 +2281,11 @@ export function CraftOptimizer({
                   : 'Market quote unavailable'}
                 onChange={(event) => setCleanBaseCost(event.target.value)}
               />
+              {ignoredNumber(cleanBaseCost) && (
+                <small className="field-warning" role="alert">
+                  Not a valid price (0 or more), so the market quote is used instead.
+                </small>
+              )}
             </label>
             <label>
               <span>Expected sale value (chaos, optional)</span>
@@ -2285,6 +2297,11 @@ export function CraftOptimizer({
                 data-sale-value-provenance={saleValueProvenance}
                 onChange={(event) => updateSaleValue(event.target.value)}
               />
+              {ignoredNumber(saleValue) && (
+                <small className="field-warning" role="alert">
+                  Not a valid value (0 or more), so no sale value is used.
+                </small>
+              )}
             </label>
           </div>
           {marketPricing && (

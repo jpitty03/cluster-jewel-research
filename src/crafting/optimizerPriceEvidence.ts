@@ -7,7 +7,9 @@ import type {
 import { chaosValue, type PriceFile } from '../priceModel.ts';
 import { baseKey } from '../tradeQuery.ts';
 
-const STALE_AFTER_MS = 7 * 86_400_000;
+// Three days: cluster prices move daily in a league's first weeks, and a week-old
+// quote was passing as current.
+const STALE_AFTER_MS = 3 * 86_400_000;
 
 function evidenceAge(timestamp: string | undefined): { ageMs?: number; stale: boolean } {
   if (!timestamp) return { stale: true };

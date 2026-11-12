@@ -5191,3 +5191,9 @@ td a {
   text-decoration: underline;
   cursor: pointer;
 }
+
+.field-warning {
+  display: block;
+  margin-top: 4px;
+  color: #fbbf24;
+}
