@@ -5,8 +5,34 @@ import type {
   GuidedCraftConstellationSummary,
 } from '../../crafting-engine/src/service/guidedCraftConstellation.ts';
 
+/**
+ * A stage can carry dozens of certified conditions, most of them branches that come up
+ * once in hundreds of attempts. They are ordered by how often the route actually meets
+ * them, so the picker opens on the situation the crafter is most likely to be in.
+ */
+function conditionsByLikelihood(node: GuidedConstellationNode | undefined) {
+  const rows = [...(node?.conditionRows ?? [])]
+    .sort((left, right) => right.expectedVisits - left.expectedVisits);
+  const total = rows.reduce((sum, row) => sum + row.expectedVisits, 0);
+  const share = (row: (typeof rows)[number]) => (total > 0 ? row.expectedVisits / total : 0);
+  return {
+    rows,
+    share,
+    likely: rows.filter((row) => share(row) >= LIKELY_CONDITION_SHARE),
+    unlikely: rows.filter((row) => share(row) < LIKELY_CONDITION_SHARE),
+  };
+}
+
+/** Conditions below this share of a stage's visits are grouped as less likely. */
+const LIKELY_CONDITION_SHARE = 0.02;
+
+function shareLabel(share: number): string {
+  const percent = share * 100;
+  return percent >= 1 ? `${Math.round(percent)}%` : '<1%';
+}
+
 function firstCondition(node: GuidedConstellationNode | undefined) {
-  return node?.conditionRows[0];
+  return conditionsByLikelihood(node).rows[0];
 }
 
 function nextTitle(
@@ -250,9 +276,22 @@ export function GuidedCraftConstellation({
                       value={selectedCondition.id}
                       onChange={(event) => setSelectedConditionId(event.target.value)}
                     >
-                      {selectedNode.conditionRows.map((row) => (
-                        <option key={row.id} value={row.id}>{row.label} → {row.actionName}</option>
-                      ))}
+                      {(() => {
+                        const conditions = conditionsByLikelihood(selectedNode);
+                        const option = (row: (typeof conditions.rows)[number]) => (
+                          <option key={row.id} value={row.id}>
+                            {shareLabel(conditions.share(row))} · {row.label} → {row.actionName}
+                          </option>
+                        );
+                        return conditions.unlikely.length === 0
+                          ? conditions.rows.map(option)
+                          : <>
+                            <optgroup label="Most likely at this stage">{conditions.likely.map(option)}</optgroup>
+                            <optgroup label={`Less likely (${conditions.unlikely.length})`}>
+                              {conditions.unlikely.map(option)}
+                            </optgroup>
+                          </>;
+                      })()}
                     </select>
                   </label>
                 )}

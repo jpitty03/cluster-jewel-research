@@ -4098,7 +4098,6 @@ export class OptimizerService {
     const searchStopDeadline = optimizationStarted + Math.floor(
       runtimeBudget.engineDeadlineMs * coreSearchDeadlineFraction
     );
-    const absoluteCostCeiling = requestedObjective.maxExpectedCostChaos;
     const costLowerBoundExcludesCandidate = (
       lowerBoundChaos: number,
       cheapestIncumbentChaos: number,
@@ -4106,15 +4105,11 @@ export class OptimizerService {
       if (requestedObjective.kind === 'CHEAPEST_CHAOS') {
         return lowerBoundChaos >= cheapestIncumbentChaos;
       }
-      if (
-        requestedObjective.kind === 'FEWEST_ACTIONS_WITHIN_COST' ||
-        requestedObjective.kind === 'FASTEST_WITHIN_COST'
-      ) {
-        return absoluteCostCeiling !== undefined && lowerBoundChaos > absoluteCostCeiling;
-      }
-      // Premium ceilings are normalized only after a cheapest executable U exists.
-      // Balanced and unconstrained effort objectives have no admissible service-level
-      // scalar lower bound here, so a chaos incumbent cannot safely prune them.
+      // Under an effort objective the engines minimise actions or time, so the "lower
+      // bound" they report is in those units (15,685 "chaos" on a 98c craft was really
+      // milliseconds). Comparing it with a chaos ceiling pruned families that were well
+      // inside the ceiling. There is no admissible chaos bound here, so nothing is pruned;
+      // the ceiling is enforced on resolved routes instead.
       return false;
     };
     const priceBook = new PriceBook(input.prices?.currencyRates ?? {});

@@ -214,6 +214,24 @@ function ignoredNumber(text: string): boolean {
   return !Number.isFinite(value) || value < 0;
 }
 
+/** Headline figure: rounded chaos, with the divine equivalent once it is worth reading. */
+function headlineCost(value: number | null | undefined, divineRate: number | undefined): string {
+  if (value === null || value === undefined) return '—';
+  const chaosText = value >= 100
+    ? `${Math.round(value).toLocaleString()}c`
+    : `${value.toFixed(1)}c`;
+  return divineRate && divineRate > 0 && value >= divineRate / 2
+    ? `${chaosText} (${(value / divineRate).toFixed(1)} div)`
+    : chaosText;
+}
+
+function readableDuration(ms: number): string {
+  const seconds = Math.round(ms / 1000);
+  if (seconds < 90) return `${seconds}s`;
+  const minutes = Math.round(seconds / 60);
+  return minutes < 90 ? `${minutes} min` : `${Math.floor(minutes / 60)}h ${minutes % 60}m`;
+}
+
 function chaos(value: number | null | undefined): string {
   return value === null || value === undefined ? '—' : `${value.toFixed(3)}c`;
 }
@@ -1358,6 +1376,7 @@ export function CraftOptimizer({
     lines.push(`Selected Route: ${publicSelectedRouteName ?? 'none certified'}`);
     lines.push(`Expected Total Cost: ~${chaos(res.expectedCostChaos)}`);
     lines.push('\nRounded purchase guidance (expected model consumption is shown explicitly):');
+    lines.push('These are averages, not guarantees: a repeat-until-it-hits craft runs over its average roughly one time in three, and about twice the listed amounts covers most runs.');
 
     const cleanMethod = res.acquisition.candidates
       .flatMap((c) => c.methods)
@@ -1369,7 +1388,7 @@ export function CraftOptimizer({
     const currencies = res.expectedCurrencies ?? {};
     for (const [curr, expectedCount] of Object.entries(currencies)) {
       if (expectedCount && expectedCount > 0) {
-        lines.push(`- ${Math.ceil(expectedCount).toLocaleString()}x ${curr} (rounded-up purchase guidance from ${expectedCount} expected consumption)`);
+        lines.push(`- ${Math.ceil(expectedCount).toLocaleString()}x ${curr} (rounded-up purchase guidance from ${Number(expectedCount.toFixed(1)).toLocaleString()} expected consumption)`);
       }
     }
 
@@ -2596,11 +2615,14 @@ export function CraftOptimizer({
             <dl className="recommendation-facts">
               <dt>Selected route</dt><dd>{publicSelectedRouteName ?? 'none certified'}</dd>
               <dt>{result.recommendationStatus === 'NO_RESOLVED_ROUTE' || result.recommendationStatus === 'INTERNAL_RESULT_MISMATCH' ? 'Resolved start' : 'Recommended start'}</dt><dd>{recommendedStart}</dd>
-              <dt>Expected cost</dt><dd className="recommendation-cost">{chaos(result.expectedCostChaos)}</dd>
+              <dt>Expected cost</dt>
+              <dd className="recommendation-cost" title={chaos(result.expectedCostChaos)}>
+                {headlineCost(result.expectedCostChaos, draftInput.prices?.currencyRates?.divine)}
+              </dd>
               <dt>Expected physical actions</dt>
               <dd>{result.recommended?.metrics?.expectedPhysicalActions !== undefined ? `${Math.round(result.recommended.metrics.expectedPhysicalActions).toLocaleString()} actions` : '—'}</dd>
               <dt>Estimated manual time</dt>
-              <dd>{result.recommended?.metrics?.estimatedManualTimeMs !== undefined ? `${(result.recommended.metrics.estimatedManualTimeMs / 1000).toFixed(1)}s` : '—'}</dd>
+              <dd>{result.recommended?.metrics?.estimatedManualTimeMs !== undefined ? readableDuration(result.recommended.metrics.estimatedManualTimeMs) : '—'}</dd>
               {result.objective && (
                 <>
                   <dt>Optimization objective</dt>
