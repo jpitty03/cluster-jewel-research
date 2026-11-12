@@ -18,6 +18,7 @@
     "price": "tsx scripts/price.ts",
     "test": "vitest run && npm run test:node",
     "test:node": "node --test \"scripts/test/*.test.mjs\" \"poe2-crafting-engine/test/*.test.mjs\"",
+    "validate:pools": "tsx scripts/validate-cluster-pools.ts",
     "lab": "tsx quality-lab/src/orchestrator.ts --suite RELEASE",
     "lab:dev": "tsx quality-lab/src/orchestrator.ts --suite DEV",
     "lab:release": "tsx quality-lab/src/orchestrator.ts --suite RELEASE",
