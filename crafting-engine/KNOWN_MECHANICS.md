@@ -101,6 +101,10 @@ This document establishes the game mechanics, domain rules, and mathematical mod
 2. **Harvest Multi-Affix Generation Distribution**:
    - Poedb description: "Rerolls a rare item that guarantees a modifier with the respective modTag. 50% chance to roll 3-6 modifiers."
    - For cluster jewels with max 4 affixes (2P / 2S), the distribution rolls 3 or 4 affixes.
+   - The engine uses 3 affixes 65% / 4 affixes 35% (`rules/rareRollShape.ts`), taken from Craft of
+     Exile's `numOfAffixes` table for items capped at 2 prefixes / 2 suffixes (model snapshot
+     2026-09-06). Before 2026-11 it assumed 50/50 with no source. The Poedb wording above is
+     ambiguous and Craft of Exile's figure is community-measured, so this remains approximate.
 
 ---
 

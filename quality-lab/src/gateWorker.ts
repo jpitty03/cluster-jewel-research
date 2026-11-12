@@ -485,12 +485,14 @@ async function optimizedFixture(
   page: Page,
   appUrl: string,
   input: FixtureRecord,
-  objective?: 'FEWEST_600',
+  objective?: 'FEWEST_700',
 ): Promise<JsonRecord> {
   await ensureOptimizerPage(page, appUrl);
   await importFixture(page, input);
   await setBudget(page, input.searchBudget);
-  if (objective === 'FEWEST_600') await setFewestObjective(page, 600);
+  // 700c: with the 65/35 rare-jewel affix split the Harvest Defences route costs about
+  // 625c (577c under the old 50/50), so the earlier 600c ceiling no longer admits it.
+  if (objective === 'FEWEST_700') await setFewestObjective(page, 700);
   return runOptimization(page, input.searchBudget.maxWallTimeMs);
 }
 
@@ -1230,10 +1232,10 @@ async function runGateOperation(ctx: GateWorkerContext): Promise<unknown> {
     case 'harvest-objective-policy':
       return withPage(ctx, async (page) => {
         const input = fixture('phase2w_armour_evasion_12');
-        const result = await optimizedFixture(page, ctx.appUrl, input, 'FEWEST_600');
+        const result = await optimizedFixture(page, ctx.appUrl, input, 'FEWEST_700');
         const objective = jsonRecord(result.objective, 'objective');
         assert.equal(objective.kind, 'FEWEST_ACTIONS_WITHIN_COST');
-        assert.equal(objective.maxExpectedCostChaos, 600);
+        assert.equal(objective.maxExpectedCostChaos, 700);
         const flow = selectedPolicyFlow(result, 'Harvest objective');
         const conserved = assertFlowConservation(flow, 'Harvest objective');
         const nodes = arrayValue(flow.nodes, 'Harvest nodes').map((entry) => jsonRecord(entry, 'Harvest node'));

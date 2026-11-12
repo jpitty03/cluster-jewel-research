@@ -9,6 +9,7 @@ import {
 import type { SolverContext } from '../domain/CraftAction.ts';
 import type { PriceConfidence, PriceSource } from '../domain/PriceBook.ts';
 import type { RandomSource } from '../probability/random.ts';
+import { RARE_JEWEL_AFFIX_COUNT, rareJewelAffixCountProbability } from './rareRollShape.ts';
 import type { Mod } from '../domain/Mod.ts';
 import { toRolledMod } from '../domain/Mod.ts';
 import { canAcceptPrefix, canAcceptSuffix } from './affixRules.ts';
@@ -244,7 +245,7 @@ function generateHarvestTransitions(
   if (taggedWeight <= 0) return { outcomes: [], immediateCostChaos: costChaos };
 
   const outcomes = new Map<string, TransitionOutcome>();
-  for (const desiredTotalAffixes of [3, 4]) {
+  for (const desiredTotalAffixes of [3, 4] as const) {
     // Aggregate after every roll, not only after enumerating the complete
     // Cartesian tree. The key retains every property that affects target
     // satisfaction or downstream pool eligibility, so this is a probability-
@@ -254,7 +255,8 @@ function generateHarvestTransitions(
       checkTransitionDeadline(control);
       const guaranteedState = addMod(baseState, guaranteed);
       const key = getHarvestCanonicalAggregationKey(guaranteedState, target);
-      const probability = guaranteed.weight / taggedWeight * 0.5;
+      const probability = guaranteed.weight / taggedWeight *
+        rareJewelAffixCountProbability(desiredTotalAffixes);
       const existing = frontier.get(key);
       if (existing) existing.probability += probability;
       else frontier.set(key, {
@@ -320,7 +322,7 @@ function sampleHarvestTransition(
   const guaranteed = selectWeightedMod(tagged, rng);
   if (!guaranteed) return nextState;
   nextState = addMod(nextState, guaranteed);
-  const desiredTotalAffixes = rng.next() < 0.5 ? 3 : 4;
+  const desiredTotalAffixes = rng.next() < RARE_JEWEL_AFFIX_COUNT.threeAffixProbability ? 3 : 4;
   const extraCount = Math.max(0, desiredTotalAffixes - getAllAffixes(nextState).length);
   for (let index = 0; index < extraCount; index++) {
     const extra = selectWeightedMod(getEligibleMods(nextState, allMods), rng);
@@ -1040,7 +1042,7 @@ export function createHarvestReforgeMechanics(
           };
         },
         mechanicsConfidence: 'APPROXIMATE / EXTERNALLY CLOSE',
-        mechanicsProvenance: 'Current engine approximation: preserve fractures, guarantee one tagged mod, then roll to 3 or 4 total explicit affixes with 50% probability each',
+        mechanicsProvenance: `Preserve fractures, guarantee one tagged mod, then roll to 3 or 4 total explicit affixes. ${RARE_JEWEL_AFFIX_COUNT.provenance}`,
         repeatableFullReroll: HARVEST_REPEATABLE_FULL_REROLL,
         parameters: {
           harvestTag: tag,
