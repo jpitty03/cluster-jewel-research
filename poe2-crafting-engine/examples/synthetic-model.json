@@ -1,0 +1,39 @@
+{
+  "game": "poe2",
+  "ruleset": "synthetic-math-fixture-NOT-GAME-DATA",
+  "priceUnit": "synthetic-unit",
+  "budget": 4,
+  "start": "anchor",
+  "states": {
+    "anchor": {
+      "success": false,
+      "actions": [
+        {
+          "id": "risky-finish",
+          "cost": 1,
+          "evidenceIds": ["synthetic-fixture"],
+          "outcomes": [
+            { "state": "finished", "probability": 0.5 },
+            { "state": "damaged", "probability": 0.5 }
+          ]
+        },
+        {
+          "id": "buy-finished",
+          "cost": 4,
+          "evidenceIds": ["synthetic-fixture"],
+          "outcomes": [{ "state": "finished", "probability": 1 }]
+        }
+      ]
+    },
+    "damaged": {
+      "success": false,
+      "actions": [{
+        "id": "repair",
+        "cost": 1,
+        "evidenceIds": ["synthetic-fixture"],
+        "outcomes": [{ "state": "anchor", "probability": 1 }]
+      }]
+    },
+    "finished": { "success": true, "actions": [] }
+  }
+}

@@ -11,6 +11,8 @@ For each character it fetches the full build snapshot, extracts equipped cluster
 
 ## How to use
 
+For pasted-item crafting research, see the [PoE1 mechanics guide](docs/crafting-engine/CRAFTING_MECHANICS.md) or the separate [PoE2 crafting engine](docs/poe2-crafting-engine/CRAFTING_MECHANICS.md). The [PoE2 workflow](docs/poe2-crafting-engine/WORKFLOW.md) covers target resolution, class-pool research, route costs and failure recovery; its [calculation tools](poe2-crafting-engine/README.md) run independently of this UI.
+
 ```sh
 npm install
 npm run dev        # start the Vite dev server + scraping API

@@ -82,7 +82,37 @@ async function fetchBytes(path: string): Promise<Uint8Array> {
   return new Uint8Array(await res.arrayBuffer());
 }
 
+interface IndexStateSnapshot {
+  url: string;
+  type: string;
+  version: string;
+}
+
+// Snapshot versions for every build overview (streamers, each league's exp /
+// depthsolo ladder) come from the same JSON the poe.ninja frontend loads on
+// startup. Until late 2026 they were embedded in the page's Astro props; the
+// page now ships only {league,type} and the client looks the version up here.
 export async function fetchSnapshotVersion(url = 'streamers', type = 'streamers'): Promise<string> {
+  try {
+    const res = await fetch(`${BASE}/poe1/api/data/index-state`, {
+      headers: { 'user-agent': UA, accept: 'application/json', referer: `${BASE}/poe1/builds/${url}` },
+    });
+    if (!res.ok) throw new Error(`index-state -> ${res.status}`);
+    const state = (await res.json()) as { snapshotVersions?: IndexStateSnapshot[] };
+    const hit = state.snapshotVersions?.find((s) => s.url === url && s.type === type);
+    if (hit?.version) return hit.version;
+    throw new Error(`no ${url}/${type} entry in index-state snapshotVersions`);
+  } catch (err) {
+    // Fall back to the legacy page-props lookup in case index-state moves.
+    try {
+      return await fetchSnapshotVersionFromPage(url, type);
+    } catch {
+      throw err;
+    }
+  }
+}
+
+async function fetchSnapshotVersionFromPage(url: string, type: string): Promise<string> {
   const res = await fetch(`${BASE}/poe1/builds/${url}`, {
     headers: { 'user-agent': UA },
   });

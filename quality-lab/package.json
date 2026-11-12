@@ -18,13 +18,7 @@
     "lab:typecheck": "tsc --noEmit -p tsconfig.json",
     "lab:visual-fixture": "tsx src/orchestrator.ts --gate D-frozen-policy-flow-renderer",
     "lab:recommend": "tsx src/impactRecommendation.ts",
-    "lab:no-fallback-probe": "tsx src/noFallbackProbe.ts",
-    "lab:smoke": "tsx src/runner.ts --scenario smoke",
-    "lab:methods": "tsx src/runner.ts --scenario methods",
-    "lab:objectives": "tsx src/runner.ts --scenario four",
-    "lab:responsive": "tsx src/runner.ts --scenario responsive",
-    "lab:animation": "tsx src/runner.ts --scenario animation",
-    "lab:additional": "tsx src/runner.ts --scenario additional"
+    "lab:no-fallback-probe": "tsx src/noFallbackProbe.ts"
   },
   "dependencies": {
     "tsx": "^4.23.5",

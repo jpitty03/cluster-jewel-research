@@ -38,3 +38,5 @@ dist-ssr
 /output*.txt
 /quality-lab/artifacts/
 /quality-lab/reports/
+/docs/crafting-engine/references
+/docs/poe2-crafting-engine/references
