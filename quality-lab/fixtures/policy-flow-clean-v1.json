@@ -1,7 +1,7 @@
 {
   "fixtureId": "policy-flow-clean-v1",
   "fixtureVersion": 1,
-  "sourceAppCommit": "df49b94ecca555671d8c78268d3149c2b8c84c7b",
+  "sourceAppCommit": "a56915afab584bfffd63950bc3389b21df7f60b7",
   "normalizedRequest": {
     "baseType": "Large Cluster Jewel",
     "clusterType": "10% increased Attack Damage",
@@ -19,14 +19,14 @@
     }
   },
   "selectedBundleId": "core:clean-open-policy",
-  "selectedPolicyFingerprint": "policy-b29143bf",
+  "selectedPolicyFingerprint": "policy-30adb3b8",
   "policyFlowVersion": "SELECTED_POLICY_FLOW_V1",
   "topologyFingerprint": "topology-4481a40d",
   "serializedSummary": {
     "path": "quality-lab/fixtures/policy-flow-clean-v1-artifact.json",
     "selector": "clean",
-    "artifactSha256": "240b9065365eef61e9209df60fa6676d02bc61547f50288377bec55c0ee67be4",
-    "normalizedSummarySha256": "12c4d104b9fd3f9c43499995e024d05df4fb9de90b9b0e72ca4233a8564d0746",
+    "artifactSha256": "391625eedc30b222c0d469e95fd9743c6e93ef905588c052aa3f5f34f95bcc28",
+    "normalizedSummarySha256": "7d875fa1d885588af2fcba9340d071418446893890700e9cd02854a275af0467",
     "nodeCount": 5,
     "edgeCount": 14
   },
