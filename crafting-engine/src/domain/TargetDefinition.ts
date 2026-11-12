@@ -382,7 +382,8 @@ export function getMatchingOutcomeBranch(
 /**
  * Returns the interchangeability signature for a mod that the target cannot tell apart from
  * its class-mates, or undefined when the mod must keep its own identity: it is fractured
- * (persists through rerolls and can be a fracture target), it satisfies or is referenced by
+ * (unless `includeFractured`; the caller must then keep fractured and loose junk apart, as
+ * a fractured mod persists through rerolls), it satisfies or is referenced by
  * a target or roll requirement, or its exclusion group also hosts a mod a requirement names
  * (so it blocks that target from rolling).
  */
@@ -390,9 +391,10 @@ export function getInterchangeableJunkSignature(
   mod: RolledMod,
   requirements: readonly ModRequirement[],
   rollRequirements: readonly RollRequirement[] = [],
+  includeFractured = false,
 ): string | undefined {
   const exclusionClass = mod.exclusionClass;
-  if (!exclusionClass || mod.isFractured) return undefined;
+  if (!exclusionClass || (mod.isFractured && !includeFractured)) return undefined;
   for (const requirement of [...requirements, ...rollRequirements]) {
     if (requirement.modGroup !== undefined && (
       requirement.modGroup === mod.modGroup || mod.modGroups?.includes(requirement.modGroup)

@@ -65,3 +65,44 @@ describe('interchangeable junk mods', () => {
     expect(merged.states).toBeLessThan(strict.states / 5);
   }, 120_000);
 });
+
+// A fractured junk mod stays interchangeable with its class-mates: whichever member was
+// fractured blocks an identically shaped slice of the pool. Keying it by its own group left
+// the graph with a state only for the representative the merged parent happened to carry,
+// and a simulated craft that fractured another member fell out of the graph.
+describe('fractured junk state identity', () => {
+  it('gives class-mates one state and keeps fractured apart from loose junk', async () => {
+    const { getCanonicalStateKey } = await import('../../src/rules/actionDiscovery.ts');
+    const { toRolledMod } = await import('../../src/domain/Mod.ts');
+    const pool = ModPool.forCluster(new ClusterModRepository(), BASE, CLUSTER);
+    const notable = pool.getPrefixes().find((mod) => mod.isNotable)!;
+    const target: TargetDefinition = { requiredMods: [{ modId: notable.modId }] };
+    const bySignature = new Map<string, ReturnType<typeof pool.getSuffixes>>();
+    for (const mod of pool.getSuffixes()) {
+      const signature = mod.exclusionClass?.signature;
+      if (!signature) continue;
+      bySignature.set(signature, [...(bySignature.get(signature) ?? []), mod]);
+    }
+    const classMates = [...bySignature.values()]
+      .map((mods) => mods.filter((mod, index, all) =>
+        all.findIndex((other) => other.modGroup === mod.modGroup) === index))
+      .find((mods) => mods.length >= 2);
+    expect(classMates, 'pool has two junk suffix groups in one exclusion class').toBeDefined();
+    const [first, second] = classMates!;
+    const stateWith = (mod: typeof first, isFractured: boolean): ItemState => ({
+      baseType: BASE,
+      clusterType: CLUSTER,
+      itemLevel: 84,
+      passiveCount: 3,
+      rarity: 'rare',
+      prefixes: [],
+      suffixes: [toRolledMod(mod, { isFractured })],
+      fracturedModIds: isFractured ? [mod.modId] : [],
+    });
+    const key = (mod: typeof first, isFractured: boolean) =>
+      getCanonicalStateKey(stateWith(mod, isFractured), target);
+    expect(key(first, true)).toBe(key(second, true));
+    expect(key(first, false)).toBe(key(second, false));
+    expect(key(first, true)).not.toBe(key(first, false));
+  });
+});

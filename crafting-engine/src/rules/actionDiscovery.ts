@@ -106,8 +106,14 @@ export function getCanonicalStateKey(
   const formatMod = (m: RolledMod): string => {
     // Non-target mods that exclude an identical slice of the pool are one state: see
     // ExclusionClass. This is what keeps the graph from enumerating every junk-suffix pair.
-    const junkSignature = getInterchangeableJunkSignature(m, reqs, target?.finalRollRequirements);
-    if (junkSignature !== undefined) return `junk(${junkSignature})`;
+    // A fractured junk mod is interchangeable with its class-mates too: whichever one got
+    // fractured blocks an identically shaped slice of the pool for the rest of the craft.
+    // Keying it by its own group made the graph model only the representative the merged
+    // state happened to carry, so a real item that fractured a different member had no state.
+    const junkSignature = getInterchangeableJunkSignature(m, reqs, target?.finalRollRequirements, true);
+    if (junkSignature !== undefined) {
+      return m.isFractured ? `FRAC:junk(${junkSignature})` : `junk(${junkSignature})`;
+    }
     const matchingTargetRequirements = reqs
       .map((requirement, index) => matchesModRequirement(m, requirement) ? index : -1)
       .filter((index) => index >= 0);
