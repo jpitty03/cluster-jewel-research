@@ -906,49 +906,60 @@ function solveSelectedPolicyLinearSystem(
     return { values: new Map(), iterations: 0, residual: Infinity, converged: false };
   }
 
+  // Compile the policy matrix once into flat arrays. Rows that share a transition array
+  // (reset mechanics share them aggressively) share one group, so a product costs one pass
+  // over the distinct groups plus one over the rows. Group order is first-use order and
+  // entries keep their original order, so sums accumulate exactly as the keyed version did.
+  const groupByTransitions = new Map<NonNullable<(typeof actions)[number]>['transitions'], number>();
+  const rowGroup = new Int32Array(size);
+  const groupStarts: number[] = [0];
+  const entryTargets: number[] = [];
+  const entryProbabilities: number[] = [];
+  for (let row = 0; row < size; row++) {
+    const transitions = actions[row]!.transitions;
+    let group = groupByTransitions.get(transitions);
+    if (group === undefined) {
+      group = groupByTransitions.size;
+      groupByTransitions.set(transitions, group);
+      for (const transition of transitions) {
+        const targetIndex = indexByKey.get(transition.targetKey);
+        if (targetIndex === undefined) continue;
+        entryTargets.push(targetIndex);
+        entryProbabilities.push(transition.probability);
+      }
+      groupStarts.push(entryTargets.length);
+    }
+    rowGroup[row] = group;
+  }
+  const groupCount = groupByTransitions.size;
+  const groupStart = Int32Array.from(groupStarts);
+  const entryTarget = Int32Array.from(entryTargets);
+  const entryProbability = Float64Array.from(entryProbabilities);
+  const groupScratch = new Float64Array(groupCount);
+
   const multiply = (input: Float64Array): Float64Array => {
     if (deadlineMs !== undefined && Date.now() >= deadlineMs) {
       throw new SearchRoundDeadlineExceeded();
     }
     const output = new Float64Array(input);
     if (!transpose) {
-      const continuationByTransitions = new Map<
-        NonNullable<(typeof actions)[number]>['transitions'],
-        number
-      >();
-      for (let row = 0; row < size; row++) {
-        const action = actions[row]!;
-        let continuation = continuationByTransitions.get(action.transitions);
-        if (continuation === undefined) {
-          continuation = 0;
-          for (const transition of action.transitions) {
-            const targetIndex = indexByKey.get(transition.targetKey);
-            if (targetIndex !== undefined) continuation += transition.probability * input[targetIndex];
-          }
-          continuationByTransitions.set(action.transitions, continuation);
+      for (let group = 0; group < groupCount; group++) {
+        let continuation = 0;
+        for (let entry = groupStart[group]; entry < groupStart[group + 1]; entry++) {
+          continuation += entryProbability[entry] * input[entryTarget[entry]];
         }
-        output[row] -= continuation;
+        groupScratch[group] = continuation;
       }
+      for (let row = 0; row < size; row++) output[row] -= groupScratch[rowGroup[row]];
       return output;
     }
 
-    const sourceMassByTransitions = new Map<
-      NonNullable<(typeof actions)[number]>['transitions'],
-      number
-    >();
-    for (let row = 0; row < size; row++) {
-      const transitions = actions[row]!.transitions;
-      sourceMassByTransitions.set(
-        transitions,
-        (sourceMassByTransitions.get(transitions) ?? 0) + input[row]
-      );
-    }
-    for (const [transitions, sourceMass] of sourceMassByTransitions) {
-      for (const transition of transitions) {
-        const targetIndex = indexByKey.get(transition.targetKey);
-        if (targetIndex !== undefined) {
-          output[targetIndex] -= transition.probability * sourceMass;
-        }
+    groupScratch.fill(0);
+    for (let row = 0; row < size; row++) groupScratch[rowGroup[row]] += input[row];
+    for (let group = 0; group < groupCount; group++) {
+      const sourceMass = groupScratch[group];
+      for (let entry = groupStart[group]; entry < groupStart[group + 1]; entry++) {
+        output[entryTarget[entry]] -= entryProbability[entry] * sourceMass;
       }
     }
     return output;
@@ -2346,13 +2357,22 @@ export class GenericSearchEngine {
         timeToFirstUsefulRecommendationMs ??= Date.now() - startTime;
         if (effectiveOptions.stopAfterFirstCertifiedPolicy === true) break;
         if (intent === 'RECOMMEND') {
-          const canRefine = recommendationRefinementRoundsRemaining > 0 &&
+          // Past the guaranteed refinement round, keep going only while rounds still pay.
+          // A first certified route can be several times the cost of the one the next
+          // tranche of states finds (12,647c -> 3,598c on the four-mod fixture), and
+          // stopping there left the Deep presets' extra states unused.
+          const previousIncumbent = incumbentHistory.at(-2)?.upperBoundChaos;
+          const latestIncumbent = incumbentHistory.at(-1)?.upperBoundChaos;
+          const lastRoundImproved = previousIncumbent !== undefined &&
+            latestIncumbent !== undefined &&
+            previousIncumbent - latestIncumbent > 0.02 * previousIncumbent;
+          const canRefine = (recommendationRefinementRoundsRemaining > 0 || lastRoundImproved) &&
             round + 1 < availableRounds &&
             roundStateBudget < maxStates &&
             result.optimalityProof.modeledActionOptimalityProven !== true &&
             (deadlineMs === undefined || Date.now() < deadlineMs);
           if (canRefine) {
-            recommendationRefinementRoundsRemaining--;
+            if (recommendationRefinementRoundsRemaining > 0) recommendationRefinementRoundsRemaining--;
           } else {
             break;
           }
@@ -2987,6 +3007,42 @@ export class GenericSearchEngine {
         includedKeys.add(key);
       }
       if (!selectedPolicyDirectlyClosed) break;
+      // A policy with a state that can never reach a terminal makes (I - P) singular, and
+      // the iterative solve then burns its whole iteration allowance before giving up.
+      // Reachability over the selected transitions answers the same question in one pass.
+      // States sharing a transition array are handled as one group.
+      {
+        const sourcesByTransitions = new Map<CanonicalGraphNode['actions'] extends Map<string, infer T> ? T extends { transitions: infer U } ? U : never : never, string[]>();
+        for (const key of includedKeys) {
+          const transitions = nodes.get(key)!.actions.get(policyMap.get(key)!.bestActionId)!.transitions;
+          const sources = sourcesByTransitions.get(transitions);
+          if (sources) sources.push(key);
+          else sourcesByTransitions.set(transitions, [key]);
+        }
+        const groupsByTarget = new Map<string, Array<typeof sourcesByTransitions extends Map<infer K, unknown> ? K : never>>();
+        for (const transitions of sourcesByTransitions.keys()) {
+          for (const transition of transitions) {
+            const groups = groupsByTarget.get(transition.targetKey);
+            if (groups) groups.push(transitions);
+            else groupsByTarget.set(transition.targetKey, [transitions]);
+          }
+        }
+        const queue: string[] = [];
+        for (const [key, node] of nodes) if (node.isTerminal) queue.push(key);
+        const activated = new Set<unknown>();
+        let reached = 0;
+        for (let index = 0; index < queue.length; index++) {
+          for (const transitions of groupsByTarget.get(queue[index]) ?? []) {
+            if (activated.has(transitions)) continue;
+            activated.add(transitions);
+            for (const source of sourcesByTransitions.get(transitions)!) {
+              reached++;
+              queue.push(source);
+            }
+          }
+        }
+        if (reached < includedKeys.size) break;
+      }
       const solve = solveSelectedPolicyLinearSystem(
         nodes,
         policyMap,
@@ -3003,6 +3059,9 @@ export class GenericSearchEngine {
       for (const [key, value] of solve.values) V.set(key, value);
 
       let policyChanged = false;
+      // Many states share one transition array per action (every magic item rerolls into the
+      // same distribution), so each array's continuation is computed once per pass.
+      const improvementContinuations = new Map<unknown, number>();
       for (const [key, decision] of policyMap) {
         const node = nodes.get(key)!;
         let bestActionId = '';
@@ -3011,14 +3070,18 @@ export class GenericSearchEngine {
         for (const candidate of decision.candidateQValues) {
           const action = node.actions.get(candidate.actionId)!;
           if (!action.isDirectlyResolved) continue;
-          let continuation = 0;
-          for (const transition of action.transitions) {
-            const targetValue = V.get(transition.targetKey);
-            if (targetValue === undefined) {
-              continuation = Infinity;
-              break;
+          let continuation = improvementContinuations.get(action.transitions);
+          if (continuation === undefined) {
+            continuation = 0;
+            for (const transition of action.transitions) {
+              const targetValue = V.get(transition.targetKey);
+              if (targetValue === undefined) {
+                continuation = Infinity;
+                break;
+              }
+              continuation += transition.probability * targetValue;
             }
-            continuation += transition.probability * targetValue;
+            improvementContinuations.set(action.transitions, continuation);
           }
           candidate.expectedContinuationChaos = continuation;
           candidate.totalQValueChaos = action.immediateObjectiveCost + continuation;
@@ -3068,16 +3131,28 @@ export class GenericSearchEngine {
       const seedAction = new Map<string, string>();
       for (let prune = 0; prune <= nodes.size; prune++) {
         assertWithinDeadline();
-        // Reverse edges over the actions that are still safe.
-        const parents = new Map<string, Array<{ key: string; actionId: string }>>();
+        // Reverse edges over the actions that are still safe. States share transition arrays
+        // heavily, so edges are kept per distinct array ("group") with its member
+        // (state, action) pairs, rather than once per state per outcome.
+        type SeedMember = { key: string; actionId: string; order: number };
+        const membersByTransitions = new Map<unknown, SeedMember[]>();
+        const groupsByTarget = new Map<string, unknown[]>();
+        let memberOrder = 0;
         for (const [key, actionIds] of usableActions) {
           const node = nodes.get(key)!;
           for (const actionId of actionIds) {
-            for (const transition of node.actions.get(actionId)!.transitions) {
-              const list = parents.get(transition.targetKey) ?? [];
-              list.push({ key, actionId });
-              parents.set(transition.targetKey, list);
+            const transitions = node.actions.get(actionId)!.transitions;
+            let members = membersByTransitions.get(transitions);
+            if (!members) {
+              members = [];
+              membersByTransitions.set(transitions, members);
+              for (const transition of transitions) {
+                const groups = groupsByTarget.get(transition.targetKey);
+                if (groups) groups.push(transitions);
+                else groupsByTarget.set(transition.targetKey, [transitions]);
+              }
             }
+            members.push({ key, actionId, order: memberOrder++ });
           }
         }
         canFinish = new Set<string>();
@@ -3090,9 +3165,20 @@ export class GenericSearchEngine {
           stepsToFinish.set(key, 0);
           queue.push(key);
         }
+        const activatedGroups = new Set<unknown>();
         for (let index = 0; index < queue.length; index++) {
           const targetKey = queue[index];
-          for (const parent of parents.get(targetKey) ?? []) {
+          // Every member of a group reaches this target, so a group only matters the first
+          // time one of its targets is dequeued. Members are visited in (state, action)
+          // order, which is the order the per-outcome edge list produced.
+          const newlyReaching: SeedMember[] = [];
+          for (const group of groupsByTarget.get(targetKey) ?? []) {
+            if (activatedGroups.has(group)) continue;
+            activatedGroups.add(group);
+            for (const member of membersByTransitions.get(group)!) newlyReaching.push(member);
+          }
+          newlyReaching.sort((left, right) => left.order - right.order);
+          for (const parent of newlyReaching) {
             if (canFinish.has(parent.key)) continue;
             canFinish.add(parent.key);
             stepsToFinish.set(parent.key, stepsToFinish.get(targetKey)! + 1);
@@ -3102,10 +3188,18 @@ export class GenericSearchEngine {
         }
         // An action that can land on a state with no way to finish is not safe to rely on.
         let removed = false;
+        const groupIsSafe = new Map<unknown, boolean>();
         for (const [key, actionIds] of usableActions) {
           const node = nodes.get(key)!;
-          const kept = actionIds.filter((actionId) =>
-            node.actions.get(actionId)!.transitions.every((transition) => canFinish.has(transition.targetKey)));
+          const kept = actionIds.filter((actionId) => {
+            const transitions = node.actions.get(actionId)!.transitions;
+            let safe = groupIsSafe.get(transitions);
+            if (safe === undefined) {
+              safe = transitions.every((transition) => canFinish.has(transition.targetKey));
+              groupIsSafe.set(transitions, safe);
+            }
+            return safe;
+          });
           if (kept.length !== actionIds.length) {
             usableActions.set(key, kept);
             removed = true;
