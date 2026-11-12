@@ -5197,3 +5197,9 @@ td a {
   margin-top: 4px;
   color: #fbbf24;
 }
+
+th[aria-sort]:focus-visible,
+tr.clickable:focus-visible {
+  outline: 2px solid #7dd3fc;
+  outline-offset: -2px;
+}

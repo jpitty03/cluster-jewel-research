@@ -1,4 +1,4 @@
-import { Fragment, useEffect, useMemo, useRef, useState } from 'react'
+import { Fragment, useEffect, useMemo, useRef, useState, type KeyboardEvent } from 'react'
 import { createPortal } from 'react-dom'
 import poedbData from './data/poedb-cluster-mods.json'
 import { DEFAULT_LEAGUE } from '../league'
@@ -50,17 +50,25 @@ interface Progress {
   running: boolean
 }
 
-// Prod: every committed league snapshot is bundled here, keyed by league display name
-// and sorted newest-first (by fetch time). This also yields the league dropdown list.
-const clusterSnapshots = import.meta.glob('./data/*/cluster-jewels.json', {
+// Prod: each committed league's cluster snapshot is several MB, so it is its own chunk,
+// fetched when that league is shown. The league list (display name, newest first) comes
+// from the small streamers.json beside it, which App.tsx bundles anyway.
+const clusterLoaders = import.meta.glob('./data/*/cluster-jewels.json', {
+  import: 'default',
+}) as Record<string, () => Promise<ClusterData>>
+const leagueMeta = import.meta.glob('./data/*/streamers.json', {
   eager: true,
   import: 'default',
-}) as Record<string, ClusterData>
-const snapshotByLeague: Record<string, ClusterData> = {}
-for (const data of Object.values(clusterSnapshots)) snapshotByLeague[data.league] = data
-const snapshotLeagues = Object.values(snapshotByLeague)
-  .sort((a, b) => (a.fetchedAt < b.fetchedAt ? 1 : -1))
-  .map((d) => d.league)
+}) as Record<string, { league: string; fetchedAt: string }>
+const snapshotLoaderByLeague: Record<string, () => Promise<ClusterData>> = {}
+const snapshotLeagues = Object.entries(leagueMeta)
+  .filter(([path]) => clusterLoaders[path.replace('streamers.json', 'cluster-jewels.json')])
+  .sort(([, a], [, b]) => (a.fetchedAt < b.fetchedAt ? 1 : -1))
+  .map(([path, meta]) => {
+    snapshotLoaderByLeague[meta.league] =
+      clusterLoaders[path.replace('streamers.json', 'cluster-jewels.json')]
+    return meta.league
+  })
 
 const secsUntil = (epochMs: number) => Math.max(0, Math.round((epochMs - Date.now()) / 1000))
 
@@ -610,6 +618,7 @@ const sortValue = (r: Row, key: SortKey): string | number | null => {
 
 function ClusterJewels({ onOptimize }: { onOptimize: (seed: OptimizerSeed) => void }) {
   const [data, setData] = useState<ClusterData | null>(null)
+  const requestedLeagueRef = useRef<string | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [progress, setProgress] = useState<Progress | null>(null)
   const [leagues, setLeagues] = useState<string[]>(snapshotLeagues)
@@ -639,8 +648,18 @@ function ClusterJewels({ onOptimize }: { onOptimize: (seed: OptimizerSeed) => vo
 
   const loadLeagueData = (l: string) => {
     if (!LIVE) {
-      setData(snapshotByLeague[l] ?? null)
-      return Promise.resolve()
+      const loader = snapshotLoaderByLeague[l]
+      if (!loader) {
+        setData(null)
+        return Promise.resolve()
+      }
+      requestedLeagueRef.current = l
+      return loader()
+        .then((snapshot) => {
+          // A slower earlier league must not overwrite the one picked after it.
+          if (requestedLeagueRef.current === l) setData(snapshot)
+        })
+        .catch((err) => setError(String(err)))
     }
     return fetch(`/api/cluster-jewels?league=${encodeURIComponent(l)}`)
       .then(async (res) => {
@@ -770,6 +789,19 @@ function ClusterJewels({ onOptimize }: { onOptimize: (seed: OptimizerSeed) => vo
       setSortDesc(DESC_FIRST.includes(key))
     }
   }
+  // Sortable headers are reachable and operable from the keyboard, and announce their state.
+  const sortableHeader = (key: SortKey) => ({
+    onClick: () => setSort(key),
+    onKeyDown: (event: KeyboardEvent<HTMLElement>) => {
+      if (event.key !== 'Enter' && event.key !== ' ') return
+      event.preventDefault()
+      setSort(key)
+    },
+    tabIndex: 0,
+    'aria-sort': (sortKey === key ? (sortDesc ? 'descending' : 'ascending') : 'none') as
+      'ascending' | 'descending' | 'none',
+  })
+
   const arrow = (key: SortKey) => (sortKey === key ? (sortDesc ? ' ▾' : ' ▴') : '')
 
   const totalShown = groups.reduce((s, g) => s + g.jewels.length, 0)
@@ -1064,6 +1096,10 @@ function ClusterJewels({ onOptimize }: { onOptimize: (seed: OptimizerSeed) => vo
         </div>
       )}
 
+      {!LIVE && !data && !error && snapshotLoaderByLeague[league] && (
+        <div className="status">Loading {league} cluster jewels…</div>
+      )}
+
       {data && (
         <>
           <p className="summary">
@@ -1074,24 +1110,24 @@ function ClusterJewels({ onOptimize }: { onOptimize: (seed: OptimizerSeed) => vo
             <table>
               <thead>
                 <tr>
-                  <th onClick={() => setSort('base')}>Base{arrow('base')}</th>
-                  <th onClick={() => setSort('clusterType')}>Cluster Type{arrow('clusterType')}</th>
-                  <th onClick={() => setSort('count')} className="num">
+                  <th {...sortableHeader('base')}>Base{arrow('base')}</th>
+                  <th {...sortableHeader('clusterType')}>Cluster Type{arrow('clusterType')}</th>
+                  <th {...sortableHeader('count')} className="num">
                     Characters{arrow('count')}
                   </th>
-                  <th onClick={() => setSort('fractured')} className="num">
+                  <th {...sortableHeader('fractured')} className="num">
                     Fractured{arrow('fractured')}
                   </th>
-                  <th onClick={() => setSort('basePrice')}>Base Price{arrow('basePrice')}</th>
+                  <th {...sortableHeader('basePrice')}>Base Price{arrow('basePrice')}</th>
                   <th
-                    onClick={() => setSort('cheapest')}
+                    {...sortableHeader('cheapest')}
                     className="num"
                     title="Cheapest listing across this group's priced combos"
                   >
                     Cheapest{arrow('cheapest')}
                   </th>
                   <th
-                    onClick={() => setSort('median')}
+                    {...sortableHeader('median')}
                     className="num"
                     title={
                       "Median completed price across this group's priced combos, weighted by " +
@@ -1108,6 +1144,14 @@ function ClusterJewels({ onOptimize }: { onOptimize: (seed: OptimizerSeed) => vo
                     <tr
                       className="clickable"
                       onClick={() => setExpanded(expanded === g.key ? null : g.key)}
+                      tabIndex={0}
+                      aria-expanded={expanded === g.key}
+                      onKeyDown={(event) => {
+                        if (event.target !== event.currentTarget) return
+                        if (event.key !== 'Enter' && event.key !== ' ') return
+                        event.preventDefault()
+                        setExpanded(expanded === g.key ? null : g.key)
+                      }}
                     >
                       <td>{g.base.replace(' Cluster Jewel', '')}</td>
                       <td className="char">{g.clusterType}</td>

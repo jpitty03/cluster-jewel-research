@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useState, type KeyboardEvent } from 'react'
 import ClusterJewels from './ClusterJewels'
 import CraftOptimizer from './CraftOptimizer'
 import { DEFAULT_LEAGUE } from '../league'
@@ -162,6 +162,19 @@ function App() {
     }
   }
 
+  // Sortable headers are reachable and operable from the keyboard, and announce their state.
+  const sortableHeader = (key: SortKey) => ({
+    onClick: () => setSort(key),
+    onKeyDown: (event: KeyboardEvent<HTMLElement>) => {
+      if (event.key !== 'Enter' && event.key !== ' ') return
+      event.preventDefault()
+      setSort(key)
+    },
+    tabIndex: 0,
+    'aria-sort': (sortKey === key ? (sortDesc ? 'descending' : 'ascending') : 'none') as
+      'ascending' | 'descending' | 'none',
+  })
+
   const arrow = (key: SortKey) => (sortKey === key ? (sortDesc ? ' ▾' : ' ▴') : '')
 
   return (
@@ -249,15 +262,15 @@ function App() {
           <table>
             <thead>
               <tr>
-                <th onClick={() => setSort('name')}>Character{arrow('name')}</th>
-                <th onClick={() => setSort('streamerName')}>Streamer{arrow('streamerName')}</th>
-                <th onClick={() => setSort('class')}>Class{arrow('class')}</th>
-                <th onClick={() => setSort('level')} className="num">
+                <th {...sortableHeader('name')}>Character{arrow('name')}</th>
+                <th {...sortableHeader('streamerName')}>Streamer{arrow('streamerName')}</th>
+                <th {...sortableHeader('class')}>Class{arrow('class')}</th>
+                <th {...sortableHeader('level')} className="num">
                   Level{arrow('level')}
                 </th>
                 <th className="num">DPS</th>
-                <th onClick={() => setSort('league')}>League{arrow('league')}</th>
-                <th onClick={() => setSort('seen')}>Seen{arrow('seen')}</th>
+                <th {...sortableHeader('league')}>League{arrow('league')}</th>
+                <th {...sortableHeader('seen')}>Seen{arrow('seen')}</th>
               </tr>
             </thead>
             <tbody>
