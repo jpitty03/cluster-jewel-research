@@ -382,6 +382,31 @@ for (const base of Object.keys(PAGES)) {
       changes.push(`${base}: ${mod.modId} weight ${was.weight} -> ${mod.weight}, ilvl ${was.ilvl} -> ${mod.ilvl}`)
     }
   }
+  // Notables are where a new league usually differs: added, removed or reweighted per type.
+  const previousPools = new Map((previous?.bases?.[base] ?? []).map((pool) => [pool.clusterType, pool]))
+  for (const pool of pools) {
+    const wasPool = previousPools.get(pool.clusterType)
+    if (!wasPool) {
+      changes.push(`${base}: new cluster type "${pool.clusterType}" (${pool.notables.length} notables)`)
+      continue
+    }
+    const where = `${base} · ${pool.clusterType}`
+    const wasNotables = new Map(wasPool.notables.map((notable) => [notable.name, notable]))
+    for (const notable of pool.notables) {
+      const was = wasNotables.get(notable.name)
+      if (!was) changes.push(`${where}: new notable ${notable.name} (weight ${notable.weight})`)
+      else if (was.weight !== notable.weight || was.ilvl !== notable.ilvl) {
+        changes.push(`${where}: ${notable.name} weight ${was.weight} -> ${notable.weight}, ilvl ${was.ilvl} -> ${notable.ilvl}`)
+      }
+      wasNotables.delete(notable.name)
+    }
+    for (const name of wasNotables.keys()) changes.push(`${where}: notable ${name} removed`)
+  }
+  for (const pool of previous?.bases?.[base] ?? []) {
+    if (!pools.some((now) => now.clusterType === pool.clusterType)) {
+      changes.push(`${base}: cluster type "${pool.clusterType}" removed`)
+    }
+  }
 }
 if (problems.length) {
   console.error('Scrape looks broken, nothing written:' + problems.map((line) => '\n  ' + line).join(''))
