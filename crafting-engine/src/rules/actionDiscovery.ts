@@ -6,6 +6,7 @@ import {
   matchesModRequirement,
   evaluateRollRequirement,
   getAllTargetModRequirements,
+  getInterchangeableJunkSignature,
 } from '../domain/TargetDefinition.ts';
 
 import {
@@ -103,6 +104,10 @@ export function getCanonicalStateKey(
   const reqs = target ? getAllTargetModRequirements(target) : [];
 
   const formatMod = (m: RolledMod): string => {
+    // Non-target mods that exclude an identical slice of the pool are one state: see
+    // ExclusionClass. This is what keeps the graph from enumerating every junk-suffix pair.
+    const junkSignature = getInterchangeableJunkSignature(m, reqs, target?.finalRollRequirements);
+    if (junkSignature !== undefined) return `junk(${junkSignature})`;
     const matchingTargetRequirements = reqs
       .map((requirement, index) => matchesModRequirement(m, requirement) ? index : -1)
       .filter((index) => index >= 0);

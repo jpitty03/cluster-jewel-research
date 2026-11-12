@@ -378,3 +378,37 @@ export function getMatchingOutcomeBranch(
     branch.requiredMods.every((req) => affixes.some((m) => matchesModRequirement(m, req)))
   );
 }
+
+/**
+ * Returns the interchangeability signature for a mod that the target cannot tell apart from
+ * its class-mates, or undefined when the mod must keep its own identity: it is fractured
+ * (persists through rerolls and can be a fracture target), it satisfies or is referenced by
+ * a target or roll requirement, or its exclusion group also hosts a mod a requirement names
+ * (so it blocks that target from rolling).
+ */
+export function getInterchangeableJunkSignature(
+  mod: RolledMod,
+  requirements: readonly ModRequirement[],
+  rollRequirements: readonly RollRequirement[] = [],
+): string | undefined {
+  const exclusionClass = mod.exclusionClass;
+  if (!exclusionClass || mod.isFractured) return undefined;
+  for (const requirement of [...requirements, ...rollRequirements]) {
+    if (requirement.modGroup !== undefined && (
+      requirement.modGroup === mod.modGroup || mod.modGroups?.includes(requirement.modGroup)
+    )) return undefined;
+    if (requirement.modId !== undefined && exclusionClass.memberIds.has(requirement.modId)) {
+      return undefined;
+    }
+    if (requirement.name !== undefined && exclusionClass.memberNames.has(requirement.name)) {
+      return undefined;
+    }
+    // A requirement that names nothing matches every mod.
+    if (
+      requirement.modGroup === undefined &&
+      requirement.modId === undefined &&
+      requirement.name === undefined
+    ) return undefined;
+  }
+  return exclusionClass.signature;
+}

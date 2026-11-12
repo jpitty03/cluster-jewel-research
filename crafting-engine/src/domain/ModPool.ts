@@ -8,23 +8,32 @@ export class ModPool {
   private suffixes: Mod[];
 
   constructor(mods: Mod[]) {
-    const groupSignaturesByName = new Map<string, Set<string>>();
+    // Interchangeability classes for non-target mods (see ExclusionClass). Only groups that
+    // partition the pool cleanly qualify: every member must belong to exactly that one group,
+    // otherwise two occupied groups could overlap and the removed weight would not be additive.
+    const membersByGroup = new Map<string, Mod[]>();
+    const multiGroup = new Set<string>();
     for (const mod of mods) {
-      const groups = (mod.modGroups?.length > 0 ? mod.modGroups : [mod.modGroup])
-        .slice()
-        .sort()
-        .join('+');
-      const signatures = groupSignaturesByName.get(mod.name) ?? new Set<string>();
-      signatures.add(groups);
-      groupSignaturesByName.set(mod.name, signatures);
-    }
-    for (const mod of mods) {
-      if ((groupSignaturesByName.get(mod.name)?.size ?? 0) > 1) {
-        // Duplicate-name exclusion is a separate legality predicate from mod-group exclusion.
-        // Mark it from pool data so canonical search preserves only names that can change the
-        // eligible successor pool, without any modifier-name special cases.
-        mod.eligibilityNameSensitive = true;
+      const groups = mod.modGroups?.length > 0 ? mod.modGroups : [mod.modGroup];
+      for (const group of groups) {
+        const members = membersByGroup.get(group) ?? [];
+        members.push(mod);
+        membersByGroup.set(group, members);
+        if (groups.length !== 1) multiGroup.add(group);
       }
+    }
+    for (const [group, members] of membersByGroup) {
+      if (multiGroup.has(group)) continue;
+      const exclusionClass = {
+        signature: members
+          .map((member) =>
+            `${member.genType === 'Prefix' ? 'P' : 'S'}${member.isNotable ? 'N' : ''}@${member.ilvl}x${member.weight}`)
+          .sort()
+          .join(','),
+        memberIds: new Set(members.map((member) => member.modId)),
+        memberNames: new Set(members.map((member) => member.name)),
+      };
+      for (const member of members) member.exclusionClass = exclusionClass;
     }
     this.mods = mods;
     this.prefixes = mods.filter((m) => m.genType === 'Prefix');

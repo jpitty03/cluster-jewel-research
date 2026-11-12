@@ -308,6 +308,8 @@ function conditionLines(
         ? 'blocking junk'
         : junk.kind === 'OCCUPIES_LAST_COMPATIBLE_SLOT'
           ? 'last-slot junk'
+          : junk.kind === 'FILLS_NOTABLE_CAPACITY'
+            ? 'junk notable (no notable slots left)'
           : 'fractured junk';
     lines.push(`${junk.count} ${junk.side.toLowerCase()} ${kind}`);
   }

@@ -101,6 +101,8 @@ export type PlayerJunkKind =
   | 'SAFE_FOR_THIS_RULE'
   | 'BLOCKS_MISSING_TARGET'
   | 'OCCUPIES_LAST_COMPATIBLE_SLOT'
+  /** A junk notable on a jewel whose notable slots are all used while a target notable is missing. */
+  | 'FILLS_NOTABLE_CAPACITY'
   | 'FRACTURED';
 
 export type PlayerCraftRuleStage =
@@ -281,6 +283,8 @@ export interface CraftPlanSource {
   };
   /** Eligible catalog metadata used only to compile inspectable player conditions. */
   modifierMetadata: readonly CraftPlanModifierMetadata[];
+  /** Notable slots on this jewel base; lets rules tell apart items that can take no more notables. */
+  maxNotables?: number;
 }
 
 const PHASE_ORDER: CraftPlanPhase[] = [
@@ -511,6 +515,7 @@ function junkKindForAffix(options: {
   context: PolicyExplanationRule['context'];
   target: TargetDefinition;
   catalog: readonly CraftPlanModifierMetadata[];
+  maxNotables?: number;
 }): PlayerJunkKind {
   if (options.isFractured) return 'FRACTURED';
   const missingMetadata = missingTargetMetadata(
@@ -522,6 +527,13 @@ function junkKindForAffix(options: {
     targetMetadata.genType.toUpperCase() === options.side &&
     overlappingModGroup(options.metadata, targetMetadata)
   )) return 'BLOCKS_MISSING_TARGET';
+  if (options.maxNotables !== undefined && options.metadata.isNotable &&
+      missingMetadata.some((targetMetadata) => targetMetadata.isNotable)) {
+    const notableIds = new Set(options.catalog.filter((entry) => entry.isNotable).map((entry) => entry.modId));
+    const notablesOnItem = [...options.context.prefixes, ...options.context.suffixes]
+      .filter((affix) => notableIds.has(affix.modId)).length;
+    if (notablesOnItem >= options.maxNotables) return 'FILLS_NOTABLE_CAPACITY';
+  }
   const maximum = options.side === 'PREFIX'
     ? getMaxPrefixes(options.context.rarity)
     : getMaxSuffixes(options.context.rarity);
@@ -539,6 +551,7 @@ export function classifyPlayerRuleAffixes(options: {
   context: PolicyExplanationRule['context'];
   target: TargetDefinition;
   modifierMetadata: readonly CraftPlanModifierMetadata[];
+  maxNotables?: number;
 }): PlayerCraftRuleAffixEvidence[] {
   const metadataById = new Map(options.modifierMetadata.map((metadata) => [metadata.modId, metadata]));
   return ([
@@ -562,6 +575,7 @@ export function classifyPlayerRuleAffixes(options: {
               context: options.context,
               target: options.target,
               catalog: options.modifierMetadata,
+              maxNotables: options.maxNotables,
             }),
           }
         : {}),
@@ -747,6 +761,7 @@ export function compilePlayerCraftRules(options: {
   rules: PolicyExplanationRule[];
   selectedPhysicalActionIds: ReadonlySet<string>;
   modifierMetadata: readonly CraftPlanModifierMetadata[];
+  maxNotables?: number;
 }): { rules: PlayerCraftRule[]; certification: PlayerCraftRuleCertification } {
   interface Draft {
     policyRuleIndex: number;
@@ -776,6 +791,7 @@ export function compilePlayerCraftRules(options: {
       context: rule.context,
       target: options.target,
       modifierMetadata: options.modifierMetadata,
+      maxNotables: options.maxNotables,
     });
     for (const affix of affixes.filter((candidate) => candidate.role === 'JUNK')) {
       if (!options.modifierMetadata.some((metadata) => metadata.modId === affix.modId)) {
@@ -1633,6 +1649,7 @@ export function buildCraftPlan(source: CraftPlanSource): CraftPlanSummary {
     rules: source.policyExplanation,
     selectedPhysicalActionIds: selectedPhysicalActionIdSet,
     modifierMetadata: source.modifierMetadata,
+    maxNotables: source.maxNotables,
   });
   const downstreamPolicyActionIds = unique([
     ...source.policyExplanation

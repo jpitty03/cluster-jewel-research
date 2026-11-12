@@ -3,6 +3,7 @@ import type { TargetDefinition } from '../domain/TargetDefinition.ts';
 import {
   evaluateRollRequirement,
   getAllTargetModRequirements,
+  getInterchangeableJunkSignature,
   matchesModRequirement,
 } from '../domain/TargetDefinition.ts';
 import type { SolverContext } from '../domain/CraftAction.ts';
@@ -164,6 +165,8 @@ function addMod(state: ItemState, mod: Mod): ItemState {
 function getHarvestCanonicalAggregationKey(state: ItemState, target: TargetDefinition): string {
   const requirements = getAllTargetModRequirements(target);
   const formatMod = (mod: ReturnType<typeof toRolledMod>): string => {
+    const junkSignature = getInterchangeableJunkSignature(mod, requirements, target.finalRollRequirements);
+    if (junkSignature !== undefined) return `junk(${junkSignature})`;
     const groups = (mod.modGroups.length > 0 ? mod.modGroups : [mod.modGroup]).slice().sort().join('+');
     const targetMatches = requirements
       .map((requirement, index) => matchesModRequirement(mod, requirement) ? index : -1)

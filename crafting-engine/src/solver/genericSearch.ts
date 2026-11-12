@@ -2198,8 +2198,12 @@ export class GenericSearchEngine {
       }
       let completedRound: GenericSearchResult;
       const roundStarted = Date.now();
-      const deferredThisRound = intent === 'RECOMMEND' ||
-        (!certifiedRecommendationFound && round < stagedRecommendationRounds);
+      // Deferral exists to reach a first executable answer quickly. Once one is certified,
+      // RECOMMEND spends its refinement round on the withheld actions (Regal, Harvest):
+      // leaving them deferred for the whole request returned magic-only routes that cost
+      // far more than the rare route the same budget could have solved.
+      const deferredThisRound = !certifiedRecommendationFound &&
+        (intent === 'RECOMMEND' || round < stagedRecommendationRounds);
       const roundDeadlineMs = deadlineMs;
       const sessionKeysBeforeRound = expansionSession
         ? new Set(expansionSession.nodes.keys())
@@ -2956,7 +2960,8 @@ export class GenericSearchEngine {
     // Grouped sparse linear solve
     let linearPolicyStable = false;
     let linearPolicyIterations = 0;
-    for (let policyPass = 0; policyPass < 20; policyPass++) {
+    const runLinearPolicyIteration = (maxPolicyPasses: number): void => {
+    for (let policyPass = 0; policyPass < maxPolicyPasses; policyPass++) {
       assertWithinDeadline();
       const includedKeys = new Set<string>();
       let selectedPolicyDirectlyClosed = true;
@@ -3030,6 +3035,89 @@ export class GenericSearchEngine {
       if (!policyChanged) {
         linearPolicyStable = true;
         break;
+      }
+    }
+    };
+    runLinearPolicyIteration(20);
+
+    // Value iteration starts from zero and creeps upward; on crafts with small per-attempt
+    // success chances it reaches its sweep cap far below the true cost, and the greedy policy
+    // read from those values is usually improper, which makes the exact solve above singular.
+    // Policy iteration only needs a proper starting policy, and one can be built directly:
+    // keep the actions whose every outcome can still finish, then have each state take an
+    // action with some chance of moving one step closer to the target. From that seed the
+    // exact solve converges to the same optimum value iteration was approaching.
+    if (!linearPolicyStable) {
+      const usableActions = new Map<string, string[]>();
+      for (const [key, node] of nodes) {
+        if (node.isTerminal) continue;
+        usableActions.set(key, [...node.actions.entries()]
+          .filter(([, action]) => action.isDirectlyResolved && action.transitions.length > 0 &&
+            action.transitions.every((transition) => nodes.has(transition.targetKey)))
+          .map(([actionId]) => actionId));
+      }
+      let canFinish = new Set<string>();
+      const stepsToFinish = new Map<string, number>();
+      const seedAction = new Map<string, string>();
+      for (let prune = 0; prune <= nodes.size; prune++) {
+        assertWithinDeadline();
+        // Reverse edges over the actions that are still safe.
+        const parents = new Map<string, Array<{ key: string; actionId: string }>>();
+        for (const [key, actionIds] of usableActions) {
+          const node = nodes.get(key)!;
+          for (const actionId of actionIds) {
+            for (const transition of node.actions.get(actionId)!.transitions) {
+              const list = parents.get(transition.targetKey) ?? [];
+              list.push({ key, actionId });
+              parents.set(transition.targetKey, list);
+            }
+          }
+        }
+        canFinish = new Set<string>();
+        stepsToFinish.clear();
+        seedAction.clear();
+        const queue: string[] = [];
+        for (const [key, node] of nodes) {
+          if (!node.isTerminal) continue;
+          canFinish.add(key);
+          stepsToFinish.set(key, 0);
+          queue.push(key);
+        }
+        for (let index = 0; index < queue.length; index++) {
+          const targetKey = queue[index];
+          for (const parent of parents.get(targetKey) ?? []) {
+            if (canFinish.has(parent.key)) continue;
+            canFinish.add(parent.key);
+            stepsToFinish.set(parent.key, stepsToFinish.get(targetKey)! + 1);
+            seedAction.set(parent.key, parent.actionId);
+            queue.push(parent.key);
+          }
+        }
+        // An action that can land on a state with no way to finish is not safe to rely on.
+        let removed = false;
+        for (const [key, actionIds] of usableActions) {
+          const node = nodes.get(key)!;
+          const kept = actionIds.filter((actionId) =>
+            node.actions.get(actionId)!.transitions.every((transition) => canFinish.has(transition.targetKey)));
+          if (kept.length !== actionIds.length) {
+            usableActions.set(key, kept);
+            removed = true;
+          }
+        }
+        if (!removed) break;
+      }
+      const everyStateCanFinish = [...nodes.entries()].every(
+        ([key, node]) => node.isTerminal || seedAction.has(key)
+      );
+      if (everyStateCanFinish) {
+        for (const [key, actionId] of seedAction) {
+          const decision = policyMap.get(key);
+          const action = nodes.get(key)?.actions.get(actionId);
+          if (!decision || !action) continue;
+          decision.bestActionId = actionId;
+          decision.bestActionName = action.action.name;
+        }
+        runLinearPolicyIteration(200);
       }
     }
     if (linearPolicyStable) {
@@ -3132,10 +3220,35 @@ export class GenericSearchEngine {
         2000,
         deadlineMs
       );
+      // Absorption with probability exactly 1 is a structural fact of a finite chain: a state
+      // absorbs almost surely iff it cannot reach a state that has no path to a terminal.
+      // Deciding that from the numeric solve is unsafe, because slow reroll loops are badly
+      // conditioned: a 1e-10 residual can leave values ~1e-8 short of 1, which flips whole
+      // regions between RESOLVED and IMPROPER and makes candidate resolution oscillate.
+      const reachesTrap = new Set<string>();
+      const trapQueue: string[] = [];
+      for (const [key, node] of nodes) {
+        if (node.isTerminal || canReachTerminal.has(key)) continue;
+        reachesTrap.add(key);
+        trapQueue.push(key);
+      }
+      for (let queueIndex = 0; queueIndex < trapQueue.length; queueIndex++) {
+        for (const parentKey of selectedParentsByTarget.get(trapQueue[queueIndex]) ?? []) {
+          if (reachesTrap.has(parentKey)) continue;
+          reachesTrap.add(parentKey);
+          trapQueue.push(parentKey);
+        }
+      }
+      const snapStructurallyCertain = (): void => {
+        for (const key of linearKeys) {
+          if (!reachesTrap.has(key)) absorption.set(key, 1);
+        }
+      };
       if (linearAbsorption.converged) {
         for (const [key, value] of linearAbsorption.values) {
           absorption.set(key, Math.max(0, Math.min(1, value)));
         }
+        snapStructurallyCertain();
         absorptionMs += Date.now() - absorptionStarted;
         return {
           downstreamUnresolved,
@@ -3180,6 +3293,7 @@ export class GenericSearchEngine {
         for (const [key, value] of next) absorption.set(key, value);
         if (absorptionResidual < 1e-10) break;
       }
+      snapStructurallyCertain();
       absorptionMs += Date.now() - absorptionStarted;
       return {
         downstreamUnresolved,
@@ -3190,6 +3304,7 @@ export class GenericSearchEngine {
       };
     };
 
+    const abandonedImproperActions = new Set<string>();
     const classifyCandidates = (trust: ReturnType<typeof computePolicyTrust>): boolean => {
       let policyChanged = false;
       const directMissingCache = new Map<
@@ -3228,11 +3343,24 @@ export class GenericSearchEngine {
           candidate.status = absorptionProbability >= 1 - 1e-8 ? 'RESOLVED' : 'IMPROPER';
         }
 
+        // An action abandoned for being improper stays abandoned for the rest of this
+        // resolution. Statuses are judged against the policy every other state currently
+        // holds, so a group of states that leave an improper loop together all look
+        // RESOLVED on the next pass, switch back together, and re-create the loop. Without
+        // this the passes flip the same states forever and the round times out.
         const resolvedCandidates = decision.candidateQValues.filter(
-          (candidate) => candidate.status === 'RESOLVED' && Number.isFinite(candidate.totalQValueChaos)
+          (candidate) => candidate.status === 'RESOLVED' &&
+            Number.isFinite(candidate.totalQValueChaos) &&
+            !abandonedImproperActions.has(`${key}\u0000${candidate.actionId}`)
         );
         const bestResolved = resolvedCandidates.sort((a, b) => a.totalQValueChaos - b.totalQValueChaos)[0];
         if (bestResolved && decision.bestActionId !== bestResolved.actionId) {
+          const current = decision.candidateQValues.find(
+            (candidate) => candidate.actionId === decision.bestActionId
+          );
+          if (current?.status === 'IMPROPER') {
+            abandonedImproperActions.add(`${key}\u0000${decision.bestActionId}`);
+          }
           decision.bestActionId = bestResolved.actionId;
           decision.bestActionName = bestResolved.actionName;
           decision.optimalValueChaos = bestResolved.totalQValueChaos;

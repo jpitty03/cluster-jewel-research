@@ -33,6 +33,7 @@ import {
   createHarvestReforgeMechanics,
   createRestartReacquireMechanic,
 } from '../rules/actionRegistry.ts';
+import { getMaxNotables } from '../rules/affixRules.ts';
 import { getCanonicalStateKey } from '../rules/actionDiscovery.ts';
 import { getTaggedModsForCluster } from '../rules/clusterPoolHelpers.ts';
 import type {
@@ -3698,6 +3699,26 @@ function createResolvedPolicyBundle(options: {
   const downstreamActionUsage = options.solverResult.expectedActionUsage
     .filter((usage) => !usage.actionId.startsWith('acquire_'))
     .map((usage) => ({ ...usage }));
+  // An acquisition-menu policy re-enters the menu every time it abandons an attempt, and
+  // pays for a base each time. The first acquisition is reported in the acquisition scope;
+  // the repeats are real downstream spend and must appear in the usage table, otherwise it
+  // undercounts the solver's cost by (visits - 1) bases and fails reconciliation.
+  if (options.solverResult.startingState.flags?.acquisitionMenu === true) {
+    const acquireUsage = options.solverResult.expectedActionUsage
+      .filter((usage) => usage.actionId.startsWith('acquire_'));
+    const acquireCount = acquireUsage.reduce((sum, usage) => sum + usage.expectedCount, 0);
+    const acquireCostChaos = acquireUsage.reduce((sum, usage) => sum + usage.expectedCostChaos, 0);
+    if (acquireCount > 1 + 1e-9) {
+      downstreamActionUsage.push({
+        actionId: 'restart_reacquire',
+        actionName: options.acquisitionStart.fracturedRequirement === undefined
+          ? 'Abandon attempt and reacquire a clean base'
+          : 'Abandon attempt and reacquire the starting base',
+        expectedCount: acquireCount - 1,
+        expectedCostChaos: acquireCostChaos * (acquireCount - 1) / acquireCount,
+      });
+    }
+  }
   const fullRouteUsage = buildFullRouteUsageSummary({
     recommended: options.route,
     cleanBaseCostChaos: options.cleanBaseCostChaos,
@@ -4437,7 +4458,11 @@ export class OptimizerService {
       );
       const isComplexMultiMod = minimumScenarioSize >= 3;
       const fastWallTimeCeiling = requestedIntent === 'RECOMMEND'
-        ? (isComplexMultiMod ? Math.min(4_000, Math.floor(runtimeBudget.engineDeadlineMs * 0.18)) : Math.min(10_000, Math.floor(runtimeBudget.engineDeadlineMs * 0.35)))
+        // The direct clean-base search can use every action, including fracturing mid-route,
+        // so it subsumes the acquisition-menu and self-fracture searches that follow. It gets
+        // the larger share: when it certifies, the plan and guided views can draw its policy,
+        // which they cannot do for the menu-wrapped copy of the same route.
+        ? Math.floor(runtimeBudget.engineDeadlineMs * 0.6)
         : isComplexMultiMod
           ? Math.min(20_000, Math.floor(runtimeBudget.engineDeadlineMs * 0.45))
           : Math.floor(runtimeBudget.engineDeadlineMs * 0.7);
@@ -6905,6 +6930,7 @@ export class OptimizerService {
     const craftPlan = buildCraftPlan({
       ...outputWithoutCraftPlan,
       modifierMetadata: pool.getAllMods(),
+      maxNotables: getMaxNotables(input.baseType),
     });
     const snapshotMethodFamilyWork = () => [...searchSessionRecord.methodFamilies.values()]
       .reduce((snapshot, continuation) => ({
@@ -7161,9 +7187,26 @@ export class OptimizerService {
       left: ResolvedPolicyBundle,
       right: ResolvedPolicyBundle,
     ): number => {
-      const byCost = left.metrics.expectedChaosCost - right.metrics.expectedChaosCost;
-      const byActions = left.metrics.expectedPhysicalActions - right.metrics.expectedPhysicalActions;
-      const byTime = left.metrics.estimatedManualTimeMs - right.metrics.estimatedManualTimeMs;
+      // Two solves of the same policy differ in the last few floating-point digits. Treat
+      // those as ties so the id tiebreak decides: it prefers the direct clean-base policy
+      // over the acquisition-menu wrapper around the same route, which the guided plan
+      // cannot draw.
+      const tied = (difference: number, scale: number): number =>
+        Math.abs(difference) <= 1e-7 * Math.max(1, Math.abs(scale)) ? 0 : difference;
+      const byCost = tied(
+        left.metrics.expectedChaosCost - right.metrics.expectedChaosCost,
+        right.metrics.expectedChaosCost,
+      );
+      const byActions = tied(
+        left.metrics.expectedPhysicalActions - right.metrics.expectedPhysicalActions,
+        right.metrics.expectedPhysicalActions,
+      );
+      const byTime = tied(
+        left.metrics.estimatedManualTimeMs - right.metrics.estimatedManualTimeMs,
+        right.metrics.estimatedManualTimeMs,
+      );
+      const menuWrapped = (bundle: ResolvedPolicyBundle): number =>
+        bundle.id === 'core:open-selected-policy' ? 1 : 0;
       switch (objective.kind) {
         case 'FEWEST_ACTIONS_WITHIN_COST':
         case 'UNCONSTRAINED_FEWEST_ACTIONS':
@@ -7176,7 +7219,10 @@ export class OptimizerService {
             byCost || byTime || byActions || left.id.localeCompare(right.id);
         case 'CHEAPEST_CHAOS':
         default:
-          return byCost || byActions || byTime || left.id.localeCompare(right.id);
+          // At equal cost the menu-wrapped policy is the same route as the direct one, but
+          // it reports reacquiring a base as zero physical actions and would win on that.
+          return byCost || menuWrapped(left) - menuWrapped(right) ||
+            byActions || byTime || left.id.localeCompare(right.id);
       }
     };
     let selectedBundle = [...eligibleBundles].sort(compareBundles)[0];
@@ -7517,6 +7563,7 @@ export class OptimizerService {
       acquisition: finalAcquisition,
       proof: { globalOptimality: finalProofGlobalOptimality },
       modifierMetadata: pool.getAllMods(),
+      maxNotables: getMaxNotables(input.baseType),
     });
     for (const family of methodPortfolio) {
       if (family.spec.id === selectedFamilyId && canonicalRecommended) family.craftPlan = finalCraftPlan;

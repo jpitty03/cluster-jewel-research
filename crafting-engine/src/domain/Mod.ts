@@ -24,6 +24,26 @@ export interface Mod {
   isNotable: boolean;
   /** The same display/name key exists in another exclusion group in this pool. */
   eligibilityNameSensitive?: boolean;
+  /** Set by ModPool: see ExclusionClass. */
+  exclusionClass?: ExclusionClass;
+}
+
+/**
+ * Interchangeability class for a mod that is NOT part of the craft target.
+ *
+ * Every modeled action sees a non-target ("junk") mod only through (a) the side it
+ * occupies, (b) whether it uses notable capacity, and (c) which pool mods its
+ * exclusion group removes from later rolls. Two mods whose groups contain the same
+ * multiset of (side, notable, ilvl, weight) members therefore produce identical
+ * legality, costs and transition probabilities at every item level, so search may
+ * treat them as one state. `signature` is that multiset; `memberIds`/`memberNames`
+ * let a caller detect that the group also hosts a target mod, in which case the
+ * junk mod blocks the target and must keep its own identity.
+ */
+export interface ExclusionClass {
+  signature: string;
+  memberIds: ReadonlySet<string>;
+  memberNames: ReadonlySet<string>;
 }
 
 export interface RolledMod {
@@ -43,6 +63,8 @@ export interface RolledMod {
   isNotable: boolean;
   /** Preserve the name in canonical identity because duplicate-name eligibility can differ. */
   eligibilityNameSensitive?: boolean;
+  /** Shared reference to the pool mod's class; see ExclusionClass. */
+  exclusionClass?: ExclusionClass;
 }
 
 export function toRolledMod(
@@ -66,5 +88,6 @@ export function toRolledMod(
     isFractured: options.isFractured ?? false,
     isNotable: mod.isNotable,
     eligibilityNameSensitive: mod.eligibilityNameSensitive,
+    exclusionClass: mod.exclusionClass,
   };
 }
