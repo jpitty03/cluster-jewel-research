@@ -22,6 +22,10 @@ export interface PriceEntry {
   passivesMin: number | null
   passivesMax: number | null
   at: string
+  /** Distinct seller accounts in the sample. Absent in entries priced before 2026-11. */
+  sellers?: number
+  /** A lone cheapest listing that was set aside as a lowball; `low` is the next seller. */
+  lowOutlier?: Money
 }
 
 export interface PriceFile {
@@ -109,4 +113,55 @@ export function weightedMedian<T extends { chaos: number; weight: number }>(item
     if (acc * 2 >= total) return item
   }
   return sorted[sorted.length - 1] // unreachable, but keeps the return type honest
+}
+
+/** One priced trade listing, cheapest first as the trade API returns them. */
+export interface SampledListing {
+  price: Money | null
+  account?: string
+}
+
+/** A cheapest listing under this fraction of the next seller's price is set aside. */
+const LOWBALL_RATIO = 0.5
+
+/**
+ * Reduces the cheap end of a trade search to the numbers the site shows.
+ *
+ * One seller often lists the same jewel several times, and price-fixers post a single
+ * listing far below the book that they never sell. So: one listing per seller, and when at
+ * least three sellers are sampled, a cheapest listing below half of the next seller's price
+ * is recorded as `lowOutlier` instead of `low`. The comparison needs both prices in chaos;
+ * without rates for either currency the listing is kept.
+ */
+export function summarizeListings(
+  listings: readonly SampledListing[],
+  rates: Record<string, number> | undefined,
+): Pick<PriceEntry, 'low' | 'mid' | 'sampled' | 'sellers' | 'lowOutlier'> {
+  const seen = new Set<string>()
+  const bySeller: Money[] = []
+  let sampled = 0
+  for (const listing of listings) {
+    if (!listing.price) continue
+    sampled++
+    if (listing.account) {
+      if (seen.has(listing.account)) continue
+      seen.add(listing.account)
+    }
+    bySeller.push(listing.price)
+  }
+  let lowOutlier: Money | undefined
+  if (bySeller.length >= 3) {
+    const first = chaosValue(rates, bySeller[0])
+    const second = chaosValue(rates, bySeller[1])
+    if (first != null && second != null && first < second * LOWBALL_RATIO) {
+      lowOutlier = bySeller.shift()
+    }
+  }
+  return {
+    low: bySeller[0] ?? null,
+    mid: bySeller[Math.floor((bySeller.length - 1) / 2)] ?? null,
+    sampled,
+    sellers: bySeller.length + (lowOutlier ? 1 : 0),
+    ...(lowOutlier ? { lowOutlier } : {}),
+  }
 }

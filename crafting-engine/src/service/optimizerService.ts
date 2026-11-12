@@ -4832,7 +4832,9 @@ export class OptimizerService {
               restartReacquire: {
                 destination: start.state,
                 acquisitionCostChaos: proofRecord.acquisitionLowerBoundChaos,
-                confidence: 'research-fallback',
+                // A derived bound, not a quoted price: it must stay available when fallback
+                // prices are disallowed, or the bound loses its restart and stops being one.
+                confidence: 'known',
                 provenance:
                   'Admissible Phase 2L downstream bound restart priced at the independently ' +
                   'admissible acquisition lower bound.',
@@ -5158,7 +5160,10 @@ export class OptimizerService {
                 restartReacquire: {
                   destination: start.state,
                   acquisitionCostChaos: synthesis.expectedCostChaos,
-                  confidence: 'research-fallback',
+                  // The restart is as trustworthy as the prices behind the acquisition it
+                  // repeats. Hard-coding research-fallback removed it (and with it every
+                  // self-fracture route) whenever fallback prices were disallowed.
+                  confidence: synthesisPriceConfidence(synthesis),
                   provenance: 'Self-fracture acquisition',
                   label: `Abandon attempt and reacquire self-fracture ${start.label}`,
                 },
@@ -5523,7 +5528,7 @@ export class OptimizerService {
               restartReacquire: {
                 destination: start.state,
                 acquisitionCostChaos: acquisition.expectedCostChaos,
-                confidence: 'research-fallback',
+                confidence: synthesisPriceConfidence(acquisition),
                 provenance: 'Self-fracture acquisition',
                 label: `Abandon attempt and reacquire self-fracture ${start.label}`,
               },

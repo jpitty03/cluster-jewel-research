@@ -345,6 +345,20 @@ function PriceCard({
             <span className="hc-label">median</span>
             <span className="hc-value">{entry.listed > 0 ? money(entry.mid) : '—'}</span>
           </div>
+          {entry.sellers !== undefined && entry.listed > 0 && (
+            <div className="hc-row">
+              <span className="hc-label">sample</span>
+              <span className="hc-value hc-dim">
+                {entry.sellers} seller{entry.sellers === 1 ? '' : 's'} of {entry.listed} listed
+              </span>
+            </div>
+          )}
+          {entry.lowOutlier && (
+            <div className="hc-row">
+              <span className="hc-label">ignored</span>
+              <span className="hc-value hc-dim">{money(entry.lowOutlier)} lone lowball</span>
+            </div>
+          )}
         </div>
       )}
 

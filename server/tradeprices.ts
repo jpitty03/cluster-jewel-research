@@ -207,7 +207,7 @@ export interface Price {
 
 export interface Listing {
   id: string
-  listing: { indexed: string; price: Price | null }
+  listing: { indexed: string; price: Price | null; account?: { name?: string } }
   item: { note?: string }
 }
 

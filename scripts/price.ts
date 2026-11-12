@@ -29,9 +29,9 @@ import { fileURLToPath } from 'node:url'
 import { DEFAULT_LEAGUE } from '../league.ts'
 import { slugify } from '../server/clusterjewels.ts'
 import { fetchCurrencyRates } from '../server/poeninja.ts'
-import { credentialMode, tradeFetch, tradeSearch, type Price } from '../server/tradeprices.ts'
+import { credentialMode, tradeFetch, tradeSearch } from '../server/tradeprices.ts'
 import { groupJewels, type ClusterData } from '../src/clusterAggregate.ts'
-import { CACHE_VERSION, type PriceFile } from '../src/priceModel.ts'
+import { CACHE_VERSION, summarizeListings, type PriceFile } from '../src/priceModel.ts'
 import {
   BASE_ILVLS,
   PRICED_TOP,
@@ -214,7 +214,7 @@ console.log(
 
 // ---------- run ----------
 
-const fmt = (p: Price | null) => (p ? `${p.amount} ${p.currency}` : '—')
+const fmt = (p: { amount: number; currency: string } | null) => (p ? `${p.amount} ${p.currency}` : '—')
 
 let done = 0
 let failed = 0
@@ -230,13 +230,14 @@ for (const job of pending) {
     // Results come back sorted by price ascending, so the sample is the cheap end
     // of the book: first is the floor, the middle one resists a single lowball.
     const listings = await tradeFetch(search.result.slice(0, 10), search.id)
-    const priced = listings.map((l) => l.listing.price).filter((p): p is Price => p != null)
+    const summary = summarizeListings(
+      listings.map((l) => ({ price: l.listing.price, account: l.listing.account?.name })),
+      cache.rates,
+    )
 
     bucket(job)[job.key] = {
-      low: priced[0] ?? null,
-      mid: priced[Math.floor((priced.length - 1) / 2)] ?? null,
+      ...summary,
       listed: search.total,
-      sampled: priced.length,
       passivesMin: job.passives.min,
       passivesMax: job.passives.max,
       at: new Date().toISOString(),
@@ -244,8 +245,9 @@ for (const job of pending) {
     save()
     console.log(
       `[price] ${done}/${Math.min(pending.length, max)} ${job.label} → ` +
-        `${fmt(priced[0] ?? null)} … ${fmt(priced[Math.floor((priced.length - 1) / 2)] ?? null)} ` +
-        `(${search.total} listed)`,
+        `${fmt(summary.low)} … ${fmt(summary.mid)} ` +
+        `(${search.total} listed, ${summary.sellers} sellers` +
+        `${summary.lowOutlier ? `, lowball ${summary.lowOutlier.amount} ${summary.lowOutlier.currency} set aside` : ''})`,
     )
   } catch (err) {
     // One bad query shouldn't end a 40-minute run.
