@@ -31,7 +31,7 @@ Open the app, pick a league, and:
 | `npm run scrape` | Headless scrape (`npx tsx scripts/scrape.ts [--league=<Name>] [--full]`) — writes snapshots to `src/data/<league-slug>/` for the static build. `--full` clears the league store and refetches everything. |
 | `npm run scrape:poedb` | One-time scrape of poedb.tw cluster enchantment pools (mod weights, ilvl, prefix/suffix) → `src/data/poedb-cluster-mods.json` |
 | `npm run price` | Prices the most-used notable combos on pathofexile.com/trade (`npx tsx scripts/price.ts [--league=<Name>] [--top=N] [--ttl=<hours>] [--max=N] [--full]`) → `src/data/<league-slug>/trade-prices.json` |
-| `npm run publish` | `scrape` + `price` + commit/push `src/data`, which triggers the GitHub Actions rebuild/redeploy of the static site |
+| `npm run publish` | Preflight checks, game-data refresh, `scrape`, `price`, then commit/push `src/data` and `league.ts`, which triggers the GitHub Actions rebuild/redeploy of the static site. See [LEAGUE_START.md](LEAGUE_START.md) |
 | `npm run build` | Type-check + production build (bundles the committed data snapshots; no server needed) |
 
 ### Trade prices
@@ -87,6 +87,9 @@ CF_CLEARANCE=...
 ```
 
 ### New league
+
+Short version: set the name in `league.ts`, run `npm run publish`. The full checklist,
+timings and the messages you may see are in [LEAGUE_START.md](LEAGUE_START.md).
 
 Set the league name once in `league.ts` (`DEFAULT_LEAGUE`) — poe.ninja's exact
 spelling, e.g. `Allflame`. It's the default for the dev server, the headless

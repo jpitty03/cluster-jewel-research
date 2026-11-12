@@ -54,7 +54,8 @@
   "+10 to Dexterity": "52",
   "+10 to Intelligence": "53",
   "6% increased Mana Reservation Efficiency of Skills": "54",
-  "2% increased Effect of your Curses": "55"
+  "2% increased Effect of your Curses": "55",
+  "3% increased effect of Non-Curse Auras from your Skills": "24"
  },
  "notableExplicits": {
   "Prismatic Heart": "explicit.stat_2342448236",

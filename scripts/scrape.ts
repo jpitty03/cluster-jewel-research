@@ -55,6 +55,15 @@ const MIN_FETCHED_SHARE = 0.9
 const fetchedShare = clusters.charactersTotal
   ? clusters.charactersFetched / clusters.charactersTotal
   : 0
+// A league's first day or two: nobody on poe.ninja's ladder holds a cluster jewel yet. That
+// is not a failed crawl, so say what it is instead of quoting a 0/0 share.
+if (clusters.charactersTotal === 0) {
+  console.error(
+    `[scrape] ${league}: poe.ninja lists no level 80+ characters with cluster jewels yet. ` +
+      'Nothing was written. Try again once the league is a day or two old.',
+  )
+  process.exit(1)
+}
 if (clusters.jewels.length === 0 || fetchedShare < MIN_FETCHED_SHARE) {
   console.error(
     `[scrape] ${league}: only ${clusters.charactersFetched}/${clusters.charactersTotal} ` +
@@ -77,4 +86,4 @@ console.log(
     `${clusters.charactersFetched}/${clusters.charactersTotal} cluster-holders`,
 )
 
-console.log('[scrape] done. Run `npm run scrape:poedb` too if mod pools changed (new patch).')
+console.log('[scrape] done.')

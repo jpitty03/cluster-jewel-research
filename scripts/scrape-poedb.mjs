@@ -15,7 +15,7 @@
 // Writes: data/poedb-cluster-mods.json + src/data/poedb-cluster-mods.json
 //         data/poedb-horticrafting.json + src/data/poedb-horticrafting.json
 
-import { mkdirSync, writeFileSync } from 'node:fs'
+import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs'
 import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 
@@ -302,6 +302,38 @@ async function scrapePage(pageName) {
   return { pools: parseEnchantPools(html), baseMods: parseBaseMods(extractModsView(html)) }
 }
 
+// The previous snapshot anchors mod ids and gates the write. poedb's hover links used to
+// end in the game's mod key ("AfflictionJewelSmallPassivesGrantLife_"); since late 2026 they
+// are opaque hashes. Mod ids are what targets, saved setups and share links refer to, so an
+// unreadable id takes the previous snapshot's id for the same mod, and a mod that is new to
+// this scrape gets a readable one built from its group and tier.
+const PREVIOUS_PATH = join(ROOT, 'src', 'data', 'poedb-cluster-mods.json')
+const previous = existsSync(PREVIOUS_PATH) ? JSON.parse(readFileSync(PREVIOUS_PATH, 'utf8')) : null
+const isOpaqueId = (id) => !id || /^[0-9a-f]{32,}$/i.test(id)
+const modIdentity = (mod) => [mod.genType, mod.modGroup, mod.ilvl, mod.name, mod.statText].join('|')
+
+function stabiliseModIds(base, baseMods) {
+  const known = new Map((previous?.baseMods?.[base]?.mods ?? []).map((mod) => [modIdentity(mod), mod.modId]))
+  const taken = new Set(baseMods.mods.map((mod) => mod.modId).filter((id) => !isOpaqueId(id)))
+  let carried = 0
+  let minted = 0
+  for (const mod of baseMods.mods) {
+    if (!isOpaqueId(mod.modId)) continue
+    const carriedId = known.get(modIdentity(mod))
+    if (carriedId && !isOpaqueId(carriedId)) {
+      mod.modId = carriedId
+      carried++
+    } else {
+      let id = `${mod.modGroup ?? mod.name}_T${mod.tier}`
+      while (taken.has(id)) id += '_'
+      mod.modId = id
+      minted++
+    }
+    taken.add(mod.modId)
+  }
+  return { carried, minted }
+}
+
 const out = { fetchedAt: new Date().toISOString(), source: 'poedb.tw', bases: {}, baseMods: {} }
 for (const [base, page] of Object.entries(PAGES)) {
   process.stdout.write(`Scraping ${page}… `)
@@ -310,6 +342,10 @@ for (const [base, page] of Object.entries(PAGES)) {
   if (baseMods) out.baseMods[base] = baseMods
   else console.warn(`  ! no ModsView payload on ${page} — explicit pool missing`)
   const notables = pools.reduce((s, p) => s + p.notables.length, 0)
+  if (baseMods) {
+    const ids = stabiliseModIds(base, baseMods)
+    if (ids.minted) console.log(`  ${ids.minted} new mod(s) given ids from group and tier`)
+  }
   const pre = baseMods?.mods.filter((m) => m.genType === 'Prefix').length ?? 0
   const suf = baseMods?.mods.filter((m) => m.genType === 'Suffix').length ?? 0
   console.log(`${pools.length} pools / ${notables} notables, explicits: ${pre} prefixes + ${suf} suffixes`)
@@ -320,6 +356,42 @@ process.stdout.write(`Scraping ${HORTICRAFTING_PAGE}… `)
 const horti = await scrapeHorticrafting()
 if (horti) console.log(`${horti.count} crafts`)
 else console.warn('  ! could not find the Horticrafting Station table')
+
+// Gate the write: a page that lost its tables (layout change, block page) must not replace
+// a working snapshot, because the optimizer has nothing else to build its pools from.
+const problems = []
+const changes = []
+for (const base of Object.keys(PAGES)) {
+  const pools = out.bases[base] ?? []
+  const mods = out.baseMods[base]?.mods ?? []
+  const notables = pools.reduce((sum, pool) => sum + pool.notables.length, 0)
+  const before = {
+    pools: previous?.bases?.[base]?.length ?? 0,
+    mods: previous?.baseMods?.[base]?.mods?.length ?? 0,
+    notables: (previous?.bases?.[base] ?? []).reduce((sum, pool) => sum + pool.notables.length, 0),
+  }
+  for (const [label, now, was] of [['cluster types', pools.length, before.pools], ['mods', mods.length, before.mods], ['notables', notables, before.notables]]) {
+    if (now === 0 || now < was * 0.8) problems.push(`${base}: ${now} ${label} (previous snapshot had ${was})`)
+    else if (now !== was) changes.push(`${base}: ${label} ${was} -> ${now}`)
+  }
+  const previousById = new Map((previous?.baseMods?.[base]?.mods ?? []).map((mod) => [mod.modId, mod]))
+  for (const mod of mods) {
+    const was = previousById.get(mod.modId)
+    if (!was) changes.push(`${base}: new mod ${mod.modId} (${mod.name}, weight ${mod.weight})`)
+    else if (was.weight !== mod.weight || was.ilvl !== mod.ilvl) {
+      changes.push(`${base}: ${mod.modId} weight ${was.weight} -> ${mod.weight}, ilvl ${was.ilvl} -> ${mod.ilvl}`)
+    }
+  }
+}
+if (problems.length) {
+  console.error('Scrape looks broken, nothing written:' + problems.map((line) => '\n  ' + line).join(''))
+  process.exit(1)
+}
+console.log(
+  changes.length
+    ? 'Changes since the previous snapshot:' + changes.map((line) => '\n  ' + line).join('')
+    : 'No pool changes since the previous snapshot.',
+)
 
 mkdirSync(join(ROOT, 'data'), { recursive: true })
 mkdirSync(join(ROOT, 'src', 'data'), { recursive: true })

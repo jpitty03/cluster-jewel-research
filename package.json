@@ -18,6 +18,7 @@
     "price": "tsx scripts/price.ts",
     "test": "vitest run && npm run test:node",
     "test:node": "node --test \"scripts/test/*.test.mjs\" \"poe2-crafting-engine/test/*.test.mjs\"",
+    "preflight": "tsx scripts/preflight.ts",
     "validate:pools": "tsx scripts/validate-cluster-pools.ts",
     "lab": "tsx quality-lab/src/orchestrator.ts --suite RELEASE",
     "lab:dev": "tsx quality-lab/src/orchestrator.ts --suite DEV",
@@ -34,7 +35,7 @@
     "lab:visual-fixture": "tsx quality-lab/src/orchestrator.ts --gate D-frozen-policy-flow-renderer",
     "lab:recommend": "tsx quality-lab/src/impactRecommendation.ts",
     "lab:no-fallback-probe": "tsx quality-lab/src/noFallbackProbe.ts",
-    "publish": "npm run scrape && npm run price && node scripts/publish.mjs"
+    "publish": "npm run preflight && node scripts/refresh-game-data.mjs && npm run scrape && npm run price && node scripts/publish.mjs"
   },
   "dependencies": {
     "react": "^19.2.8",

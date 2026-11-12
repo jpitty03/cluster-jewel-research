@@ -123,6 +123,15 @@ async function fetchIndexState(): Promise<IndexState> {
 // "allflame" but "Hardcore Allflame" is "allflamehc". Look the name up in the
 // league lists (current, then ended) and only guess a slug when poe.ninja doesn't
 // know the league at all — in which case the exp lookup fails loudly downstream.
+/** League names poe.ninja currently has build data for (current leagues only). */
+export async function listBuildLeagues(): Promise<string[]> {
+  const state = await fetchIndexState();
+  return (state.buildLeagues ?? [])
+    .flatMap((league) => [league.name, league.displayName ?? league.name])
+    // Private leagues are listed twice, once with their "(PL12345)" id.
+    .filter((name, index, all) => Boolean(name) && !/\(PL\d+\)/.test(name) && all.indexOf(name) === index);
+}
+
 export async function resolveLeagueUrl(league: string): Promise<string> {
   const wanted = league.trim().toLowerCase();
   try {

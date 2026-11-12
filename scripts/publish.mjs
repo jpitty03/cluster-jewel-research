@@ -17,19 +17,21 @@ if (branch !== 'main') {
   process.exit(1)
 }
 
-run('git add src/data')
+// league.ts rides along: the deployed site reads the current league from it, so a league
+// change that stayed local would leave the optimizer defaulting to the old league's prices.
+run('git add src/data league.ts')
 
 // `git diff --cached --quiet` exits non-zero when there are staged changes.
 let hasChanges = false
 try {
-  execSync('git diff --cached --quiet -- src/data')
+  execSync('git diff --cached --quiet -- src/data league.ts')
 } catch {
   hasChanges = true
 }
 
-// Commit src/data only: anything else that happens to be staged stays staged
+// Commit src/data and league.ts only: anything else that happens to be staged stays staged
 // rather than riding along in a "data:" commit.
-if (hasChanges) run(`git commit -m "data: ${new Date().toISOString()}" -- src/data`)
+if (hasChanges) run(`git commit -m "data: ${new Date().toISOString()}" -- src/data league.ts`)
 
 // Push whenever main is ahead of its upstream, not only when this run committed —
 // otherwise a push that failed last time (network, remote moved) leaves a commit
