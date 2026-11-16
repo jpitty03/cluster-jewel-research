@@ -1,3 +1,4 @@
+import { gzipSync, strToU8 } from 'fflate'
 // pathofexile.com/trade query building, shared by the UI (which turns queries into
 // clickable search links) and scripts/price.ts (which runs them against the trade
 // API to cache prices). Both must build the *identical* query — a price cached for
@@ -187,9 +188,17 @@ export function buildBaseQuery(
   }
 }
 
-export const tradeSearchUrl = (league: string, query: TradeQuery): string =>
-  `https://www.pathofexile.com/trade/search/${encodeURIComponent(league)}` +
-  `?q=${encodeURIComponent(JSON.stringify(query))}`
+// The trade site reads a search from the URL path: the query (without the sort wrapper),
+// gzipped and base64url-encoded with no padding. This is the form the site itself produces
+// when you copy a search link in Covens; the older ?q=<json> form is not relied on.
+// mtime is pinned so the same search always gives the same link.
+export const tradeSearchUrl = (league: string, query: TradeQuery): string => {
+  const bytes = gzipSync(strToU8(JSON.stringify(query.query)), { mtime: 0 })
+  let binary = ''
+  for (const byte of bytes) binary += String.fromCharCode(byte)
+  const payload = btoa(binary).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '')
+  return `https://www.pathofexile.com/trade/search/${encodeURIComponent(league)}/${payload}`
+}
 
 export function comboTradeUrl(
   league: string,
