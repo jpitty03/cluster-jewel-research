@@ -2,6 +2,7 @@
 // data/characters.csv), fetches each character's build JSON from poe.ninja,
 // and extracts every equipped cluster jewel for popularity analysis.
 
+import { plainModText } from '../src/modText.ts'
 import { existsSync, mkdirSync, readdirSync, readFileSync, writeFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { UA, fetchSnapshotVersion, getStreamerBuilds, resolveLeagueUrl, searchClusterHolders } from './poeninja'
@@ -144,9 +145,9 @@ interface ItemData {
 }
 
 function parseClusterJewel(it: ItemData, owner: CharacterRef): ClusterJewel {
-  const enchants = it.enchantMods ?? []
-  const explicit = it.explicitMods ?? []
-  const fracturedMods = it.fracturedMods ?? []
+  const enchants = (it.enchantMods ?? []).map(plainModText)
+  const explicit = (it.explicitMods ?? []).map(plainModText)
+  const fracturedMods = (it.fracturedMods ?? []).map(plainModText)
 
   let passives: number | null = null
   let jewelSockets = 0
