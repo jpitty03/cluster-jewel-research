@@ -88,6 +88,9 @@ class RateLimiter {
       const now = Date.now()
       if (this.blockedUntil > now) {
         await sleep(this.blockedUntil - now)
+        // The usage counts seen before the penalty are stale now. Forget them and
+        // let the next response re-measure, rather than pacing on old numbers.
+        this.external.clear()
         continue
       }
       const wait = this.waitMs(now)
@@ -105,15 +108,21 @@ class RateLimiter {
     for (const rule of this.rules) {
       const windowStart = now - rule.window * 1000
       const mine = this.stamps.filter((t) => t > windowStart)
-      const used = mine.length + (this.external.get(rule.window) ?? 0)
+      const external = this.external.get(rule.window) ?? 0
+      const used = mine.length + external
       // Keep one slot of headroom so a concurrent browser request can't tip us over.
-      if (used < Math.max(1, rule.hits - 1)) continue
+      const room = Math.max(1, rule.hits - 1)
+      if (used < room) continue
       // One of ours leaving the window frees a slot. If the pressure is entirely
       // external we can't see when those age out, so fall back to the rule's
       // average spacing and re-measure from the next response's -State header.
-      const next = mine.length
-        ? mine[0] + rule.window * 1000 - now
-        : (rule.window / rule.hits) * 1000
+      const externalOnly = !mine.length || external >= room
+      const next = externalOnly
+        ? (rule.window / rule.hits) * 1000
+        : mine[0] + rule.window * 1000 - now
+      // Assume one external hit ages out over that spacing; otherwise the count,
+      // which only a response can refresh, would hold this loop forever.
+      if (externalOnly && external > 0) this.external.set(rule.window, external - 1)
       wait = Math.max(wait, next)
     }
     return wait
