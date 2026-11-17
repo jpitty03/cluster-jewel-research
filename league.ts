@@ -9,4 +9,4 @@
 //
 // Node entry points also honour the POE_LEAGUE env var, and `npm run scrape`
 // still takes --league=<Name>; both override this default.
-export const DEFAULT_LEAGUE = 'Allflame'
+export const DEFAULT_LEAGUE = 'Covens'
