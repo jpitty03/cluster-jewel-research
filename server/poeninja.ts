@@ -155,10 +155,22 @@ export async function resolveLeagueUrl(league: string): Promise<string> {
 // page now ships only {league,type} and the client looks the version up here.
 export async function fetchSnapshotVersion(url = 'streamers', type = 'streamers'): Promise<string> {
   try {
+    // Since 2026-11 the versions are served per overview, not in index-state.
+    const res = await fetch(`${BASE}/poe1/api/data/snapshot-versions?league=${encodeURIComponent(url)}`, {
+      headers: { 'user-agent': UA, accept: 'application/json', referer: `${BASE}/poe1/builds/${url}` },
+    });
+    if (res.ok) {
+      const listed = (await res.json()) as IndexStateSnapshot[];
+      const hit = listed.find((s) => s.url === url && s.type === type);
+      if (hit?.version) return hit.version;
+    }
+    // Older location, kept in case the per-overview endpoint goes away again.
     const state = await fetchIndexState();
     const hit = state.snapshotVersions?.find((s) => s.url === url && s.type === type);
     if (hit?.version) return hit.version;
-    throw new Error(`no ${url}/${type} entry in index-state snapshotVersions`);
+    throw new Error(
+      `poe.ninja lists no ${url}/${type} snapshot version (snapshot-versions -> HTTP ${res.status})`,
+    );
   } catch (err) {
     // Fall back to the legacy page-props lookup in case index-state moves.
     try {
