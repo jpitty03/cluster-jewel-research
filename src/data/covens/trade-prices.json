@@ -1,116 +1,153 @@
 {
  "version": 2,
  "league": "Covens",
- "fetchedAt": "2026-11-17T02:45:19.542Z",
+ "fetchedAt": "2026-11-22T18:36:48.132Z",
  "rates": {
-  "accelerating-catalyst": 0.3513,
+  "accelerating-catalyst": 0.2903,
   "chaos": 1,
-  "blessed": 0.2091,
-  "abrasive-catalyst": 0.338,
-  "alch": 0.01709,
-  "alt": 0.09769,
-  "ancient-orb": 6.26,
-  "annul": 8.31,
-  "aug": 0.07232,
-  "awakeners-orb": 128.1,
-  "bauble": 2.21,
-  "chance": 0.6294,
-  "divine": 153.6,
-  "elders-exalted-orb": 18.22,
-  "eldritch-chaos-orb": 42.14,
-  "eldritch-exalted-orb": 2.76,
-  "eldritch-orb-of-annulment": 25.51,
-  "enkindling-orb": 0.3495,
-  "exalted": 0.789,
-  "exceptional-eldritch-ichor": 14.72,
-  "fertile-catalyst": 5.91,
-  "fracturing-orb": 810.2,
-  "fracturing-shard": 38.19,
-  "fusing": 0.1803,
-  "grand-eldritch-ember": 1.82,
-  "grand-eldritch-ichor": 2.94,
-  "greater-eldritch-ember": 0.6932,
-  "greater-eldritch-ichor": 1.63,
-  "imbued-catalyst": 0.3474,
-  "instilling-orb": 0.7397,
-  "intrinsic-catalyst": 0.5703,
-  "jewellers": 0.03529,
-  "lesser-eldritch-ember": 0.5885,
-  "lesser-eldritch-ichor": 0.9165,
-  "mavens-chisel-of-avarice": 23.05,
-  "mavens-chisel-of-threads": 1.88,
-  "orb-of-conflict": 45.79,
-  "orb-of-intention": 1.47,
-  "orb-of-remembrance": 40.42,
-  "orb-of-unmaking": 0.4778,
-  "orb-of-unravelling": 15.32,
-  "primal-lifeforce": 0.01426,
-  "redeemers-exalted-orb": 45.87,
-  "reflecting-mist": 1026,
-  "regal": 0.258,
-  "regret": 1.57,
-  "sacred-lifeforce": 7,
-  "sandswept-lifeforce": 51.01,
-  "scour": 0.701,
-  "scrap": 0.1714,
-  "shapers-exalted-orb": 85.46,
-  "soul-core-of-finesse": 721.2,
-  "soul-core-of-instability": 201.6,
-  "soul-core-of-might": 849.9,
-  "tainted-blacksmiths-whetstone": 0.5391,
-  "tainted-exalted-orb": 12.8,
-  "tainted-orb-of-fusing": 35.12,
-  "tempering-catalyst": 1.1,
-  "turbulent-catalyst": 0.5564,
-  "veiled-exalted-orb": 507.7,
-  "vivid-lifeforce": 0.01273,
-  "wild-lifeforce": 0.01221,
-  "chrome": 0.888,
-  "cluster-fog": 164.2,
-  "crusaders-exalted-orb": 87.11,
-  "dextral-catalyst": 17.8,
-  "hinekoras-lock": 7153,
-  "exceptional-eldritch-ember": 13.46,
-  "flesh-of-xesht": 36.24,
-  "foulborn-exalted-orb": 395.5,
-  "foulborn-orb-of-augmentation": 3.11,
-  "foulborn-regal-orb": 10.68,
-  "gcp": 2.7,
-  "hunters-exalted-orb": 217.5,
-  "mavens-chisel-of-divination": 7.47,
-  "mavens-chisel-of-procurement": 11.21,
-  "mavens-chisel-of-proliferation": 8.24,
-  "mavens-orb": 174.5,
-  "mirror": 45072,
-  "mirror-shard": 3994,
-  "noxious-catalyst": 0.3923,
-  "portal": 0.02284,
-  "prismatic-catalyst": 7.24,
-  "rogues-marker": 0.001139,
-  "sacred-orb": 20.62,
-  "sinistral-catalyst": 3.95,
-  "soul-core-of-intellect": 840,
-  "stacked-deck": 2.15,
-  "tailoring-orb": 109.5,
-  "tainted-armourers-scrap": 1.38,
-  "tainted-catalyst": 5.92,
-  "tainted-chaos-orb": 4.79,
-  "tainted-chromatic-orb": 2.53,
-  "tainted-divine-orb": 126.7,
-  "tainted-divine-teardrop": 87.75,
-  "tainted-jewellers-orb": 1.95,
-  "tainted-mythic-orb": 6.18,
-  "tempering-orb": 172.5,
-  "transmute": 0.02006,
-  "unstable-catalyst": 2.78,
-  "vaal": 0.4181,
-  "veiled-chaos-orb": 7.62,
-  "warlords-exalted-orb": 132.2,
-  "whetstone": 0.1012,
-  "wisdom": 0.007995
+  "divine": 209.1,
+  "blessed": 0.1722,
+  "abrasive-catalyst": 0.2595,
+  "alch": 0.09173,
+  "alchemy-shard": 1,
+  "alt": 0.1957,
+  "ancient-orb": 14.39,
+  "annul": 5.86,
+  "aug": 0.2056,
+  "awakeners-orb": 105.5,
+  "bauble": 1.48,
+  "chance": 0.8687,
+  "elders-exalted-orb": 8.18,
+  "eldritch-chaos-orb": 35.08,
+  "eldritch-exalted-orb": 1.99,
+  "eldritch-orb-of-annulment": 24.4,
+  "enkindling-orb": 0.9691,
+  "exalted": 0.9514,
+  "exceptional-eldritch-ichor": 37.29,
+  "fertile-catalyst": 8.07,
+  "fracturing-orb": 1468,
+  "fracturing-shard": 64.49,
+  "fusing": 0.1501,
+  "grand-eldritch-ember": 6.85,
+  "grand-eldritch-ichor": 2.51,
+  "greater-eldritch-ember": 2.22,
+  "greater-eldritch-ichor": 0.7686,
+  "imbued-catalyst": 0.2561,
+  "instilling-orb": 0.3928,
+  "intrinsic-catalyst": 0.3448,
+  "jewellers": 0.02784,
+  "lesser-eldritch-ember": 0.5964,
+  "lesser-eldritch-ichor": 0.5044,
+  "mavens-chisel-of-avarice": 294.7,
+  "mavens-chisel-of-threads": 9.4,
+  "orb-of-conflict": 106.1,
+  "orb-of-intention": 0.8438,
+  "orb-of-remembrance": 113.9,
+  "orb-of-unmaking": 0.5771,
+  "orb-of-unravelling": 9.93,
+  "primal-lifeforce": 0.02982,
+  "redeemers-exalted-orb": 7.48,
+  "reflecting-mist": 813.1,
+  "regal": 0.3083,
+  "regret": 1.56,
+  "sacred-lifeforce": 22.04,
+  "sandswept-lifeforce": 174.1,
+  "scour": 0.8042,
+  "scrap": 0.2568,
+  "shapers-exalted-orb": 48.48,
+  "soul-core-of-finesse": 1839,
+  "soul-core-of-instability": 468.7,
+  "soul-core-of-might": 1776,
+  "tainted-blacksmiths-whetstone": 1.39,
+  "tainted-exalted-orb": 25.26,
+  "tainted-orb-of-fusing": 32.02,
+  "tempering-catalyst": 2.07,
+  "turbulent-catalyst": 0.294,
+  "veiled-exalted-orb": 317.8,
+  "vivid-lifeforce": 0.03103,
+  "wild-lifeforce": 0.02213,
+  "chrome": 1.58,
+  "cluster-fog": 794,
+  "crusaders-exalted-orb": 12.85,
+  "dextral-catalyst": 94.72,
+  "hinekoras-lock": 16000,
+  "exceptional-eldritch-ember": 38.58,
+  "flesh-of-xesht": 20.79,
+  "foulborn-exalted-orb": 22.79,
+  "foulborn-orb-of-augmentation": 1.74,
+  "foulborn-regal-orb": 1.33,
+  "gcp": 3.09,
+  "hunters-exalted-orb": 45.23,
+  "mavens-chisel-of-divination": 34.48,
+  "mavens-chisel-of-procurement": 197.8,
+  "mavens-chisel-of-proliferation": 53.38,
+  "mavens-orb": 523,
+  "mirror": 118599,
+  "mirror-shard": 6107,
+  "noxious-catalyst": 0.2663,
+  "portal": 0.0543,
+  "prismatic-catalyst": 16.43,
+  "rogues-marker": 0.003334,
+  "sacred-orb": 16.82,
+  "sinistral-catalyst": 40.23,
+  "soul-core-of-intellect": 1620,
+  "stacked-deck": 3.63,
+  "tailoring-orb": 381.8,
+  "tainted-armourers-scrap": 2.26,
+  "tainted-catalyst": 18.49,
+  "tainted-chaos-orb": 7.06,
+  "tainted-chromatic-orb": 5.43,
+  "tainted-divine-orb": 627.1,
+  "tainted-divine-teardrop": 260.3,
+  "tainted-jewellers-orb": 1.64,
+  "tainted-mythic-orb": 11.58,
+  "tempering-orb": 742,
+  "transmute": 0.03513,
+  "unstable-catalyst": 2.28,
+  "vaal": 0.7931,
+  "veiled-chaos-orb": 12.64,
+  "warlords-exalted-orb": 37.96,
+  "whetstone": 0.1421,
+  "wisdom": 0.01813
  },
  "prices": {
   "Large Cluster Jewel||Minions deal 10% increased Damage||25% increased Small Passive Effect": {
+   "low": {
+    "type": "~b/o",
+    "amount": 10,
+    "currency": "chaos"
+   },
+   "mid": {
+    "type": "~b/o",
+    "amount": 20,
+    "currency": "chaos"
+   },
+   "sampled": 10,
+   "sellers": 10,
+   "listed": 1532,
+   "passivesMin": 12,
+   "passivesMax": 12,
+   "at": "2026-11-22T17:47:37.644Z"
+  },
+  "Medium Cluster Jewel||12% increased Trap Damage / 12% increased Mine Damage||Guerilla Tactics + Surprise Sabotage": {
+   "low": {
+    "type": "~b/o",
+    "amount": 44,
+    "currency": "chaos"
+   },
+   "mid": {
+    "type": "~b/o",
+    "amount": 69,
+    "currency": "chaos"
+   },
+   "sampled": 10,
+   "sellers": 8,
+   "listed": 623,
+   "passivesMin": 4,
+   "passivesMax": 5,
+   "at": "2026-11-22T17:53:07.801Z"
+  },
+  "Small Cluster Jewel||6% increased Mana Reservation Efficiency of Skills||25% increased Small Passive Effect": {
    "low": {
     "type": "~b/o",
     "amount": 20,
@@ -118,110 +155,69 @@
    },
    "mid": {
     "type": "~b/o",
-    "amount": 28,
+    "amount": 50,
     "currency": "chaos"
    },
    "sampled": 10,
    "sellers": 10,
-   "listed": 495,
-   "passivesMin": 12,
-   "passivesMax": 12,
-   "at": "2026-11-17T01:56:33.716Z"
-  },
-  "Medium Cluster Jewel||12% increased Trap Damage / 12% increased Mine Damage||Guerilla Tactics + Surprise Sabotage": {
-   "low": {
-    "type": "~b/o",
-    "amount": 30,
-    "currency": "chaos"
-   },
-   "mid": {
-    "type": "~b/o",
-    "amount": 37,
-    "currency": "chaos"
-   },
-   "sampled": 10,
-   "sellers": 7,
-   "listed": 199,
-   "passivesMin": 4,
-   "passivesMax": 5,
-   "at": "2026-11-17T01:56:34.630Z"
-  },
-  "Small Cluster Jewel||6% increased Mana Reservation Efficiency of Skills||25% increased Small Passive Effect": {
-   "low": {
-    "type": "~b/o",
-    "amount": 130,
-    "currency": "chaos"
-   },
-   "mid": {
-    "type": "~b/o",
-    "amount": 140,
-    "currency": "chaos"
-   },
-   "sampled": 10,
-   "sellers": 4,
-   "listed": 331,
+   "listed": 1909,
    "passivesMin": 3,
    "passivesMax": 3,
-   "at": "2026-11-17T01:56:44.342Z"
+   "at": "2026-11-22T17:57:07.662Z"
   },
   "Small Cluster Jewel||6% increased Mana Reservation Efficiency of Skills||35% increased Small Passive Effect": {
    "low": {
     "type": "~b/o",
-    "amount": 8,
+    "amount": 12,
     "currency": "divine"
    },
    "mid": {
     "type": "~b/o",
-    "amount": 11,
+    "amount": 13,
     "currency": "divine"
    },
    "sampled": 10,
-   "sellers": 7,
-   "listed": 52,
+   "sellers": 8,
+   "listed": 333,
    "passivesMin": 3,
    "passivesMax": 3,
-   "at": "2026-11-17T01:56:54.040Z"
+   "at": "2026-11-22T17:57:38.005Z"
   },
   "Large Cluster Jewel||12% increased Lightning Damage||25% increased Small Passive Effect": {
    "low": {
     "type": "~b/o",
-    "amount": 1,
+    "amount": 2,
     "currency": "chaos"
    },
    "mid": {
     "type": "~b/o",
-    "amount": 10,
+    "amount": 7,
     "currency": "chaos"
    },
    "sampled": 10,
    "sellers": 10,
-   "listed": 65,
+   "listed": 252,
    "passivesMin": 12,
    "passivesMax": 12,
-   "at": "2026-11-17T01:56:54.337Z"
+   "at": "2026-11-22T17:56:57.995Z"
   },
   "Large Cluster Jewel||10% increased Spell Damage||35% increased Small Passive Effect": {
    "low": {
     "type": "~b/o",
-    "amount": 200,
+    "amount": 80,
     "currency": "chaos"
    },
    "mid": {
     "type": "~b/o",
-    "amount": 350,
+    "amount": 150,
     "currency": "chaos"
    },
    "sampled": 10,
-   "sellers": 8,
-   "lowOutlier": {
-    "type": "~b/o",
-    "amount": 50,
-    "currency": "chaos"
-   },
-   "listed": 85,
+   "sellers": 9,
+   "listed": 811,
    "passivesMin": 12,
    "passivesMax": 12,
-   "at": "2026-11-17T01:57:04.054Z"
+   "at": "2026-11-22T18:02:48.865Z"
   },
   "Large Cluster Jewel||12% increased Attack Damage while Dual Wielding||35% increased Small Passive Effect": {
    "low": {
@@ -249,110 +245,110 @@
   "Large Cluster Jewel||Minions deal 10% increased Damage||Primordial Bond + Rotten Claws": {
    "low": {
     "type": "~b/o",
+    "amount": 40,
+    "currency": "chaos"
+   },
+   "mid": {
+    "type": "~b/o",
     "amount": 50,
-    "currency": "chaos"
-   },
-   "mid": {
-    "type": "~b/o",
-    "amount": 80,
-    "currency": "chaos"
-   },
-   "sampled": 10,
-   "sellers": 10,
-   "listed": 84,
-   "passivesMin": 8,
-   "passivesMax": 9,
-   "at": "2026-11-17T01:59:08.243Z"
-  },
-  "Large Cluster Jewel||Minions deal 10% increased Damage||Primordial Bond + Renewal": {
-   "low": {
-    "type": "~b/o",
-    "amount": 290,
-    "currency": "chaos"
-   },
-   "mid": {
-    "type": "~b/o",
-    "amount": 300,
-    "currency": "chaos"
-   },
-   "sampled": 10,
-   "sellers": 7,
-   "listed": 58,
-   "passivesMin": 8,
-   "passivesMax": 8,
-   "at": "2026-11-17T01:59:09.142Z"
-  },
-  "Large Cluster Jewel||Minions deal 10% increased Damage||Primordial Bond + Raze and Pillage": {
-   "low": {
-    "type": "~b/o",
-    "amount": 320,
-    "currency": "chaos"
-   },
-   "mid": {
-    "type": "~b/o",
-    "amount": 330,
-    "currency": "chaos"
-   },
-   "sampled": 10,
-   "sellers": 8,
-   "listed": 18,
-   "passivesMin": 8,
-   "passivesMax": 8,
-   "at": "2026-11-17T01:59:18.932Z"
-  },
-  "Medium Cluster Jewel||10% increased Area Damage||Assert Dominance + Magnifier": {
-   "low": {
-    "type": "~b/o",
-    "amount": 45,
-    "currency": "chaos"
-   },
-   "mid": {
-    "type": "~b/o",
-    "amount": 45,
-    "currency": "chaos"
-   },
-   "sampled": 10,
-   "sellers": 7,
-   "listed": 101,
-   "passivesMin": 4,
-   "passivesMax": 5,
-   "at": "2026-11-17T01:59:19.236Z"
-  },
-  "Medium Cluster Jewel||10% increased Area Damage||Assert Dominance + Towering Threat": {
-   "low": {
-    "type": "~b/o",
-    "amount": 60,
-    "currency": "chaos"
-   },
-   "mid": {
-    "type": "~b/o",
-    "amount": 70,
     "currency": "chaos"
    },
    "sampled": 10,
    "sellers": 9,
-   "listed": 57,
-   "passivesMin": 4,
-   "passivesMax": 5,
-   "at": "2026-11-17T02:04:08.280Z"
+   "listed": 369,
+   "passivesMin": 8,
+   "passivesMax": 9,
+   "at": "2026-11-22T17:47:38.580Z"
   },
-  "Medium Cluster Jewel||10% increased Area Damage||Magnifier + Towering Threat": {
+  "Large Cluster Jewel||Minions deal 10% increased Damage||Primordial Bond + Renewal": {
    "low": {
     "type": "~b/o",
-    "amount": 60,
+    "amount": 1222,
+    "currency": "alt"
+   },
+   "mid": {
+    "type": "~b/o",
+    "amount": 1,
+    "currency": "divine"
+   },
+   "sampled": 10,
+   "sellers": 9,
+   "listed": 418,
+   "passivesMin": 8,
+   "passivesMax": 8,
+   "at": "2026-11-22T17:47:48.321Z"
+  },
+  "Large Cluster Jewel||Minions deal 10% increased Damage||Primordial Bond + Raze and Pillage": {
+   "low": {
+    "type": "~b/o",
+    "amount": 145,
     "currency": "chaos"
    },
    "mid": {
     "type": "~b/o",
-    "amount": 60,
+    "amount": 1,
+    "currency": "divine"
+   },
+   "sampled": 10,
+   "sellers": 8,
+   "listed": 113,
+   "passivesMin": 8,
+   "passivesMax": 8,
+   "at": "2026-11-22T17:47:57.939Z"
+  },
+  "Medium Cluster Jewel||10% increased Area Damage||Assert Dominance + Magnifier": {
+   "low": {
+    "type": "~b/o",
+    "amount": 30,
+    "currency": "chaos"
+   },
+   "mid": {
+    "type": "~b/o",
+    "amount": 55,
     "currency": "chaos"
    },
    "sampled": 10,
-   "sellers": 5,
-   "listed": 128,
+   "sellers": 7,
+   "listed": 651,
    "passivesMin": 4,
    "passivesMax": 5,
-   "at": "2026-11-17T02:04:08.661Z"
+   "at": "2026-11-22T17:46:48.566Z"
+  },
+  "Medium Cluster Jewel||10% increased Area Damage||Assert Dominance + Towering Threat": {
+   "low": {
+    "type": "~b/o",
+    "amount": 3,
+    "currency": "divine"
+   },
+   "mid": {
+    "type": "~b/o",
+    "amount": 4,
+    "currency": "divine"
+   },
+   "sampled": 10,
+   "sellers": 7,
+   "listed": 77,
+   "passivesMin": 4,
+   "passivesMax": 5,
+   "at": "2026-11-22T17:46:58.330Z"
+  },
+  "Medium Cluster Jewel||10% increased Area Damage||Magnifier + Towering Threat": {
+   "low": {
+    "type": "~b/o",
+    "amount": 35,
+    "currency": "chaos"
+   },
+   "mid": {
+    "type": "~b/o",
+    "amount": 38,
+    "currency": "chaos"
+   },
+   "sampled": 10,
+   "sellers": 7,
+   "listed": 475,
+   "passivesMin": 4,
+   "passivesMax": 5,
+   "at": "2026-11-22T17:46:58.694Z"
   },
   "Medium Cluster Jewel||10% increased Area Damage||Towering Threat + Vast Power": {
    "low": {
@@ -375,102 +371,110 @@
   "Medium Cluster Jewel||10% increased Area Damage||Expansive Might + Towering Threat": {
    "low": {
     "type": "~b/o",
-    "amount": 140,
-    "currency": "chaos"
+    "amount": 2,
+    "currency": "divine"
    },
    "mid": {
     "type": "~b/o",
-    "amount": 160,
-    "currency": "chaos"
+    "amount": 2,
+    "currency": "divine"
    },
    "sampled": 10,
    "sellers": 8,
-   "listed": 44,
+   "listed": 181,
    "passivesMin": 4,
    "passivesMax": 5,
-   "at": "2026-11-17T02:04:09.370Z"
+   "at": "2026-11-22T17:47:07.631Z"
   },
   "Large Cluster Jewel||12% increased Chaos Damage||Unholy Grace + Unwaveringly Evil + Wicked Pall": {
    "low": {
     "type": "~b/o",
-    "amount": 270,
-    "currency": "chaos"
+    "amount": 5,
+    "currency": "divine"
    },
    "mid": {
     "type": "~b/o",
-    "amount": 270,
-    "currency": "chaos"
+    "amount": 5,
+    "currency": "divine"
    },
    "sampled": 10,
-   "sellers": 2,
-   "listed": 90,
+   "sellers": 10,
+   "listed": 51,
    "passivesMin": 8,
    "passivesMax": 8,
-   "at": "2026-11-17T02:04:18.271Z"
+   "at": "2026-11-22T17:46:47.919Z"
   },
   "Large Cluster Jewel||12% increased Chaos Damage||Overwhelming Malice + Unholy Grace + Unwaveringly Evil": {
    "low": {
     "type": "~b/o",
-    "amount": 7,
+    "amount": 8,
     "currency": "divine"
    },
    "mid": {
     "type": "~b/o",
-    "amount": 8,
+    "amount": 9,
     "currency": "divine"
    },
    "sampled": 10,
-   "sellers": 9,
-   "listed": 23,
+   "sellers": 10,
+   "listed": 22,
    "passivesMin": 8,
    "passivesMax": 8,
-   "at": "2026-11-17T02:04:19.369Z"
+   "at": "2026-11-22T17:46:47.633Z"
   },
   "Large Cluster Jewel||12% increased Chaos Damage||Touch of Cruelty + Unspeakable Gifts + Unwaveringly Evil": {
    "low": {
     "type": "~b/o",
-    "amount": 400,
-    "currency": "chaos"
+    "amount": 56,
+    "currency": "divine"
    },
    "mid": {
     "type": "~b/o",
-    "amount": 3,
+    "amount": 60,
     "currency": "divine"
    },
    "sampled": 7,
-   "sellers": 7,
+   "sellers": 6,
    "listed": 7,
    "passivesMin": 8,
    "passivesMax": 8,
-   "at": "2026-11-17T02:04:28.342Z"
+   "at": "2026-11-22T17:46:37.611Z"
   },
   "Large Cluster Jewel||12% increased Chaos Damage||Unspeakable Gifts + Unwaveringly Evil + Wicked Pall": {
-   "low": null,
-   "mid": null,
-   "sampled": 0,
-   "sellers": 0,
-   "listed": 0,
+   "low": {
+    "type": "~b/o",
+    "amount": 15,
+    "currency": "divine"
+   },
+   "mid": {
+    "type": "~b/o",
+    "amount": 18,
+    "currency": "divine"
+   },
+   "sampled": 10,
+   "sellers": 9,
+   "listed": 16,
    "passivesMin": 8,
    "passivesMax": 8,
-   "at": "2026-11-17T02:04:28.476Z"
+   "at": "2026-11-22T17:46:38.502Z"
   },
   "Large Cluster Jewel||12% increased Chaos Damage||Touch of Cruelty + Unholy Grace + Unwaveringly Evil": {
    "low": {
     "type": "~b/o",
-    "amount": 90,
-    "currency": "chaos"
+    "amount": 4,
+    "currency": "divine"
    },
    "mid": {
     "type": "~b/o",
-    "amount": 95,
-    "currency": "chaos"
+    "amount": 4,
+    "currency": "divine"
    },
    "sampled": 10,
-   "sellers": 7,
-   "listed": 32,
+   "sellers": 10,
+   "listed": 93,
    "passivesMin": 8,
    "passivesMax": 8,
-   "at": "2026-11-17T02:04:29.015Z"
+   "at": "2026-11-22T17:46:48.269Z"
   },
   "Small Cluster Jewel||15% increased Armour||Enduring Composure": {
    "low": {
@@ -480,151 +484,61 @@
    },
    "mid": {
     "type": "~b/o",
-    "amount": 24,
-    "currency": "chaos"
-   },
-   "sampled": 10,
-   "sellers": 8,
-   "listed": 1088,
-   "passivesMin": 2,
-   "passivesMax": 3,
-   "at": "2026-11-17T02:04:29.419Z"
-  },
-  "Small Cluster Jewel||15% increased Armour||25% increased Small Passive Effect + Enduring Composure": {
-   "low": {
-    "type": "~b/o",
-    "amount": 30,
-    "currency": "chaos"
-   },
-   "mid": {
-    "type": "~b/o",
-    "amount": 60,
-    "currency": "chaos"
-   },
-   "sampled": 10,
-   "sellers": 10,
-   "listed": 15,
-   "passivesMin": 3,
-   "passivesMax": 3,
-   "at": "2026-11-17T02:05:08.261Z"
-  },
-  "Small Cluster Jewel||15% increased Armour||Uncompromising": {
-   "low": {
-    "type": "~b/o",
-    "amount": 11,
-    "currency": "chaos"
-   },
-   "mid": {
-    "type": "~b/o",
-    "amount": 20,
-    "currency": "chaos"
-   },
-   "sampled": 10,
-   "sellers": 10,
-   "listed": 147,
-   "passivesMin": 2,
-   "passivesMax": 2,
-   "at": "2026-11-17T02:05:09.334Z"
-  },
-  "Large Cluster Jewel||12% increased Attack Damage while holding a Shield||Calamitous + Fuel the Fight + Martial Prowess": {
-   "low": {
-    "type": "~b/o",
-    "amount": 135,
-    "currency": "chaos"
-   },
-   "mid": {
-    "type": "~b/o",
-    "amount": 150,
-    "currency": "chaos"
-   },
-   "sampled": 10,
-   "sellers": 6,
-   "listed": 29,
-   "passivesMin": 8,
-   "passivesMax": 8,
-   "at": "2026-11-17T02:05:19.003Z"
-  },
-  "Large Cluster Jewel||12% increased Attack Damage while holding a Shield||Feed the Fury + Prodigious Defence + Smite the Weak": {
-   "low": {
-    "type": "~b/o",
-    "amount": 500,
-    "currency": "chaos"
-   },
-   "mid": {
-    "type": "~b/o",
-    "amount": 580,
-    "currency": "chaos"
-   },
-   "sampled": 10,
-   "sellers": 8,
-   "listed": 12,
-   "passivesMin": 8,
-   "passivesMax": 8,
-   "at": "2026-11-17T02:05:28.652Z"
-  },
-  "Large Cluster Jewel||12% increased Attack Damage while holding a Shield||Fuel the Fight + Prodigious Defence + Smite the Weak": {
-   "low": {
-    "type": "~b/o",
-    "amount": 150,
-    "currency": "chaos"
-   },
-   "mid": {
-    "type": "~b/o",
-    "amount": 160,
+    "amount": 50,
     "currency": "chaos"
    },
    "sampled": 10,
    "sellers": 5,
-   "listed": 53,
-   "passivesMin": 8,
-   "passivesMax": 8,
-   "at": "2026-11-17T02:05:28.988Z"
+   "listed": 2311,
+   "passivesMin": 2,
+   "passivesMax": 3,
+   "at": "2026-11-22T17:47:58.659Z"
   },
-  "Large Cluster Jewel||12% increased Attack Damage while holding a Shield||Calamitous + Devastator + Martial Prowess": {
+  "Small Cluster Jewel||15% increased Armour||25% increased Small Passive Effect + Enduring Composure": {
    "low": {
     "type": "~b/o",
-    "amount": 9,
-    "currency": "divine"
-   },
-   "mid": {
-    "type": "~b/o",
-    "amount": 9,
-    "currency": "divine"
-   },
-   "sampled": 2,
-   "sellers": 2,
-   "listed": 2,
-   "passivesMin": 8,
-   "passivesMax": 8,
-   "at": "2026-11-17T02:05:29.358Z"
-  },
-  "Large Cluster Jewel||12% increased Attack Damage while holding a Shield||Feed the Fury + Fuel the Fight + Martial Prowess": {
-   "low": {
-    "type": "~b/o",
-    "amount": 650,
+    "amount": 50,
     "currency": "chaos"
    },
    "mid": {
     "type": "~b/o",
-    "amount": 5,
-    "currency": "divine"
+    "amount": 80,
+    "currency": "chaos"
    },
    "sampled": 10,
-   "sellers": 9,
-   "listed": 28,
-   "passivesMin": 8,
-   "passivesMax": 8,
-   "at": "2026-11-17T02:05:38.424Z"
+   "sellers": 10,
+   "listed": 35,
+   "passivesMin": 3,
+   "passivesMax": 3,
+   "at": "2026-11-22T17:48:37.604Z"
   },
-  "Large Cluster Jewel||12% increased Physical Damage||Force Multiplier + Iron Breaker + Master the Fundamentals": {
+  "Small Cluster Jewel||15% increased Armour||Uncompromising": {
    "low": {
     "type": "~b/o",
-    "amount": 1000,
+    "amount": 10,
     "currency": "chaos"
    },
    "mid": {
     "type": "~b/o",
-    "amount": 5,
+    "amount": 10,
+    "currency": "chaos"
+   },
+   "sampled": 10,
+   "sellers": 10,
+   "listed": 497,
+   "passivesMin": 2,
+   "passivesMax": 2,
+   "at": "2026-11-22T17:51:38.288Z"
+  },
+  "Large Cluster Jewel||12% increased Attack Damage while holding a Shield||Calamitous + Fuel the Fight + Martial Prowess": {
+   "low": {
+    "type": "~b/o",
+    "amount": 150,
+    "currency": "chaos"
+   },
+   "mid": {
+    "type": "~b/o",
+    "amount": 1,
     "currency": "divine"
    },
    "sampled": 10,
@@ -632,61 +546,151 @@
    "listed": 39,
    "passivesMin": 8,
    "passivesMax": 8,
-   "at": "2026-11-17T02:05:38.722Z"
+   "at": "2026-11-22T17:52:07.722Z"
+  },
+  "Large Cluster Jewel||12% increased Attack Damage while holding a Shield||Feed the Fury + Prodigious Defence + Smite the Weak": {
+   "low": {
+    "type": "~b/o",
+    "amount": 5,
+    "currency": "divine"
+   },
+   "mid": {
+    "type": "~b/o",
+    "amount": 5,
+    "currency": "divine"
+   },
+   "sampled": 10,
+   "sellers": 8,
+   "listed": 23,
+   "passivesMin": 8,
+   "passivesMax": 8,
+   "at": "2026-11-22T17:52:38.024Z"
+  },
+  "Large Cluster Jewel||12% increased Attack Damage while holding a Shield||Fuel the Fight + Prodigious Defence + Smite the Weak": {
+   "low": {
+    "type": "~b/o",
+    "amount": 1,
+    "currency": "divine"
+   },
+   "mid": {
+    "type": "~b/o",
+    "amount": 1,
+    "currency": "divine"
+   },
+   "sampled": 10,
+   "sellers": 10,
+   "listed": 74,
+   "passivesMin": 8,
+   "passivesMax": 8,
+   "at": "2026-11-22T17:52:38.741Z"
+  },
+  "Large Cluster Jewel||12% increased Attack Damage while holding a Shield||Calamitous + Devastator + Martial Prowess": {
+   "low": {
+    "type": "~b/o",
+    "amount": 1,
+    "currency": "divine"
+   },
+   "mid": {
+    "type": "~b/o",
+    "amount": 2,
+    "currency": "divine"
+   },
+   "sampled": 10,
+   "sellers": 10,
+   "listed": 21,
+   "passivesMin": 8,
+   "passivesMax": 8,
+   "at": "2026-11-22T17:52:38.412Z"
+  },
+  "Large Cluster Jewel||12% increased Attack Damage while holding a Shield||Feed the Fury + Fuel the Fight + Martial Prowess": {
+   "low": {
+    "type": "~b/o",
+    "amount": 498,
+    "currency": "chaos"
+   },
+   "mid": {
+    "type": "~b/o",
+    "amount": 3,
+    "currency": "divine"
+   },
+   "sampled": 10,
+   "sellers": 7,
+   "listed": 109,
+   "passivesMin": 8,
+   "passivesMax": 8,
+   "at": "2026-11-22T17:52:47.704Z"
+  },
+  "Large Cluster Jewel||12% increased Physical Damage||Force Multiplier + Iron Breaker + Master the Fundamentals": {
+   "low": {
+    "type": "~b/o",
+    "amount": 8,
+    "currency": "divine"
+   },
+   "mid": {
+    "type": "~b/o",
+    "amount": 8,
+    "currency": "divine"
+   },
+   "sampled": 10,
+   "sellers": 8,
+   "listed": 58,
+   "passivesMin": 8,
+   "passivesMax": 8,
+   "at": "2026-11-22T17:51:47.975Z"
   },
   "Large Cluster Jewel||12% increased Physical Damage||Battle-Hardened + Force Multiplier + Iron Breaker": {
    "low": {
     "type": "~b/o",
-    "amount": 228,
+    "amount": 155,
     "currency": "chaos"
    },
    "mid": {
     "type": "~b/o",
-    "amount": 335,
-    "currency": "chaos"
+    "amount": 1,
+    "currency": "divine"
    },
    "sampled": 10,
-   "sellers": 7,
-   "listed": 26,
+   "sellers": 5,
+   "listed": 139,
    "passivesMin": 8,
    "passivesMax": 8,
-   "at": "2026-11-17T02:09:08.583Z"
+   "at": "2026-11-22T17:51:57.614Z"
   },
   "Large Cluster Jewel||12% increased Physical Damage||Battle-Hardened + Furious Assault + Iron Breaker": {
    "low": {
     "type": "~b/o",
-    "amount": 33,
+    "amount": 53,
     "currency": "chaos"
    },
    "mid": {
     "type": "~b/o",
-    "amount": 34,
+    "amount": 58,
     "currency": "chaos"
    },
    "sampled": 10,
-   "sellers": 4,
-   "listed": 62,
+   "sellers": 5,
+   "listed": 69,
    "passivesMin": 8,
    "passivesMax": 8,
-   "at": "2026-11-17T02:09:08.968Z"
+   "at": "2026-11-22T17:51:58.008Z"
   },
   "Large Cluster Jewel||12% increased Physical Damage||Battle-Hardened + Furious Assault + Master the Fundamentals": {
    "low": {
     "type": "~b/o",
-    "amount": 385,
+    "amount": 499,
     "currency": "chaos"
    },
    "mid": {
     "type": "~b/o",
-    "amount": 390,
-    "currency": "chaos"
+    "amount": 3,
+    "currency": "divine"
    },
    "sampled": 10,
-   "sellers": 7,
-   "listed": 33,
+   "sellers": 9,
+   "listed": 55,
    "passivesMin": 8,
    "passivesMax": 8,
-   "at": "2026-11-17T02:09:09.413Z"
+   "at": "2026-11-22T17:51:58.710Z"
   },
   "Large Cluster Jewel||12% increased Physical Damage||Force Multiplier + Iron Breaker": {
    "low": {
@@ -709,92 +713,92 @@
   "Medium Cluster Jewel||12% increased Trap Damage / 12% increased Mine Damage||Expert Sabotage + Guerilla Tactics": {
    "low": {
     "type": "~b/o",
-    "amount": 25,
+    "amount": 40,
     "currency": "chaos"
    },
    "mid": {
     "type": "~b/o",
-    "amount": 29,
+    "amount": 43,
     "currency": "chaos"
    },
    "sampled": 10,
-   "sellers": 7,
-   "listed": 185,
+   "sellers": 9,
+   "listed": 379,
    "passivesMin": 4,
    "passivesMax": 5,
-   "at": "2026-11-17T02:09:18.644Z"
+   "at": "2026-11-22T17:56:37.624Z"
   },
   "Medium Cluster Jewel||12% increased Trap Damage / 12% increased Mine Damage||Guerilla Tactics + Set and Forget": {
    "low": {
     "type": "~b/o",
-    "amount": 25,
+    "amount": 30,
     "currency": "chaos"
    },
    "mid": {
     "type": "~b/o",
-    "amount": 25,
+    "amount": 30,
     "currency": "chaos"
    },
    "sampled": 10,
    "sellers": 6,
-   "listed": 55,
+   "listed": 157,
    "passivesMin": 4,
    "passivesMax": 5,
-   "at": "2026-11-17T02:09:18.981Z"
+   "at": "2026-11-22T17:56:37.940Z"
   },
   "Large Cluster Jewel||10% increased Elemental Damage||Prismatic Heart + Sadist + Widespread Destruction": {
    "low": {
     "type": "~b/o",
-    "amount": 44,
+    "amount": 180,
     "currency": "chaos"
    },
    "mid": {
     "type": "~b/o",
-    "amount": 45,
-    "currency": "chaos"
-   },
-   "sampled": 10,
-   "sellers": 6,
-   "listed": 54,
-   "passivesMin": 8,
-   "passivesMax": 8,
-   "at": "2026-11-17T02:09:19.356Z"
-  },
-  "Large Cluster Jewel||10% increased Elemental Damage||Disorienting Display + Prismatic Heart + Sadist": {
-   "low": {
-    "type": "~b/o",
-    "amount": 170,
-    "currency": "chaos"
-   },
-   "mid": {
-    "type": "~b/o",
-    "amount": 190,
-    "currency": "chaos"
-   },
-   "sampled": 10,
-   "sellers": 6,
-   "listed": 60,
-   "passivesMin": 8,
-   "passivesMax": 8,
-   "at": "2026-11-17T02:09:28.997Z"
-  },
-  "Large Cluster Jewel||10% increased Elemental Damage||Prismatic Heart + Widespread Destruction": {
-   "low": {
-    "type": "~b/o",
-    "amount": 5,
-    "currency": "chaos"
-   },
-   "mid": {
-    "type": "~b/o",
-    "amount": 10,
+    "amount": 215,
     "currency": "chaos"
    },
    "sampled": 10,
    "sellers": 10,
-   "listed": 240,
+   "listed": 39,
    "passivesMin": 8,
    "passivesMax": 8,
-   "at": "2026-11-17T02:09:29.407Z"
+   "at": "2026-11-22T18:06:38.411Z"
+  },
+  "Large Cluster Jewel||10% increased Elemental Damage||Disorienting Display + Prismatic Heart + Sadist": {
+   "low": {
+    "type": "~b/o",
+    "amount": 1,
+    "currency": "divine"
+   },
+   "mid": {
+    "type": "~b/o",
+    "amount": 200,
+    "currency": "chaos"
+   },
+   "sampled": 10,
+   "sellers": 10,
+   "listed": 61,
+   "passivesMin": 8,
+   "passivesMax": 8,
+   "at": "2026-11-22T18:06:48.031Z"
+  },
+  "Large Cluster Jewel||10% increased Elemental Damage||Prismatic Heart + Widespread Destruction": {
+   "low": {
+    "type": "~b/o",
+    "amount": 30,
+    "currency": "chaos"
+   },
+   "mid": {
+    "type": "~b/o",
+    "amount": 35,
+    "currency": "chaos"
+   },
+   "sampled": 10,
+   "sellers": 10,
+   "listed": 271,
+   "passivesMin": 8,
+   "passivesMax": 8,
+   "at": "2026-11-22T18:06:57.670Z"
   },
   "Large Cluster Jewel||10% increased Elemental Damage||Inspired Oppression + Prismatic Heart + Widespread Destruction": {
    "low": {
@@ -817,74 +821,74 @@
   "Large Cluster Jewel||10% increased Elemental Damage||Disorienting Display + Prismatic Heart": {
    "low": {
     "type": "~b/o",
-    "amount": 20,
+    "amount": 40,
     "currency": "chaos"
    },
    "mid": {
     "type": "~b/o",
-    "amount": 30,
+    "amount": 50,
     "currency": "chaos"
    },
    "sampled": 10,
    "sellers": 10,
-   "listed": 150,
+   "listed": 228,
    "passivesMin": 8,
    "passivesMax": 8,
-   "at": "2026-11-17T02:09:38.729Z"
+   "at": "2026-11-22T18:06:48.754Z"
   },
   "Medium Cluster Jewel||10% increased Damage while affected by a Herald||Empowered Envoy + Endbringer": {
    "low": {
     "type": "~b/o",
-    "amount": 99,
-    "currency": "chaos"
+    "amount": 1390,
+    "currency": "alt"
    },
    "mid": {
     "type": "~b/o",
-    "amount": 99,
-    "currency": "chaos"
+    "amount": 1449,
+    "currency": "alt"
    },
    "sampled": 10,
-   "sellers": 3,
-   "listed": 227,
+   "sellers": 5,
+   "listed": 1832,
    "passivesMin": 4,
    "passivesMax": 5,
-   "at": "2026-11-17T02:10:08.250Z"
+   "at": "2026-11-22T17:52:48.004Z"
   },
   "Medium Cluster Jewel||10% increased Damage while affected by a Herald||Dark Messenger + Self-Fulfilling Prophecy": {
    "low": {
     "type": "~b/o",
-    "amount": 30,
+    "amount": 50,
     "currency": "chaos"
    },
    "mid": {
     "type": "~b/o",
-    "amount": 65,
+    "amount": 51,
     "currency": "chaos"
    },
    "sampled": 10,
    "sellers": 10,
-   "listed": 12,
+   "listed": 46,
    "passivesMin": 4,
    "passivesMax": 5,
-   "at": "2026-11-17T02:10:09.336Z"
+   "at": "2026-11-22T17:52:57.654Z"
   },
   "Medium Cluster Jewel||10% increased Damage while affected by a Herald||Dark Messenger + Empowered Envoy": {
    "low": {
     "type": "~b/o",
-    "amount": 2,
+    "amount": 50,
     "currency": "chaos"
    },
    "mid": {
     "type": "~b/o",
-    "amount": 15,
+    "amount": 50,
     "currency": "chaos"
    },
    "sampled": 10,
    "sellers": 10,
-   "listed": 36,
+   "listed": 237,
    "passivesMin": 4,
    "passivesMax": 5,
-   "at": "2026-11-17T02:10:18.295Z"
+   "at": "2026-11-22T17:52:58.028Z"
   },
   "Medium Cluster Jewel||10% increased Damage while affected by a Herald||Empowered Envoy + Heraldry": {
    "low": {
@@ -907,20 +911,20 @@
   "Medium Cluster Jewel||10% increased Damage while affected by a Herald||Endbringer + Heraldry": {
    "low": {
     "type": "~b/o",
-    "amount": 23,
+    "amount": 60,
     "currency": "chaos"
    },
    "mid": {
     "type": "~b/o",
-    "amount": 25,
+    "amount": 100,
     "currency": "chaos"
    },
-   "sampled": 8,
-   "sellers": 8,
-   "listed": 8,
+   "sampled": 10,
+   "sellers": 10,
+   "listed": 32,
    "passivesMin": 4,
    "passivesMax": 5,
-   "at": "2026-11-17T02:10:18.978Z"
+   "at": "2026-11-22T17:52:58.397Z"
   },
   "Small Cluster Jewel||6% increased Mana Reservation Efficiency of Skills||Mortifying Aspect": {
    "low": {
@@ -943,74 +947,74 @@
   "Small Cluster Jewel||6% increased Mana Reservation Efficiency of Skills||Introspection": {
    "low": {
     "type": "~b/o",
-    "amount": 140,
+    "amount": 58,
     "currency": "chaos"
    },
    "mid": {
     "type": "~b/o",
-    "amount": 160,
+    "amount": 70,
     "currency": "chaos"
    },
    "sampled": 10,
-   "sellers": 5,
-   "listed": 99,
+   "sellers": 9,
+   "listed": 893,
    "passivesMin": 3,
    "passivesMax": 3,
-   "at": "2026-11-17T02:10:29.024Z"
+   "at": "2026-11-22T17:57:38.376Z"
   },
   "Small Cluster Jewel||6% increased Mana Reservation Efficiency of Skills||Uncompromising": {
    "low": {
     "type": "~b/o",
-    "amount": 15,
+    "amount": 30,
     "currency": "chaos"
    },
    "mid": {
     "type": "~b/o",
-    "amount": 20,
+    "amount": 50,
     "currency": "chaos"
    },
    "sampled": 10,
-   "sellers": 8,
-   "listed": 73,
+   "sellers": 10,
+   "listed": 131,
    "passivesMin": 2,
    "passivesMax": 2,
-   "at": "2026-11-17T02:10:29.342Z"
+   "at": "2026-11-22T17:57:38.753Z"
   },
   "Large Cluster Jewel||12% increased Damage with Bows / 12% increased Damage Over Time with Bow Skills||Arcing Shot + Broadside + Martial Prowess": {
    "low": {
     "type": "~b/o",
-    "amount": 380,
-    "currency": "chaos"
+    "amount": 3,
+    "currency": "divine"
    },
    "mid": {
     "type": "~b/o",
-    "amount": 395,
-    "currency": "chaos"
+    "amount": 3,
+    "currency": "divine"
    },
    "sampled": 10,
-   "sellers": 8,
-   "listed": 97,
+   "sellers": 9,
+   "listed": 146,
    "passivesMin": 8,
    "passivesMax": 8,
-   "at": "2026-11-17T02:10:38.307Z"
+   "at": "2026-11-22T18:01:57.734Z"
   },
   "Large Cluster Jewel||12% increased Damage with Bows / 12% increased Damage Over Time with Bow Skills||Feed the Fury + Fuel the Fight + Martial Prowess": {
    "low": {
     "type": "~b/o",
-    "amount": 229,
+    "amount": 240,
     "currency": "chaos"
    },
    "mid": {
     "type": "~b/o",
-    "amount": 250,
+    "amount": 300,
     "currency": "chaos"
    },
    "sampled": 10,
-   "sellers": 6,
-   "listed": 29,
+   "sellers": 9,
+   "listed": 47,
    "passivesMin": 8,
    "passivesMax": 8,
-   "at": "2026-11-17T02:14:08.270Z"
+   "at": "2026-11-22T18:02:07.778Z"
   },
   "Large Cluster Jewel||12% increased Damage with Bows / 12% increased Damage Over Time with Bow Skills||Arcing Shot + Martial Prowess + Tempered Arrowheads": {
    "low": {
@@ -1020,33 +1024,33 @@
    },
    "mid": {
     "type": "~b/o",
-    "amount": 410,
-    "currency": "chaos"
+    "amount": 3,
+    "currency": "divine"
    },
    "sampled": 10,
-   "sellers": 8,
-   "listed": 55,
+   "sellers": 7,
+   "listed": 108,
    "passivesMin": 8,
    "passivesMax": 8,
-   "at": "2026-11-17T02:14:08.627Z"
+   "at": "2026-11-22T18:01:58.662Z"
   },
   "Large Cluster Jewel||12% increased Damage with Bows / 12% increased Damage Over Time with Bow Skills||Calamitous + Fuel the Fight + Martial Prowess": {
    "low": {
     "type": "~b/o",
-    "amount": 148,
+    "amount": 130,
     "currency": "chaos"
    },
    "mid": {
     "type": "~b/o",
-    "amount": 155,
-    "currency": "chaos"
+    "amount": 1,
+    "currency": "divine"
    },
    "sampled": 10,
-   "sellers": 6,
-   "listed": 16,
+   "sellers": 9,
+   "listed": 30,
    "passivesMin": 8,
    "passivesMax": 8,
-   "at": "2026-11-17T02:14:08.968Z"
+   "at": "2026-11-22T18:02:08.078Z"
   },
   "Large Cluster Jewel||12% increased Damage with Bows / 12% increased Damage Over Time with Bow Skills||Drive the Destruction + Feed the Fury + Martial Prowess": {
    "low": {
@@ -1069,40 +1073,22 @@
   "Medium Cluster Jewel||10% increased Projectile Damage||Repeater + Streamlined": {
    "low": {
     "type": "~b/o",
-    "amount": 14,
+    "amount": 39,
     "currency": "chaos"
    },
    "mid": {
     "type": "~b/o",
-    "amount": 20,
+    "amount": 40,
     "currency": "chaos"
    },
    "sampled": 10,
-   "sellers": 8,
-   "listed": 363,
+   "sellers": 5,
+   "listed": 1882,
    "passivesMin": 4,
    "passivesMax": 5,
-   "at": "2026-11-17T02:14:18.299Z"
+   "at": "2026-11-22T17:57:48.731Z"
   },
   "Medium Cluster Jewel||10% increased Projectile Damage||Follow-Through + Repeater": {
-   "low": {
-    "type": "~b/o",
-    "amount": 35,
-    "currency": "chaos"
-   },
-   "mid": {
-    "type": "~b/o",
-    "amount": 38,
-    "currency": "chaos"
-   },
-   "sampled": 10,
-   "sellers": 6,
-   "listed": 117,
-   "passivesMin": 4,
-   "passivesMax": 5,
-   "at": "2026-11-17T02:14:19.371Z"
-  },
-  "Medium Cluster Jewel||10% increased Projectile Damage||Eye to Eye + Repeater": {
    "low": {
     "type": "~b/o",
     "amount": 30,
@@ -1110,33 +1096,51 @@
    },
    "mid": {
     "type": "~b/o",
-    "amount": 47,
+    "amount": 30,
     "currency": "chaos"
    },
    "sampled": 10,
-   "sellers": 5,
-   "listed": 133,
+   "sellers": 8,
+   "listed": 251,
    "passivesMin": 4,
    "passivesMax": 5,
-   "at": "2026-11-17T02:14:28.316Z"
+   "at": "2026-11-22T17:57:58.426Z"
   },
-  "Medium Cluster Jewel||10% increased Projectile Damage||Follow-Through": {
+  "Medium Cluster Jewel||10% increased Projectile Damage||Eye to Eye + Repeater": {
    "low": {
     "type": "~b/o",
-    "amount": 10,
+    "amount": 15,
     "currency": "chaos"
    },
    "mid": {
     "type": "~b/o",
-    "amount": 35,
+    "amount": 30,
+    "currency": "chaos"
+   },
+   "sampled": 10,
+   "sellers": 9,
+   "listed": 579,
+   "passivesMin": 4,
+   "passivesMax": 5,
+   "at": "2026-11-22T17:57:58.805Z"
+  },
+  "Medium Cluster Jewel||10% increased Projectile Damage||Follow-Through": {
+   "low": {
+    "type": "~b/o",
+    "amount": 23,
+    "currency": "chaos"
+   },
+   "mid": {
+    "type": "~b/o",
+    "amount": 39,
     "currency": "chaos"
    },
    "sampled": 10,
    "sellers": 10,
-   "listed": 105,
+   "listed": 270,
    "passivesMin": 4,
    "passivesMax": 4,
-   "at": "2026-11-17T02:14:28.654Z"
+   "at": "2026-11-22T17:58:08.181Z"
   },
   "Medium Cluster Jewel||10% increased Projectile Damage||Follow-Through + Streamlined": {
    "low": {
@@ -1159,56 +1163,56 @@
   "Large Cluster Jewel||12% increased Cold Damage||Blanketed Snow + Prismatic Heart": {
    "low": {
     "type": "~b/o",
-    "amount": 250,
-    "currency": "chaos"
+    "amount": 2,
+    "currency": "divine"
    },
    "mid": {
     "type": "~b/o",
-    "amount": 3,
+    "amount": 2,
     "currency": "divine"
    },
    "sampled": 10,
-   "sellers": 7,
-   "listed": 18,
+   "sellers": 9,
+   "listed": 68,
    "passivesMin": 8,
    "passivesMax": 8,
-   "at": "2026-11-17T02:14:38.755Z"
+   "at": "2026-11-22T18:02:58.445Z"
   },
   "Large Cluster Jewel||12% increased Cold Damage||Blanketed Snow + Widespread Destruction": {
    "low": {
     "type": "~b/o",
-    "amount": 50,
+    "amount": 120,
     "currency": "chaos"
    },
    "mid": {
     "type": "~b/o",
-    "amount": 80,
-    "currency": "chaos"
+    "amount": 1,
+    "currency": "divine"
    },
    "sampled": 10,
-   "sellers": 10,
-   "listed": 58,
+   "sellers": 7,
+   "listed": 201,
    "passivesMin": 8,
    "passivesMax": 8,
-   "at": "2026-11-17T02:15:09.032Z"
+   "at": "2026-11-22T18:03:37.648Z"
   },
   "Large Cluster Jewel||12% increased Cold Damage||Blanketed Snow + Disorienting Display": {
    "low": {
     "type": "~b/o",
-    "amount": 62,
+    "amount": 100,
     "currency": "chaos"
    },
    "mid": {
     "type": "~b/o",
-    "amount": 70,
+    "amount": 120,
     "currency": "chaos"
    },
    "sampled": 10,
-   "sellers": 8,
-   "listed": 43,
+   "sellers": 10,
+   "listed": 151,
    "passivesMin": 8,
    "passivesMax": 8,
-   "at": "2026-11-17T02:15:09.360Z"
+   "at": "2026-11-22T18:03:08.264Z"
   },
   "Large Cluster Jewel||12% increased Cold Damage||Blanketed Snow + Disorienting Display + Prismatic Heart": {
    "low": {
@@ -1249,20 +1253,20 @@
   "Large Cluster Jewel||12% increased Lightning Damage||Overshock + Prismatic Heart + Widespread Destruction": {
    "low": {
     "type": "~b/o",
-    "amount": 5,
+    "amount": 1,
     "currency": "divine"
    },
    "mid": {
     "type": "~b/o",
-    "amount": 9,
-    "currency": "divine"
+    "amount": 180,
+    "currency": "chaos"
    },
-   "sampled": 5,
-   "sellers": 5,
-   "listed": 5,
+   "sampled": 10,
+   "sellers": 9,
+   "listed": 66,
    "passivesMin": 8,
    "passivesMax": 8,
-   "at": "2026-11-17T02:15:19.006Z"
+   "at": "2026-11-22T17:56:47.669Z"
   },
   "Large Cluster Jewel||12% increased Lightning Damage||Overshock + Storm Drinker + Widespread Destruction": {
    "low": {
@@ -1285,25 +1289,25 @@
   "Large Cluster Jewel||12% increased Lightning Damage||Prismatic Heart + Storm Drinker + Widespread Destruction": {
    "low": {
     "type": "~b/o",
-    "amount": 80,
+    "amount": 95,
     "currency": "chaos"
    },
    "mid": {
     "type": "~b/o",
-    "amount": 100,
+    "amount": 130,
     "currency": "chaos"
    },
    "sampled": 10,
-   "sellers": 10,
-   "listed": 71,
+   "sellers": 9,
+   "listed": 99,
    "passivesMin": 8,
    "passivesMax": 8,
-   "at": "2026-11-17T02:15:29.017Z"
+   "at": "2026-11-22T17:56:48.679Z"
   },
   "Large Cluster Jewel||10% increased Spell Damage||Conjured Wall + Mage Hunter + Thaumophage": {
    "low": {
     "type": "~b/o",
-    "amount": 6,
+    "amount": 5,
     "currency": "divine"
    },
    "mid": {
@@ -1311,48 +1315,48 @@
     "amount": 6,
     "currency": "divine"
    },
-   "sampled": 6,
-   "sellers": 6,
-   "listed": 6,
+   "sampled": 10,
+   "sellers": 9,
+   "listed": 59,
    "passivesMin": 8,
    "passivesMax": 8,
-   "at": "2026-11-17T02:15:29.377Z"
+   "at": "2026-11-22T18:02:38.008Z"
   },
   "Large Cluster Jewel||10% increased Spell Damage||Mage Hunter + Thaumophage": {
    "low": {
     "type": "~b/o",
-    "amount": 45,
+    "amount": 74,
     "currency": "chaos"
    },
    "mid": {
     "type": "~b/o",
-    "amount": 50,
+    "amount": 99,
     "currency": "chaos"
    },
    "sampled": 10,
-   "sellers": 10,
-   "listed": 82,
+   "sellers": 9,
+   "listed": 185,
    "passivesMin": 8,
    "passivesMax": 8,
-   "at": "2026-11-17T02:16:08.265Z"
+   "at": "2026-11-22T18:02:48.489Z"
   },
   "Large Cluster Jewel||10% increased Spell Damage||Conjured Wall + Essence Rush + Mage Hunter": {
    "low": {
     "type": "~b/o",
-    "amount": 4,
+    "amount": 6,
     "currency": "divine"
    },
    "mid": {
     "type": "~b/o",
-    "amount": 5,
+    "amount": 6,
     "currency": "divine"
    },
    "sampled": 10,
    "sellers": 10,
-   "listed": 19,
+   "listed": 75,
    "passivesMin": 8,
    "passivesMax": 8,
-   "at": "2026-11-17T02:19:08.308Z"
+   "at": "2026-11-22T18:02:47.716Z"
   },
   "Large Cluster Jewel||10% increased Spell Damage||Mage Hunter + Practiced Caster": {
    "low": {
@@ -1375,40 +1379,112 @@
   "Medium Cluster Jewel||15% increased Critical Strike Chance||Overwhelming Malice": {
    "low": {
     "type": "~b/o",
-    "amount": 10,
-    "currency": "chaos"
-   },
-   "mid": {
-    "type": "~b/o",
-    "amount": 18,
-    "currency": "chaos"
-   },
-   "sampled": 10,
-   "sellers": 8,
-   "listed": 347,
-   "passivesMin": 4,
-   "passivesMax": 5,
-   "at": "2026-11-17T02:19:09.059Z"
-  },
-  "Medium Cluster Jewel||15% increased Critical Strike Chance||Pressure Points + Quick Getaway": {
-   "low": {
-    "type": "~b/o",
-    "amount": 25,
-    "currency": "chaos"
-   },
-   "mid": {
-    "type": "~b/o",
     "amount": 30,
+    "currency": "chaos"
+   },
+   "mid": {
+    "type": "~b/o",
+    "amount": 40,
     "currency": "chaos"
    },
    "sampled": 10,
    "sellers": 9,
-   "listed": 89,
+   "listed": 703,
    "passivesMin": 4,
    "passivesMax": 5,
-   "at": "2026-11-17T02:19:18.617Z"
+   "at": "2026-11-22T18:12:38.406Z"
+  },
+  "Medium Cluster Jewel||15% increased Critical Strike Chance||Pressure Points + Quick Getaway": {
+   "low": {
+    "type": "~b/o",
+    "amount": 40,
+    "currency": "chaos"
+   },
+   "mid": {
+    "type": "~b/o",
+    "amount": 44,
+    "currency": "chaos"
+   },
+   "sampled": 10,
+   "sellers": 5,
+   "listed": 307,
+   "passivesMin": 4,
+   "passivesMax": 5,
+   "at": "2026-11-22T18:12:48.073Z"
   },
   "Medium Cluster Jewel||15% increased Critical Strike Chance||Basics of Pain + Overwhelming Malice": {
+   "low": {
+    "type": "~b/o",
+    "amount": 40,
+    "currency": "chaos"
+   },
+   "mid": {
+    "type": "~b/o",
+    "amount": 45,
+    "currency": "chaos"
+   },
+   "sampled": 10,
+   "sellers": 10,
+   "listed": 93,
+   "passivesMin": 4,
+   "passivesMax": 5,
+   "at": "2026-11-22T18:12:48.446Z"
+  },
+  "Medium Cluster Jewel||15% increased Critical Strike Chance||Basics of Pain + Pressure Points": {
+   "low": {
+    "type": "~b/o",
+    "amount": 1,
+    "currency": "divine"
+   },
+   "mid": {
+    "type": "~b/o",
+    "amount": 1,
+    "currency": "divine"
+   },
+   "sampled": 10,
+   "sellers": 7,
+   "listed": 182,
+   "passivesMin": 4,
+   "passivesMax": 5,
+   "at": "2026-11-22T18:12:48.805Z"
+  },
+  "Medium Cluster Jewel||15% increased Critical Strike Chance||Basics of Pain + Quick Getaway": {
+   "low": {
+    "type": "~b/o",
+    "amount": 14,
+    "currency": "chaos"
+   },
+   "mid": {
+    "type": "~b/o",
+    "amount": 20,
+    "currency": "chaos"
+   },
+   "sampled": 10,
+   "sellers": 10,
+   "listed": 115,
+   "passivesMin": 4,
+   "passivesMax": 5,
+   "at": "2026-11-22T18:12:57.761Z"
+  },
+  "Medium Cluster Jewel||Minions have 12% increased maximum Life||Blessed Rebirth + Life from Death": {
+   "low": {
+    "type": "~b/o",
+    "amount": 490,
+    "currency": "chaos"
+   },
+   "mid": {
+    "type": "~b/o",
+    "amount": 3,
+    "currency": "divine"
+   },
+   "sampled": 10,
+   "sellers": 10,
+   "listed": 118,
+   "passivesMin": 4,
+   "passivesMax": 5,
+   "at": "2026-11-22T18:07:38.405Z"
+  },
+  "Medium Cluster Jewel||Minions have 12% increased maximum Life||Blessed Rebirth + Dread March": {
    "low": {
     "type": "~b/o",
     "amount": 30,
@@ -1420,119 +1496,47 @@
     "currency": "chaos"
    },
    "sampled": 10,
-   "sellers": 9,
-   "listed": 40,
-   "passivesMin": 4,
-   "passivesMax": 5,
-   "at": "2026-11-17T02:19:18.990Z"
-  },
-  "Medium Cluster Jewel||15% increased Critical Strike Chance||Basics of Pain + Pressure Points": {
-   "low": {
-    "type": "~b/o",
-    "amount": 80,
-    "currency": "chaos"
-   },
-   "mid": {
-    "type": "~b/o",
-    "amount": 90,
-    "currency": "chaos"
-   },
-   "sampled": 10,
-   "sellers": 7,
-   "listed": 91,
-   "passivesMin": 4,
-   "passivesMax": 5,
-   "at": "2026-11-17T02:19:19.357Z"
-  },
-  "Medium Cluster Jewel||15% increased Critical Strike Chance||Basics of Pain + Quick Getaway": {
-   "low": {
-    "type": "~b/o",
-    "amount": 8,
-    "currency": "chaos"
-   },
-   "mid": {
-    "type": "~b/o",
-    "amount": 10,
-    "currency": "chaos"
-   },
-   "sampled": 10,
    "sellers": 10,
-   "listed": 53,
+   "listed": 164,
    "passivesMin": 4,
    "passivesMax": 5,
-   "at": "2026-11-17T02:19:28.306Z"
-  },
-  "Medium Cluster Jewel||Minions have 12% increased maximum Life||Blessed Rebirth + Life from Death": {
-   "low": {
-    "type": "~b/o",
-    "amount": 189,
-    "currency": "chaos"
-   },
-   "mid": {
-    "type": "~b/o",
-    "amount": 190,
-    "currency": "chaos"
-   },
-   "sampled": 10,
-   "sellers": 6,
-   "listed": 119,
-   "passivesMin": 4,
-   "passivesMax": 5,
-   "at": "2026-11-17T02:19:28.668Z"
-  },
-  "Medium Cluster Jewel||Minions have 12% increased maximum Life||Blessed Rebirth + Dread March": {
-   "low": {
-    "type": "~b/o",
-    "amount": 18,
-    "currency": "chaos"
-   },
-   "mid": {
-    "type": "~b/o",
-    "amount": 25,
-    "currency": "chaos"
-   },
-   "sampled": 10,
-   "sellers": 10,
-   "listed": 59,
-   "passivesMin": 4,
-   "passivesMax": 5,
-   "at": "2026-11-17T02:19:38.397Z"
+   "at": "2026-11-22T18:07:48.445Z"
   },
   "Medium Cluster Jewel||Minions have 12% increased maximum Life||Bodyguards + Life from Death": {
    "low": {
     "type": "~b/o",
-    "amount": 30,
+    "amount": 40,
     "currency": "chaos"
    },
    "mid": {
     "type": "~b/o",
-    "amount": 50,
+    "amount": 40,
     "currency": "chaos"
    },
    "sampled": 10,
    "sellers": 7,
-   "listed": 31,
+   "listed": 108,
    "passivesMin": 4,
    "passivesMax": 5,
-   "at": "2026-11-17T02:19:38.716Z"
+   "at": "2026-11-22T18:07:48.037Z"
   },
   "Medium Cluster Jewel||Minions have 12% increased maximum Life||Blessed Rebirth + Renewal": {
    "low": {
     "type": "~b/o",
-    "amount": 45,
+    "amount": 60,
     "currency": "chaos"
    },
    "mid": {
     "type": "~b/o",
-    "amount": 45,
+    "amount": 70,
     "currency": "chaos"
    },
    "sampled": 10,
-   "sellers": 3,
-   "listed": 81,
+   "sellers": 9,
+   "listed": 87,
    "passivesMin": 4,
    "passivesMax": 5,
-   "at": "2026-11-17T02:20:08.280Z"
+   "at": "2026-11-22T18:07:58.538Z"
   },
   "Medium Cluster Jewel||Minions have 12% increased maximum Life||Hulking Corpses": {
    "low": {
@@ -1555,26 +1559,26 @@
   "Large Cluster Jewel||Staff Attacks deal 12% increased Damage with Hits and Ailments / Mace or Sceptre Attacks deal 12% increased Damage with Hits and Ailments||Calamitous + Fuel the Fight + Martial Prowess": {
    "low": {
     "type": "~b/o",
-    "amount": 300,
+    "amount": 250,
     "currency": "chaos"
    },
    "mid": {
     "type": "~b/o",
-    "amount": 400,
+    "amount": 299,
     "currency": "chaos"
    },
    "sampled": 10,
-   "sellers": 10,
-   "listed": 11,
+   "sellers": 8,
+   "listed": 36,
    "passivesMin": 8,
    "passivesMax": 8,
-   "at": "2026-11-17T02:20:09.085Z"
+   "at": "2026-11-22T18:01:47.721Z"
   },
   "Large Cluster Jewel||Staff Attacks deal 12% increased Damage with Hits and Ailments / Mace or Sceptre Attacks deal 12% increased Damage with Hits and Ailments||Feed the Fury + Fuel the Fight + Martial Prowess": {
    "low": {
     "type": "~b/o",
-    "amount": 355,
-    "currency": "chaos"
+    "amount": 2,
+    "currency": "divine"
    },
    "mid": {
     "type": "~b/o",
@@ -1582,11 +1586,11 @@
     "currency": "divine"
    },
    "sampled": 10,
-   "sellers": 9,
-   "listed": 21,
+   "sellers": 8,
+   "listed": 56,
    "passivesMin": 8,
    "passivesMax": 8,
-   "at": "2026-11-17T02:20:18.628Z"
+   "at": "2026-11-22T18:01:38.001Z"
   },
   "Large Cluster Jewel||Staff Attacks deal 12% increased Damage with Hits and Ailments / Mace or Sceptre Attacks deal 12% increased Damage with Hits and Ailments||Feed the Fury + Martial Prowess + Weight Advantage": {
    "low": {
@@ -1596,33 +1600,33 @@
    },
    "mid": {
     "type": "~b/o",
-    "amount": 5,
-    "currency": "divine"
-   },
-   "sampled": 5,
-   "sellers": 4,
-   "listed": 5,
-   "passivesMin": 8,
-   "passivesMax": 8,
-   "at": "2026-11-17T02:20:19.040Z"
-  },
-  "Large Cluster Jewel||Staff Attacks deal 12% increased Damage with Hits and Ailments / Mace or Sceptre Attacks deal 12% increased Damage with Hits and Ailments||Fuel the Fight + Martial Prowess + Overlord": {
-   "low": {
-    "type": "~b/o",
-    "amount": 14,
-    "currency": "divine"
-   },
-   "mid": {
-    "type": "~b/o",
-    "amount": 17,
+    "amount": 3,
     "currency": "divine"
    },
    "sampled": 10,
    "sellers": 9,
-   "listed": 11,
+   "listed": 55,
    "passivesMin": 8,
    "passivesMax": 8,
-   "at": "2026-11-17T02:20:19.407Z"
+   "at": "2026-11-22T18:01:48.330Z"
+  },
+  "Large Cluster Jewel||Staff Attacks deal 12% increased Damage with Hits and Ailments / Mace or Sceptre Attacks deal 12% increased Damage with Hits and Ailments||Fuel the Fight + Martial Prowess + Overlord": {
+   "low": {
+    "type": "~b/o",
+    "amount": 10,
+    "currency": "divine"
+   },
+   "mid": {
+    "type": "~b/o",
+    "amount": 12,
+    "currency": "divine"
+   },
+   "sampled": 10,
+   "sellers": 8,
+   "listed": 23,
+   "passivesMin": 8,
+   "passivesMax": 8,
+   "at": "2026-11-22T18:01:48.728Z"
   },
   "Large Cluster Jewel||Staff Attacks deal 12% increased Damage with Hits and Ailments / Mace or Sceptre Attacks deal 12% increased Damage with Hits and Ailments||Feed the Fury + Martial Prowess + Overlord": {
    "low": {
@@ -1645,22 +1649,58 @@
   "Medium Cluster Jewel||12% increased Totem Damage||Ancestral Echo + Sleepless Sentries": {
    "low": {
     "type": "~b/o",
-    "amount": 70,
+    "amount": 139,
     "currency": "chaos"
    },
    "mid": {
     "type": "~b/o",
-    "amount": 75,
+    "amount": 140,
     "currency": "chaos"
    },
    "sampled": 10,
    "sellers": 5,
-   "listed": 88,
+   "listed": 187,
    "passivesMin": 4,
    "passivesMax": 5,
-   "at": "2026-11-17T02:20:28.730Z"
+   "at": "2026-11-22T18:07:58.840Z"
   },
   "Medium Cluster Jewel||12% increased Totem Damage||Ancestral Echo + Ancestral Reach": {
+   "low": {
+    "type": "~b/o",
+    "amount": 40,
+    "currency": "chaos"
+   },
+   "mid": {
+    "type": "~b/o",
+    "amount": 40,
+    "currency": "chaos"
+   },
+   "sampled": 10,
+   "sellers": 1,
+   "listed": 244,
+   "passivesMin": 4,
+   "passivesMax": 5,
+   "at": "2026-11-22T18:08:37.709Z"
+  },
+  "Medium Cluster Jewel||12% increased Totem Damage||Ancestral Reach + Sleepless Sentries": {
+   "low": {
+    "type": "~b/o",
+    "amount": 219,
+    "currency": "chaos"
+   },
+   "mid": {
+    "type": "~b/o",
+    "amount": 220,
+    "currency": "chaos"
+   },
+   "sampled": 10,
+   "sellers": 6,
+   "listed": 73,
+   "passivesMin": 4,
+   "passivesMax": 5,
+   "at": "2026-11-22T18:11:37.622Z"
+  },
+  "Medium Cluster Jewel||12% increased Totem Damage||Sleepless Sentries + Snaring Spirits": {
    "low": {
     "type": "~b/o",
     "amount": 35,
@@ -1672,119 +1712,83 @@
     "currency": "chaos"
    },
    "sampled": 10,
-   "sellers": 7,
-   "listed": 68,
-   "passivesMin": 4,
-   "passivesMax": 5,
-   "at": "2026-11-17T02:20:38.343Z"
-  },
-  "Medium Cluster Jewel||12% increased Totem Damage||Ancestral Reach + Sleepless Sentries": {
-   "low": {
-    "type": "~b/o",
-    "amount": 70,
-    "currency": "chaos"
-   },
-   "mid": {
-    "type": "~b/o",
-    "amount": 70,
-    "currency": "chaos"
-   },
-   "sampled": 10,
    "sellers": 9,
-   "listed": 45,
+   "listed": 52,
    "passivesMin": 4,
    "passivesMax": 5,
-   "at": "2026-11-17T02:20:38.727Z"
-  },
-  "Medium Cluster Jewel||12% increased Totem Damage||Sleepless Sentries + Snaring Spirits": {
-   "low": {
-    "type": "~b/o",
-    "amount": 32,
-    "currency": "chaos"
-   },
-   "mid": {
-    "type": "~b/o",
-    "amount": 34,
-    "currency": "chaos"
-   },
-   "sampled": 10,
-   "sellers": 6,
-   "listed": 18,
-   "passivesMin": 4,
-   "passivesMax": 5,
-   "at": "2026-11-17T02:21:08.318Z"
+   "at": "2026-11-22T18:11:38.018Z"
   },
   "Medium Cluster Jewel||12% increased Totem Damage||Ancestral Echo + Ancestral Might": {
    "low": {
     "type": "~b/o",
-    "amount": 10,
+    "amount": 8,
     "currency": "chaos"
    },
    "mid": {
     "type": "~b/o",
-    "amount": 15,
+    "amount": 10,
     "currency": "chaos"
    },
    "sampled": 10,
-   "sellers": 10,
-   "listed": 20,
+   "sellers": 9,
+   "listed": 52,
    "passivesMin": 4,
    "passivesMax": 5,
-   "at": "2026-11-17T02:24:08.283Z"
+   "at": "2026-11-22T18:11:38.329Z"
   },
   "Large Cluster Jewel||Wand Attacks deal 12% increased Damage with Hits and Ailments||Martial Prowess + Opportunistic Fusilade + Storm's Hand": {
    "low": {
     "type": "~b/o",
-    "amount": 200,
-    "currency": "chaos"
+    "amount": 4,
+    "currency": "divine"
    },
    "mid": {
     "type": "~b/o",
-    "amount": 240,
-    "currency": "chaos"
+    "amount": 4,
+    "currency": "divine"
    },
    "sampled": 10,
    "sellers": 5,
-   "listed": 36,
+   "listed": 32,
    "passivesMin": 8,
    "passivesMax": 8,
-   "at": "2026-11-17T02:24:08.625Z"
+   "at": "2026-11-22T18:06:58.035Z"
   },
   "Large Cluster Jewel||Wand Attacks deal 12% increased Damage with Hits and Ailments||Fuel the Fight + Martial Prowess + Opportunistic Fusilade": {
    "low": {
     "type": "~b/o",
-    "amount": 45,
+    "amount": 100,
     "currency": "chaos"
    },
    "mid": {
     "type": "~b/o",
-    "amount": 65,
+    "amount": 100,
     "currency": "chaos"
    },
    "sampled": 10,
    "sellers": 10,
-   "listed": 11,
+   "listed": 16,
    "passivesMin": 8,
    "passivesMax": 8,
-   "at": "2026-11-17T02:24:18.284Z"
+   "at": "2026-11-22T18:07:08.087Z"
   },
   "Large Cluster Jewel||Wand Attacks deal 12% increased Damage with Hits and Ailments||Feed the Fury + Fuel the Fight + Martial Prowess": {
    "low": {
     "type": "~b/o",
-    "amount": 350,
-    "currency": "chaos"
+    "amount": 1,
+    "currency": "divine"
    },
    "mid": {
     "type": "~b/o",
-    "amount": 3,
+    "amount": 2,
     "currency": "divine"
    },
    "sampled": 10,
-   "sellers": 9,
-   "listed": 13,
+   "sellers": 8,
+   "listed": 21,
    "passivesMin": 8,
    "passivesMax": 8,
-   "at": "2026-11-17T02:24:18.606Z"
+   "at": "2026-11-22T18:07:37.653Z"
   },
   "Large Cluster Jewel||Wand Attacks deal 12% increased Damage with Hits and Ailments||Calamitous + Devastator + Martial Prowess": {
    "low": null,
@@ -1799,79 +1803,79 @@
   "Large Cluster Jewel||Wand Attacks deal 12% increased Damage with Hits and Ailments||Calamitous + Fuel the Fight + Martial Prowess": {
    "low": {
     "type": "~b/o",
-    "amount": 2,
+    "amount": 1,
     "currency": "divine"
    },
    "mid": {
     "type": "~b/o",
-    "amount": 3,
+    "amount": 1,
     "currency": "divine"
    },
    "sampled": 10,
-   "sellers": 9,
-   "listed": 13,
+   "sellers": 10,
+   "listed": 20,
    "passivesMin": 8,
    "passivesMax": 8,
-   "at": "2026-11-17T02:24:19.394Z"
+   "at": "2026-11-22T18:07:07.803Z"
   },
   "Large Cluster Jewel||12% increased Fire Damage||Burning Bright + Prismatic Heart + Widespread Destruction": {
    "low": {
     "type": "~b/o",
-    "amount": 300,
+    "amount": 140,
     "currency": "chaos"
    },
    "mid": {
     "type": "~b/o",
-    "amount": 300,
+    "amount": 150,
     "currency": "chaos"
    },
    "sampled": 10,
-   "sellers": 4,
-   "listed": 86,
+   "sellers": 5,
+   "listed": 111,
    "passivesMin": 8,
    "passivesMax": 8,
-   "at": "2026-11-17T02:24:28.337Z"
+   "at": "2026-11-22T18:11:58.409Z"
   },
   "Large Cluster Jewel||12% increased Fire Damage||Burning Bright + Smoking Remains + Widespread Destruction": {
    "low": {
     "type": "~b/o",
-    "amount": 790,
-    "currency": "chaos"
+    "amount": 7,
+    "currency": "divine"
    },
    "mid": {
     "type": "~b/o",
-    "amount": 790,
-    "currency": "chaos"
+    "amount": 7,
+    "currency": "divine"
    },
    "sampled": 10,
-   "sellers": 3,
-   "listed": 71,
+   "sellers": 4,
+   "listed": 78,
    "passivesMin": 8,
    "passivesMax": 8,
-   "at": "2026-11-17T02:24:29.406Z"
+   "at": "2026-11-22T18:12:08.132Z"
   },
   "Large Cluster Jewel||12% increased Fire Damage||Burning Bright + Cremator + Widespread Destruction": {
    "low": {
     "type": "~b/o",
-    "amount": 790,
-    "currency": "chaos"
+    "amount": 7,
+    "currency": "divine"
    },
    "mid": {
     "type": "~b/o",
-    "amount": 800,
-    "currency": "chaos"
+    "amount": 7,
+    "currency": "divine"
    },
    "sampled": 10,
-   "sellers": 8,
-   "listed": 51,
+   "sellers": 7,
+   "listed": 60,
    "passivesMin": 8,
    "passivesMax": 8,
-   "at": "2026-11-17T02:24:38.321Z"
+   "at": "2026-11-22T18:12:37.657Z"
   },
   "Large Cluster Jewel||12% increased Fire Damage||Burning Bright + Widespread Destruction": {
    "low": {
     "type": "~b/o",
-    "amount": 55,
+    "amount": 70,
     "currency": "chaos"
    },
    "mid": {
@@ -1880,11 +1884,11 @@
     "currency": "chaos"
    },
    "sampled": 10,
-   "sellers": 9,
-   "listed": 265,
+   "sellers": 10,
+   "listed": 372,
    "passivesMin": 8,
    "passivesMax": 8,
-   "at": "2026-11-17T02:24:38.728Z"
+   "at": "2026-11-22T18:12:38.116Z"
   },
   "Large Cluster Jewel||12% increased Fire Damage||Burning Bright + Doryani's Lesson + Prismatic Heart": {
    "low": {
@@ -1907,38 +1911,38 @@
   "Large Cluster Jewel||10% increased Attack Damage||Calamitous + Fuel the Fight + Martial Prowess": {
    "low": {
     "type": "~b/o",
-    "amount": 330,
-    "currency": "chaos"
+    "amount": 2,
+    "currency": "divine"
    },
    "mid": {
     "type": "~b/o",
-    "amount": 450,
-    "currency": "chaos"
+    "amount": 2,
+    "currency": "divine"
    },
    "sampled": 10,
    "sellers": 9,
-   "listed": 11,
+   "listed": 19,
    "passivesMin": 8,
    "passivesMax": 8,
-   "at": "2026-11-17T02:25:08.623Z"
+   "at": "2026-11-22T18:17:38.074Z"
   },
   "Large Cluster Jewel||10% increased Attack Damage||Calamitous + Drive the Destruction + Martial Prowess": {
    "low": {
     "type": "~b/o",
-    "amount": 22,
+    "amount": 45,
     "currency": "chaos"
    },
    "mid": {
     "type": "~b/o",
-    "amount": 35,
+    "amount": 90,
     "currency": "chaos"
    },
-   "sampled": 10,
-   "sellers": 10,
-   "listed": 11,
+   "sampled": 7,
+   "sellers": 7,
+   "listed": 7,
    "passivesMin": 8,
    "passivesMax": 8,
-   "at": "2026-11-17T02:25:18.351Z"
+   "at": "2026-11-22T18:17:47.688Z"
   },
   "Large Cluster Jewel||10% increased Attack Damage||Drive the Destruction + Fuel the Fight + Martial Prowess": {
    "low": {
@@ -1979,38 +1983,38 @@
   "Large Cluster Jewel||12% increased Damage with Two Handed Weapons||Graceful Execution + Martial Mastery + Martial Prowess": {
    "low": {
     "type": "~b/o",
-    "amount": 765,
-    "currency": "chaos"
+    "amount": 6,
+    "currency": "divine"
    },
    "mid": {
     "type": "~b/o",
-    "amount": 786,
-    "currency": "chaos"
+    "amount": 6,
+    "currency": "divine"
    },
    "sampled": 10,
-   "sellers": 5,
-   "listed": 45,
+   "sellers": 7,
+   "listed": 52,
    "passivesMin": 8,
    "passivesMax": 8,
-   "at": "2026-11-17T02:25:19.415Z"
+   "at": "2026-11-22T18:16:57.682Z"
   },
   "Large Cluster Jewel||12% increased Damage with Two Handed Weapons||Calamitous + Fuel the Fight + Martial Prowess": {
    "low": {
     "type": "~b/o",
-    "amount": 255,
-    "currency": "chaos"
+    "amount": 1,
+    "currency": "divine"
    },
    "mid": {
     "type": "~b/o",
-    "amount": 2,
+    "amount": 1,
     "currency": "divine"
    },
-   "sampled": 3,
-   "sellers": 3,
-   "listed": 3,
+   "sampled": 10,
+   "sellers": 10,
+   "listed": 13,
    "passivesMin": 8,
    "passivesMax": 8,
-   "at": "2026-11-17T02:25:29.053Z"
+   "at": "2026-11-22T18:16:58.841Z"
   },
   "Large Cluster Jewel||12% increased Damage with Two Handed Weapons||Martial Mastery + Martial Prowess + Surefooted Striker": {
    "low": {
@@ -2074,74 +2078,74 @@
   "Medium Cluster Jewel||12% increased Brand Damage||Grand Design + Remarkable": {
    "low": {
     "type": "~b/o",
-    "amount": 130,
-    "currency": "chaos"
+    "amount": 2,
+    "currency": "divine"
    },
    "mid": {
     "type": "~b/o",
-    "amount": 180,
-    "currency": "chaos"
+    "amount": 2,
+    "currency": "divine"
    },
    "sampled": 10,
    "sellers": 7,
-   "listed": 44,
+   "listed": 36,
    "passivesMin": 4,
    "passivesMax": 5,
-   "at": "2026-11-17T02:26:08.316Z"
+   "at": "2026-11-22T18:11:38.777Z"
   },
   "Medium Cluster Jewel||12% increased Brand Damage||Brand Loyalty + Remarkable": {
    "low": {
     "type": "~b/o",
-    "amount": 9,
+    "amount": 15,
     "currency": "chaos"
    },
    "mid": {
     "type": "~b/o",
-    "amount": 10,
+    "amount": 30,
     "currency": "chaos"
    },
    "sampled": 10,
-   "sellers": 10,
-   "listed": 44,
+   "sellers": 9,
+   "listed": 32,
    "passivesMin": 4,
    "passivesMax": 5,
-   "at": "2026-11-17T02:29:09.008Z"
+   "at": "2026-11-22T18:11:48.380Z"
   },
   "Medium Cluster Jewel||12% increased Brand Damage||Grand Design + Seeker Runes": {
    "low": {
     "type": "~b/o",
-    "amount": 80,
+    "amount": 35,
     "currency": "chaos"
    },
    "mid": {
     "type": "~b/o",
-    "amount": 130,
+    "amount": 40,
     "currency": "chaos"
    },
    "sampled": 10,
-   "sellers": 6,
-   "listed": 14,
+   "sellers": 10,
+   "listed": 24,
    "passivesMin": 4,
    "passivesMax": 5,
-   "at": "2026-11-17T02:29:09.362Z"
+   "at": "2026-11-22T18:11:48.770Z"
   },
   "Medium Cluster Jewel||12% increased Brand Damage||Remarkable + Seeker Runes": {
    "low": {
     "type": "~b/o",
-    "amount": 20,
+    "amount": 15,
     "currency": "chaos"
    },
    "mid": {
     "type": "~b/o",
-    "amount": 25,
+    "amount": 40,
     "currency": "chaos"
    },
-   "sampled": 6,
-   "sellers": 6,
-   "listed": 6,
+   "sampled": 10,
+   "sellers": 9,
+   "listed": 22,
    "passivesMin": 4,
    "passivesMax": 5,
-   "at": "2026-11-17T02:29:18.328Z"
+   "at": "2026-11-22T18:11:58.057Z"
   },
   "Medium Cluster Jewel||12% increased Brand Damage||Remarkable": {
    "low": {
@@ -2164,56 +2168,56 @@
   "Medium Cluster Jewel||12% increased Chaos Damage over Time||Low Tolerance": {
    "low": {
     "type": "~b/o",
-    "amount": 25,
+    "amount": 40,
     "currency": "chaos"
    },
    "mid": {
     "type": "~b/o",
-    "amount": 25,
+    "amount": 50,
     "currency": "chaos"
    },
    "sampled": 10,
-   "sellers": 4,
-   "listed": 382,
+   "sellers": 10,
+   "listed": 960,
    "passivesMin": 4,
    "passivesMax": 5,
-   "at": "2026-11-17T02:29:28.347Z"
+   "at": "2026-11-22T18:12:58.069Z"
   },
   "Medium Cluster Jewel||12% increased Chaos Damage over Time||Exposure Therapy + Low Tolerance": {
    "low": {
     "type": "~b/o",
-    "amount": 30,
+    "amount": 50,
     "currency": "chaos"
    },
    "mid": {
     "type": "~b/o",
-    "amount": 35,
+    "amount": 64,
     "currency": "chaos"
    },
    "sampled": 10,
-   "sellers": 6,
-   "listed": 19,
+   "sellers": 9,
+   "listed": 68,
    "passivesMin": 4,
    "passivesMax": 5,
-   "at": "2026-11-17T02:29:29.415Z"
+   "at": "2026-11-22T18:13:07.703Z"
   },
   "Medium Cluster Jewel||12% increased Chaos Damage over Time||Circling Oblivion + Low Tolerance": {
    "low": {
     "type": "~b/o",
-    "amount": 55,
+    "amount": 64,
     "currency": "chaos"
    },
    "mid": {
     "type": "~b/o",
-    "amount": 70,
+    "amount": 64,
     "currency": "chaos"
    },
-   "sampled": 5,
-   "sellers": 5,
-   "listed": 5,
+   "sampled": 10,
+   "sellers": 3,
+   "listed": 62,
    "passivesMin": 4,
    "passivesMax": 5,
-   "at": "2026-11-17T02:29:38.374Z"
+   "at": "2026-11-22T18:13:08.177Z"
   },
   "Medium Cluster Jewel||12% increased Chaos Damage over Time||Flow of Life + Wicked Pall": {
    "low": {
@@ -2254,7 +2258,7 @@
   "Large Cluster Jewel||Axe Attacks deal 12% increased Damage with Hits and Ailments / Sword Attacks deal 12% increased Damage with Hits and Ailments||Calamitous + Fuel the Fight + Martial Prowess": {
    "low": {
     "type": "~b/o",
-    "amount": 140,
+    "amount": 150,
     "currency": "chaos"
    },
    "mid": {
@@ -2264,46 +2268,46 @@
    },
    "sampled": 10,
    "sellers": 9,
-   "listed": 11,
+   "listed": 29,
    "passivesMin": 8,
    "passivesMax": 8,
-   "at": "2026-11-17T02:30:08.657Z"
+   "at": "2026-11-22T18:16:38.023Z"
   },
   "Large Cluster Jewel||Axe Attacks deal 12% increased Damage with Hits and Ailments / Sword Attacks deal 12% increased Damage with Hits and Ailments||Feed the Fury + Fuel the Fight + Martial Prowess": {
    "low": {
     "type": "~b/o",
-    "amount": 3,
+    "amount": 5,
     "currency": "divine"
    },
    "mid": {
     "type": "~b/o",
-    "amount": 4,
+    "amount": 5,
     "currency": "divine"
    },
    "sampled": 10,
    "sellers": 8,
-   "listed": 15,
+   "listed": 46,
    "passivesMin": 8,
    "passivesMax": 8,
-   "at": "2026-11-17T02:30:18.339Z"
+   "at": "2026-11-22T18:16:47.692Z"
   },
   "Large Cluster Jewel||Axe Attacks deal 12% increased Damage with Hits and Ailments / Sword Attacks deal 12% increased Damage with Hits and Ailments||Aggressive Defence + Fuel the Fight + Martial Prowess": {
    "low": {
     "type": "~b/o",
-    "amount": 40,
+    "amount": 28,
     "currency": "chaos"
    },
    "mid": {
     "type": "~b/o",
-    "amount": 45,
+    "amount": 35,
     "currency": "chaos"
    },
-   "sampled": 7,
-   "sellers": 7,
-   "listed": 7,
+   "sampled": 10,
+   "sellers": 10,
+   "listed": 18,
    "passivesMin": 8,
    "passivesMax": 8,
-   "at": "2026-11-17T02:30:18.676Z"
+   "at": "2026-11-22T18:16:48.424Z"
   },
   "Large Cluster Jewel||Axe Attacks deal 12% increased Damage with Hits and Ailments / Sword Attacks deal 12% increased Damage with Hits and Ailments||Bloodscent + Fuel the Fight + Smite the Weak": {
    "low": {
@@ -2326,40 +2330,22 @@
   "Large Cluster Jewel||Axe Attacks deal 12% increased Damage with Hits and Ailments / Sword Attacks deal 12% increased Damage with Hits and Ailments||Bloodscent + Fuel the Fight + Martial Prowess": {
    "low": {
     "type": "~b/o",
-    "amount": 5,
+    "amount": 30,
     "currency": "divine"
    },
    "mid": {
     "type": "~b/o",
-    "amount": 7,
+    "amount": 30,
     "currency": "divine"
    },
-   "sampled": 3,
-   "sellers": 3,
-   "listed": 3,
+   "sampled": 1,
+   "sellers": 1,
+   "listed": 1,
    "passivesMin": 8,
    "passivesMax": 8,
-   "at": "2026-11-17T02:30:19.456Z"
+   "at": "2026-11-22T18:16:48.117Z"
   },
   "Large Cluster Jewel||12% increased Attack Damage while Dual Wielding||Drive the Destruction + Martial Prowess + Quick and Deadly": {
-   "low": {
-    "type": "~b/o",
-    "amount": 5,
-    "currency": "divine"
-   },
-   "mid": {
-    "type": "~b/o",
-    "amount": 7,
-    "currency": "divine"
-   },
-   "sampled": 3,
-   "sellers": 3,
-   "listed": 3,
-   "passivesMin": 8,
-   "passivesMax": 8,
-   "at": "2026-11-17T02:30:28.331Z"
-  },
-  "Large Cluster Jewel||12% increased Attack Damage while Dual Wielding||Deadly Repartee + Martial Prowess + Quick and Deadly": {
    "low": {
     "type": "~b/o",
     "amount": 2,
@@ -2370,12 +2356,30 @@
     "amount": 3,
     "currency": "divine"
    },
-   "sampled": 9,
+   "sampled": 8,
    "sellers": 8,
-   "listed": 9,
+   "listed": 8,
    "passivesMin": 8,
    "passivesMax": 8,
-   "at": "2026-11-17T02:30:29.424Z"
+   "at": "2026-11-22T18:17:58.515Z"
+  },
+  "Large Cluster Jewel||12% increased Attack Damage while Dual Wielding||Deadly Repartee + Martial Prowess + Quick and Deadly": {
+   "low": {
+    "type": "~b/o",
+    "amount": 3,
+    "currency": "divine"
+   },
+   "mid": {
+    "type": "~b/o",
+    "amount": 3,
+    "currency": "divine"
+   },
+   "sampled": 10,
+   "sellers": 5,
+   "listed": 11,
+   "passivesMin": 8,
+   "passivesMax": 8,
+   "at": "2026-11-22T18:18:07.744Z"
   },
   "Large Cluster Jewel||12% increased Attack Damage while Dual Wielding||Feed the Fury + Fuel the Fight + Martial Prowess": {
    "low": {
@@ -2385,87 +2389,87 @@
    },
    "mid": {
     "type": "~b/o",
-    "amount": 1,
-    "currency": "divine"
+    "amount": 190,
+    "currency": "chaos"
    },
    "sampled": 10,
    "sellers": 9,
-   "listed": 25,
+   "listed": 66,
    "passivesMin": 8,
    "passivesMax": 8,
-   "at": "2026-11-17T02:30:38.395Z"
+   "at": "2026-11-22T18:18:08.216Z"
   },
   "Large Cluster Jewel||12% increased Attack Damage while Dual Wielding||Calamitous + Fuel the Fight + Martial Prowess": {
    "low": {
     "type": "~b/o",
-    "amount": 100,
-    "currency": "chaos"
+    "amount": 1,
+    "currency": "divine"
    },
    "mid": {
     "type": "~b/o",
-    "amount": 120,
-    "currency": "chaos"
+    "amount": 1,
+    "currency": "divine"
    },
-   "sampled": 10,
-   "sellers": 6,
-   "listed": 23,
+   "sampled": 9,
+   "sellers": 9,
+   "listed": 9,
    "passivesMin": 8,
    "passivesMax": 8,
-   "at": "2026-11-17T02:30:38.750Z"
+   "at": "2026-11-22T18:17:48.819Z"
   },
   "Medium Cluster Jewel||12% increased Burning Damage||Blowback + Fan the Flames": {
    "low": {
     "type": "~b/o",
-    "amount": 70,
+    "amount": 60,
     "currency": "chaos"
    },
    "mid": {
     "type": "~b/o",
-    "amount": 80,
+    "amount": 100,
     "currency": "chaos"
    },
    "sampled": 10,
-   "sellers": 6,
-   "listed": 17,
+   "sellers": 9,
+   "listed": 11,
    "passivesMin": 4,
    "passivesMax": 5,
-   "at": "2026-11-17T02:31:08.329Z"
+   "at": "2026-11-22T18:22:47.694Z"
   },
   "Medium Cluster Jewel||12% increased Burning Damage||Fan the Flames": {
    "low": {
     "type": "~b/o",
-    "amount": 13,
+    "amount": 12,
     "currency": "chaos"
    },
    "mid": {
     "type": "~b/o",
-    "amount": 13,
+    "amount": 29,
     "currency": "chaos"
    },
    "sampled": 10,
-   "sellers": 6,
-   "listed": 330,
+   "sellers": 10,
+   "listed": 311,
    "passivesMin": 4,
    "passivesMax": 5,
-   "at": "2026-11-17T02:34:09.552Z"
+   "at": "2026-11-22T18:22:38.077Z"
   },
   "Medium Cluster Jewel||12% increased Burning Damage||Blowback + Wasting Affliction": {
    "low": {
     "type": "~b/o",
-    "amount": 239,
-    "currency": "chaos"
+    "amount": 4,
+    "currency": "divine"
    },
    "mid": {
     "type": "~b/o",
-    "amount": 250,
-    "currency": "chaos"
+    "amount": 4,
+    "currency": "divine"
    },
-   "sampled": 10,
+   "sampled": 5,
    "sellers": 5,
-   "listed": 28,
+   "listed": 5,
    "passivesMin": 4,
    "passivesMax": 5,
-   "at": "2026-11-17T02:34:10.022Z"
+   "at": "2026-11-22T18:22:48.145Z"
   },
   "Medium Cluster Jewel||12% increased Burning Damage||Fan the Flames + Student of Decay": {
    "low": {
@@ -2488,44 +2492,44 @@
   "Medium Cluster Jewel||12% increased Burning Damage||Circling Oblivion + Wasting Affliction": {
    "low": {
     "type": "~b/o",
-    "amount": 50,
+    "amount": 100,
     "currency": "chaos"
    },
    "mid": {
     "type": "~b/o",
-    "amount": 100,
+    "amount": 130,
     "currency": "chaos"
    },
-   "sampled": 5,
-   "sellers": 5,
-   "listed": 5,
+   "sampled": 10,
+   "sellers": 8,
+   "listed": 27,
    "passivesMin": 4,
    "passivesMax": 5,
-   "at": "2026-11-17T02:34:18.719Z"
+   "at": "2026-11-22T18:22:48.961Z"
   },
   "Large Cluster Jewel||Claw Attacks deal 12% increased Damage with Hits and Ailments / Dagger Attacks deal 12% increased Damage with Hits and Ailments||Feed the Fury + Fuel the Fight + Martial Prowess": {
    "low": {
     "type": "~b/o",
-    "amount": 590,
-    "currency": "chaos"
+    "amount": 2,
+    "currency": "divine"
    },
    "mid": {
     "type": "~b/o",
-    "amount": 4,
+    "amount": 2,
     "currency": "divine"
    },
-   "sampled": 8,
-   "sellers": 8,
-   "listed": 8,
+   "sampled": 10,
+   "sellers": 10,
+   "listed": 27,
    "passivesMin": 8,
    "passivesMax": 8,
-   "at": "2026-11-17T02:34:19.517Z"
+   "at": "2026-11-22T18:21:48.407Z"
   },
   "Large Cluster Jewel||Claw Attacks deal 12% increased Damage with Hits and Ailments / Dagger Attacks deal 12% increased Damage with Hits and Ailments||Calamitous + Fuel the Fight + Martial Prowess": {
    "low": {
     "type": "~b/o",
-    "amount": 100,
-    "currency": "chaos"
+    "amount": 1,
+    "currency": "divine"
    },
    "mid": {
     "type": "~b/o",
@@ -2533,29 +2537,29 @@
     "currency": "divine"
    },
    "sampled": 10,
-   "sellers": 8,
-   "listed": 15,
+   "sellers": 10,
+   "listed": 13,
    "passivesMin": 8,
    "passivesMax": 8,
-   "at": "2026-11-17T02:34:28.712Z"
+   "at": "2026-11-22T18:21:58.124Z"
   },
   "Large Cluster Jewel||Claw Attacks deal 12% increased Damage with Hits and Ailments / Dagger Attacks deal 12% increased Damage with Hits and Ailments||Aggressive Defence + Feed the Fury": {
    "low": {
     "type": "~b/o",
-    "amount": 17,
+    "amount": 15,
     "currency": "chaos"
    },
    "mid": {
     "type": "~b/o",
-    "amount": 35,
+    "amount": 20,
     "currency": "chaos"
    },
    "sampled": 10,
    "sellers": 10,
-   "listed": 25,
+   "listed": 27,
    "passivesMin": 8,
    "passivesMax": 8,
-   "at": "2026-11-17T02:34:29.558Z"
+   "at": "2026-11-22T18:22:37.715Z"
   },
   "Large Cluster Jewel||Claw Attacks deal 12% increased Damage with Hits and Ailments / Dagger Attacks deal 12% increased Damage with Hits and Ailments||Fuel the Fight + Martial Prowess": {
    "low": {
@@ -2578,6 +2582,60 @@
   "Large Cluster Jewel||Claw Attacks deal 12% increased Damage with Hits and Ailments / Dagger Attacks deal 12% increased Damage with Hits and Ailments||Aggressive Defence + Fuel the Fight + Martial Prowess": {
    "low": {
     "type": "~b/o",
+    "amount": 25,
+    "currency": "chaos"
+   },
+   "mid": {
+    "type": "~b/o",
+    "amount": 40,
+    "currency": "chaos"
+   },
+   "sampled": 10,
+   "sellers": 10,
+   "listed": 20,
+   "passivesMin": 8,
+   "passivesMax": 8,
+   "at": "2026-11-22T18:22:08.161Z"
+  },
+  "Medium Cluster Jewel||Exerted Attacks deal 20% increased Damage||Lead By Example + Mob Mentality": {
+   "low": {
+    "type": "~b/o",
+    "amount": 1,
+    "currency": "divine"
+   },
+   "mid": {
+    "type": "~b/o",
+    "amount": 1,
+    "currency": "divine"
+   },
+   "sampled": 10,
+   "sellers": 7,
+   "listed": 88,
+   "passivesMin": 4,
+   "passivesMax": 5,
+   "at": "2026-11-22T18:18:37.687Z"
+  },
+  "Medium Cluster Jewel||Exerted Attacks deal 20% increased Damage||Lead By Example + Warning Call": {
+   "low": {
+    "type": "~b/o",
+    "amount": 30,
+    "currency": "chaos"
+   },
+   "mid": {
+    "type": "~b/o",
+    "amount": 38,
+    "currency": "chaos"
+   },
+   "sampled": 10,
+   "sellers": 10,
+   "listed": 88,
+   "passivesMin": 4,
+   "passivesMax": 5,
+   "at": "2026-11-22T18:21:38.389Z"
+  },
+  "Medium Cluster Jewel||Exerted Attacks deal 20% increased Damage||Haunting Shout + Mob Mentality": {
+   "low": {
+    "type": "~b/o",
     "amount": 40,
     "currency": "chaos"
    },
@@ -2587,70 +2645,16 @@
     "currency": "chaos"
    },
    "sampled": 10,
-   "sellers": 9,
-   "listed": 10,
-   "passivesMin": 8,
-   "passivesMax": 8,
-   "at": "2026-11-17T02:34:38.399Z"
-  },
-  "Medium Cluster Jewel||Exerted Attacks deal 20% increased Damage||Lead By Example + Mob Mentality": {
-   "low": {
-    "type": "~b/o",
-    "amount": 170,
-    "currency": "chaos"
-   },
-   "mid": {
-    "type": "~b/o",
-    "amount": 175,
-    "currency": "chaos"
-   },
-   "sampled": 10,
-   "sellers": 7,
-   "listed": 61,
+   "sellers": 5,
+   "listed": 30,
    "passivesMin": 4,
    "passivesMax": 5,
-   "at": "2026-11-17T02:34:38.887Z"
-  },
-  "Medium Cluster Jewel||Exerted Attacks deal 20% increased Damage||Lead By Example + Warning Call": {
-   "low": {
-    "type": "~b/o",
-    "amount": 25,
-    "currency": "chaos"
-   },
-   "mid": {
-    "type": "~b/o",
-    "amount": 30,
-    "currency": "chaos"
-   },
-   "sampled": 10,
-   "sellers": 9,
-   "listed": 45,
-   "passivesMin": 4,
-   "passivesMax": 5,
-   "at": "2026-11-17T02:35:09.552Z"
-  },
-  "Medium Cluster Jewel||Exerted Attacks deal 20% increased Damage||Haunting Shout + Mob Mentality": {
-   "low": {
-    "type": "~b/o",
-    "amount": 70,
-    "currency": "chaos"
-   },
-   "mid": {
-    "type": "~b/o",
-    "amount": 75,
-    "currency": "chaos"
-   },
-   "sampled": 10,
-   "sellers": 10,
-   "listed": 28,
-   "passivesMin": 4,
-   "passivesMax": 5,
-   "at": "2026-11-17T02:35:09.871Z"
+   "at": "2026-11-22T18:21:47.702Z"
   },
   "Medium Cluster Jewel||Exerted Attacks deal 20% increased Damage||Lead By Example + Rattling Bellow": {
    "low": {
     "type": "~b/o",
-    "amount": 5,
+    "amount": 10,
     "currency": "chaos"
    },
    "mid": {
@@ -2660,10 +2664,10 @@
    },
    "sampled": 10,
    "sellers": 10,
-   "listed": 50,
+   "listed": 114,
    "passivesMin": 4,
    "passivesMax": 5,
-   "at": "2026-11-17T02:35:18.310Z"
+   "at": "2026-11-22T18:21:48.062Z"
   },
   "Medium Cluster Jewel||Exerted Attacks deal 20% increased Damage||Mob Mentality + Warning Call": {
    "low": {
@@ -2686,56 +2690,56 @@
   "Medium Cluster Jewel||6% increased Flask Effect Duration||Brewed for Potency + Spiked Concoction": {
    "low": {
     "type": "~b/o",
-    "amount": 69,
+    "amount": 35,
     "currency": "chaos"
    },
    "mid": {
     "type": "~b/o",
-    "amount": 69,
+    "amount": 40,
     "currency": "chaos"
    },
    "sampled": 10,
-   "sellers": 1,
-   "listed": 127,
+   "sellers": 5,
+   "listed": 194,
    "passivesMin": 4,
    "passivesMax": 5,
-   "at": "2026-11-17T02:35:19.529Z"
+   "at": "2026-11-22T18:22:57.867Z"
   },
   "Medium Cluster Jewel||6% increased Flask Effect Duration||Peak Vigour + Spiked Concoction": {
    "low": {
     "type": "~b/o",
-    "amount": 12,
+    "amount": 15,
     "currency": "chaos"
    },
    "mid": {
     "type": "~b/o",
-    "amount": 12,
+    "amount": 20,
     "currency": "chaos"
    },
    "sampled": 10,
-   "sellers": 4,
-   "listed": 36,
+   "sellers": 10,
+   "listed": 94,
    "passivesMin": 4,
    "passivesMax": 5,
-   "at": "2026-11-17T02:35:28.737Z"
+   "at": "2026-11-22T18:23:08.191Z"
   },
   "Medium Cluster Jewel||6% increased Flask Effect Duration||Mender's Wellspring + Spiked Concoction": {
    "low": {
     "type": "~b/o",
-    "amount": 125,
+    "amount": 40,
     "currency": "chaos"
    },
    "mid": {
     "type": "~b/o",
-    "amount": 125,
+    "amount": 45,
     "currency": "chaos"
    },
    "sampled": 10,
-   "sellers": 4,
-   "listed": 20,
+   "sellers": 8,
+   "listed": 52,
    "passivesMin": 4,
    "passivesMax": 5,
-   "at": "2026-11-17T02:35:29.597Z"
+   "at": "2026-11-22T18:23:37.780Z"
   },
   "Medium Cluster Jewel||6% increased Flask Effect Duration||Distilled Perfection + Spiked Concoction": {
    "low": {
@@ -2758,74 +2762,66 @@
   "Medium Cluster Jewel||10% increased Damage over Time||Brush with Death + Circling Oblivion": {
    "low": {
     "type": "~b/o",
+    "amount": 5,
+    "currency": "chaos"
+   },
+   "mid": {
+    "type": "~b/o",
+    "amount": 10,
+    "currency": "chaos"
+   },
+   "sampled": 10,
+   "sellers": 10,
+   "listed": 28,
+   "passivesMin": 4,
+   "passivesMax": 5,
+   "at": "2026-11-22T18:26:38.742Z"
+  },
+  "Medium Cluster Jewel||10% increased Damage over Time||Brush with Death + Wasting Affliction": {
+   "low": null,
+   "mid": null,
+   "sampled": 0,
+   "sellers": 0,
+   "listed": 0,
+   "passivesMin": 4,
+   "passivesMax": 5,
+   "at": "2026-11-22T18:26:47.955Z"
+  },
+  "Medium Cluster Jewel||10% increased Damage over Time||Brush with Death + Vile Reinvigoration": {
+   "low": {
+    "type": "~b/o",
     "amount": 20,
     "currency": "chaos"
    },
    "mid": {
     "type": "~b/o",
-    "amount": 70,
+    "amount": 50,
     "currency": "chaos"
    },
    "sampled": 10,
    "sellers": 10,
-   "listed": 10,
+   "listed": 16,
    "passivesMin": 4,
    "passivesMax": 5,
-   "at": "2026-11-17T02:35:38.360Z"
-  },
-  "Medium Cluster Jewel||10% increased Damage over Time||Brush with Death + Wasting Affliction": {
-   "low": {
-    "type": "~b/o",
-    "amount": 300,
-    "currency": "chaos"
-   },
-   "mid": {
-    "type": "~b/o",
-    "amount": 350,
-    "currency": "chaos"
-   },
-   "sampled": 3,
-   "sellers": 3,
-   "listed": 3,
-   "passivesMin": 4,
-   "passivesMax": 5,
-   "at": "2026-11-17T02:39:08.290Z"
-  },
-  "Medium Cluster Jewel||10% increased Damage over Time||Brush with Death + Vile Reinvigoration": {
-   "low": {
-    "type": "~b/o",
-    "amount": 40,
-    "currency": "chaos"
-   },
-   "mid": {
-    "type": "~b/o",
-    "amount": 60,
-    "currency": "chaos"
-   },
-   "sampled": 6,
-   "sellers": 6,
-   "listed": 6,
-   "passivesMin": 4,
-   "passivesMax": 5,
-   "at": "2026-11-17T02:39:08.767Z"
+   "at": "2026-11-22T18:26:47.801Z"
   },
   "Medium Cluster Jewel||10% increased Damage over Time||Circling Oblivion + Flow of Life": {
    "low": {
     "type": "~b/o",
-    "amount": 1,
+    "amount": 2,
     "currency": "divine"
    },
    "mid": {
     "type": "~b/o",
-    "amount": 1,
+    "amount": 3,
     "currency": "divine"
    },
-   "sampled": 9,
+   "sampled": 10,
    "sellers": 9,
-   "listed": 9,
+   "listed": 17,
    "passivesMin": 4,
    "passivesMax": 5,
-   "at": "2026-11-17T02:39:09.543Z"
+   "at": "2026-11-22T18:26:48.472Z"
   },
   "Medium Cluster Jewel||10% increased Damage over Time||Circling Oblivion + Exposure Therapy": {
    "low": {
@@ -2848,20 +2844,20 @@
   "Small Cluster Jewel||+2% Chance to Block Attack Damage||Enduring Ward": {
    "low": {
     "type": "~b/o",
-    "amount": 50,
-    "currency": "chaos"
+    "amount": 2,
+    "currency": "divine"
    },
    "mid": {
     "type": "~b/o",
-    "amount": 63,
-    "currency": "chaos"
+    "amount": 2,
+    "currency": "divine"
    },
    "sampled": 10,
-   "sellers": 7,
-   "listed": 27,
+   "sellers": 8,
+   "listed": 40,
    "passivesMin": 2,
    "passivesMax": 2,
-   "at": "2026-11-17T02:39:18.350Z"
+   "at": "2026-11-22T18:26:48.812Z"
   },
   "Small Cluster Jewel||+2% Chance to Block Attack Damage||25% increased Small Passive Effect + One with the Shield": {
    "low": null,
@@ -2881,204 +2877,71 @@
    },
    "mid": {
     "type": "~b/o",
-    "amount": 30,
+    "amount": 75,
     "currency": "chaos"
    },
-   "sampled": 3,
-   "sellers": 3,
-   "listed": 3,
+   "sampled": 9,
+   "sellers": 8,
+   "listed": 9,
    "passivesMin": 2,
    "passivesMax": 2,
-   "at": "2026-11-17T02:39:29.558Z"
+   "at": "2026-11-22T18:27:08.136Z"
   },
   "Small Cluster Jewel||+2% Chance to Block Attack Damage||One with the Shield": {
    "low": {
     "type": "~b/o",
-    "amount": 28,
+    "amount": 25,
     "currency": "chaos"
    },
    "mid": {
     "type": "~b/o",
-    "amount": 120,
+    "amount": 25,
     "currency": "chaos"
    },
    "sampled": 10,
    "sellers": 10,
-   "listed": 11,
+   "listed": 43,
    "passivesMin": 3,
    "passivesMax": 3,
-   "at": "2026-11-17T02:39:29.896Z"
+   "at": "2026-11-22T18:26:58.556Z"
   },
   "Medium Cluster Jewel||12% increased Physical Damage over Time||Rend + Wound Aggravation": {
    "low": {
     "type": "~b/o",
-    "amount": 240,
+    "amount": 150,
     "currency": "chaos"
    },
    "mid": {
     "type": "~b/o",
-    "amount": 2,
+    "amount": 1,
     "currency": "divine"
    },
    "sampled": 10,
-   "sellers": 6,
-   "listed": 11,
+   "sellers": 8,
+   "listed": 35,
    "passivesMin": 4,
    "passivesMax": 5,
-   "at": "2026-11-17T02:39:38.386Z"
+   "at": "2026-11-22T18:28:08.201Z"
   },
   "Medium Cluster Jewel||12% increased Physical Damage over Time||Brush with Death + Circling Oblivion": {
-   "low": null,
-   "mid": null,
-   "sampled": 0,
-   "sellers": 0,
-   "listed": 0,
+   "low": {
+    "type": "~b/o",
+    "amount": 10,
+    "currency": "chaos"
+   },
+   "mid": {
+    "type": "~b/o",
+    "amount": 33,
+    "currency": "chaos"
+   },
+   "sampled": 7,
+   "sellers": 7,
+   "listed": 7,
    "passivesMin": 4,
    "passivesMax": 5,
-   "at": "2026-11-17T02:40:08.603Z"
+   "at": "2026-11-22T18:31:38.033Z"
   },
   "Medium Cluster Jewel||12% increased Physical Damage over Time||Haemorrhage + Phlebotomist": {
-   "low": {
-    "type": "~b/o",
-    "amount": 50,
-    "currency": "chaos"
-   },
-   "mid": {
-    "type": "~b/o",
-    "amount": 50,
-    "currency": "chaos"
-   },
-   "sampled": 1,
-   "sellers": 1,
-   "listed": 1,
-   "passivesMin": 4,
-   "passivesMax": 5,
-   "at": "2026-11-17T02:40:09.569Z"
-  },
-  "Small Cluster Jewel||+12% to Chaos Resistance||Antivenom": {
-   "low": {
-    "type": "~b/o",
-    "amount": 1,
-    "currency": "chaos"
-   },
-   "mid": {
-    "type": "~b/o",
-    "amount": 3,
-    "currency": "chaos"
-   },
-   "sampled": 10,
-   "sellers": 10,
-   "listed": 56,
-   "passivesMin": 2,
-   "passivesMax": 2,
-   "at": "2026-11-17T02:40:09.857Z"
-  },
-  "Small Cluster Jewel||+12% to Chaos Resistance||25% increased Small Passive Effect + Exposure Therapy": {
-   "low": {
-    "type": "~b/o",
-    "amount": 1,
-    "currency": "chaos"
-   },
-   "mid": {
-    "type": "~b/o",
-    "amount": 1,
-    "currency": "chaos"
-   },
-   "sampled": 1,
-   "sellers": 1,
-   "listed": 1,
-   "passivesMin": 3,
-   "passivesMax": 3,
-   "at": "2026-11-17T02:40:19.562Z"
-  },
-  "Small Cluster Jewel||+12% to Chaos Resistance||Born of Chaos": {
-   "low": {
-    "type": "~b/o",
-    "amount": 40,
-    "currency": "chaos"
-   },
-   "mid": {
-    "type": "~b/o",
-    "amount": 40,
-    "currency": "chaos"
-   },
-   "sampled": 10,
-   "sellers": 6,
-   "listed": 43,
-   "passivesMin": 2,
-   "passivesMax": 2,
-   "at": "2026-11-17T02:40:28.811Z"
-  },
-  "Medium Cluster Jewel||Channelling Skills deal 12% increased Damage||Stoic Focus + Unwavering Focus": {
-   "low": {
-    "type": "~b/o",
-    "amount": 45,
-    "currency": "chaos"
-   },
-   "mid": {
-    "type": "~b/o",
-    "amount": 55,
-    "currency": "chaos"
-   },
-   "sampled": 10,
-   "sellers": 7,
-   "listed": 50,
-   "passivesMin": 4,
-   "passivesMax": 5,
-   "at": "2026-11-17T02:40:29.583Z"
-  },
-  "Small Cluster Jewel||+4% chance to Suppress Spell Damage||25% increased Small Passive Effect + Elegant Form": {
-   "low": {
-    "type": "~b/o",
-    "amount": 2,
-    "currency": "divine"
-   },
-   "mid": {
-    "type": "~b/o",
-    "amount": 2,
-    "currency": "divine"
-   },
-   "sampled": 5,
-   "sellers": 5,
-   "lowOutlier": {
-    "type": "~b/o",
-    "amount": 100,
-    "currency": "chaos"
-   },
-   "listed": 5,
-   "passivesMin": 3,
-   "passivesMax": 3,
-   "at": "2026-11-17T02:40:38.740Z"
-  },
-  "Small Cluster Jewel||+4% chance to Suppress Spell Damage||25% increased Small Passive Effect + Aerialist": {
-   "low": {
-    "type": "~b/o",
-    "amount": 15,
-    "currency": "divine"
-   },
-   "mid": {
-    "type": "~b/o",
-    "amount": 15,
-    "currency": "divine"
-   },
-   "sampled": 1,
-   "sellers": 1,
-   "listed": 1,
-   "passivesMin": 3,
-   "passivesMax": 3,
-   "at": "2026-11-17T02:44:08.763Z"
-  },
-  "Small Cluster Jewel||4% increased maximum Life||25% increased Small Passive Effect + Feast of Flesh": {
-   "low": null,
-   "mid": null,
-   "sampled": 0,
-   "sellers": 0,
-   "listed": 0,
-   "passivesMin": 3,
-   "passivesMax": 3,
-   "at": "2026-11-17T02:44:09.385Z"
-  },
-  "Small Cluster Jewel||4% increased maximum Life||Feast of Flesh": {
    "low": {
     "type": "~b/o",
     "amount": 5,
@@ -3089,17 +2952,166 @@
     "amount": 10,
     "currency": "chaos"
    },
-   "sampled": 10,
-   "sellers": 10,
-   "lowOutlier": {
+   "sampled": 7,
+   "sellers": 6,
+   "listed": 7,
+   "passivesMin": 4,
+   "passivesMax": 5,
+   "at": "2026-11-22T18:31:38.446Z"
+  },
+  "Small Cluster Jewel||+12% to Chaos Resistance||Antivenom": {
+   "low": {
     "type": "~b/o",
     "amount": 2,
     "currency": "chaos"
    },
-   "listed": 15,
+   "mid": {
+    "type": "~b/o",
+    "amount": 5,
+    "currency": "chaos"
+   },
+   "sampled": 10,
+   "sellers": 10,
+   "listed": 138,
    "passivesMin": 2,
    "passivesMax": 2,
-   "at": "2026-11-17T02:44:18.754Z"
+   "at": "2026-11-22T18:27:37.675Z"
+  },
+  "Small Cluster Jewel||+12% to Chaos Resistance||25% increased Small Passive Effect + Exposure Therapy": {
+   "low": {
+    "type": "~b/o",
+    "amount": 15,
+    "currency": "chaos"
+   },
+   "mid": {
+    "type": "~b/o",
+    "amount": 50,
+    "currency": "chaos"
+   },
+   "sampled": 10,
+   "sellers": 10,
+   "lowOutlier": {
+    "type": "~b/o",
+    "amount": 1,
+    "currency": "chaos"
+   },
+   "listed": 12,
+   "passivesMin": 3,
+   "passivesMax": 3,
+   "at": "2026-11-22T18:27:38.808Z"
+  },
+  "Small Cluster Jewel||+12% to Chaos Resistance||Born of Chaos": {
+   "low": {
+    "type": "~b/o",
+    "amount": 75,
+    "currency": "chaos"
+   },
+   "mid": {
+    "type": "~b/o",
+    "amount": 90,
+    "currency": "chaos"
+   },
+   "sampled": 10,
+   "sellers": 7,
+   "listed": 118,
+   "passivesMin": 2,
+   "passivesMax": 2,
+   "at": "2026-11-22T18:27:48.487Z"
+  },
+  "Medium Cluster Jewel||Channelling Skills deal 12% increased Damage||Stoic Focus + Unwavering Focus": {
+   "low": {
+    "type": "~b/o",
+    "amount": 30,
+    "currency": "chaos"
+   },
+   "mid": {
+    "type": "~b/o",
+    "amount": 40,
+    "currency": "chaos"
+   },
+   "sampled": 10,
+   "sellers": 9,
+   "listed": 132,
+   "passivesMin": 4,
+   "passivesMax": 5,
+   "at": "2026-11-22T18:27:57.734Z"
+  },
+  "Small Cluster Jewel||+4% chance to Suppress Spell Damage||25% increased Small Passive Effect + Elegant Form": {
+   "low": {
+    "type": "~b/o",
+    "amount": 1,
+    "currency": "divine"
+   },
+   "mid": {
+    "type": "~b/o",
+    "amount": 3,
+    "currency": "divine"
+   },
+   "sampled": 7,
+   "sellers": 7,
+   "listed": 7,
+   "passivesMin": 3,
+   "passivesMax": 3,
+   "at": "2026-11-22T18:31:58.128Z"
+  },
+  "Small Cluster Jewel||+4% chance to Suppress Spell Damage||25% increased Small Passive Effect + Aerialist": {
+   "low": {
+    "type": "~b/o",
+    "amount": 5,
+    "currency": "divine"
+   },
+   "mid": {
+    "type": "~b/o",
+    "amount": 5,
+    "currency": "divine"
+   },
+   "sampled": 1,
+   "sellers": 1,
+   "listed": 1,
+   "passivesMin": 3,
+   "passivesMax": 3,
+   "at": "2026-11-22T18:32:07.766Z"
+  },
+  "Small Cluster Jewel||4% increased maximum Life||25% increased Small Passive Effect + Feast of Flesh": {
+   "low": {
+    "type": "~b/o",
+    "amount": 50,
+    "currency": "chaos"
+   },
+   "mid": {
+    "type": "~b/o",
+    "amount": 50,
+    "currency": "chaos"
+   },
+   "sampled": 3,
+   "sellers": 3,
+   "lowOutlier": {
+    "type": "~b/o",
+    "amount": 15,
+    "currency": "chaos"
+   },
+   "listed": 3,
+   "passivesMin": 3,
+   "passivesMax": 3,
+   "at": "2026-11-22T18:32:08.200Z"
+  },
+  "Small Cluster Jewel||4% increased maximum Life||Feast of Flesh": {
+   "low": {
+    "type": "~b/o",
+    "amount": 1,
+    "currency": "chaos"
+   },
+   "mid": {
+    "type": "~b/o",
+    "amount": 5,
+    "currency": "chaos"
+   },
+   "sampled": 10,
+   "sellers": 10,
+   "listed": 26,
+   "passivesMin": 2,
+   "passivesMax": 2,
+   "at": "2026-11-22T18:32:38.488Z"
   },
   "Small Cluster Jewel||4% increased maximum Life||Sublime Sensation": {
    "low": {
@@ -3114,15 +3126,15 @@
    },
    "sampled": 10,
    "sellers": 10,
-   "listed": 35,
+   "listed": 66,
    "passivesMin": 2,
    "passivesMax": 2,
-   "at": "2026-11-17T02:44:28.385Z"
+   "at": "2026-11-22T18:32:48.130Z"
   },
   "Small Cluster Jewel||6% increased maximum Mana||Openness": {
    "low": {
     "type": "~b/o",
-    "amount": 3,
+    "amount": 4,
     "currency": "chaos"
    },
    "mid": {
@@ -3132,28 +3144,28 @@
    },
    "sampled": 10,
    "sellers": 10,
-   "listed": 82,
+   "listed": 197,
    "passivesMin": 2,
    "passivesMax": 3,
-   "at": "2026-11-17T02:44:28.747Z"
+   "at": "2026-11-22T18:32:48.477Z"
   },
   "Small Cluster Jewel||2% Chance to Block Spell Damage||Enduring Ward": {
    "low": {
     "type": "~b/o",
-    "amount": 60,
-    "currency": "chaos"
+    "amount": 2,
+    "currency": "divine"
    },
    "mid": {
     "type": "~b/o",
-    "amount": 75,
-    "currency": "chaos"
+    "amount": 3,
+    "currency": "divine"
    },
-   "sampled": 9,
+   "sampled": 5,
    "sellers": 5,
-   "listed": 9,
+   "listed": 5,
    "passivesMin": 2,
    "passivesMax": 2,
-   "at": "2026-11-17T02:44:38.370Z"
+   "at": "2026-11-22T18:33:07.738Z"
   },
   "Small Cluster Jewel||6% increased maximum Energy Shield||Sublime Sensation": {
    "low": {
@@ -3168,10 +3180,10 @@
    },
    "sampled": 10,
    "sellers": 10,
-   "listed": 70,
+   "listed": 117,
    "passivesMin": 3,
    "passivesMax": 3,
-   "at": "2026-11-17T02:45:08.758Z"
+   "at": "2026-11-22T18:31:57.709Z"
   },
   "Medium Cluster Jewel||10% increased Effect of Non-Damaging Ailments||Blast-Freeze + Stormrider": {
    "low": null,
@@ -3182,49 +3194,299 @@
    "passivesMin": 4,
    "passivesMax": 5,
    "at": "2026-11-17T02:45:18.199Z"
-  }
- },
- "bases": {
-  "Large Cluster Jewel||Minions deal 10% increased Damage||12-12||i83": {
+  },
+  "Medium Cluster Jewel||10% increased Area Damage||Assert Dominance + Expansive Might": {
    "low": {
     "type": "~b/o",
-    "amount": 15,
+    "amount": 100,
     "currency": "chaos"
    },
    "mid": {
     "type": "~b/o",
-    "amount": 19,
+    "amount": 110,
+    "currency": "chaos"
+   },
+   "sampled": 10,
+   "sellers": 6,
+   "listed": 57,
+   "passivesMin": 4,
+   "passivesMax": 5,
+   "at": "2026-11-22T17:47:07.989Z"
+  },
+  "Large Cluster Jewel||Minions deal 10% increased Damage||Feasting Fiends + Renewal + Vicious Bite": {
+   "low": {
+    "type": "~b/o",
+    "amount": 95,
+    "currency": "chaos"
+   },
+   "mid": {
+    "type": "~b/o",
+    "amount": 110,
+    "currency": "chaos"
+   },
+   "sampled": 10,
+   "sellers": 9,
+   "listed": 147,
+   "passivesMin": 8,
+   "passivesMax": 8,
+   "at": "2026-11-22T17:47:58.312Z"
+  },
+  "Large Cluster Jewel||12% increased Physical Damage||Furious Assault + Iron Breaker + Master the Fundamentals": {
+   "low": {
+    "type": "~b/o",
+    "amount": 84,
+    "currency": "chaos"
+   },
+   "mid": {
+    "type": "~b/o",
+    "amount": 85,
+    "currency": "chaos"
+   },
+   "sampled": 10,
+   "sellers": 4,
+   "listed": 91,
+   "passivesMin": 8,
+   "passivesMax": 8,
+   "at": "2026-11-22T17:51:58.308Z"
+  },
+  "Medium Cluster Jewel||10% increased Damage while affected by a Herald||Empowered Envoy + Purposeful Harbinger": {
+   "low": {
+    "type": "~b/o",
+    "amount": 50,
+    "currency": "chaos"
+   },
+   "mid": {
+    "type": "~b/o",
+    "amount": 60,
     "currency": "chaos"
    },
    "sampled": 10,
    "sellers": 10,
-   "listed": 27,
-   "passivesMin": 12,
-   "passivesMax": 12,
-   "at": "2026-11-17T01:56:34.019Z"
+   "listed": 86,
+   "passivesMin": 4,
+   "passivesMax": 5,
+   "at": "2026-11-22T17:52:58.761Z"
   },
-  "Large Cluster Jewel||Minions deal 10% increased Damage||12-12||i84": {
+  "Medium Cluster Jewel||12% increased Trap Damage / 12% increased Mine Damage||Arcane Pyrotechnics + Guerilla Tactics": {
    "low": {
     "type": "~b/o",
-    "amount": 18,
+    "amount": 20,
+    "currency": "chaos"
+   },
+   "mid": {
+    "type": "~b/o",
+    "amount": 33,
+    "currency": "chaos"
+   },
+   "sampled": 10,
+   "sellers": 9,
+   "listed": 35,
+   "passivesMin": 4,
+   "passivesMax": 5,
+   "at": "2026-11-22T17:56:38.264Z"
+  },
+  "Medium Cluster Jewel||12% increased Trap Damage / 12% increased Mine Damage||Expendability + Guerilla Tactics": {
+   "low": {
+    "type": "~b/o",
+    "amount": 8,
+    "currency": "chaos"
+   },
+   "mid": {
+    "type": "~b/o",
+    "amount": 11,
+    "currency": "chaos"
+   },
+   "sampled": 10,
+   "sellers": 9,
+   "listed": 41,
+   "passivesMin": 4,
+   "passivesMax": 5,
+   "at": "2026-11-22T17:56:38.581Z"
+  },
+  "Large Cluster Jewel||12% increased Lightning Damage||Doryani's Lesson + Prismatic Heart + Storm Drinker": {
+   "low": {
+    "type": "~b/o",
+    "amount": 150,
+    "currency": "chaos"
+   },
+   "mid": {
+    "type": "~b/o",
+    "amount": 1,
+    "currency": "divine"
+   },
+   "sampled": 10,
+   "sellers": 10,
+   "listed": 31,
+   "passivesMin": 8,
+   "passivesMax": 8,
+   "at": "2026-11-22T17:56:57.644Z"
+  },
+  "Small Cluster Jewel||6% increased Mana Reservation Efficiency of Skills||25% increased Small Passive Effect + Introspection": {
+   "low": {
+    "type": "~b/o",
+    "amount": 500,
+    "currency": "chaos"
+   },
+   "mid": {
+    "type": "~b/o",
+    "amount": 3,
+    "currency": "divine"
+   },
+   "sampled": 10,
+   "sellers": 8,
+   "listed": 55,
+   "passivesMin": 3,
+   "passivesMax": 3,
+   "at": "2026-11-22T17:57:48.426Z"
+  },
+  "Medium Cluster Jewel||10% increased Projectile Damage||Aerodynamics + Streamlined": {
+   "low": {
+    "type": "~b/o",
+    "amount": 1,
     "currency": "divine"
    },
    "mid": {
     "type": "~b/o",
-    "amount": 18,
+    "amount": 1,
     "currency": "divine"
    },
-   "sampled": 3,
-   "sellers": 3,
-   "listed": 3,
-   "passivesMin": 12,
-   "passivesMax": 12,
-   "at": "2026-11-17T01:56:34.308Z"
+   "sampled": 10,
+   "sellers": 8,
+   "listed": 260,
+   "passivesMin": 4,
+   "passivesMax": 5,
+   "at": "2026-11-22T17:58:07.785Z"
   },
-  "Medium Cluster Jewel||12% increased Trap Damage / 12% increased Mine Damage||4-5||i83": {
+  "Large Cluster Jewel||Staff Attacks deal 12% increased Damage with Hits and Ailments / Mace or Sceptre Attacks deal 12% increased Damage with Hits and Ailments||Calamitous + Devastator + Martial Prowess": {
    "low": {
     "type": "~b/o",
-    "amount": 8,
+    "amount": 250,
+    "currency": "chaos"
+   },
+   "mid": {
+    "type": "~b/o",
+    "amount": 250,
+    "currency": "chaos"
+   },
+   "sampled": 10,
+   "sellers": 5,
+   "listed": 34,
+   "passivesMin": 8,
+   "passivesMax": 8,
+   "at": "2026-11-22T18:01:48.006Z"
+  },
+  "Large Cluster Jewel||12% increased Damage with Bows / 12% increased Damage Over Time with Bow Skills||Calamitous + Devastator + Martial Prowess": {
+   "low": {
+    "type": "~b/o",
+    "amount": 3,
+    "currency": "divine"
+   },
+   "mid": {
+    "type": "~b/o",
+    "amount": 3,
+    "currency": "divine"
+   },
+   "sampled": 4,
+   "sellers": 3,
+   "listed": 4,
+   "passivesMin": 8,
+   "passivesMax": 8,
+   "at": "2026-11-22T18:02:37.618Z"
+  },
+  "Large Cluster Jewel||10% increased Spell Damage||Essence Rush + Mage Hunter + Practiced Caster": {
+   "low": {
+    "type": "~b/o",
+    "amount": 40,
+    "currency": "chaos"
+   },
+   "mid": {
+    "type": "~b/o",
+    "amount": 60,
+    "currency": "chaos"
+   },
+   "sampled": 10,
+   "sellers": 10,
+   "listed": 28,
+   "passivesMin": 8,
+   "passivesMax": 8,
+   "at": "2026-11-22T18:02:48.039Z"
+  },
+  "Large Cluster Jewel||12% increased Cold Damage||Blanketed Snow + Prismatic Heart + Widespread Destruction": {
+   "low": {
+    "type": "~b/o",
+    "amount": 12,
+    "currency": "divine"
+   },
+   "mid": {
+    "type": "~b/o",
+    "amount": 13,
+    "currency": "divine"
+   },
+   "sampled": 10,
+   "sellers": 7,
+   "listed": 12,
+   "passivesMin": 8,
+   "passivesMax": 8,
+   "at": "2026-11-22T18:06:37.666Z"
+  },
+  "Large Cluster Jewel||12% increased Cold Damage||Sadist + Snowstorm + Widespread Destruction": {
+   "low": {
+    "type": "~b/o",
+    "amount": 1,
+    "currency": "divine"
+   },
+   "mid": {
+    "type": "~b/o",
+    "amount": 2,
+    "currency": "divine"
+   },
+   "sampled": 9,
+   "sellers": 8,
+   "listed": 9,
+   "passivesMin": 8,
+   "passivesMax": 8,
+   "at": "2026-11-22T18:06:38.020Z"
+  },
+  "Large Cluster Jewel||10% increased Elemental Damage||Corrosive Elements + Disorienting Display + Prismatic Heart": {
+   "low": {
+    "type": "~b/o",
+    "amount": 74,
+    "currency": "chaos"
+   },
+   "mid": {
+    "type": "~b/o",
+    "amount": 75,
+    "currency": "chaos"
+   },
+   "sampled": 10,
+   "sellers": 9,
+   "listed": 46,
+   "passivesMin": 8,
+   "passivesMax": 8,
+   "at": "2026-11-22T18:06:48.328Z"
+  },
+  "Large Cluster Jewel||Wand Attacks deal 12% increased Damage with Hits and Ailments||Devastator + Drive the Destruction + Martial Prowess": {
+   "low": {
+    "type": "~b/o",
+    "amount": 55,
+    "currency": "chaos"
+   },
+   "mid": {
+    "type": "~b/o",
+    "amount": 100,
+    "currency": "chaos"
+   },
+   "sampled": 10,
+   "sellers": 9,
+   "listed": 12,
+   "passivesMin": 8,
+   "passivesMax": 8,
+   "at": "2026-11-22T18:07:38.062Z"
+  },
+  "Medium Cluster Jewel||Minions have 12% increased maximum Life||Life from Death": {
+   "low": {
+    "type": "~b/o",
+    "amount": 9,
     "currency": "chaos"
    },
    "mid": {
@@ -3233,34 +3495,242 @@
     "currency": "chaos"
    },
    "sampled": 10,
-   "sellers": 9,
-   "listed": 35,
+   "sellers": 10,
+   "listed": 846,
    "passivesMin": 4,
-   "passivesMax": 5,
-   "at": "2026-11-17T01:56:43.696Z"
+   "passivesMax": 6,
+   "at": "2026-11-22T18:07:48.803Z"
   },
-  "Medium Cluster Jewel||12% increased Trap Damage / 12% increased Mine Damage||4-5||i84": {
+  "Medium Cluster Jewel||12% increased Brand Damage||Brand Loyalty + Grand Design": {
    "low": {
     "type": "~b/o",
-    "amount": 14,
+    "amount": 5,
     "currency": "chaos"
    },
    "mid": {
     "type": "~b/o",
-    "amount": 15,
+    "amount": 9,
     "currency": "chaos"
    },
    "sampled": 10,
    "sellers": 10,
-   "listed": 18,
+   "listed": 49,
    "passivesMin": 4,
    "passivesMax": 5,
-   "at": "2026-11-17T01:56:44.026Z"
+   "at": "2026-11-22T18:11:57.683Z"
   },
-  "Small Cluster Jewel||6% increased Mana Reservation Efficiency of Skills||3-3||i83": {
+  "Medium Cluster Jewel||12% increased Chaos Damage over Time||Eldritch Inspiration + Low Tolerance": {
    "low": {
     "type": "~b/o",
-    "amount": 114,
+    "amount": 7,
+    "currency": "divine"
+   },
+   "mid": {
+    "type": "~b/o",
+    "amount": 7,
+    "currency": "divine"
+   },
+   "sampled": 10,
+   "sellers": 7,
+   "listed": 91,
+   "passivesMin": 4,
+   "passivesMax": 5,
+   "at": "2026-11-22T18:13:37.636Z"
+  },
+  "Medium Cluster Jewel||12% increased Chaos Damage over Time||Low Tolerance + Unwaveringly Evil": {
+   "low": {
+    "type": "~b/o",
+    "amount": 60,
+    "currency": "chaos"
+   },
+   "mid": {
+    "type": "~b/o",
+    "amount": 60,
+    "currency": "chaos"
+   },
+   "sampled": 10,
+   "sellers": 7,
+   "listed": 92,
+   "passivesMin": 4,
+   "passivesMax": 5,
+   "at": "2026-11-22T18:16:37.634Z"
+  },
+  "Large Cluster Jewel||Axe Attacks deal 12% increased Damage with Hits and Ailments / Sword Attacks deal 12% increased Damage with Hits and Ailments||Aggressive Defence + Bloodscent + Martial Prowess": {
+   "low": {
+    "type": "~b/o",
+    "amount": 300,
+    "currency": "chaos"
+   },
+   "mid": {
+    "type": "~b/o",
+    "amount": 350,
+    "currency": "chaos"
+   },
+   "sampled": 10,
+   "sellers": 7,
+   "listed": 16,
+   "passivesMin": 8,
+   "passivesMax": 8,
+   "at": "2026-11-22T18:16:48.749Z"
+  },
+  "Large Cluster Jewel||12% increased Damage with Two Handed Weapons||Fuel the Fight + Graceful Execution + Heavy Hitter": {
+   "low": {
+    "type": "~b/o",
+    "amount": 1,
+    "currency": "divine"
+   },
+   "mid": {
+    "type": "~b/o",
+    "amount": 175,
+    "currency": "chaos"
+   },
+   "sampled": 10,
+   "sellers": 9,
+   "listed": 17,
+   "passivesMin": 8,
+   "passivesMax": 8,
+   "at": "2026-11-22T18:17:07.744Z"
+  },
+  "Large Cluster Jewel||12% increased Damage with Two Handed Weapons||Brutal Infamy + Graceful Execution + Martial Prowess": {
+   "low": {
+    "type": "~b/o",
+    "amount": 3,
+    "currency": "divine"
+   },
+   "mid": {
+    "type": "~b/o",
+    "amount": 3,
+    "currency": "divine"
+   },
+   "sampled": 5,
+   "sellers": 3,
+   "listed": 5,
+   "passivesMin": 8,
+   "passivesMax": 8,
+   "at": "2026-11-22T18:17:08.115Z"
+  },
+  "Large Cluster Jewel||12% increased Damage with Two Handed Weapons||Fearsome Warrior + Martial Mastery + Martial Prowess": {
+   "low": {
+    "type": "~b/o",
+    "amount": 6,
+    "currency": "divine"
+   },
+   "mid": {
+    "type": "~b/o",
+    "amount": 8,
+    "currency": "divine"
+   },
+   "sampled": 7,
+   "sellers": 6,
+   "listed": 7,
+   "passivesMin": 8,
+   "passivesMax": 8,
+   "at": "2026-11-22T18:17:37.732Z"
+  },
+  "Large Cluster Jewel||10% increased Attack Damage||Feed the Fury + Fuel the Fight + Martial Prowess": {
+   "low": {
+    "type": "~b/o",
+    "amount": 5,
+    "currency": "divine"
+   },
+   "mid": {
+    "type": "~b/o",
+    "amount": 7,
+    "currency": "divine"
+   },
+   "sampled": 10,
+   "sellers": 10,
+   "listed": 16,
+   "passivesMin": 8,
+   "passivesMax": 8,
+   "at": "2026-11-22T18:17:48.166Z"
+  },
+  "Large Cluster Jewel||10% increased Attack Damage||Calamitous + Feed the Fury + Martial Prowess": {
+   "low": {
+    "type": "~b/o",
+    "amount": 4,
+    "currency": "divine"
+   },
+   "mid": {
+    "type": "~b/o",
+    "amount": 6,
+    "currency": "divine"
+   },
+   "sampled": 3,
+   "sellers": 3,
+   "listed": 3,
+   "passivesMin": 8,
+   "passivesMax": 8,
+   "at": "2026-11-22T18:17:48.451Z"
+  },
+  "Large Cluster Jewel||12% increased Attack Damage while Dual Wielding||Fuel the Fight + Martial Prowess + Quick and Deadly": {
+   "low": {
+    "type": "~b/o",
+    "amount": 5,
+    "currency": "divine"
+   },
+   "mid": {
+    "type": "~b/o",
+    "amount": 5,
+    "currency": "divine"
+   },
+   "sampled": 10,
+   "sellers": 8,
+   "listed": 12,
+   "passivesMin": 8,
+   "passivesMax": 8,
+   "at": "2026-11-22T18:17:58.910Z"
+  },
+  "Medium Cluster Jewel||Exerted Attacks deal 20% increased Damage||Cry Wolf + Mob Mentality": {
+   "low": {
+    "type": "~b/o",
+    "amount": 90,
+    "currency": "chaos"
+   },
+   "mid": {
+    "type": "~b/o",
+    "amount": 93,
+    "currency": "chaos"
+   },
+   "sampled": 10,
+   "sellers": 8,
+   "listed": 54,
+   "passivesMin": 4,
+   "passivesMax": 5,
+   "at": "2026-11-22T18:21:38.798Z"
+  },
+  "Large Cluster Jewel||Claw Attacks deal 12% increased Damage with Hits and Ailments / Dagger Attacks deal 12% increased Damage with Hits and Ailments||25% increased Small Passive Effect + Fuel the Fight + Martial Prowess": {
+   "low": null,
+   "mid": null,
+   "sampled": 0,
+   "sellers": 0,
+   "listed": 0,
+   "passivesMin": 12,
+   "passivesMax": 12,
+   "at": "2026-11-22T18:21:58.276Z"
+  },
+  "Medium Cluster Jewel||12% increased Burning Damage||Fan the Flames + Flow of Life": {
+   "low": {
+    "type": "~b/o",
+    "amount": 7,
+    "currency": "divine"
+   },
+   "mid": {
+    "type": "~b/o",
+    "amount": 7,
+    "currency": "divine"
+   },
+   "sampled": 6,
+   "sellers": 6,
+   "listed": 6,
+   "passivesMin": 4,
+   "passivesMax": 5,
+   "at": "2026-11-22T18:22:48.661Z"
+  },
+  "Medium Cluster Jewel||6% increased Flask Effect Duration||Fasting + Spiked Concoction": {
+   "low": {
+    "type": "~b/o",
+    "amount": 96,
     "currency": "chaos"
    },
    "mid": {
@@ -3269,13 +3739,67 @@
     "currency": "chaos"
    },
    "sampled": 10,
+   "sellers": 6,
+   "listed": 57,
+   "passivesMin": 4,
+   "passivesMax": 5,
+   "at": "2026-11-22T18:22:58.973Z"
+  },
+  "Medium Cluster Jewel||6% increased Flask Effect Duration||Brewed for Potency + Fasting": {
+   "low": {
+    "type": "~b/o",
+    "amount": 70,
+    "currency": "chaos"
+   },
+   "mid": {
+    "type": "~b/o",
+    "amount": 99,
+    "currency": "chaos"
+   },
+   "sampled": 10,
+   "sellers": 8,
+   "listed": 24,
+   "passivesMin": 4,
+   "passivesMax": 5,
+   "at": "2026-11-22T18:23:07.749Z"
+  },
+  "Medium Cluster Jewel||10% increased Damage over Time||Brewed for Potency + Circling Oblivion": {
+   "low": {
+    "type": "~b/o",
+    "amount": 4,
+    "currency": "chaos"
+   },
+   "mid": {
+    "type": "~b/o",
+    "amount": 7,
+    "currency": "chaos"
+   },
+   "sampled": 10,
    "sellers": 10,
-   "listed": 34,
+   "listed": 66,
+   "passivesMin": 4,
+   "passivesMax": 5,
+   "at": "2026-11-22T18:26:37.665Z"
+  },
+  "Small Cluster Jewel||+12% to Chaos Resistance||25% increased Small Passive Effect + Antivenom": {
+   "low": {
+    "type": "~b/o",
+    "amount": 159,
+    "currency": "chaos"
+   },
+   "mid": {
+    "type": "~b/o",
+    "amount": 159,
+    "currency": "chaos"
+   },
+   "sampled": 2,
+   "sellers": 2,
+   "listed": 2,
    "passivesMin": 3,
    "passivesMax": 3,
-   "at": "2026-11-17T01:56:44.634Z"
+   "at": "2026-11-22T18:27:48.940Z"
   },
-  "Small Cluster Jewel||6% increased Mana Reservation Efficiency of Skills||3-3||i84": {
+  "Medium Cluster Jewel||Channelling Skills deal 12% increased Damage||Enduring Focus + Unrestrained Focus": {
    "low": {
     "type": "~b/o",
     "amount": 8,
@@ -3286,14 +3810,142 @@
     "amount": 9,
     "currency": "divine"
    },
-   "sampled": 6,
-   "sellers": 6,
-   "listed": 6,
+   "sampled": 8,
+   "sellers": 4,
+   "listed": 8,
+   "passivesMin": 4,
+   "passivesMax": 5,
+   "at": "2026-11-22T18:27:59.012Z"
+  },
+  "Medium Cluster Jewel||Channelling Skills deal 12% increased Damage||Enduring Focus + Unwavering Focus": {
+   "low": {
+    "type": "~b/o",
+    "amount": 320,
+    "currency": "chaos"
+   },
+   "mid": {
+    "type": "~b/o",
+    "amount": 2,
+    "currency": "divine"
+   },
+   "sampled": 10,
+   "sellers": 9,
+   "listed": 19,
+   "passivesMin": 4,
+   "passivesMax": 5,
+   "at": "2026-11-22T18:28:07.812Z"
+  },
+  "Small Cluster Jewel||6% increased maximum Energy Shield||Mystical Ward": {
+   "low": {
+    "type": "~b/o",
+    "amount": 1,
+    "currency": "chaos"
+   },
+   "mid": {
+    "type": "~b/o",
+    "amount": 1,
+    "currency": "chaos"
+   },
+   "sampled": 10,
+   "sellers": 10,
+   "listed": 178,
    "passivesMin": 3,
    "passivesMax": 3,
-   "at": "2026-11-17T01:56:53.670Z"
+   "at": "2026-11-22T18:31:38.784Z"
   },
-  "Large Cluster Jewel||12% increased Lightning Damage||12-12||i83": {
+  "Small Cluster Jewel||6% increased maximum Energy Shield||35% increased Small Passive Effect": {
+   "low": {
+    "type": "~b/o",
+    "amount": 30,
+    "currency": "chaos"
+   },
+   "mid": {
+    "type": "~b/o",
+    "amount": 100,
+    "currency": "chaos"
+   },
+   "sampled": 10,
+   "sellers": 7,
+   "listed": 141,
+   "passivesMin": 3,
+   "passivesMax": 3,
+   "at": "2026-11-22T18:31:48.431Z"
+  },
+  "Small Cluster Jewel||6% increased maximum Energy Shield||25% increased Small Passive Effect + Spring Back": {
+   "low": {
+    "type": "~b/o",
+    "amount": 1,
+    "currency": "chaos"
+   },
+   "mid": {
+    "type": "~b/o",
+    "amount": 3,
+    "currency": "chaos"
+   },
+   "sampled": 10,
+   "sellers": 10,
+   "listed": 16,
+   "passivesMin": 3,
+   "passivesMax": 3,
+   "at": "2026-11-22T18:31:48.777Z"
+  },
+  "Small Cluster Jewel||+15% to Fire Resistance||25% increased Small Passive Effect + Fire Attunement": {
+   "low": {
+    "type": "~b/o",
+    "amount": 1,
+    "currency": "chaos"
+   },
+   "mid": {
+    "type": "~b/o",
+    "amount": 1,
+    "currency": "chaos"
+   },
+   "sampled": 10,
+   "sellers": 10,
+   "listed": 10,
+   "passivesMin": 3,
+   "passivesMax": 3,
+   "at": "2026-11-22T18:32:58.182Z"
+  },
+  "Medium Cluster Jewel||10% increased Effect of Non-Damaging Ailments||Blast-Freeze + Overshock": {
+   "low": {
+    "type": "~b/o",
+    "amount": 2,
+    "currency": "chaos"
+   },
+   "mid": {
+    "type": "~b/o",
+    "amount": 5,
+    "currency": "chaos"
+   },
+   "sampled": 5,
+   "sellers": 5,
+   "listed": 5,
+   "passivesMin": 4,
+   "passivesMax": 5,
+   "at": "2026-11-22T18:36:37.708Z"
+  },
+  "Small Cluster Jewel||15% increased Evasion Rating||Sublime Form": {
+   "low": {
+    "type": "~b/o",
+    "amount": 1,
+    "currency": "chaos"
+   },
+   "mid": {
+    "type": "~b/o",
+    "amount": 3,
+    "currency": "chaos"
+   },
+   "sampled": 10,
+   "sellers": 10,
+   "listed": 67,
+   "passivesMin": 3,
+   "passivesMax": 3,
+   "at": "2026-11-22T18:36:38.775Z"
+  }
+ },
+ "bases": {
+  "Large Cluster Jewel||Minions deal 10% increased Damage||12-12||i83": {
    "low": {
     "type": "~b/o",
     "amount": 8,
@@ -3304,66 +3956,174 @@
     "amount": 10,
     "currency": "chaos"
    },
-   "sampled": 6,
-   "sellers": 6,
-   "listed": 6,
+   "sampled": 10,
+   "sellers": 10,
+   "listed": 86,
    "passivesMin": 12,
    "passivesMax": 12,
-   "at": "2026-11-17T01:56:54.689Z"
+   "at": "2026-11-22T17:47:37.976Z"
   },
-  "Large Cluster Jewel||12% increased Lightning Damage||12-12||i84": {
+  "Large Cluster Jewel||Minions deal 10% increased Damage||12-12||i84": {
    "low": {
     "type": "~b/o",
-    "amount": 375,
-    "currency": "chaos"
-   },
-   "mid": {
-    "type": "~b/o",
-    "amount": 3,
+    "amount": 25,
     "currency": "divine"
    },
-   "sampled": 8,
-   "sellers": 8,
-   "listed": 8,
+   "mid": {
+    "type": "~b/o",
+    "amount": 27,
+    "currency": "divine"
+   },
+   "sampled": 10,
+   "sellers": 10,
+   "listed": 12,
    "passivesMin": 12,
    "passivesMax": 12,
-   "at": "2026-11-17T01:57:03.679Z"
+   "at": "2026-11-22T17:47:38.278Z"
   },
-  "Large Cluster Jewel||10% increased Spell Damage||12-12||i83": {
+  "Medium Cluster Jewel||12% increased Trap Damage / 12% increased Mine Damage||4-5||i83": {
    "low": {
     "type": "~b/o",
-    "amount": 2,
+    "amount": 3,
     "currency": "chaos"
    },
    "mid": {
     "type": "~b/o",
-    "amount": 3,
+    "amount": 5,
     "currency": "chaos"
    },
    "sampled": 10,
    "sellers": 10,
-   "listed": 20,
-   "passivesMin": 12,
-   "passivesMax": 12,
-   "at": "2026-11-17T01:57:33.706Z"
+   "listed": 106,
+   "passivesMin": 4,
+   "passivesMax": 5,
+   "at": "2026-11-22T17:53:08.132Z"
   },
-  "Large Cluster Jewel||10% increased Spell Damage||12-12||i84": {
+  "Medium Cluster Jewel||12% increased Trap Damage / 12% increased Mine Damage||4-5||i84": {
    "low": {
     "type": "~b/o",
-    "amount": 375,
+    "amount": 10,
     "currency": "chaos"
    },
    "mid": {
     "type": "~b/o",
+    "amount": 10,
+    "currency": "chaos"
+   },
+   "sampled": 10,
+   "sellers": 10,
+   "listed": 47,
+   "passivesMin": 4,
+   "passivesMax": 5,
+   "at": "2026-11-22T17:53:37.608Z"
+  },
+  "Small Cluster Jewel||6% increased Mana Reservation Efficiency of Skills||3-3||i83": {
+   "low": {
+    "type": "~b/o",
+    "amount": 15,
+    "currency": "chaos"
+   },
+   "mid": {
+    "type": "~b/o",
+    "amount": 15,
+    "currency": "chaos"
+   },
+   "sampled": 10,
+   "sellers": 10,
+   "listed": 160,
+   "passivesMin": 3,
+   "passivesMax": 3,
+   "at": "2026-11-22T17:57:08.188Z"
+  },
+  "Small Cluster Jewel||6% increased Mana Reservation Efficiency of Skills||3-3||i84": {
+   "low": {
+    "type": "~b/o",
+    "amount": 12,
+    "currency": "divine"
+   },
+   "mid": {
+    "type": "~b/o",
+    "amount": 12,
+    "currency": "divine"
+   },
+   "sampled": 10,
+   "sellers": 10,
+   "listed": 22,
+   "passivesMin": 3,
+   "passivesMax": 3,
+   "at": "2026-11-22T17:57:37.619Z"
+  },
+  "Large Cluster Jewel||12% increased Lightning Damage||12-12||i83": {
+   "low": {
+    "type": "~b/o",
+    "amount": 4,
+    "currency": "chaos"
+   },
+   "mid": {
+    "type": "~b/o",
+    "amount": 5,
+    "currency": "chaos"
+   },
+   "sampled": 10,
+   "sellers": 10,
+   "listed": 28,
+   "passivesMin": 12,
+   "passivesMax": 12,
+   "at": "2026-11-22T17:56:58.302Z"
+  },
+  "Large Cluster Jewel||12% increased Lightning Damage||12-12||i84": {
+   "low": {
+    "type": "~b/o",
+    "amount": 1,
+    "currency": "divine"
+   },
+   "mid": {
+    "type": "~b/o",
+    "amount": 1,
+    "currency": "divine"
+   },
+   "sampled": 10,
+   "sellers": 10,
+   "listed": 51,
+   "passivesMin": 12,
+   "passivesMax": 12,
+   "at": "2026-11-22T17:56:58.670Z"
+  },
+  "Large Cluster Jewel||10% increased Spell Damage||12-12||i83": {
+   "low": {
+    "type": "~b/o",
+    "amount": 3,
+    "currency": "chaos"
+   },
+   "mid": {
+    "type": "~b/o",
+    "amount": 9,
+    "currency": "chaos"
+   },
+   "sampled": 10,
+   "sellers": 9,
+   "listed": 40,
+   "passivesMin": 12,
+   "passivesMax": 12,
+   "at": "2026-11-22T18:02:57.688Z"
+  },
+  "Large Cluster Jewel||10% increased Spell Damage||12-12||i84": {
+   "low": {
+    "type": "~b/o",
     "amount": 3,
     "currency": "divine"
    },
-   "sampled": 9,
+   "mid": {
+    "type": "~b/o",
+    "amount": 4,
+    "currency": "divine"
+   },
+   "sampled": 10,
    "sellers": 9,
-   "listed": 9,
+   "listed": 30,
    "passivesMin": 12,
    "passivesMax": 12,
-   "at": "2026-11-17T01:57:34.004Z"
+   "at": "2026-11-22T18:02:58.096Z"
   },
   "Large Cluster Jewel||12% increased Attack Damage while Dual Wielding||12-12||i83": {
    "low": {
@@ -3404,74 +4164,79 @@
   "Large Cluster Jewel||Minions deal 10% increased Damage||8-9||i83": {
    "low": {
     "type": "~b/o",
-    "amount": 8,
+    "amount": 4,
     "currency": "chaos"
    },
    "mid": {
     "type": "~b/o",
-    "amount": 10,
+    "amount": 5,
     "currency": "chaos"
    },
    "sampled": 10,
    "sellers": 10,
-   "listed": 54,
+   "lowOutlier": {
+    "type": "~b/o",
+    "amount": 1,
+    "currency": "chaos"
+   },
+   "listed": 432,
    "passivesMin": 8,
    "passivesMax": 9,
-   "at": "2026-11-17T01:59:08.556Z"
+   "at": "2026-11-22T17:47:47.643Z"
   },
   "Large Cluster Jewel||Minions deal 10% increased Damage||8-9||i84": {
    "low": {
     "type": "~b/o",
-    "amount": 345,
+    "amount": 140,
     "currency": "chaos"
    },
    "mid": {
     "type": "~b/o",
-    "amount": 380,
+    "amount": 150,
     "currency": "chaos"
    },
-   "sampled": 8,
-   "sellers": 8,
-   "listed": 8,
+   "sampled": 10,
+   "sellers": 7,
+   "listed": 156,
    "passivesMin": 8,
    "passivesMax": 9,
-   "at": "2026-11-17T01:59:08.830Z"
+   "at": "2026-11-22T17:47:47.956Z"
   },
   "Large Cluster Jewel||Minions deal 10% increased Damage||8-8||i83": {
    "low": {
     "type": "~b/o",
-    "amount": 194,
+    "amount": 29,
     "currency": "chaos"
    },
    "mid": {
     "type": "~b/o",
-    "amount": 210,
+    "amount": 34,
     "currency": "chaos"
    },
    "sampled": 10,
    "sellers": 10,
-   "listed": 21,
+   "listed": 373,
    "passivesMin": 8,
    "passivesMax": 8,
-   "at": "2026-11-17T01:59:18.242Z"
+   "at": "2026-11-22T17:47:48.655Z"
   },
   "Large Cluster Jewel||Minions deal 10% increased Damage||8-8||i84": {
    "low": {
     "type": "~b/o",
-    "amount": 355,
+    "amount": 325,
     "currency": "chaos"
    },
    "mid": {
     "type": "~b/o",
-    "amount": 360,
-    "currency": "chaos"
+    "amount": 2,
+    "currency": "divine"
    },
-   "sampled": 4,
-   "sellers": 4,
-   "listed": 4,
+   "sampled": 10,
+   "sellers": 10,
+   "listed": 68,
    "passivesMin": 8,
    "passivesMax": 8,
-   "at": "2026-11-17T01:59:18.533Z"
+   "at": "2026-11-22T17:47:57.645Z"
   },
   "Medium Cluster Jewel||10% increased Area Damage||4-5||i83": {
    "low": {
@@ -3486,64 +4251,64 @@
    },
    "sampled": 10,
    "sellers": 10,
-   "listed": 46,
+   "listed": 144,
    "passivesMin": 4,
    "passivesMax": 5,
-   "at": "2026-11-17T01:59:28.247Z"
+   "at": "2026-11-22T17:46:57.665Z"
   },
   "Medium Cluster Jewel||10% increased Area Damage||4-5||i84": {
    "low": {
     "type": "~b/o",
-    "amount": 10,
+    "amount": 14,
     "currency": "chaos"
    },
    "mid": {
     "type": "~b/o",
-    "amount": 25,
+    "amount": 19,
     "currency": "chaos"
    },
    "sampled": 10,
-   "sellers": 10,
-   "listed": 11,
+   "sellers": 9,
+   "listed": 30,
    "passivesMin": 4,
    "passivesMax": 5,
-   "at": "2026-11-17T01:59:28.574Z"
+   "at": "2026-11-22T17:46:57.941Z"
   },
   "Large Cluster Jewel||12% increased Chaos Damage||8-8||i83": {
    "low": {
     "type": "~b/o",
-    "amount": 70,
+    "amount": 380,
     "currency": "chaos"
    },
    "mid": {
     "type": "~b/o",
-    "amount": 75,
+    "amount": 450,
     "currency": "chaos"
    },
    "sampled": 10,
    "sellers": 10,
-   "listed": 12,
+   "listed": 100,
    "passivesMin": 8,
    "passivesMax": 8,
-   "at": "2026-11-17T02:04:18.620Z"
+   "at": "2026-11-22T17:46:37.910Z"
   },
   "Large Cluster Jewel||12% increased Chaos Damage||8-8||i84": {
    "low": {
     "type": "~b/o",
-    "amount": 85,
+    "amount": 450,
     "currency": "chaos"
    },
    "mid": {
     "type": "~b/o",
-    "amount": 100,
-    "currency": "chaos"
+    "amount": 3,
+    "currency": "divine"
    },
-   "sampled": 6,
-   "sellers": 6,
-   "listed": 6,
+   "sampled": 10,
+   "sellers": 10,
+   "listed": 29,
    "passivesMin": 8,
    "passivesMax": 8,
-   "at": "2026-11-17T02:04:18.981Z"
+   "at": "2026-11-22T17:46:38.196Z"
   },
   "Small Cluster Jewel||15% increased Armour||2-3||i83": {
    "low": {
@@ -3553,33 +4318,33 @@
    },
    "mid": {
     "type": "~b/o",
-    "amount": 3,
+    "amount": 2,
     "currency": "chaos"
    },
    "sampled": 10,
    "sellers": 10,
-   "listed": 68,
+   "listed": 147,
    "passivesMin": 2,
    "passivesMax": 3,
-   "at": "2026-11-17T02:04:38.379Z"
+   "at": "2026-11-22T17:48:07.745Z"
   },
   "Small Cluster Jewel||15% increased Armour||2-3||i84": {
    "low": {
     "type": "~b/o",
-    "amount": 5,
+    "amount": 3,
     "currency": "chaos"
    },
    "mid": {
     "type": "~b/o",
-    "amount": 14,
+    "amount": 8,
     "currency": "chaos"
    },
    "sampled": 10,
    "sellers": 10,
-   "listed": 26,
+   "listed": 48,
    "passivesMin": 2,
    "passivesMax": 3,
-   "at": "2026-11-17T02:04:38.681Z"
+   "at": "2026-11-22T17:48:08.055Z"
   },
   "Small Cluster Jewel||15% increased Armour||3-3||i83": {
    "low": {
@@ -3589,35 +4354,233 @@
    },
    "mid": {
     "type": "~b/o",
-    "amount": 3,
+    "amount": 2,
     "currency": "chaos"
    },
    "sampled": 10,
    "sellers": 10,
-   "listed": 35,
+   "listed": 77,
    "passivesMin": 3,
    "passivesMax": 3,
-   "at": "2026-11-17T02:05:08.659Z"
+   "at": "2026-11-22T17:51:37.625Z"
   },
   "Small Cluster Jewel||15% increased Armour||3-3||i84": {
    "low": {
     "type": "~b/o",
-    "amount": 5,
+    "amount": 3,
     "currency": "chaos"
    },
    "mid": {
     "type": "~b/o",
-    "amount": 25,
+    "amount": 8,
     "currency": "chaos"
    },
-   "sampled": 7,
-   "sellers": 7,
-   "listed": 7,
+   "sampled": 10,
+   "sellers": 10,
+   "listed": 15,
    "passivesMin": 3,
    "passivesMax": 3,
-   "at": "2026-11-17T02:05:08.999Z"
+   "at": "2026-11-22T17:51:37.945Z"
   },
   "Small Cluster Jewel||15% increased Armour||2-2||i83": {
+   "low": {
+    "type": "~b/o",
+    "amount": 10,
+    "currency": "chaos"
+   },
+   "mid": {
+    "type": "~b/o",
+    "amount": 20,
+    "currency": "chaos"
+   },
+   "sampled": 10,
+   "sellers": 7,
+   "listed": 69,
+   "passivesMin": 2,
+   "passivesMax": 2,
+   "at": "2026-11-22T17:51:38.590Z"
+  },
+  "Small Cluster Jewel||15% increased Armour||2-2||i84": {
+   "low": {
+    "type": "~b/o",
+    "amount": 10,
+    "currency": "chaos"
+   },
+   "mid": {
+    "type": "~b/o",
+    "amount": 14,
+    "currency": "chaos"
+   },
+   "sampled": 10,
+   "sellers": 10,
+   "listed": 34,
+   "passivesMin": 2,
+   "passivesMax": 2,
+   "at": "2026-11-22T17:51:47.604Z"
+  },
+  "Large Cluster Jewel||12% increased Attack Damage while holding a Shield||8-8||i83": {
+   "low": {
+    "type": "~b/o",
+    "amount": 33,
+    "currency": "chaos"
+   },
+   "mid": {
+    "type": "~b/o",
+    "amount": 40,
+    "currency": "chaos"
+   },
+   "sampled": 10,
+   "sellers": 10,
+   "listed": 55,
+   "passivesMin": 8,
+   "passivesMax": 8,
+   "at": "2026-11-22T17:52:08.011Z"
+  },
+  "Large Cluster Jewel||12% increased Attack Damage while holding a Shield||8-8||i84": {
+   "low": {
+    "type": "~b/o",
+    "amount": 37,
+    "currency": "chaos"
+   },
+   "mid": {
+    "type": "~b/o",
+    "amount": 45,
+    "currency": "chaos"
+   },
+   "sampled": 10,
+   "sellers": 10,
+   "listed": 30,
+   "passivesMin": 8,
+   "passivesMax": 8,
+   "at": "2026-11-22T17:52:37.670Z"
+  },
+  "Large Cluster Jewel||12% increased Physical Damage||8-8||i83": {
+   "low": {
+    "type": "~b/o",
+    "amount": 8,
+    "currency": "chaos"
+   },
+   "mid": {
+    "type": "~b/o",
+    "amount": 10,
+    "currency": "chaos"
+   },
+   "sampled": 10,
+   "sellers": 10,
+   "listed": 65,
+   "passivesMin": 8,
+   "passivesMax": 8,
+   "at": "2026-11-22T17:51:48.343Z"
+  },
+  "Large Cluster Jewel||12% increased Physical Damage||8-8||i84": {
+   "low": {
+    "type": "~b/o",
+    "amount": 9,
+    "currency": "chaos"
+   },
+   "mid": {
+    "type": "~b/o",
+    "amount": 14,
+    "currency": "chaos"
+   },
+   "sampled": 10,
+   "sellers": 10,
+   "listed": 32,
+   "passivesMin": 8,
+   "passivesMax": 8,
+   "at": "2026-11-22T17:51:48.701Z"
+  },
+  "Large Cluster Jewel||10% increased Elemental Damage||8-8||i83": {
+   "low": {
+    "type": "~b/o",
+    "amount": 24,
+    "currency": "chaos"
+   },
+   "mid": {
+    "type": "~b/o",
+    "amount": 30,
+    "currency": "chaos"
+   },
+   "sampled": 10,
+   "sellers": 10,
+   "listed": 46,
+   "passivesMin": 8,
+   "passivesMax": 8,
+   "at": "2026-11-22T18:06:38.698Z"
+  },
+  "Large Cluster Jewel||10% increased Elemental Damage||8-8||i84": {
+   "low": {
+    "type": "~b/o",
+    "amount": 34,
+    "currency": "chaos"
+   },
+   "mid": {
+    "type": "~b/o",
+    "amount": 35,
+    "currency": "chaos"
+   },
+   "sampled": 9,
+   "sellers": 9,
+   "listed": 9,
+   "passivesMin": 8,
+   "passivesMax": 8,
+   "at": "2026-11-22T18:06:47.649Z"
+  },
+  "Medium Cluster Jewel||10% increased Damage while affected by a Herald||4-5||i83": {
+   "low": {
+    "type": "~b/o",
+    "amount": 24,
+    "currency": "chaos"
+   },
+   "mid": {
+    "type": "~b/o",
+    "amount": 35,
+    "currency": "chaos"
+   },
+   "sampled": 10,
+   "sellers": 10,
+   "listed": 113,
+   "passivesMin": 4,
+   "passivesMax": 5,
+   "at": "2026-11-22T17:52:48.374Z"
+  },
+  "Medium Cluster Jewel||10% increased Damage while affected by a Herald||4-5||i84": {
+   "low": {
+    "type": "~b/o",
+    "amount": 78,
+    "currency": "chaos"
+   },
+   "mid": {
+    "type": "~b/o",
+    "amount": 90,
+    "currency": "chaos"
+   },
+   "sampled": 10,
+   "sellers": 9,
+   "listed": 53,
+   "passivesMin": 4,
+   "passivesMax": 5,
+   "at": "2026-11-22T17:52:48.731Z"
+  },
+  "Small Cluster Jewel||6% increased Mana Reservation Efficiency of Skills||2-2||i83": {
+   "low": {
+    "type": "~b/o",
+    "amount": 3,
+    "currency": "chaos"
+   },
+   "mid": {
+    "type": "~b/o",
+    "amount": 4,
+    "currency": "chaos"
+   },
+   "sampled": 10,
+   "sellers": 10,
+   "listed": 82,
+   "passivesMin": 2,
+   "passivesMax": 2,
+   "at": "2026-11-22T17:57:47.638Z"
+  },
+  "Small Cluster Jewel||6% increased Mana Reservation Efficiency of Skills||2-2||i84": {
    "low": {
     "type": "~b/o",
     "amount": 7,
@@ -3630,120 +4593,12 @@
    },
    "sampled": 10,
    "sellers": 10,
-   "listed": 34,
+   "listed": 27,
    "passivesMin": 2,
    "passivesMax": 2,
-   "at": "2026-11-17T02:05:18.277Z"
+   "at": "2026-11-22T17:57:48.128Z"
   },
-  "Small Cluster Jewel||15% increased Armour||2-2||i84": {
-   "low": {
-    "type": "~b/o",
-    "amount": 10,
-    "currency": "chaos"
-   },
-   "mid": {
-    "type": "~b/o",
-    "amount": 20,
-    "currency": "chaos"
-   },
-   "sampled": 10,
-   "sellers": 10,
-   "listed": 19,
-   "passivesMin": 2,
-   "passivesMax": 2,
-   "at": "2026-11-17T02:05:18.642Z"
-  },
-  "Large Cluster Jewel||12% increased Attack Damage while holding a Shield||8-8||i83": {
-   "low": {
-    "type": "~b/o",
-    "amount": 50,
-    "currency": "chaos"
-   },
-   "mid": {
-    "type": "~b/o",
-    "amount": 58,
-    "currency": "chaos"
-   },
-   "sampled": 10,
-   "sellers": 10,
-   "listed": 20,
-   "passivesMin": 8,
-   "passivesMax": 8,
-   "at": "2026-11-17T02:05:19.338Z"
-  },
-  "Large Cluster Jewel||12% increased Attack Damage while holding a Shield||8-8||i84": {
-   "low": {
-    "type": "~b/o",
-    "amount": 100,
-    "currency": "chaos"
-   },
-   "mid": {
-    "type": "~b/o",
-    "amount": 100,
-    "currency": "chaos"
-   },
-   "sampled": 1,
-   "sellers": 1,
-   "listed": 1,
-   "passivesMin": 8,
-   "passivesMax": 8,
-   "at": "2026-11-17T02:05:28.262Z"
-  },
-  "Large Cluster Jewel||12% increased Physical Damage||8-8||i83": {
-   "low": {
-    "type": "~b/o",
-    "amount": 10,
-    "currency": "chaos"
-   },
-   "mid": {
-    "type": "~b/o",
-    "amount": 20,
-    "currency": "chaos"
-   },
-   "sampled": 10,
-   "sellers": 10,
-   "listed": 17,
-   "passivesMin": 8,
-   "passivesMax": 8,
-   "at": "2026-11-17T02:06:08.271Z"
-  },
-  "Large Cluster Jewel||12% increased Physical Damage||8-8||i84": {
-   "low": {
-    "type": "~b/o",
-    "amount": 38,
-    "currency": "chaos"
-   },
-   "mid": {
-    "type": "~b/o",
-    "amount": 95,
-    "currency": "chaos"
-   },
-   "sampled": 9,
-   "sellers": 9,
-   "listed": 9,
-   "passivesMin": 8,
-   "passivesMax": 8,
-   "at": "2026-11-17T02:09:08.260Z"
-  },
-  "Large Cluster Jewel||10% increased Elemental Damage||8-8||i83": {
-   "low": {
-    "type": "~b/o",
-    "amount": 4,
-    "currency": "chaos"
-   },
-   "mid": {
-    "type": "~b/o",
-    "amount": 8,
-    "currency": "chaos"
-   },
-   "sampled": 10,
-   "sellers": 10,
-   "listed": 33,
-   "passivesMin": 8,
-   "passivesMax": 8,
-   "at": "2026-11-17T02:09:28.307Z"
-  },
-  "Large Cluster Jewel||10% increased Elemental Damage||8-8||i84": {
+  "Large Cluster Jewel||12% increased Damage with Bows / 12% increased Damage Over Time with Bow Skills||8-8||i83": {
    "low": {
     "type": "~b/o",
     "amount": 5,
@@ -3751,215 +4606,143 @@
    },
    "mid": {
     "type": "~b/o",
-    "amount": 10,
-    "currency": "chaos"
-   },
-   "sampled": 9,
-   "sellers": 9,
-   "listed": 9,
-   "passivesMin": 8,
-   "passivesMax": 8,
-   "at": "2026-11-17T02:09:28.638Z"
-  },
-  "Medium Cluster Jewel||10% increased Damage while affected by a Herald||4-5||i83": {
-   "low": {
-    "type": "~b/o",
-    "amount": 2,
-    "currency": "chaos"
-   },
-   "mid": {
-    "type": "~b/o",
-    "amount": 4,
+    "amount": 9,
     "currency": "chaos"
    },
    "sampled": 10,
    "sellers": 10,
-   "listed": 46,
-   "passivesMin": 4,
-   "passivesMax": 5,
-   "at": "2026-11-17T02:10:08.601Z"
+   "listed": 64,
+   "passivesMin": 8,
+   "passivesMax": 8,
+   "at": "2026-11-22T18:01:58.065Z"
   },
-  "Medium Cluster Jewel||10% increased Damage while affected by a Herald||4-5||i84": {
+  "Large Cluster Jewel||12% increased Damage with Bows / 12% increased Damage Over Time with Bow Skills||8-8||i84": {
    "low": {
     "type": "~b/o",
-    "amount": 2,
+    "amount": 14,
     "currency": "chaos"
    },
    "mid": {
     "type": "~b/o",
-    "amount": 5,
-    "currency": "chaos"
-   },
-   "sampled": 10,
-   "sellers": 9,
-   "listed": 18,
-   "passivesMin": 4,
-   "passivesMax": 5,
-   "at": "2026-11-17T02:10:08.993Z"
-  },
-  "Small Cluster Jewel||6% increased Mana Reservation Efficiency of Skills||2-2||i83": {
-   "low": {
-    "type": "~b/o",
-    "amount": 8,
-    "currency": "chaos"
-   },
-   "mid": {
-    "type": "~b/o",
-    "amount": 10,
+    "amount": 20,
     "currency": "chaos"
    },
    "sampled": 10,
    "sellers": 10,
    "listed": 25,
-   "passivesMin": 2,
-   "passivesMax": 2,
-   "at": "2026-11-17T02:10:28.314Z"
-  },
-  "Small Cluster Jewel||6% increased Mana Reservation Efficiency of Skills||2-2||i84": {
-   "low": {
-    "type": "~b/o",
-    "amount": 12,
-    "currency": "chaos"
-   },
-   "mid": {
-    "type": "~b/o",
-    "amount": 22,
-    "currency": "chaos"
-   },
-   "sampled": 10,
-   "sellers": 10,
-   "listed": 11,
-   "passivesMin": 2,
-   "passivesMax": 2,
-   "at": "2026-11-17T02:10:28.657Z"
-  },
-  "Large Cluster Jewel||12% increased Damage with Bows / 12% increased Damage Over Time with Bow Skills||8-8||i83": {
-   "low": {
-    "type": "~b/o",
-    "amount": 92,
-    "currency": "chaos"
-   },
-   "mid": {
-    "type": "~b/o",
-    "amount": 2,
-    "currency": "divine"
-   },
-   "sampled": 8,
-   "sellers": 8,
-   "listed": 8,
    "passivesMin": 8,
    "passivesMax": 8,
-   "at": "2026-11-17T02:10:38.720Z"
-  },
-  "Large Cluster Jewel||12% increased Damage with Bows / 12% increased Damage Over Time with Bow Skills||8-8||i84": {
-   "low": {
-    "type": "~b/o",
-    "amount": 95,
-    "currency": "chaos"
-   },
-   "mid": {
-    "type": "~b/o",
-    "amount": 114,
-    "currency": "chaos"
-   },
-   "sampled": 5,
-   "sellers": 5,
-   "listed": 5,
-   "passivesMin": 8,
-   "passivesMax": 8,
-   "at": "2026-11-17T02:11:08.271Z"
+   "at": "2026-11-22T18:01:58.350Z"
   },
   "Medium Cluster Jewel||10% increased Projectile Damage||4-5||i83": {
    "low": {
     "type": "~b/o",
-    "amount": 2,
+    "amount": 4,
     "currency": "chaos"
    },
    "mid": {
     "type": "~b/o",
-    "amount": 4,
+    "amount": 12,
     "currency": "chaos"
    },
    "sampled": 10,
    "sellers": 10,
-   "listed": 106,
+   "listed": 107,
    "passivesMin": 4,
    "passivesMax": 5,
-   "at": "2026-11-17T02:14:18.690Z"
+   "at": "2026-11-22T17:57:57.690Z"
   },
   "Medium Cluster Jewel||10% increased Projectile Damage||4-5||i84": {
    "low": {
     "type": "~b/o",
-    "amount": 20,
+    "amount": 15,
     "currency": "chaos"
    },
    "mid": {
     "type": "~b/o",
-    "amount": 30,
+    "amount": 25,
     "currency": "chaos"
    },
    "sampled": 10,
    "sellers": 10,
-   "listed": 14,
+   "listed": 40,
    "passivesMin": 4,
    "passivesMax": 5,
-   "at": "2026-11-17T02:14:19.032Z"
+   "at": "2026-11-22T17:57:58.044Z"
   },
   "Medium Cluster Jewel||10% increased Projectile Damage||4-4||i83": {
    "low": {
     "type": "~b/o",
-    "amount": 4,
+    "amount": 14,
     "currency": "chaos"
    },
    "mid": {
     "type": "~b/o",
-    "amount": 5,
-    "currency": "chaos"
-   },
-   "sampled": 10,
-   "sellers": 9,
-   "listed": 62,
-   "passivesMin": 4,
-   "passivesMax": 4,
-   "at": "2026-11-17T02:14:29.018Z"
-  },
-  "Medium Cluster Jewel||10% increased Projectile Damage||4-4||i84": {
-   "low": {
-    "type": "~b/o",
-    "amount": 20,
-    "currency": "chaos"
-   },
-   "mid": {
-    "type": "~b/o",
-    "amount": 45,
-    "currency": "chaos"
-   },
-   "sampled": 7,
-   "sellers": 7,
-   "listed": 7,
-   "passivesMin": 4,
-   "passivesMax": 4,
-   "at": "2026-11-17T02:14:29.326Z"
-  },
-  "Large Cluster Jewel||12% increased Cold Damage||8-8||i83": {
-   "low": {
-    "type": "~b/o",
-    "amount": 3,
-    "currency": "chaos"
-   },
-   "mid": {
-    "type": "~b/o",
-    "amount": 4,
+    "amount": 19,
     "currency": "chaos"
    },
    "sampled": 10,
    "sellers": 10,
-   "listed": 33,
+   "listed": 55,
+   "passivesMin": 4,
+   "passivesMax": 4,
+   "at": "2026-11-22T17:58:37.643Z"
+  },
+  "Medium Cluster Jewel||10% increased Projectile Damage||4-4||i84": {
+   "low": {
+    "type": "~b/o",
+    "amount": 13,
+    "currency": "chaos"
+   },
+   "mid": {
+    "type": "~b/o",
+    "amount": 50,
+    "currency": "chaos"
+   },
+   "sampled": 10,
+   "sellers": 9,
+   "listed": 20,
+   "passivesMin": 4,
+   "passivesMax": 4,
+   "at": "2026-11-22T18:01:37.706Z"
+  },
+  "Large Cluster Jewel||12% increased Cold Damage||8-8||i83": {
+   "low": {
+    "type": "~b/o",
+    "amount": 5,
+    "currency": "chaos"
+   },
+   "mid": {
+    "type": "~b/o",
+    "amount": 8,
+    "currency": "chaos"
+   },
+   "sampled": 10,
+   "sellers": 10,
+   "listed": 91,
    "passivesMin": 8,
    "passivesMax": 8,
-   "at": "2026-11-17T02:15:08.268Z"
+   "at": "2026-11-22T18:02:58.800Z"
   },
   "Large Cluster Jewel||12% increased Cold Damage||8-8||i84": {
+   "low": {
+    "type": "~b/o",
+    "amount": 6,
+    "currency": "chaos"
+   },
+   "mid": {
+    "type": "~b/o",
+    "amount": 9,
+    "currency": "chaos"
+   },
+   "sampled": 10,
+   "sellers": 10,
+   "listed": 23,
+   "passivesMin": 8,
+   "passivesMax": 8,
+   "at": "2026-11-22T18:03:07.747Z"
+  },
+  "Large Cluster Jewel||12% increased Lightning Damage||8-8||i83": {
    "low": {
     "type": "~b/o",
     "amount": 12,
@@ -3970,48 +4753,30 @@
     "amount": 15,
     "currency": "chaos"
    },
-   "sampled": 9,
-   "sellers": 9,
-   "listed": 9,
-   "passivesMin": 8,
-   "passivesMax": 8,
-   "at": "2026-11-17T02:15:08.616Z"
-  },
-  "Large Cluster Jewel||12% increased Lightning Damage||8-8||i83": {
-   "low": {
-    "type": "~b/o",
-    "amount": 11,
-    "currency": "chaos"
-   },
-   "mid": {
-    "type": "~b/o",
-    "amount": 20,
-    "currency": "chaos"
-   },
    "sampled": 10,
    "sellers": 10,
-   "listed": 16,
+   "listed": 50,
    "passivesMin": 8,
    "passivesMax": 8,
-   "at": "2026-11-17T02:15:19.382Z"
+   "at": "2026-11-22T17:56:47.972Z"
   },
   "Large Cluster Jewel||12% increased Lightning Damage||8-8||i84": {
    "low": {
     "type": "~b/o",
-    "amount": 30,
+    "amount": 24,
     "currency": "chaos"
    },
    "mid": {
     "type": "~b/o",
-    "amount": 39,
+    "amount": 30,
     "currency": "chaos"
    },
-   "sampled": 5,
-   "sellers": 5,
-   "listed": 5,
+   "sampled": 10,
+   "sellers": 10,
+   "listed": 15,
    "passivesMin": 8,
    "passivesMax": 8,
-   "at": "2026-11-17T02:15:28.310Z"
+   "at": "2026-11-22T17:56:48.251Z"
   },
   "Large Cluster Jewel||10% increased Spell Damage||8-8||i83": {
    "low": {
@@ -4021,187 +4786,56 @@
    },
    "mid": {
     "type": "~b/o",
-    "amount": 15,
+    "amount": 10,
     "currency": "chaos"
    },
    "sampled": 10,
    "sellers": 10,
-   "listed": 28,
+   "listed": 65,
    "passivesMin": 8,
    "passivesMax": 8,
-   "at": "2026-11-17T02:15:38.301Z"
+   "at": "2026-11-22T18:02:38.355Z"
   },
   "Large Cluster Jewel||10% increased Spell Damage||8-8||i84": {
    "low": {
     "type": "~b/o",
+    "amount": 10,
+    "currency": "chaos"
+   },
+   "mid": {
+    "type": "~b/o",
     "amount": 15,
-    "currency": "chaos"
-   },
-   "mid": {
-    "type": "~b/o",
-    "amount": 30,
-    "currency": "chaos"
-   },
-   "sampled": 8,
-   "sellers": 8,
-   "listed": 8,
-   "passivesMin": 8,
-   "passivesMax": 8,
-   "at": "2026-11-17T02:15:38.721Z"
-  },
-  "Medium Cluster Jewel||15% increased Critical Strike Chance||4-5||i83": {
-   "low": {
-    "type": "~b/o",
-    "amount": 2,
-    "currency": "chaos"
-   },
-   "mid": {
-    "type": "~b/o",
-    "amount": 5,
-    "currency": "chaos"
-   },
-   "sampled": 10,
-   "sellers": 10,
-   "listed": 37,
-   "passivesMin": 4,
-   "passivesMax": 5,
-   "at": "2026-11-17T02:19:09.352Z"
-  },
-  "Medium Cluster Jewel||15% increased Critical Strike Chance||4-5||i84": {
-   "low": {
-    "type": "~b/o",
-    "amount": 4,
-    "currency": "chaos"
-   },
-   "mid": {
-    "type": "~b/o",
-    "amount": 8,
-    "currency": "chaos"
-   },
-   "sampled": 10,
-   "sellers": 10,
-   "listed": 13,
-   "passivesMin": 4,
-   "passivesMax": 5,
-   "at": "2026-11-17T02:19:18.287Z"
-  },
-  "Medium Cluster Jewel||Minions have 12% increased maximum Life||4-5||i83": {
-   "low": {
-    "type": "~b/o",
-    "amount": 3,
-    "currency": "chaos"
-   },
-   "mid": {
-    "type": "~b/o",
-    "amount": 3,
-    "currency": "chaos"
-   },
-   "sampled": 10,
-   "sellers": 8,
-   "listed": 77,
-   "passivesMin": 4,
-   "passivesMax": 5,
-   "at": "2026-11-17T02:19:29.001Z"
-  },
-  "Medium Cluster Jewel||Minions have 12% increased maximum Life||4-5||i84": {
-   "low": {
-    "type": "~b/o",
-    "amount": 4,
-    "currency": "chaos"
-   },
-   "mid": {
-    "type": "~b/o",
-    "amount": 5,
     "currency": "chaos"
    },
    "sampled": 10,
    "sellers": 10,
    "listed": 22,
-   "passivesMin": 4,
-   "passivesMax": 5,
-   "at": "2026-11-17T02:19:29.378Z"
-  },
-  "Large Cluster Jewel||Staff Attacks deal 12% increased Damage with Hits and Ailments / Mace or Sceptre Attacks deal 12% increased Damage with Hits and Ailments||8-8||i83": {
-   "low": {
-    "type": "~b/o",
-    "amount": 250,
-    "currency": "chaos"
-   },
-   "mid": {
-    "type": "~b/o",
-    "amount": 300,
-    "currency": "chaos"
-   },
-   "sampled": 8,
-   "sellers": 8,
-   "listed": 8,
    "passivesMin": 8,
    "passivesMax": 8,
-   "at": "2026-11-17T02:20:09.360Z"
+   "at": "2026-11-22T18:02:38.766Z"
   },
-  "Large Cluster Jewel||Staff Attacks deal 12% increased Damage with Hits and Ailments / Mace or Sceptre Attacks deal 12% increased Damage with Hits and Ailments||8-8||i84": {
-   "low": {
-    "type": "~b/o",
-    "amount": 320,
-    "currency": "chaos"
-   },
-   "mid": {
-    "type": "~b/o",
-    "amount": 369,
-    "currency": "chaos"
-   },
-   "sampled": 3,
-   "sellers": 3,
-   "listed": 3,
-   "passivesMin": 8,
-   "passivesMax": 8,
-   "at": "2026-11-17T02:20:18.305Z"
-  },
-  "Medium Cluster Jewel||12% increased Totem Damage||4-5||i83": {
-   "low": {
-    "type": "~b/o",
-    "amount": 5,
-    "currency": "chaos"
-   },
-   "mid": {
-    "type": "~b/o",
-    "amount": 8,
-    "currency": "chaos"
-   },
-   "sampled": 10,
-   "sellers": 10,
-   "listed": 26,
-   "passivesMin": 4,
-   "passivesMax": 5,
-   "at": "2026-11-17T02:20:29.033Z"
-  },
-  "Medium Cluster Jewel||12% increased Totem Damage||4-5||i84": {
-   "low": {
-    "type": "~b/o",
-    "amount": 15,
-    "currency": "chaos"
-   },
-   "mid": {
-    "type": "~b/o",
-    "amount": 30,
-    "currency": "chaos"
-   },
-   "sampled": 10,
-   "sellers": 10,
-   "lowOutlier": {
-    "type": "~b/o",
-    "amount": 3,
-    "currency": "chaos"
-   },
-   "listed": 10,
-   "passivesMin": 4,
-   "passivesMax": 5,
-   "at": "2026-11-17T02:20:29.396Z"
-  },
-  "Large Cluster Jewel||Wand Attacks deal 12% increased Damage with Hits and Ailments||8-8||i83": {
+  "Medium Cluster Jewel||15% increased Critical Strike Chance||4-5||i83": {
    "low": {
     "type": "~b/o",
     "amount": 4,
+    "currency": "chaos"
+   },
+   "mid": {
+    "type": "~b/o",
+    "amount": 7,
+    "currency": "chaos"
+   },
+   "sampled": 10,
+   "sellers": 10,
+   "listed": 95,
+   "passivesMin": 4,
+   "passivesMax": 5,
+   "at": "2026-11-22T18:12:38.794Z"
+  },
+  "Medium Cluster Jewel||15% increased Critical Strike Chance||4-5||i84": {
+   "low": {
+    "type": "~b/o",
+    "amount": 10,
     "currency": "chaos"
    },
    "mid": {
@@ -4211,15 +4845,177 @@
    },
    "sampled": 10,
    "sellers": 10,
-   "listed": 13,
+   "listed": 52,
+   "passivesMin": 4,
+   "passivesMax": 5,
+   "at": "2026-11-22T18:12:47.761Z"
+  },
+  "Medium Cluster Jewel||Minions have 12% increased maximum Life||4-5||i83": {
+   "low": {
+    "type": "~b/o",
+    "amount": 4,
+    "currency": "chaos"
+   },
+   "mid": {
+    "type": "~b/o",
+    "amount": 5,
+    "currency": "chaos"
+   },
+   "sampled": 10,
+   "sellers": 10,
+   "listed": 91,
+   "passivesMin": 4,
+   "passivesMax": 5,
+   "at": "2026-11-22T18:07:38.862Z"
+  },
+  "Medium Cluster Jewel||Minions have 12% increased maximum Life||4-5||i84": {
+   "low": {
+    "type": "~b/o",
+    "amount": 5,
+    "currency": "chaos"
+   },
+   "mid": {
+    "type": "~b/o",
+    "amount": 5,
+    "currency": "chaos"
+   },
+   "sampled": 10,
+   "sellers": 10,
+   "listed": 46,
+   "passivesMin": 4,
+   "passivesMax": 5,
+   "at": "2026-11-22T18:07:47.712Z"
+  },
+  "Large Cluster Jewel||Staff Attacks deal 12% increased Damage with Hits and Ailments / Mace or Sceptre Attacks deal 12% increased Damage with Hits and Ailments||8-8||i83": {
+   "low": {
+    "type": "~b/o",
+    "amount": 1,
+    "currency": "divine"
+   },
+   "mid": {
+    "type": "~b/o",
+    "amount": 1,
+    "currency": "divine"
+   },
+   "sampled": 10,
+   "sellers": 10,
+   "listed": 248,
    "passivesMin": 8,
    "passivesMax": 8,
-   "at": "2026-11-17T02:24:09.055Z"
+   "at": "2026-11-22T18:01:38.303Z"
+  },
+  "Large Cluster Jewel||Staff Attacks deal 12% increased Damage with Hits and Ailments / Mace or Sceptre Attacks deal 12% increased Damage with Hits and Ailments||8-8||i84": {
+   "low": {
+    "type": "~b/o",
+    "amount": 1,
+    "currency": "divine"
+   },
+   "mid": {
+    "type": "~b/o",
+    "amount": 250,
+    "currency": "chaos"
+   },
+   "sampled": 4,
+   "sellers": 4,
+   "listed": 4,
+   "passivesMin": 8,
+   "passivesMax": 8,
+   "at": "2026-11-22T18:01:38.638Z"
+  },
+  "Medium Cluster Jewel||12% increased Totem Damage||4-5||i83": {
+   "low": {
+    "type": "~b/o",
+    "amount": 3,
+    "currency": "chaos"
+   },
+   "mid": {
+    "type": "~b/o",
+    "amount": 5,
+    "currency": "chaos"
+   },
+   "sampled": 10,
+   "sellers": 10,
+   "listed": 68,
+   "passivesMin": 4,
+   "passivesMax": 5,
+   "at": "2026-11-22T18:08:07.721Z"
+  },
+  "Medium Cluster Jewel||12% increased Totem Damage||4-5||i84": {
+   "low": {
+    "type": "~b/o",
+    "amount": 4,
+    "currency": "chaos"
+   },
+   "mid": {
+    "type": "~b/o",
+    "amount": 5,
+    "currency": "chaos"
+   },
+   "sampled": 10,
+   "sellers": 10,
+   "listed": 49,
+   "passivesMin": 4,
+   "passivesMax": 5,
+   "at": "2026-11-22T18:08:08.122Z"
+  },
+  "Large Cluster Jewel||Wand Attacks deal 12% increased Damage with Hits and Ailments||8-8||i83": {
+   "low": {
+    "type": "~b/o",
+    "amount": 3,
+    "currency": "chaos"
+   },
+   "mid": {
+    "type": "~b/o",
+    "amount": 5,
+    "currency": "chaos"
+   },
+   "sampled": 10,
+   "sellers": 10,
+   "listed": 41,
+   "passivesMin": 8,
+   "passivesMax": 8,
+   "at": "2026-11-22T18:06:58.356Z"
   },
   "Large Cluster Jewel||Wand Attacks deal 12% increased Damage with Hits and Ailments||8-8||i84": {
    "low": {
     "type": "~b/o",
-    "amount": 11,
+    "amount": 10,
+    "currency": "chaos"
+   },
+   "mid": {
+    "type": "~b/o",
+    "amount": 12,
+    "currency": "chaos"
+   },
+   "sampled": 10,
+   "sellers": 10,
+   "listed": 15,
+   "passivesMin": 8,
+   "passivesMax": 8,
+   "at": "2026-11-22T18:06:58.732Z"
+  },
+  "Large Cluster Jewel||12% increased Fire Damage||8-8||i83": {
+   "low": {
+    "type": "~b/o",
+    "amount": 8,
+    "currency": "chaos"
+   },
+   "mid": {
+    "type": "~b/o",
+    "amount": 8,
+    "currency": "chaos"
+   },
+   "sampled": 10,
+   "sellers": 9,
+   "listed": 73,
+   "passivesMin": 8,
+   "passivesMax": 8,
+   "at": "2026-11-22T18:11:58.759Z"
+  },
+  "Large Cluster Jewel||12% increased Fire Damage||8-8||i84": {
+   "low": {
+    "type": "~b/o",
+    "amount": 10,
     "currency": "chaos"
    },
    "mid": {
@@ -4227,66 +5023,30 @@
     "amount": 14,
     "currency": "chaos"
    },
-   "sampled": 5,
-   "sellers": 5,
-   "listed": 5,
-   "passivesMin": 8,
-   "passivesMax": 8,
-   "at": "2026-11-17T02:24:09.357Z"
-  },
-  "Large Cluster Jewel||12% increased Fire Damage||8-8||i83": {
-   "low": {
-    "type": "~b/o",
-    "amount": 20,
-    "currency": "chaos"
-   },
-   "mid": {
-    "type": "~b/o",
-    "amount": 33,
-    "currency": "chaos"
-   },
    "sampled": 10,
-   "sellers": 10,
-   "listed": 17,
+   "sellers": 9,
+   "listed": 34,
    "passivesMin": 8,
    "passivesMax": 8,
-   "at": "2026-11-17T02:24:28.687Z"
-  },
-  "Large Cluster Jewel||12% increased Fire Damage||8-8||i84": {
-   "low": {
-    "type": "~b/o",
-    "amount": 44,
-    "currency": "chaos"
-   },
-   "mid": {
-    "type": "~b/o",
-    "amount": 72,
-    "currency": "chaos"
-   },
-   "sampled": 7,
-   "sellers": 7,
-   "listed": 7,
-   "passivesMin": 8,
-   "passivesMax": 8,
-   "at": "2026-11-17T02:24:29.038Z"
+   "at": "2026-11-22T18:12:07.763Z"
   },
   "Large Cluster Jewel||10% increased Attack Damage||8-8||i83": {
    "low": {
     "type": "~b/o",
-    "amount": 2,
-    "currency": "chaos"
+    "amount": 8,
+    "currency": "alt"
    },
    "mid": {
     "type": "~b/o",
-    "amount": 3,
+    "amount": 1,
     "currency": "chaos"
    },
    "sampled": 10,
    "sellers": 10,
-   "listed": 72,
+   "listed": 210,
    "passivesMin": 8,
    "passivesMax": 8,
-   "at": "2026-11-17T02:25:09.024Z"
+   "at": "2026-11-22T18:17:38.434Z"
   },
   "Large Cluster Jewel||10% increased Attack Damage||8-8||i84": {
    "low": {
@@ -4299,48 +5059,48 @@
     "amount": 10,
     "currency": "chaos"
    },
-   "sampled": 7,
-   "sellers": 7,
-   "listed": 7,
+   "sampled": 10,
+   "sellers": 10,
+   "listed": 22,
    "passivesMin": 8,
    "passivesMax": 8,
-   "at": "2026-11-17T02:25:09.389Z"
+   "at": "2026-11-22T18:17:38.807Z"
   },
   "Large Cluster Jewel||12% increased Damage with Two Handed Weapons||8-8||i83": {
    "low": {
     "type": "~b/o",
-    "amount": 5,
+    "amount": 9,
     "currency": "chaos"
    },
    "mid": {
     "type": "~b/o",
-    "amount": 8,
+    "amount": 9,
     "currency": "chaos"
    },
    "sampled": 10,
    "sellers": 10,
-   "listed": 19,
+   "listed": 37,
    "passivesMin": 8,
    "passivesMax": 8,
-   "at": "2026-11-17T02:25:28.328Z"
+   "at": "2026-11-22T18:16:58.035Z"
   },
   "Large Cluster Jewel||12% increased Damage with Two Handed Weapons||8-8||i84": {
    "low": {
     "type": "~b/o",
-    "amount": 45,
+    "amount": 10,
     "currency": "chaos"
    },
    "mid": {
     "type": "~b/o",
-    "amount": 74,
+    "amount": 15,
     "currency": "chaos"
    },
-   "sampled": 3,
-   "sellers": 3,
-   "listed": 3,
+   "sampled": 10,
+   "sellers": 10,
+   "listed": 26,
    "passivesMin": 8,
    "passivesMax": 8,
-   "at": "2026-11-17T02:25:28.715Z"
+   "at": "2026-11-22T18:16:58.437Z"
   },
   "Medium Cluster Jewel||12% increased Brand Damage||4-5||i83": {
    "low": {
@@ -4355,28 +5115,28 @@
    },
    "sampled": 10,
    "sellers": 10,
-   "listed": 61,
+   "listed": 128,
    "passivesMin": 4,
    "passivesMax": 5,
-   "at": "2026-11-17T02:29:08.307Z"
+   "at": "2026-11-22T18:11:47.680Z"
   },
   "Medium Cluster Jewel||12% increased Brand Damage||4-5||i84": {
    "low": {
     "type": "~b/o",
-    "amount": 3,
+    "amount": 1,
     "currency": "chaos"
    },
    "mid": {
     "type": "~b/o",
-    "amount": 4,
+    "amount": 1,
     "currency": "chaos"
    },
    "sampled": 10,
    "sellers": 10,
-   "listed": 14,
+   "listed": 29,
    "passivesMin": 4,
    "passivesMax": 5,
-   "at": "2026-11-17T02:29:08.624Z"
+   "at": "2026-11-22T18:11:48.063Z"
   },
   "Medium Cluster Jewel||12% increased Brand Damage||4-4||i83": {
    "low": {
@@ -4417,7 +5177,25 @@
   "Medium Cluster Jewel||12% increased Chaos Damage over Time||4-5||i83": {
    "low": {
     "type": "~b/o",
+    "amount": 10,
+    "currency": "chaos"
+   },
+   "mid": {
+    "type": "~b/o",
     "amount": 12,
+    "currency": "chaos"
+   },
+   "sampled": 10,
+   "sellers": 10,
+   "listed": 106,
+   "passivesMin": 4,
+   "passivesMax": 5,
+   "at": "2026-11-22T18:12:58.575Z"
+  },
+  "Medium Cluster Jewel||12% increased Chaos Damage over Time||4-5||i84": {
+   "low": {
+    "type": "~b/o",
+    "amount": 20,
     "currency": "chaos"
    },
    "mid": {
@@ -4426,39 +5204,16 @@
     "currency": "chaos"
    },
    "sampled": 10,
-   "sellers": 10,
-   "lowOutlier": {
-    "type": "~b/o",
-    "amount": 4,
-    "currency": "chaos"
-   },
-   "listed": 34,
-   "passivesMin": 4,
-   "passivesMax": 5,
-   "at": "2026-11-17T02:29:28.719Z"
-  },
-  "Medium Cluster Jewel||12% increased Chaos Damage over Time||4-5||i84": {
-   "low": {
-    "type": "~b/o",
-    "amount": 28,
-    "currency": "chaos"
-   },
-   "mid": {
-    "type": "~b/o",
-    "amount": 35,
-    "currency": "chaos"
-   },
-   "sampled": 9,
    "sellers": 9,
-   "listed": 9,
+   "listed": 37,
    "passivesMin": 4,
    "passivesMax": 5,
-   "at": "2026-11-17T02:29:29.063Z"
+   "at": "2026-11-22T18:12:58.889Z"
   },
   "Large Cluster Jewel||Axe Attacks deal 12% increased Damage with Hits and Ailments / Sword Attacks deal 12% increased Damage with Hits and Ailments||8-8||i83": {
    "low": {
     "type": "~b/o",
-    "amount": 8,
+    "amount": 10,
     "currency": "chaos"
    },
    "mid": {
@@ -4468,30 +5223,102 @@
    },
    "sampled": 10,
    "sellers": 10,
-   "listed": 24,
+   "listed": 35,
    "passivesMin": 8,
    "passivesMax": 8,
-   "at": "2026-11-17T02:30:09.019Z"
+   "at": "2026-11-22T18:16:38.363Z"
   },
   "Large Cluster Jewel||Axe Attacks deal 12% increased Damage with Hits and Ailments / Sword Attacks deal 12% increased Damage with Hits and Ailments||8-8||i84": {
    "low": {
     "type": "~b/o",
-    "amount": 22,
+    "amount": 15,
     "currency": "chaos"
    },
    "mid": {
     "type": "~b/o",
-    "amount": 30,
+    "amount": 19,
     "currency": "chaos"
    },
-   "sampled": 8,
-   "sellers": 8,
-   "listed": 8,
+   "sampled": 10,
+   "sellers": 9,
+   "listed": 16,
    "passivesMin": 8,
    "passivesMax": 8,
-   "at": "2026-11-17T02:30:09.386Z"
+   "at": "2026-11-22T18:16:38.757Z"
   },
   "Large Cluster Jewel||12% increased Attack Damage while Dual Wielding||8-8||i83": {
+   "low": {
+    "type": "~b/o",
+    "amount": 10,
+    "currency": "chaos"
+   },
+   "mid": {
+    "type": "~b/o",
+    "amount": 12,
+    "currency": "chaos"
+   },
+   "sampled": 10,
+   "sellers": 10,
+   "listed": 73,
+   "passivesMin": 8,
+   "passivesMax": 8,
+   "at": "2026-11-22T18:17:57.718Z"
+  },
+  "Large Cluster Jewel||12% increased Attack Damage while Dual Wielding||8-8||i84": {
+   "low": {
+    "type": "~b/o",
+    "amount": 14,
+    "currency": "chaos"
+   },
+   "mid": {
+    "type": "~b/o",
+    "amount": 19,
+    "currency": "chaos"
+   },
+   "sampled": 10,
+   "sellers": 10,
+   "listed": 27,
+   "passivesMin": 8,
+   "passivesMax": 8,
+   "at": "2026-11-22T18:17:58.150Z"
+  },
+  "Medium Cluster Jewel||12% increased Burning Damage||4-5||i83": {
+   "low": {
+    "type": "~b/o",
+    "amount": 4,
+    "currency": "chaos"
+   },
+   "mid": {
+    "type": "~b/o",
+    "amount": 5,
+    "currency": "chaos"
+   },
+   "sampled": 10,
+   "sellers": 10,
+   "listed": 77,
+   "passivesMin": 4,
+   "passivesMax": 5,
+   "at": "2026-11-22T18:22:38.473Z"
+  },
+  "Medium Cluster Jewel||12% increased Burning Damage||4-5||i84": {
+   "low": {
+    "type": "~b/o",
+    "amount": 4,
+    "currency": "chaos"
+   },
+   "mid": {
+    "type": "~b/o",
+    "amount": 5,
+    "currency": "chaos"
+   },
+   "sampled": 10,
+   "sellers": 10,
+   "listed": 22,
+   "passivesMin": 4,
+   "passivesMax": 5,
+   "at": "2026-11-22T18:22:38.868Z"
+  },
+  "Large Cluster Jewel||Claw Attacks deal 12% increased Damage with Hits and Ailments / Dagger Attacks deal 12% increased Damage with Hits and Ailments||8-8||i83": {
    "low": {
     "type": "~b/o",
     "amount": 7,
@@ -4504,82 +5331,10 @@
    },
    "sampled": 10,
    "sellers": 10,
-   "listed": 38,
+   "listed": 25,
    "passivesMin": 8,
    "passivesMax": 8,
-   "at": "2026-11-17T02:30:28.784Z"
-  },
-  "Large Cluster Jewel||12% increased Attack Damage while Dual Wielding||8-8||i84": {
-   "low": {
-    "type": "~b/o",
-    "amount": 18,
-    "currency": "chaos"
-   },
-   "mid": {
-    "type": "~b/o",
-    "amount": 24,
-    "currency": "chaos"
-   },
-   "sampled": 10,
-   "sellers": 10,
-   "listed": 14,
-   "passivesMin": 8,
-   "passivesMax": 8,
-   "at": "2026-11-17T02:30:29.088Z"
-  },
-  "Medium Cluster Jewel||12% increased Burning Damage||4-5||i83": {
-   "low": {
-    "type": "~b/o",
-    "amount": 2,
-    "currency": "chaos"
-   },
-   "mid": {
-    "type": "~b/o",
-    "amount": 3,
-    "currency": "chaos"
-   },
-   "sampled": 10,
-   "sellers": 10,
-   "listed": 43,
-   "passivesMin": 4,
-   "passivesMax": 5,
-   "at": "2026-11-17T02:34:08.416Z"
-  },
-  "Medium Cluster Jewel||12% increased Burning Damage||4-5||i84": {
-   "low": {
-    "type": "~b/o",
-    "amount": 2,
-    "currency": "chaos"
-   },
-   "mid": {
-    "type": "~b/o",
-    "amount": 3,
-    "currency": "chaos"
-   },
-   "sampled": 10,
-   "sellers": 10,
-   "listed": 17,
-   "passivesMin": 4,
-   "passivesMax": 5,
-   "at": "2026-11-17T02:34:09.215Z"
-  },
-  "Large Cluster Jewel||Claw Attacks deal 12% increased Damage with Hits and Ailments / Dagger Attacks deal 12% increased Damage with Hits and Ailments||8-8||i83": {
-   "low": {
-    "type": "~b/o",
-    "amount": 2,
-    "currency": "chaos"
-   },
-   "mid": {
-    "type": "~b/o",
-    "amount": 5,
-    "currency": "chaos"
-   },
-   "sampled": 10,
-   "sellers": 10,
-   "listed": 18,
-   "passivesMin": 8,
-   "passivesMax": 8,
-   "at": "2026-11-17T02:34:19.846Z"
+   "at": "2026-11-22T18:21:48.814Z"
   },
   "Large Cluster Jewel||Claw Attacks deal 12% increased Damage with Hits and Ailments / Dagger Attacks deal 12% increased Damage with Hits and Ailments||8-8||i84": {
    "low": {
@@ -4589,15 +5344,15 @@
    },
    "mid": {
     "type": "~b/o",
-    "amount": 15,
+    "amount": 11,
     "currency": "chaos"
    },
    "sampled": 10,
-   "sellers": 10,
-   "listed": 13,
+   "sellers": 9,
+   "listed": 20,
    "passivesMin": 8,
    "passivesMax": 8,
-   "at": "2026-11-17T02:34:28.344Z"
+   "at": "2026-11-22T18:21:57.704Z"
   },
   "Medium Cluster Jewel||Exerted Attacks deal 20% increased Damage||4-5||i83": {
    "low": {
@@ -4607,69 +5362,69 @@
    },
    "mid": {
     "type": "~b/o",
+    "amount": 4,
+    "currency": "chaos"
+   },
+   "sampled": 10,
+   "sellers": 10,
+   "listed": 87,
+   "passivesMin": 4,
+   "passivesMax": 5,
+   "at": "2026-11-22T18:21:37.655Z"
+  },
+  "Medium Cluster Jewel||Exerted Attacks deal 20% increased Damage||4-5||i84": {
+   "low": {
+    "type": "~b/o",
+    "amount": 5,
+    "currency": "chaos"
+   },
+   "mid": {
+    "type": "~b/o",
     "amount": 5,
     "currency": "chaos"
    },
    "sampled": 10,
    "sellers": 10,
-   "listed": 37,
+   "listed": 32,
    "passivesMin": 4,
    "passivesMax": 5,
-   "at": "2026-11-17T02:35:08.295Z"
-  },
-  "Medium Cluster Jewel||Exerted Attacks deal 20% increased Damage||4-5||i84": {
-   "low": {
-    "type": "~b/o",
-    "amount": 9,
-    "currency": "chaos"
-   },
-   "mid": {
-    "type": "~b/o",
-    "amount": 15,
-    "currency": "chaos"
-   },
-   "sampled": 10,
-   "sellers": 10,
-   "listed": 10,
-   "passivesMin": 4,
-   "passivesMax": 5,
-   "at": "2026-11-17T02:35:08.704Z"
+   "at": "2026-11-22T18:21:38.079Z"
   },
   "Medium Cluster Jewel||6% increased Flask Effect Duration||4-5||i83": {
    "low": {
     "type": "~b/o",
-    "amount": 1,
+    "amount": 2,
     "currency": "chaos"
    },
    "mid": {
-    "type": "~b/o",
-    "amount": 3,
-    "currency": "chaos"
-   },
-   "sampled": 10,
-   "sellers": 10,
-   "listed": 45,
-   "passivesMin": 4,
-   "passivesMax": 5,
-   "at": "2026-11-17T02:35:19.871Z"
-  },
-  "Medium Cluster Jewel||6% increased Flask Effect Duration||4-5||i84": {
-   "low": {
     "type": "~b/o",
     "amount": 4,
     "currency": "chaos"
    },
+   "sampled": 10,
+   "sellers": 10,
+   "listed": 72,
+   "passivesMin": 4,
+   "passivesMax": 5,
+   "at": "2026-11-22T18:22:58.157Z"
+  },
+  "Medium Cluster Jewel||6% increased Flask Effect Duration||4-5||i84": {
+   "low": {
+    "type": "~b/o",
+    "amount": 3,
+    "currency": "chaos"
+   },
    "mid": {
     "type": "~b/o",
-    "amount": 9,
+    "amount": 7,
     "currency": "chaos"
    },
    "sampled": 10,
    "sellers": 10,
-   "listed": 15,
+   "listed": 19,
    "passivesMin": 4,
    "passivesMax": 5,
-   "at": "2026-11-17T02:35:28.337Z"
+   "at": "2026-11-22T18:22:58.598Z"
   },
   "Medium Cluster Jewel||10% increased Damage over Time||4-5||i83": {
    "low": {
@@ -4684,10 +5439,10 @@
    },
    "sampled": 10,
    "sellers": 10,
-   "listed": 267,
+   "listed": 537,
    "passivesMin": 4,
    "passivesMax": 5,
-   "at": "2026-11-17T02:35:38.783Z"
+   "at": "2026-11-22T18:26:38.046Z"
   },
   "Medium Cluster Jewel||10% increased Damage over Time||4-5||i84": {
    "low": {
@@ -4702,10 +5457,10 @@
    },
    "sampled": 10,
    "sellers": 10,
-   "listed": 19,
+   "listed": 53,
    "passivesMin": 4,
    "passivesMax": 5,
-   "at": "2026-11-17T02:36:08.349Z"
+   "at": "2026-11-22T18:26:38.399Z"
   },
   "Small Cluster Jewel||+2% Chance to Block Attack Damage||2-2||i83": {
    "low": {
@@ -4715,33 +5470,33 @@
    },
    "mid": {
     "type": "~b/o",
-    "amount": 5,
+    "amount": 3,
     "currency": "chaos"
    },
    "sampled": 10,
-   "sellers": 10,
-   "listed": 15,
+   "sellers": 9,
+   "listed": 37,
    "passivesMin": 2,
    "passivesMax": 2,
-   "at": "2026-11-17T02:39:18.750Z"
+   "at": "2026-11-22T18:26:57.719Z"
   },
   "Small Cluster Jewel||+2% Chance to Block Attack Damage||2-2||i84": {
    "low": {
     "type": "~b/o",
-    "amount": 3,
+    "amount": 10,
     "currency": "chaos"
    },
    "mid": {
     "type": "~b/o",
-    "amount": 5,
+    "amount": 40,
     "currency": "chaos"
    },
-   "sampled": 9,
-   "sellers": 9,
-   "listed": 9,
+   "sampled": 6,
+   "sellers": 6,
+   "listed": 6,
    "passivesMin": 2,
    "passivesMax": 2,
-   "at": "2026-11-17T02:39:19.551Z"
+   "at": "2026-11-22T18:26:58.198Z"
   },
   "Small Cluster Jewel||+2% Chance to Block Attack Damage||3-3||i83": {
    "low": {
@@ -4751,33 +5506,33 @@
    },
    "mid": {
     "type": "~b/o",
-    "amount": 1,
+    "amount": 2,
     "currency": "chaos"
    },
    "sampled": 10,
    "sellers": 10,
-   "listed": 26,
+   "listed": 43,
    "passivesMin": 3,
    "passivesMax": 3,
-   "at": "2026-11-17T02:39:28.345Z"
+   "at": "2026-11-22T18:26:58.845Z"
   },
   "Small Cluster Jewel||+2% Chance to Block Attack Damage||3-3||i84": {
    "low": {
     "type": "~b/o",
-    "amount": 2,
+    "amount": 5,
     "currency": "chaos"
    },
    "mid": {
     "type": "~b/o",
-    "amount": 3,
+    "amount": 10,
     "currency": "chaos"
    },
-   "sampled": 7,
-   "sellers": 7,
-   "listed": 7,
+   "sampled": 5,
+   "sellers": 5,
+   "listed": 5,
    "passivesMin": 3,
    "passivesMax": 3,
-   "at": "2026-11-17T02:39:28.752Z"
+   "at": "2026-11-22T18:27:07.784Z"
   },
   "Medium Cluster Jewel||12% increased Physical Damage over Time||4-5||i83": {
    "low": {
@@ -4792,35 +5547,12 @@
    },
    "sampled": 10,
    "sellers": 10,
-   "listed": 110,
+   "listed": 218,
    "passivesMin": 4,
    "passivesMax": 5,
-   "at": "2026-11-17T02:39:38.793Z"
+   "at": "2026-11-22T18:28:37.682Z"
   },
   "Medium Cluster Jewel||12% increased Physical Damage over Time||4-5||i84": {
-   "low": {
-    "type": "~b/o",
-    "amount": 20,
-    "currency": "chaos"
-   },
-   "mid": {
-    "type": "~b/o",
-    "amount": 25,
-    "currency": "chaos"
-   },
-   "sampled": 6,
-   "sellers": 6,
-   "lowOutlier": {
-    "type": "~b/o",
-    "amount": 3,
-    "currency": "chaos"
-   },
-   "listed": 6,
-   "passivesMin": 4,
-   "passivesMax": 5,
-   "at": "2026-11-17T02:40:08.360Z"
-  },
-  "Small Cluster Jewel||+12% to Chaos Resistance||2-2||i83": {
    "low": {
     "type": "~b/o",
     "amount": 1,
@@ -4833,28 +5565,46 @@
    },
    "sampled": 10,
    "sellers": 10,
-   "listed": 32,
-   "passivesMin": 2,
-   "passivesMax": 2,
-   "at": "2026-11-17T02:40:18.328Z"
+   "listed": 28,
+   "passivesMin": 4,
+   "passivesMax": 5,
+   "at": "2026-11-22T18:31:37.702Z"
   },
-  "Small Cluster Jewel||+12% to Chaos Resistance||2-2||i84": {
+  "Small Cluster Jewel||+12% to Chaos Resistance||2-2||i83": {
    "low": {
     "type": "~b/o",
-    "amount": 2,
+    "amount": 1,
     "currency": "chaos"
    },
    "mid": {
     "type": "~b/o",
-    "amount": 5,
+    "amount": 2,
     "currency": "chaos"
    },
    "sampled": 10,
-   "sellers": 9,
-   "listed": 15,
+   "sellers": 10,
+   "listed": 45,
    "passivesMin": 2,
    "passivesMax": 2,
-   "at": "2026-11-17T02:40:18.856Z"
+   "at": "2026-11-22T18:27:38.038Z"
+  },
+  "Small Cluster Jewel||+12% to Chaos Resistance||2-2||i84": {
+   "low": {
+    "type": "~b/o",
+    "amount": 4,
+    "currency": "chaos"
+   },
+   "mid": {
+    "type": "~b/o",
+    "amount": 10,
+    "currency": "chaos"
+   },
+   "sampled": 10,
+   "sellers": 10,
+   "listed": 16,
+   "passivesMin": 2,
+   "passivesMax": 2,
+   "at": "2026-11-22T18:27:38.419Z"
   },
   "Small Cluster Jewel||+12% to Chaos Resistance||3-3||i83": {
    "low": {
@@ -4869,48 +5619,12 @@
    },
    "sampled": 10,
    "sellers": 10,
-   "listed": 41,
+   "listed": 85,
    "passivesMin": 3,
    "passivesMax": 3,
-   "at": "2026-11-17T02:40:19.882Z"
+   "at": "2026-11-22T18:27:47.739Z"
   },
   "Small Cluster Jewel||+12% to Chaos Resistance||3-3||i84": {
-   "low": {
-    "type": "~b/o",
-    "amount": 5,
-    "currency": "chaos"
-   },
-   "mid": {
-    "type": "~b/o",
-    "amount": 15,
-    "currency": "chaos"
-   },
-   "sampled": 10,
-   "sellers": 10,
-   "listed": 13,
-   "passivesMin": 3,
-   "passivesMax": 3,
-   "at": "2026-11-17T02:40:28.465Z"
-  },
-  "Medium Cluster Jewel||Channelling Skills deal 12% increased Damage||4-5||i83": {
-   "low": {
-    "type": "~b/o",
-    "amount": 2,
-    "currency": "chaos"
-   },
-   "mid": {
-    "type": "~b/o",
-    "amount": 5,
-    "currency": "chaos"
-   },
-   "sampled": 10,
-   "sellers": 10,
-   "listed": 23,
-   "passivesMin": 4,
-   "passivesMax": 5,
-   "at": "2026-11-17T02:40:29.951Z"
-  },
-  "Medium Cluster Jewel||Channelling Skills deal 12% increased Damage||4-5||i84": {
    "low": {
     "type": "~b/o",
     "amount": 4,
@@ -4923,10 +5637,46 @@
    },
    "sampled": 10,
    "sellers": 10,
-   "listed": 13,
+   "listed": 14,
+   "passivesMin": 3,
+   "passivesMax": 3,
+   "at": "2026-11-22T18:27:48.119Z"
+  },
+  "Medium Cluster Jewel||Channelling Skills deal 12% increased Damage||4-5||i83": {
+   "low": {
+    "type": "~b/o",
+    "amount": 1,
+    "currency": "chaos"
+   },
+   "mid": {
+    "type": "~b/o",
+    "amount": 2,
+    "currency": "chaos"
+   },
+   "sampled": 10,
+   "sellers": 10,
+   "listed": 107,
    "passivesMin": 4,
    "passivesMax": 5,
-   "at": "2026-11-17T02:40:38.389Z"
+   "at": "2026-11-22T18:27:58.186Z"
+  },
+  "Medium Cluster Jewel||Channelling Skills deal 12% increased Damage||4-5||i84": {
+   "low": {
+    "type": "~b/o",
+    "amount": 2,
+    "currency": "chaos"
+   },
+   "mid": {
+    "type": "~b/o",
+    "amount": 4,
+    "currency": "chaos"
+   },
+   "sampled": 10,
+   "sellers": 10,
+   "listed": 36,
+   "passivesMin": 4,
+   "passivesMax": 5,
+   "at": "2026-11-22T18:27:58.552Z"
   },
   "Small Cluster Jewel||+4% chance to Suppress Spell Damage||3-3||i83": {
    "low": {
@@ -4941,28 +5691,28 @@
    },
    "sampled": 10,
    "sellers": 10,
-   "listed": 44,
+   "listed": 76,
    "passivesMin": 3,
    "passivesMax": 3,
-   "at": "2026-11-17T02:41:08.346Z"
+   "at": "2026-11-22T18:31:58.489Z"
   },
   "Small Cluster Jewel||+4% chance to Suppress Spell Damage||3-3||i84": {
    "low": {
     "type": "~b/o",
-    "amount": 2,
+    "amount": 6,
     "currency": "chaos"
    },
    "mid": {
     "type": "~b/o",
-    "amount": 6,
+    "amount": 10,
     "currency": "chaos"
    },
    "sampled": 10,
    "sellers": 10,
-   "listed": 16,
+   "listed": 11,
    "passivesMin": 3,
    "passivesMax": 3,
-   "at": "2026-11-17T02:44:08.318Z"
+   "at": "2026-11-22T18:31:58.863Z"
   },
   "Small Cluster Jewel||4% increased maximum Life||3-3||i83": {
    "low": {
@@ -4977,10 +5727,10 @@
    },
    "sampled": 10,
    "sellers": 10,
-   "listed": 82,
+   "listed": 150,
    "passivesMin": 3,
    "passivesMax": 3,
-   "at": "2026-11-17T02:44:09.894Z"
+   "at": "2026-11-22T18:32:37.699Z"
   },
   "Small Cluster Jewel||4% increased maximum Life||3-3||i84": {
    "low": {
@@ -4993,12 +5743,12 @@
     "amount": 5,
     "currency": "chaos"
    },
-   "sampled": 8,
-   "sellers": 8,
-   "listed": 8,
+   "sampled": 10,
+   "sellers": 10,
+   "listed": 22,
    "passivesMin": 3,
    "passivesMax": 3,
-   "at": "2026-11-17T02:44:18.326Z"
+   "at": "2026-11-22T18:32:38.065Z"
   },
   "Small Cluster Jewel||4% increased maximum Life||2-2||i83": {
    "low": {
@@ -5013,34 +5763,34 @@
    },
    "sampled": 10,
    "sellers": 10,
-   "listed": 72,
+   "listed": 185,
    "passivesMin": 2,
    "passivesMax": 2,
-   "at": "2026-11-17T02:44:19.520Z"
+   "at": "2026-11-22T18:32:38.828Z"
   },
   "Small Cluster Jewel||4% increased maximum Life||2-2||i84": {
    "low": {
     "type": "~b/o",
-    "amount": 2,
+    "amount": 4,
     "currency": "chaos"
    },
    "mid": {
     "type": "~b/o",
-    "amount": 2,
+    "amount": 4,
     "currency": "chaos"
    },
    "sampled": 10,
-   "sellers": 9,
-   "listed": 14,
+   "sellers": 10,
+   "listed": 19,
    "passivesMin": 2,
    "passivesMax": 2,
-   "at": "2026-11-17T02:44:19.958Z"
+   "at": "2026-11-22T18:32:47.715Z"
   },
   "Small Cluster Jewel||6% increased maximum Mana||2-3||i83": {
    "low": {
     "type": "~b/o",
-    "amount": 1,
-    "currency": "chaos"
+    "amount": 9,
+    "currency": "alt"
    },
    "mid": {
     "type": "~b/o",
@@ -5049,10 +5799,10 @@
    },
    "sampled": 10,
    "sellers": 10,
-   "listed": 160,
+   "listed": 348,
    "passivesMin": 2,
    "passivesMax": 3,
-   "at": "2026-11-17T02:44:29.580Z"
+   "at": "2026-11-22T18:32:49.010Z"
   },
   "Small Cluster Jewel||6% increased maximum Mana||2-3||i84": {
    "low": {
@@ -5062,15 +5812,15 @@
    },
    "mid": {
     "type": "~b/o",
-    "amount": 2,
+    "amount": 4,
     "currency": "chaos"
    },
    "sampled": 10,
    "sellers": 10,
-   "listed": 25,
+   "listed": 43,
    "passivesMin": 2,
    "passivesMax": 3,
-   "at": "2026-11-17T02:44:29.874Z"
+   "at": "2026-11-22T18:32:57.875Z"
   },
   "Small Cluster Jewel||2% Chance to Block Spell Damage||2-2||i83": {
    "low": {
@@ -5085,28 +5835,28 @@
    },
    "sampled": 10,
    "sellers": 10,
-   "listed": 22,
+   "listed": 63,
    "passivesMin": 2,
    "passivesMax": 2,
-   "at": "2026-11-17T02:44:38.782Z"
+   "at": "2026-11-22T18:33:08.187Z"
   },
   "Small Cluster Jewel||2% Chance to Block Spell Damage||2-2||i84": {
    "low": {
     "type": "~b/o",
-    "amount": 2,
+    "amount": 3,
     "currency": "chaos"
    },
    "mid": {
     "type": "~b/o",
-    "amount": 8,
+    "amount": 10,
     "currency": "chaos"
    },
    "sampled": 10,
-   "sellers": 9,
-   "listed": 13,
+   "sellers": 10,
+   "listed": 19,
    "passivesMin": 2,
    "passivesMax": 2,
-   "at": "2026-11-17T02:45:08.368Z"
+   "at": "2026-11-22T18:33:37.693Z"
   },
   "Small Cluster Jewel||6% increased maximum Energy Shield||3-3||i83": {
    "low": {
@@ -5121,28 +5871,28 @@
    },
    "sampled": 10,
    "sellers": 10,
-   "listed": 84,
+   "listed": 192,
    "passivesMin": 3,
    "passivesMax": 3,
-   "at": "2026-11-17T02:45:09.552Z"
+   "at": "2026-11-22T18:31:47.719Z"
   },
   "Small Cluster Jewel||6% increased maximum Energy Shield||3-3||i84": {
    "low": {
     "type": "~b/o",
-    "amount": 60,
+    "amount": 4,
     "currency": "chaos"
    },
    "mid": {
     "type": "~b/o",
-    "amount": 61,
+    "amount": 10,
     "currency": "chaos"
    },
    "sampled": 10,
-   "sellers": 8,
-   "listed": 33,
+   "sellers": 10,
+   "listed": 36,
    "passivesMin": 3,
    "passivesMax": 3,
-   "at": "2026-11-17T02:45:09.912Z"
+   "at": "2026-11-22T18:31:48.125Z"
   },
   "Medium Cluster Jewel||10% increased Effect of Non-Damaging Ailments||4-5||i83": {
    "low": {
@@ -5157,10 +5907,10 @@
    },
    "sampled": 10,
    "sellers": 10,
-   "listed": 168,
+   "listed": 419,
    "passivesMin": 4,
    "passivesMax": 5,
-   "at": "2026-11-17T02:45:18.754Z"
+   "at": "2026-11-22T18:36:38.061Z"
   },
   "Medium Cluster Jewel||10% increased Effect of Non-Damaging Ailments||4-5||i84": {
    "low": {
@@ -5175,11 +5925,155 @@
    },
    "sampled": 10,
    "sellers": 10,
-   "listed": 20,
+   "listed": 71,
    "passivesMin": 4,
    "passivesMax": 5,
-   "at": "2026-11-17T02:45:19.540Z"
+   "at": "2026-11-22T18:36:38.485Z"
+  },
+  "Medium Cluster Jewel||Minions have 12% increased maximum Life||4-6||i83": {
+   "low": {
+    "type": "~b/o",
+    "amount": 1,
+    "currency": "chaos"
+   },
+   "mid": {
+    "type": "~b/o",
+    "amount": 2,
+    "currency": "chaos"
+   },
+   "sampled": 10,
+   "sellers": 10,
+   "listed": 121,
+   "passivesMin": 4,
+   "passivesMax": 6,
+   "at": "2026-11-22T18:07:57.709Z"
+  },
+  "Medium Cluster Jewel||Minions have 12% increased maximum Life||4-6||i84": {
+   "low": {
+    "type": "~b/o",
+    "amount": 5,
+    "currency": "chaos"
+   },
+   "mid": {
+    "type": "~b/o",
+    "amount": 5,
+    "currency": "chaos"
+   },
+   "sampled": 10,
+   "sellers": 10,
+   "listed": 72,
+   "passivesMin": 4,
+   "passivesMax": 6,
+   "at": "2026-11-22T18:07:58.090Z"
+  },
+  "Large Cluster Jewel||Claw Attacks deal 12% increased Damage with Hits and Ailments / Dagger Attacks deal 12% increased Damage with Hits and Ailments||12-12||i83": {
+   "low": {
+    "type": "~b/o",
+    "amount": 5,
+    "currency": "chaos"
+   },
+   "mid": {
+    "type": "~b/o",
+    "amount": 10,
+    "currency": "chaos"
+   },
+   "sampled": 10,
+   "sellers": 9,
+   "listed": 14,
+   "passivesMin": 12,
+   "passivesMax": 12,
+   "at": "2026-11-22T18:21:58.780Z"
+  },
+  "Large Cluster Jewel||Claw Attacks deal 12% increased Damage with Hits and Ailments / Dagger Attacks deal 12% increased Damage with Hits and Ailments||12-12||i84": {
+   "low": {
+    "type": "~b/o",
+    "amount": 1,
+    "currency": "divine"
+   },
+   "mid": {
+    "type": "~b/o",
+    "amount": 1,
+    "currency": "divine"
+   },
+   "sampled": 10,
+   "sellers": 10,
+   "listed": 30,
+   "passivesMin": 12,
+   "passivesMax": 12,
+   "at": "2026-11-22T18:22:07.744Z"
+  },
+  "Small Cluster Jewel||+15% to Fire Resistance||3-3||i83": {
+   "low": {
+    "type": "~b/o",
+    "amount": 1,
+    "currency": "chrome"
+   },
+   "mid": {
+    "type": "~b/o",
+    "amount": 1,
+    "currency": "chaos"
+   },
+   "sampled": 10,
+   "sellers": 10,
+   "listed": 139,
+   "passivesMin": 3,
+   "passivesMax": 3,
+   "at": "2026-11-22T18:32:58.523Z"
+  },
+  "Small Cluster Jewel||+15% to Fire Resistance||3-3||i84": {
+   "low": {
+    "type": "~b/o",
+    "amount": 4,
+    "currency": "chaos"
+   },
+   "mid": {
+    "type": "~b/o",
+    "amount": 10,
+    "currency": "chaos"
+   },
+   "sampled": 9,
+   "sellers": 9,
+   "listed": 9,
+   "passivesMin": 3,
+   "passivesMax": 3,
+   "at": "2026-11-22T18:32:58.998Z"
+  },
+  "Small Cluster Jewel||15% increased Evasion Rating||3-3||i83": {
+   "low": {
+    "type": "~b/o",
+    "amount": 3,
+    "currency": "alt"
+   },
+   "mid": {
+    "type": "~b/o",
+    "amount": 1,
+    "currency": "chaos"
+   },
+   "sampled": 10,
+   "sellers": 10,
+   "listed": 165,
+   "passivesMin": 3,
+   "passivesMax": 3,
+   "at": "2026-11-22T18:36:47.702Z"
+  },
+  "Small Cluster Jewel||15% increased Evasion Rating||3-3||i84": {
+   "low": {
+    "type": "~b/o",
+    "amount": 3,
+    "currency": "chaos"
+   },
+   "mid": {
+    "type": "~b/o",
+    "amount": 4,
+    "currency": "chaos"
+   },
+   "sampled": 10,
+   "sellers": 10,
+   "listed": 19,
+   "passivesMin": 3,
+   "passivesMax": 3,
+   "at": "2026-11-22T18:36:48.130Z"
   }
  },
- "ratesAt": "2026-11-17T01:59:07.852Z"
+ "ratesAt": "2026-11-22T17:46:37.202Z"
 }
