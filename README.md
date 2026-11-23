@@ -29,6 +29,7 @@ Open the app, pick a league, and:
 | --- | --- |
 | `npm run dev` | Dev server with live scraping API |
 | `npm run scrape` | Headless scrape (`npx tsx scripts/scrape.ts [--league=<Name>] [--full]`) — writes snapshots to `src/data/<league-slug>/` for the static build. `--full` clears the league store and refetches everything. |
+| `npm run scrape:browser -- --league=Covens` | Runs the same resumable crawl through a visible Chrome session. Complete any verification in its window. Requires Google Chrome installed locally. |
 | `npm run scrape:poedb` | One-time scrape of poedb.tw cluster enchantment pools (mod weights, ilvl, prefix/suffix) → `src/data/poedb-cluster-mods.json` |
 | `npm run price` | Prices the most-used notable combos on pathofexile.com/trade (`npx tsx scripts/price.ts [--league=<Name>] [--top=N] [--ttl=<hours>] [--max=N] [--full]`) → `src/data/<league-slug>/trade-prices.json` |
 | `npm run publish` | Preflight checks, game-data refresh, `scrape`, `price`, then commit/push `src/data` and `league.ts`, which triggers the GitHub Actions rebuild/redeploy of the static site. See [LEAGUE_START.md](LEAGUE_START.md) |
@@ -134,7 +135,35 @@ src/data/<league-slug>/   Committed snapshots bundled into the production build:
 
 ## How it works
 
-- All poe.ninja requests go through the dev server (or the headless script) — never the browser — to avoid CORS and keep parsing server-side. A real browser User-Agent is used and requests are throttled/rate-limit-aware (backs off on 429s).
-- poe.ninja's API requires a **snapshot version** per league/endpoint; it's read from poe.ninja's `/poe1/api/data/index-state` JSON (cached for a minute), which also supplies each league's URL slug.
+### Browser-assisted scraping
+
+Run `npm run scrape:browser -- --league=Covens` (equivalently, `npm run scrape -- --browser --league=Covens`).
+In Windows PowerShell, use `npm.cmd` so the `--` argument separator reaches npm. From the parent
+`cluster-jewel-scrape` directory, run:
+
+```powershell
+npm.cmd --prefix .\cluster-jewel-research run scrape:browser -- --league=Covens
+```
+
+The crawler opens Chrome with a dedicated profile in `data/poeninja-browser-profile/`, which is ignored by Git.
+It keeps the profile between runs and makes poe.ninja requests inside the tab, using Chrome's own cookies,
+user agent, and network stack. This profile is separate from your everyday Chrome profile; existing clearance
+in your regular window is not automatically available here. No cookies need to be copied into the project.
+
+If a request needs verification, the crawler opens the corresponding build page and pauses for up to
+20 minutes while you complete the check. If verification times out, the browser closes, or the API remains
+blocked afterward, the crawl stops with an error and retains saved character results. Re-run the same
+command to resume. Browser mode does not guarantee Cloudflare will accept the session.
+
+Searches and dictionaries use the same browser as character requests. Requests are serialized; character
+requests still use the existing 15-second pacing and `Retry-After` backoff. Ctrl+C stops the crawl and closes
+its browser. Successful completion and errors also close Chrome. Plain `npm run scrape` keeps using direct HTTP.
+
+### Requests and storage
+
+- Data collection runs locally through the dev server or scrape script, using direct HTTP by default or Chrome when `--browser` is passed to the script. Parsing stays in Node, and character requests are throttled with backoff on 429s. The published static site does not scrape at runtime.
+- poe.ninja's API requires a **snapshot version** per overview/type; it's read from `/poe1/api/data/snapshot-versions?league=<overview>`. The `/poe1/api/data/index-state` JSON (cached for a minute) supplies each league's URL slug and is a fallback for older snapshots.
+- Build searches use `/api/protected/poe1/builds/<version>/search` with `overview` and `type` (`covens`/`exp` or `streamers`/`streamers`). Ascendancy partitions add `class`, such as `Elementalist`. Snapshot IDs are discovered each run rather than hardcoded. A 403 on this protected route prevents the scrape from proceeding; the URL migration alone does not resolve a Cloudflare block.
+- Character equipment uses `/api/protected/characters/poe1/builds/<version>/character`, with numeric types (`2` for streamers, `0` for the public exp ladder). Shared dictionaries use `/api/lookup/poe1/builds/dictionary/<hash>`.
 - Character fetches are the expensive part (~1s each), so results are stored permanently with raw mod text retained — changing the parsing logic doesn't require re-crawling.
 - The production site is fully static: GitHub Actions builds from the committed `src/data` snapshots, so nothing scrapes at runtime.

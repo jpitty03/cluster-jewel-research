@@ -6,6 +6,6 @@ import { defineConfig } from 'vitest/config'
 // "No test suite found" for each.
 export default defineConfig({
   test: {
-    include: ['crafting-engine/test/**/*.test.ts', 'src/**/*.test.{ts,tsx}', 'quality-lab/**/*.test.ts'],
+    include: ['crafting-engine/test/**/*.test.ts', 'src/**/*.test.{ts,tsx}', 'server/**/*.test.ts', 'quality-lab/**/*.test.ts'],
   },
 })

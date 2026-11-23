@@ -6,6 +6,7 @@ import { plainModText } from '../src/modText.ts'
 import { existsSync, mkdirSync, readdirSync, readFileSync, writeFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { UA, fetchSnapshotVersion, getStreamerBuilds, resolveLeagueUrl, searchClusterHolders } from './poeninja'
+import { poeNinjaFetch, PoeNinjaBrowserError } from './poeninjaHttp.ts'
 
 // All crawl state is organized per league: data/<slug>/{characters.csv,
 // cluster-characters.csv, cluster-jewels.json, character-jewels.json}.
@@ -302,7 +303,7 @@ async function fetchCharacter(
     timeMachine: '',
   })
   const version = isStreamer ? versions.streamers : versions.exp
-  return fetch(`https://poe.ninja/poe1/api/builds/${version}/character?${qs}`, {
+  return poeNinjaFetch(`https://poe.ninja/api/protected/characters/poe1/builds/${version}/character?${qs}`, {
     headers: { 'user-agent': UA, accept: 'application/json' },
   })
 }
@@ -317,7 +318,10 @@ async function runCrawl(league: string, force: boolean): Promise<void> {
   // Public (non-streamer) holders are fetched through the league's exp overview,
   // which has its own snapshot version. Missing exp overview -> streamers only.
   const leagueUrl = await resolveLeagueUrl(league)
-  const expVersion = await fetchSnapshotVersion(leagueUrl, 'exp').catch(() => '')
+  const expVersion = await fetchSnapshotVersion(leagueUrl, 'exp').catch((error) => {
+    if (error instanceof PoeNinjaBrowserError) throw error
+    return ''
+  })
   const versions: CrawlVersions = { streamers: version, exp: expVersion, leagueUrl }
 
   const store: CharStore = force ? {} : loadStore(league)
@@ -378,7 +382,12 @@ async function runCrawl(league: string, force: boolean): Promise<void> {
       let res: Response
       try {
         res = await fetchCharacter(versions, c)
-      } catch {
+      } catch (error) {
+        if (error instanceof PoeNinjaBrowserError) {
+          save()
+          progress = { ...progress, running: false, phase: 'idle' }
+          throw error
+        }
         errors++
         break
       }

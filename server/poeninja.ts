@@ -3,7 +3,7 @@
 // poe.ninja's builds API speaks protobuf: a "search" endpoint returns
 // column-oriented build rows (capped at the top 100 for the current sort),
 // and "dictionary" endpoints hold shared string tables referenced by index.
-// The snapshot version hash rotates and is embedded in the HTML page props.
+// The snapshot version rotates and is discovered via snapshot-versions.
 // To get the full list we partition the search by class (each slice < 100)
 // and merge the results.
 //
@@ -11,6 +11,8 @@
 // repeated string field (one raw UTF-8 value per row) or a single packed-varint
 // blob (one number per row), never both. Numeric columns that carry a dictionary
 // name hold indexes into that dictionary rather than values.
+
+import { poeNinjaFetch, PoeNinjaBrowserError } from './poeninjaHttp.ts';
 
 export const UA =
   'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/150.0.0.0 Safari/537.36';
@@ -75,7 +77,7 @@ const num = (f: Field | undefined) =>
 // ---------- HTTP helpers ----------
 
 async function fetchBytes(path: string): Promise<Uint8Array> {
-  const res = await fetch(`${BASE}${path}`, {
+  const res = await poeNinjaFetch(`${BASE}${path}`, {
     headers: { 'user-agent': UA, accept: '*/*', referer: `${BASE}/poe1/builds/streamers` },
   });
   if (!res.ok) throw new Error(`GET ${path} -> ${res.status}`);
@@ -110,7 +112,7 @@ let indexStateCache: { at: number; state: IndexState } | null = null;
 async function fetchIndexState(): Promise<IndexState> {
   if (indexStateCache && Date.now() - indexStateCache.at < INDEX_STATE_TTL_MS)
     return indexStateCache.state;
-  const res = await fetch(`${BASE}/poe1/api/data/index-state`, {
+  const res = await poeNinjaFetch(`${BASE}/poe1/api/data/index-state`, {
     headers: { 'user-agent': UA, accept: 'application/json', referer: `${BASE}/poe1/builds/streamers` },
   });
   if (!res.ok) throw new Error(`index-state -> ${res.status}`);
@@ -143,7 +145,8 @@ export async function resolveLeagueUrl(league: string): Promise<string> {
       state.oldBuildLeagues?.find(named) ??
       state.snapshotVersions?.find((s) => s.type === 'exp' && s.name?.toLowerCase() === wanted);
     if (hit?.url) return hit.url;
-  } catch {
+  } catch (error) {
+    if (error instanceof PoeNinjaBrowserError) throw error;
     // fall through to the guessed slug
   }
   return leagueUrl(league);
@@ -156,7 +159,7 @@ export async function resolveLeagueUrl(league: string): Promise<string> {
 export async function fetchSnapshotVersion(url = 'streamers', type = 'streamers'): Promise<string> {
   try {
     // Since 2026-11 the versions are served per overview, not in index-state.
-    const res = await fetch(`${BASE}/poe1/api/data/snapshot-versions?league=${encodeURIComponent(url)}`, {
+    const res = await poeNinjaFetch(`${BASE}/poe1/api/data/snapshot-versions?league=${encodeURIComponent(url)}`, {
       headers: { 'user-agent': UA, accept: 'application/json', referer: `${BASE}/poe1/builds/${url}` },
     });
     if (res.ok) {
@@ -172,6 +175,7 @@ export async function fetchSnapshotVersion(url = 'streamers', type = 'streamers'
       `poe.ninja lists no ${url}/${type} snapshot version (snapshot-versions -> HTTP ${res.status})`,
     );
   } catch (err) {
+    if (err instanceof PoeNinjaBrowserError) throw err;
     // Fall back to the legacy page-props lookup in case index-state moves.
     try {
       return await fetchSnapshotVersionFromPage(url, type);
@@ -182,7 +186,7 @@ export async function fetchSnapshotVersion(url = 'streamers', type = 'streamers'
 }
 
 async function fetchSnapshotVersionFromPage(url: string, type: string): Promise<string> {
-  const res = await fetch(`${BASE}/poe1/builds/${url}`, {
+  const res = await poeNinjaFetch(`${BASE}/poe1/builds/${url}`, {
     headers: { 'user-agent': UA },
   });
   if (!res.ok) throw new Error(`${url} page -> ${res.status}`);
@@ -320,7 +324,7 @@ function decodeDictionary(b: Uint8Array): string[] {
 }
 
 async function fetchDictionary(hash: string): Promise<string[]> {
-  return decodeDictionary(await fetchBytes(`/poe1/api/builds/dictionary/${hash}`));
+  return decodeDictionary(await fetchBytes(`/api/lookup/poe1/builds/dictionary/${hash}`));
 }
 
 // ---------- public API ----------
@@ -372,7 +376,7 @@ async function searchBuilds(
   extra: Record<string, string> = {},
 ) {
   const qs = new URLSearchParams({ overview, type, ...extra });
-  return decodeSearch(await fetchBytes(`/poe1/api/builds/${version}/search?${qs}`));
+  return decodeSearch(await fetchBytes(`/api/protected/poe1/builds/${version}/search?${qs}`));
 }
 
 async function searchStreamers(version: string, extra: Record<string, string> = {}) {
@@ -391,6 +395,7 @@ async function publicClusterBuilds(
   try {
     expVersion = await fetchSnapshotVersion(leagueSlug, 'exp');
   } catch (e) {
+    if (e instanceof PoeNinjaBrowserError) throw e;
     console.warn(`[poeninja] no exp overview for "${league}": ${(e as Error).message}`);
     return { rows: [], total: 0 };
   }
@@ -517,7 +522,7 @@ export async function fetchCurrencyRates(league: string): Promise<Record<string,
   const url =
     `${BASE}/poe1/api/economy/exchange/current/overview` +
     `?league=${encodeURIComponent(league)}&type=Currency`;
-  const res = await fetch(url, { headers: { 'user-agent': UA, accept: 'application/json' } });
+  const res = await poeNinjaFetch(url, { headers: { 'user-agent': UA, accept: 'application/json' } });
   if (!res.ok) throw new Error(`currency overview -> ${res.status}`);
 
   const body = (await res.json()) as {
@@ -627,6 +632,7 @@ export async function searchClusterHolders(league: string): Promise<{
   try {
     expVersion = await fetchSnapshotVersion(leagueSlug, 'exp');
   } catch (e) {
+    if (e instanceof PoeNinjaBrowserError) throw e;
     console.warn(`[poeninja] no exp overview for "${league}": ${(e as Error).message}`);
   }
   if (expVersion) {
