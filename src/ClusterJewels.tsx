@@ -134,18 +134,25 @@ function resolveComboTargetIds(
   })
 }
 
-// The passive roll a group's base price is quoted at. A group can mix rolls — an
-// 8-passive large jewel and a 12-passive one are different purchases — so the header
-// row quotes its most-used priced combo, and the card says which that is.
-function groupBasePassives(file: PriceFile, g: Group) {
+// A group can mix different purchases (for example, 8- and 12-passive large
+// jewels). Show each cached passive range used by its priced combinations.
+function groupBaseVariants(file: PriceFile, g: Group): PassiveRange[] {
+  const variants: PassiveRange[] = []
+  const seen = new Set<string>()
   for (const cc of g.comboCounts.slice(0, PRICED_TOP)) {
     if (cc.notables.length === 0) continue
     const passives = pinnedPassives(g.base, cc.notables, cc.passivesMin, cc.passivesMax)
-    if (BASE_ILVLS.some((i) => file.bases[baseKey(g.base, g.clusterType, passives, i)]))
-      return { passives, cc }
+    const key = `${passives.min}-${passives.max}`
+    if (!seen.has(key) && BASE_ILVLS.some((i) => file.bases[baseKey(g.base, g.clusterType, passives, i)])) {
+      variants.push(passives)
+      seen.add(key)
+    }
   }
-  return null
+  return variants.sort((a, b) => (a.min ?? 0) - (b.min ?? 0) || (a.max ?? 0) - (b.max ?? 0))
 }
+
+const passiveRangeLabel = ({ min, max }: PassiveRange): string =>
+  min == null ? 'any passive count' : min === max ? `${min} passives` : `${min}–${max} passives`
 
 // One priced combo, resolved to chaos so it can be compared with the others.
 interface Quote {
@@ -158,7 +165,7 @@ interface Quote {
 interface GroupPrice {
   cheapest: Quote | null
   median: Quote | null
-  /** Chaos value of the group's white base, for sorting the Base Price column. */
+  /** Cheapest displayed white base in chaos, for sorting the Base Price column. */
   base: number | null
 }
 
@@ -188,17 +195,14 @@ function groupPrices(file: PriceFile | undefined, g: Group): GroupPrice {
       mids.push({ cc, entry, money: entry.mid, chaos: mid, weight: cc.characters })
   }
 
-  const pick = groupBasePassives(file, g)
   let base: number | null = null
-  if (pick) {
-    // ilvl 83 is what the column leads with; 84 only stands in when 83 has nothing.
+  for (const passives of groupBaseVariants(file, g)) {
     for (const ilvl of BASE_ILVLS) {
-      const b = file.bases[baseKey(g.base, g.clusterType, pick.passives, ilvl)]
+      const b = file.bases[baseKey(g.base, g.clusterType, passives, ilvl)]
       if (!b || b.listed === 0) continue
       const chaos = chaosValue(rates, b.low)
-      if (chaos != null) {
+      if (chaos != null && (base == null || chaos < base)) {
         base = chaos
-        break
       }
     }
   }
@@ -295,18 +299,14 @@ function PriceCard({
   entry: PriceEntry | null
 }) {
   const file = pricesByLeague[league]
-  const passiveText =
-    passives.min == null
-      ? 'any passive count'
-      : passives.min === passives.max
-        ? `${passives.min} passives`
-        : `${passives.min}–${passives.max} passives`
+  const passiveText = passiveRangeLabel(passives)
 
   return (
     <>
       <div className="hc-head">
         <strong>{base}</strong>
         <span>{clusterType}</span>
+        <span>{passiveText}</span>
         {comboLabel && <span className="hc-combo">{comboLabel}</span>}
         {note && <span className="hc-note">{note}</span>}
       </div>
@@ -376,7 +376,7 @@ function PriceCard({
       </div>
 
       <div className="hc-foot">
-        {passiveText}, uncorrupted
+        uncorrupted
         {entry && entry.listed > 0 && (
           <>
             {' · '}
@@ -429,38 +429,46 @@ function ComboPrice({
   )
 }
 
-// Base price cell on the collapsed group row: what a white base costs at each
-// craftable item level, quoted for the group's most-used combo's passive roll.
+// Keep the passive count beside each base quote, with a separate trade card for
+// each range so a cheap 8-passive base cannot be mistaken for a 12-passive one.
 function GroupBasePrice({ league, g }: { league: string; g: Group }) {
   const file = pricesByLeague[league]
-  const pick = file && groupBasePassives(file, g)
-  if (!file || !pick) return <span className="dim">—</span>
+  const variants = file ? groupBaseVariants(file, g) : []
+  if (!file || variants.length === 0) return <span className="dim">—</span>
 
   return (
-    <HoverCard
-      card={
-        <PriceCard
-          league={league}
-          base={g.base}
-          clusterType={g.clusterType}
-          passives={pick.passives}
-          comboLabel={null}
-          entry={null}
-        />
-      }
-    >
-      <span className="base-price-cell">
-        {BASE_ILVLS.map((ilvl) => {
-          const b = file.bases[baseKey(g.base, g.clusterType, pick.passives, ilvl)]
-          return (
-            <span className="base-ilvl" key={ilvl}>
-              <span className="hc-label">i{ilvl}</span>
-              {b && b.listed > 0 ? shortMoney(b.low) : '—'}
+    <span className="base-price-variants">
+      {variants.map((passives) => (
+        <HoverCard
+          key={`${passives.min}-${passives.max}`}
+          card={
+            <PriceCard
+              league={league}
+              base={g.base}
+              clusterType={g.clusterType}
+              passives={passives}
+              comboLabel={null}
+              entry={null}
+            />
+          }
+        >
+          <span className="base-price-cell">
+            <span className="base-passives">{passiveRangeLabel(passives)}</span>
+            <span className="base-price-levels">
+              {BASE_ILVLS.map((ilvl) => {
+                const b = file.bases[baseKey(g.base, g.clusterType, passives, ilvl)]
+                return (
+                  <span className="base-ilvl" key={ilvl}>
+                    <span className="hc-label">i{ilvl}</span>
+                    {b && b.listed > 0 ? shortMoney(b.low) : '—'}
+                  </span>
+                )
+              })}
             </span>
-          )
-        })}
-      </span>
-    </HoverCard>
+          </span>
+        </HoverCard>
+      ))}
+    </span>
   )
 }
 

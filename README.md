@@ -46,7 +46,7 @@ In the UI the group row carries three price columns:
 
 | Column | What it is |
 | --- | --- |
-| **Base Price** | the white base at `i83` / `i84`, for the passive roll the group's most-used combo targets |
+| **Base Price** | the white base at `i83` / `i84`, shown separately and labeled for each priced passive range (for example, 8 versus 12 passives); sorts by the cheapest displayed base |
 | **Cheapest** | the cheapest listing across the group's priced combos |
 | **Median** | the median completed price across them, **weighted by usage** — a combo 142 characters run counts more than one nine of them run |
 

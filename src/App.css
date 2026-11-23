@@ -413,7 +413,25 @@ td a {
   min-width: 170px;
 }
 
+.base-price-variants {
+  display: inline-flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
 .base-price-cell {
+  display: inline-flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.base-passives {
+  color: var(--text-dim);
+  font-size: 11.5px;
+  font-weight: 600;
+}
+
+.base-price-levels {
   display: inline-flex;
   gap: 16px;
 }
